@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Author</key>
+	<string>Hakuhin</string>
+	<key>Builder Version</key>
+	<string>534.57.2</string>
+	<key>CFBundleDisplayName</key>
+	<string>PageExpand</string>
+	<key>CFBundleIdentifier</key>
+	<string>jp.hakuhin.safari.PageExpand</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.2.2</string>
+	<key>CFBundleVersion</key>
+	<string>1.2.2</string>
+	<key>Chrome</key>
+	<dict>
+		<key>Database Quota</key>
+		<real>10485760</real>
+		<key>Global Page</key>
+		<string>background.html</string>
+		<key>Popovers</key>
+		<array>
+			<dict>
+				<key>Filename</key>
+				<string>popup.html</string>
+				<key>Identifier</key>
+				<string>popup</string>
+				<key>Width</key>
+				<real>300</real>
+			</dict>
+		</array>
+		<key>Toolbar Items</key>
+		<array>
+			<dict>
+				<key>Command</key>
+				<string></string>
+				<key>Identifier</key>
+				<string>toolbar</string>
+				<key>Image</key>
+				<string>icon-16.png</string>
+				<key>Include By Default</key>
+				<true/>
+				<key>Label</key>
+				<string>PageExpand</string>
+				<key>Menu</key>
+				<string>menu</string>
+				<key>Palette Label</key>
+				<string></string>
+				<key>Popover</key>
+				<string>popup</string>
+				<key>Tool Tip</key>
+				<string>PageExpand</string>
+			</dict>
+		</array>
+	</dict>
+	<key>Content</key>
+	<dict>
+		<key>Scripts</key>
+		<dict>
+			<key>Start</key>
+			<array>
+				<string>PageExpand.js</string>
+				<string>content_scripts.js</string>
+			</array>
+		</dict>
+	</dict>
+	<key>Description</key>
+	<string>すべてのWEBページをリッチに展開。URL文字列のリンク化、画像のポップアップ表示、動画のインライン表示、掲示板の拡張表示など。</string>
+	<key>ExtensionInfoDictionaryVersion</key>
+	<string>1.0</string>
+	<key>Permissions</key>
+	<dict>
+		<key>Website Access</key>
+		<dict>
+			<key>Include Secure Pages</key>
+			<true/>
+			<key>Level</key>
+			<string>All</string>
+		</dict>
+	</dict>
+	<key>Update Manifest URL</key>
+	<string>http://hakuhin.jp/download/page_expand/release/safari/update.plist</string>
+	<key>Website</key>
+	<string>http://hakuhin.jp</string>
+</dict>
+</plist>

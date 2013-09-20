@@ -1,0 +1,1 @@
+PageExpand("FirefoxExtensionPopup");

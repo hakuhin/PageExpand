@@ -1,0 +1,455 @@
+// --------------------------------------------------------------------------------
+// PageExpand
+//
+// Hakuhin 2010-2013  http://hakuhin.jp
+// --------------------------------------------------------------------------------
+
+
+// --------------------------------------------------------------------------------
+// PageExpand クラス
+// --------------------------------------------------------------------------------
+function PageExpand(execute_type){
+
+
+
+	// --------------------------------------------------------------------------------
+	// PageExpand バックグラウンド Opera 用
+	// --------------------------------------------------------------------------------
+	function PageExpandBackGroundForOpera(){
+
+		var _container = new Object();
+
+		// --------------------------------------------------------------------------------
+		// プロジェクトをロード（内部用）
+		// --------------------------------------------------------------------------------
+		function loadPageExpandProject(func){
+			var proj = new PageExpandProject();
+
+			// プロジェクトをロード
+			proj.loadLocalStorage(function(e){
+
+				// プロジェクトを更新
+				page_expand_project = proj;
+
+				// ロケール
+				_i18n = new InternationalMessage(page_expand_project.getLanguage());
+
+				// コンテキストメニューを再構築
+				updateProject("");
+				createContextMenu();
+
+				// ツールバーメニューを更新
+				updateToolBarMenu();
+
+				// URLフィルタを更新
+				updateUrlFilter();
+
+				func(e);
+			});
+
+		}
+
+		// --------------------------------------------------------------------------------
+		// プロジェクトを更新（内部用）
+		// --------------------------------------------------------------------------------
+		function updateProject(url){
+			project = new Project();
+			project.importObject(ObjectCopy(page_expand_project.getProject(url)));
+		}
+
+		// --------------------------------------------------------------------------------
+		// コンテキストメニューを作成（内部用）
+		// --------------------------------------------------------------------------------
+		function createContextMenu(){
+
+			if (!(opera.contexts.menu))	return;
+
+			var context_menu = opera.contexts.menu;
+
+			// すべてのアイテムを破棄
+			while(true){
+				var item = context_menu.item(0);
+				if(!item)	break;
+
+				context_menu.removeItem(0);
+			}
+			_context_menu_items = new Array();
+
+			// 再登録
+			if(project.getEnableContextMenu()){
+
+				var item_folder = context_menu.createItem({
+					title: _i18n.getMessage("context_menu_pageexpand_config"),
+					icon: 'icons/icon16.png',
+					type: 'folder'
+				});
+				context_menu.addItem(item_folder);
+
+				item_folder.addItem(context_menu.createItem({
+					title: _i18n.getMessage("context_menu_pageexpand_config_current_page"),
+					onclick: function (e) {
+						var query = new Object();
+						query.type = "urlmap";
+						var tab = OperaExtensionGetSelectedTab();
+						if(tab){
+							if(tab.url){
+								query.url = encodeURIComponent(tab.url);
+							}
+						}
+						OperaExtensionOpenPageExpandConfig(query);
+					}
+				}));
+				_context_menu_items[0] = true;
+
+				if(project.getEnableExpandBbs()){
+					item_folder.addItem(context_menu.createItem({
+						title: _i18n.getMessage("context_menu_pageexpand_config_current_bbs"),
+						onclick: function (e) {
+							var query = new Object();
+							query.type = "expand_bbs";
+							var tab = OperaExtensionGetSelectedTab();
+							if(tab){
+								if(tab.url){
+									query.url = encodeURIComponent(tab.url);
+								}
+							}
+							OperaExtensionOpenPageExpandConfig(query);
+						}
+					}));
+					_context_menu_items[1] = true;
+				}
+
+				if(!(project.getEnableStartup())){
+					item_folder.addItem(context_menu.createItem({
+						title: _i18n.getMessage("context_menu_pageexpand_execute"),
+						onclick: function (e) {
+							var tab = OperaExtensionGetSelectedTab();
+							if(tab){
+								extension_message.sendRequestToContent(tab, JsonStringify({command: "executePageExpand"}),function(response){});
+							}
+						}
+					}));
+					_context_menu_items[2] = true;
+				}
+
+				item_folder.addItem(context_menu.createItem({
+					title: _i18n.getMessage("context_menu_pageexpand_debug"),
+					onclick: function (e) {
+						var tab = OperaExtensionGetSelectedTab();
+						if(tab){
+							extension_message.sendRequestToContent(tab, JsonStringify({command: "executeDebug"}),function(response){});
+						}
+					}
+				}));
+				_context_menu_items[3] = true;
+
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// コンテキストメニューを更新（内部用）
+		// --------------------------------------------------------------------------------
+		function updateContextMenu(){
+			var items = new Array();
+
+			if(!(project.getEnable())){
+			}else if(!(project.getEnableContextMenu())){
+			}else{
+				items[0] = true;
+				if(project.getEnableExpandBbs()){
+					items[1] = true;
+				}
+				if(!(project.getEnableStartup())){
+					items[2] = true;
+				}
+				items[3] = true;
+			}
+
+			var i;
+			var num = _context_menu_items.length;
+			if(num == items.length){
+				for(i=0;i<num;i++){
+					if(_context_menu_items[i] != items[i]){
+						break;
+					}
+				}
+				if(i >= num){
+					return;
+				}
+			}
+
+			// コンテキストメニューを再構築
+			createContextMenu();
+		}
+
+		// --------------------------------------------------------------------------------
+		// ツールバーメニューを更新（内部用）
+		// --------------------------------------------------------------------------------
+		function updateToolBarMenu(){
+
+			if (!(opera.contexts.toolbar))	return;
+
+			var toolbar = opera.contexts.toolbar;
+			
+			if(_toolbar_button){
+				toolbar.removeItem(_toolbar_button);
+				_toolbar_button = null;
+			}
+
+			// 再登録
+			if(project.getEnableIconAddressBar()){
+
+				// --------------------------------------------------------------------------------
+				// ポップアップメニューを追加
+				// --------------------------------------------------------------------------------
+				var tool_bar_param = {
+					title: "Hello World",
+					icon: "icons/icon18.png",
+					popup:{
+						href: "popup.html",
+						width: 300,
+						height: 250
+					}
+				};
+				_toolbar_button = toolbar.createItem(tool_bar_param);
+				toolbar.addItem(_toolbar_button);
+
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// URLフィルタを更新（内部用）
+		// --------------------------------------------------------------------------------
+		function updateUrlFilter(){
+
+			if (!(opera.extension.urlfilter))	return;
+
+			var url_filter = opera.extension.urlfilter;
+
+			var i;
+			var num;
+
+			// クリア
+			num = _url_filter.length;
+			for(i=0;i<num;i++){
+				url_filter.block.remove(_url_filter.pop());
+			}
+
+			// 登録
+			var define = page_expand_project.getAccessBlockForOperaExtension();
+			if(define){
+				var filter = define.filter;
+				num = filter.length;
+				for(i=0;i<num;i++){
+					_url_filter.push(filter[i]);
+					url_filter.block.add(filter[i]);
+				}
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// プライベート変数
+		// --------------------------------------------------------------------------------
+		var _i18n;
+		var _toolbar_button;
+		var _url_filter;
+		var _context_menu_items;
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		(function(){
+
+			_context_menu_items = new Array();
+			_url_filter = new Array();
+
+			// Opera拡張機能通信
+			extension_message = new OperaExtensionMessageForBackground();
+
+			// --------------------------------------------------------------------------------
+			// コマンド辞書
+			// --------------------------------------------------------------------------------
+			var command_dictionary = new Object();
+
+			// PageExpandProject 取得
+			command_dictionary["getPageExpandProject"] = function(param,sender,sendResponse){
+				// JSON 文字列を返す
+				sendResponse(page_expand_project.exportJSON());
+			};
+
+			// Project 取得
+			command_dictionary["getProject"] = function(param,sender,sendResponse){
+				// JSON 文字列を返す
+				sendResponse(JsonStringify(page_expand_project.getProject(param.url)));
+
+				var tab = OperaExtensionGetSelectedTab();
+				if(tab){
+					if(tab.url){
+						updateProject(tab.url);
+						updateContextMenu();
+					}
+				}
+			};
+
+			// プロジェクト設定をリロード
+			command_dictionary["reloadPageExpandProject"] = function(param,sender,sendResponse){
+				loadPageExpandProject(function(e){});
+			};
+
+			// XMLHttpRequest 通信
+			command_dictionary["loadXMLHttpRequest"] = function(param,sender,sendResponse){
+				var completed = false;
+				try{
+					var request = param.request;
+					var xhr = XMLHttpRequestCreate();
+
+					// ステート変更時に実行されるイベント
+					xhr.onreadystatechange = function(r){
+						switch(xhr.readyState){
+						case 4:
+							if(!completed){
+								var response = new Object();
+								response.readyState = xhr.readyState;
+								response.status = xhr.status;
+								response.responseText = xhr.responseText;
+								response.responseHeaders = xhr.getAllResponseHeaders();
+								sendResponse(JsonStringify(response));
+								completed = true;
+							}
+							break;
+						}
+					};
+
+					// 読み込み開始
+					xhr.open(request.method,request.url,true);
+					var headers = request.headers;
+					for(var name in headers){
+						xhr.setRequestHeader(name,headers[name]);
+					}
+					if(xhr.overrideMimeType && request.override_mime_type){
+						xhr.overrideMimeType(request.override_mime_type);
+					}
+					xhr.send(request.data);
+				}catch(e){
+					if(!completed){
+						var response = new Object();
+						response.readyState = 4;
+						response.status = 0;
+						response.responseText = "";
+						response.responseHeaders = {};
+						sendResponse(JsonStringify(response));
+						completed = true;
+					}
+				}
+			};
+
+			// 現在のページの設定を編集
+			command_dictionary["configCurrentPage"] = function(param,sender,sendResponse){
+				var query = new Object();
+				query.type = "urlmap";
+				var tab = OperaExtensionGetSelectedTab();
+				if(tab){
+					if(tab.url){
+						query.url = encodeURIComponent(tab.url);
+					}
+				}
+				OperaExtensionOpenPageExpandConfig(query);
+			};
+
+			// 現在の掲示板の設定を編集
+			command_dictionary["configCurrentBbs"] = function(param,sender,sendResponse){
+				var query = new Object();
+				query.type = "expand_bbs";
+				var tab = OperaExtensionGetSelectedTab();
+				if(tab){
+					if(tab.url){
+						query.url = encodeURIComponent(tab.url);
+					}
+				}
+				OperaExtensionOpenPageExpandConfig(query);
+			};
+
+			// PageExpand の実行
+			command_dictionary["executePageExpand"] = function(param,sender,sendResponse){
+				var tab = OperaExtensionGetSelectedTab();
+				if(tab){
+					extension_message.sendRequestToContent(tab, JsonStringify({command: "executePageExpand"}),function(response){});
+				}
+			};
+
+			// PageExpand デバッグ
+			command_dictionary["executeDebug"] = function(param,sender,sendResponse){
+				var tab = OperaExtensionGetSelectedTab();
+				if(tab){
+					extension_message.sendRequestToContent(tab, JsonStringify({command: "executeDebug"}),function(response){});
+				}
+			};
+
+			// 現在アクティブなタブの URL を取得
+			command_dictionary["getActiveURL"] = function(param,sender,sendResponse){
+				var tab = OperaExtensionGetSelectedTab();
+				var url = "";
+				if(tab){
+					if(tab.url){
+						url = tab.url;
+					}
+				}
+				sendResponse(url);
+			};
+
+			// --------------------------------------------------------------------------------
+			// プロジェクトをロード
+			// --------------------------------------------------------------------------------
+			loadPageExpandProject(function(e){
+
+				// --------------------------------------------------------------------------------
+				// タブの状態
+				// --------------------------------------------------------------------------------
+				opera.extension.tabs.addEventListener("focus",function() {
+					var tab = OperaExtensionGetSelectedTab();
+					if(tab){
+						if(tab.url){
+							updateProject(tab.url);
+							updateContextMenu();
+						}
+					}
+				},false);
+
+				// --------------------------------------------------------------------------------
+				// コンテンツスクリプトとの通信
+				// --------------------------------------------------------------------------------
+				extension_message.addListener(function(request, sender, sendResponse) {
+					var param = JsonParse(request);
+
+					var callback = command_dictionary[param.command];
+					if(callback){
+						callback(param,sender,sendResponse);
+					}else{
+						sendResponse("");
+					}
+				});
+
+			});
+
+		})();
+
+		return _container;
+	}
+
+
+
+	// --------------------------------------------------------------------------------
+	// 初期化
+	// --------------------------------------------------------------------------------
+	switch(execute_type){
+
+	// --------------------------------------------------------------------------------
+	// Opera のバックグラウンドとして動作
+	// --------------------------------------------------------------------------------
+	case "OperaExtensionBackGround":
+		PageExpandBackGroundForOpera();
+		break;
+
+	};
+
+}

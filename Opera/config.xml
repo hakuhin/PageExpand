@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" id="http://hakuhin.jp/page_expand" version="1.2.2">
+
+  <name>PageExpand</name>
+
+  <description xml:lang="ja">すべてのWEBページをリッチに展開。短縮URLの展開、URL文字列のリンク化、画像のポップアップ表示、動画のインライン表示、掲示板の拡張表示など。</description>
+  <description xml:lang="en">Expand all pages. expand the short URL. Generate a link from the URL string. Popup image. Video is displayed inline. expand the BBS. etc...</description>
+
+  <author href="http://hakuhin.jp">Hakuhin</author>
+
+  <icon width="16" height="16" src="icons/icon16.png" />
+  <icon width="18" height="18" src="icons/icon18.png" />
+  <icon width="19" height="19" src="icons/icon19.png" />
+  <icon width="32" height="32" src="icons/icon32.png" />
+  <icon width="48" height="48" src="icons/icon48.png" />
+  <icon width="64" height="64" src="icons/icon64.png" />
+
+  <access origin="*" subdomains="true" />
+
+  <feature name="opera:urlfilter"/>
+  <feature name="opera:contextmenus"/>
+
+</widget>
