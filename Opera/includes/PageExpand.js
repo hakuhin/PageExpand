@@ -120,37 +120,10 @@ function PageExpand(execute_type){
 				execute_queue.attachLastForInsertDomNode(DomNodeAnalyzeRoot,document.documentElement);
 			}
 
-			if(document.addEventListener){
-				switch(document.readyState){
-				case "interactive":
-				case "complete":
-					// すでに DOM 構築が完了しているので初回実行
-					DocumentLoaded();
-					break;
-				default:
-					// DOM 構築完了時に発生するイベント
-					document.addEventListener("DOMContentLoaded", function(e){
-						DocumentLoaded();
-					}, false);
-					break;
-				}
-			}else{
-
-				(function(){
-					// DOM 構築完了チェック
-					var task = task_container.createTask();
-					task.setExecuteFunc(function(task){
-						switch(document.readyState){
-						case "interactive":
-						case "complete":
-							DocumentLoaded();
-							task.release();
-							return;
-						}
-					});
-				})();
-
-			}
+			// DOM 構築完了
+			DocumentGetLoadedDomContent(document,function(){
+				DocumentLoaded();
+			});
 		}
 
 	}
@@ -1431,12 +1404,6 @@ function PageExpand(execute_type){
 				return;
 			}
 
-			// アンセキュアチェック
-			if(!project.checkAllowUnsecure(url)){
-				complete();
-				return;
-			}
-
 			var loader = null;
 			var popup_image = null;
 			var thumbnail_image = null;
@@ -1689,12 +1656,6 @@ function PageExpand(execute_type){
 			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
 
 			if(!(param.result)){
-				complete();
-				return;
-			}
-
-			// アンセキュアチェック
-			if(!project.checkAllowUnsecure(url)){
 				complete();
 				return;
 			}
@@ -5271,6 +5232,54 @@ function PageExpand(execute_type){
 			}
 
 			if(allow){
+				var trim_check = false;
+				var trim_rect = new Object();
+				var bounding_rect = ElementGetBoundingClientRect(element);
+				var view_rect = ObjectCopy(bounding_rect);
+
+				var overflow_hidden = {"scroll":1,"hidden":1,"auto":1};
+				var display_inline = {"inline":1,"none":1,"table-column":1,"table-column-group":1};
+				var node = element;
+				while(node){
+					var r = ElementGetBoundingClientRect(node);
+					if(!r) break;
+
+					if(node.tagName == "BODY") break;
+
+					var style = ElementGetComputedStyle(node,null);
+					if(style){
+						if(!display_inline[style.display]){
+							if(overflow_hidden[style.overflow]){
+								if(r.bottom < view_rect.bottom) view_rect.bottom = r.bottom;
+								if(r.top    > view_rect.top   ) view_rect.top    = r.top;
+								if(r.right  < view_rect.right ) view_rect.right  = r.right;
+								if(r.left   > view_rect.left  ) view_rect.left   = r.left;
+								trim_check = true;
+							}
+						}
+					}
+
+					node = node.offsetParent;
+				}
+
+				if(trim_rect){
+					var natural_size　= ImageGetNaturalSize(element);
+					var boader_rect = ElementGetBoaderWidth(element);
+					var padding_rect = ElementGetPaddingWidth(element);
+
+					var px = bounding_rect.left + boader_rect.left + padding_rect.left;
+					var py = bounding_rect.top  + boader_rect.top  + padding_rect.top;
+					var w = (bounding_rect.right  - px) - boader_rect.right  + padding_rect.right;
+					var h = (bounding_rect.bottom - py) - boader_rect.bottom + padding_rect.bottom;
+					var sx = natural_size.width  / w;
+					var sy = natural_size.height / h;
+
+					trim_rect.left   = (view_rect.left   - px) * sx;
+					trim_rect.top    = (view_rect.top    - py) * sy;
+					trim_rect.right  = (view_rect.right  - px) * sx;
+					trim_rect.bottom = (view_rect.bottom - py) * sy;
+				}
+
 				// ポップアップイメージ
 				var image = ImageClone(element);
 				popup_image = new PopupImage(image);
@@ -5278,6 +5287,9 @@ function PageExpand(execute_type){
 				popup_image.setElementAnchor(element);
 				popup_image.setElementHitArea(element);
 				popup_image.setElementBeginArea(element);
+				if(trim_check){
+					popup_image.setTrimRect(trim_rect);
+				}
 				AnalyzeWorkSetPopupImage(work,popup_image);
 			}else{
 				// 解放
@@ -5428,7 +5440,6 @@ function PageExpand(execute_type){
 		// 受信コールバック
 		var response_listener = null;
 		response_listener = function(request, sender, sendResponse){
-			var param = JsonParse(request);
 			command_queue.push({
 				request:request,
 				sender:sender,
@@ -5448,7 +5459,7 @@ function PageExpand(execute_type){
 		// --------------------------------------------------------------------------------
 		// バックグラウンドへプロジェクト取得の要求
 		// --------------------------------------------------------------------------------
-		extension_message.sendRequest(JsonStringify({command:"getProject",url:document.URL}), function(response) {
+		extension_message.sendRequest({command:"getProject",url:document.URL}, function(response) {
 
 			// JSON 文字列からプロジェクトを作成
 			project = new Project();
@@ -5462,7 +5473,7 @@ function PageExpand(execute_type){
 
 				// 受信コールバック
 				response_listener = function(request, sender, sendResponse){
-					var param = JsonParse(request);
+					var param = request;
 
 					switch(param.command){
 					case "executePageExpand":

@@ -51,7 +51,7 @@ function PageExpand(execute_type){
 				page_expand_project = proj;
 				project = new Project();
 				getActiveURL(function(url){
-					project.importObject(ObjectCopy(page_expand_project.getProject(url)));
+					project.importObjectForBackground(page_expand_project.getProject(url));
 					func(e);
 				});
 			});
@@ -63,16 +63,16 @@ function PageExpand(execute_type){
 		function click(command){
 			switch(command){
 			case "configCurrentPage":
-				extension_message.sendRequest(JsonStringify({command: "configCurrentPage"}),function(response){});
+				extension_message.sendRequest({command: "configCurrentPage"},function(response){});
 				break;
 			case "configCurrentBbs":
-				extension_message.sendRequest(JsonStringify({command: "configCurrentBbs"}),function(response){});
+				extension_message.sendRequest({command: "configCurrentBbs"},function(response){});
 				break;
 			case "executePageExpand":
-				extension_message.sendRequest(JsonStringify({command: "executePageExpand"}),function(response){});
+				extension_message.sendRequest({command: "executePageExpand"},function(response){});
 				break;
 			case "executeDebug":
-				extension_message.sendRequest(JsonStringify({command: "executeDebug"}),function(response){});
+				extension_message.sendRequest({command: "executeDebug"},function(response){});
 				break;
 			}
 		}
@@ -81,7 +81,7 @@ function PageExpand(execute_type){
 		// アクティブページのURLを取得（内部用）
 		// --------------------------------------------------------------------------------
 		function getActiveURL(func){
-			extension_message.sendRequest(JsonStringify({command: "getActiveURL"}),function(response){
+			extension_message.sendRequest({command: "getActiveURL"},function(response){
 				func(response);
 			});
 		}

@@ -18365,6 +18365,43 @@
 			}
 			if(exit())	return proj;
 
+			// --------------------------------------------------------------------------------
+			// プロジェクト ver.12
+			// --------------------------------------------------------------------------------
+			if(proj.version < 12){
+				// バージョン値
+				proj.version = 12;
+
+				// --------------------------------------------------------------------------------
+				// URLマッピング設定
+				// --------------------------------------------------------------------------------
+				// 追加
+				update(proj.urlmap,"*",function(obj){
+					// マルチ化
+					if(obj.access_block.enable){
+						obj.access_block.id = [obj.access_block.id];
+					}else{
+						obj.access_block.id = [];
+					}
+					if(obj.replacement_to_link.enable){
+						obj.replacement_to_link.id = [obj.replacement_to_link.id];
+					}else{
+						obj.replacement_to_link.id = [];
+					}
+					if(obj.replacement_to_referer.enable){
+						obj.replacement_to_referer.id = [obj.replacement_to_referer.id];
+					}else{
+						obj.replacement_to_referer.id = [];
+					}
+					if(obj.replacement_to_useragent.enable){
+						obj.replacement_to_useragent.id = [obj.replacement_to_useragent.id];
+					}else{
+						obj.replacement_to_useragent.id = [];
+					}
+				});
+			}
+			if(exit())	return proj;
+
 			return proj;
 		}
 
@@ -18851,22 +18888,33 @@
 		// --------------------------------------------------------------------------------
 		// プロジェクトの定義からフィルタを取得（内部用）
 		// --------------------------------------------------------------------------------
-		function getFilterFromURL(define,url){
-				var filters = define.filter;
-				var i;
-				var filter_num = filters.length;
-				for(i=0;i<filter_num;i++){
-					var filter = filters[i];
-					var a = filter.filter;
-					var j;
-					var num = a.length;
-					for(j=0;j<num;j++){
-						if(StringUrlMatchRegExpList(url,a[j])){
+		function getFilterFromURL(defines,url){
+			var i;
+			var j;
+			var k;
+			var filters;
+			var filter;
+			var filter_num;
+			var url_filters;
+			var url_filter_num;
+			var define;
+			var define_num = defines.length;
+			for(i=0;i<define_num;i++){
+				define = defines[i];
+				filters = define.filter;
+				filter_num = filters.length;
+				for(j=0;j<filter_num;j++){
+					filter = filters[j];
+					url_filters = filter.filter;
+					url_filter_num = url_filters.length;
+					for(k=0;k<url_filter_num;k++){
+						if(StringUrlMatchRegExpList(url,url_filters[k])){
 							return filter;
 						}
 					}
 				}
-				return null;
+			}
+			return null;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -18891,13 +18939,21 @@
 
 					// アクセスブロック
 					if(access_block){
-						var filter = access_block.filter_regexp;
 						var i;
-						var num = filter.length;
-						for(i=0;i<num;i++){
-							if(StringUrlMatchRegExpList(url,filter[i])){
-								web_request.access_block = true;
-								break;
+						var j;
+						var filters;
+						var filter_num;
+						var define;
+						var define_num = access_block.length;
+						for(i=0;i<define_num;i++){
+							define = access_block[i];
+							filters = define.filter_regexp;
+							filter_num = filters.length;
+							for(j=0;j<filter_num;j++){
+								if(StringUrlMatchRegExpList(url,filters[j])){
+									web_request.access_block = true;
+									break;
+								}
 							}
 						}
 					}
@@ -19047,7 +19103,7 @@
 			}
 
 			// Opera 用アクセスブロック
-			_opera_access_block = ObjectCopy(_dictionary_define.access_block["opera_extension"]);
+			_opera_access_block = [ObjectCopy(_dictionary_define.access_block["opera_extension"])];
 
 			// 定義のアスタリスクワードを正規表現化
 			var url_filter_asset = [
@@ -19270,15 +19326,22 @@
 			var i;
 			var j;
 			var k;
-			var num;
-
-			// インスタンス化
+			var l;
+			var list_num;
 			var define;
 			var defines;
+			var define_num;
+			var filter;
+			var filters;
+			var filter_num;
+			var url_filters;
+			var url_filter_num;
+
+			// インスタンス化
 			defines = _proj.replacement_to_element;
 			if(defines){
-				num = defines.length;
-				for(i=0;i<num;i++){
+				define_num = defines.length;
+				for(i=0;i<define_num;i++){
 					define = defines[i];
 					define.script = StringEvalArrayFunction(define.script);
 				}
@@ -19286,8 +19349,8 @@
 
 			defines = _proj.replacement_to_text;
 			if(defines){
-				num = defines.length;
-				for(i=0;i<num;i++){
+				define_num = defines.length;
+				for(i=0;i<define_num;i++){
 					define = defines[i];
 					define.script = StringEvalArrayFunction(define.script);
 				}
@@ -19295,21 +19358,24 @@
 
 			defines = _proj.replacement_to_anchor;
 			if(defines){
-				num = defines.length;
-				for(i=0;i<num;i++){
+				define_num = defines.length;
+				for(i=0;i<define_num;i++){
 					define = defines[i];
 					define.script = StringEvalArrayFunction(define.script);
 				}
 			}
 
-			define = _proj.replacement_to_link;
-			if(define){
-				var filters = define.filter;
-				var i;
-				var num = filters.length;
-				for(i=0;i<num;i++){
-					var filter = filters[i];
-					filter.script = StringEvalArrayFunction(filter.script);
+			defines = _proj.replacement_to_link;
+			if(defines){
+				define_num = defines.length;
+				for(i=0;i<define_num;i++){
+					define = defines[i];
+					filters = define.filter;
+					filter_num = filters.length;
+					for(j=0;j<filter_num;j++){
+						filter = filters[j];
+						filter.script = StringEvalArrayFunction(filter.script);
+					}
 				}
 			}
 
@@ -19364,40 +19430,69 @@
 			}
 
 			// アスタリスクワードを正規表現化
-			var url_filter_asset = [
-				"access_block",
-				"expand_short_url"
+			var multi_url_filter_asset = [
+				"access_block"
 			];
-			var url_filter_asset_num = url_filter_asset.length;
-			for(j=0;j<url_filter_asset_num;j++){
-				var define = _proj[url_filter_asset[j]];
-				if(define){
-					var filter = define.filter;
-					var num = filter.length;
-					for(i=0;i<num;i++){
-						filter[i] = StringRegExpListFromAsteriskWord(filter[i]);
-					}
-				}
-			}
-
-			var filter_list_asset = [
-				"replacement_to_link"
-			];
-			var filter_list_asset_num = filter_list_asset.length;
-			for(k=0;k<filter_list_asset_num;k++){
-				var define = _proj[filter_list_asset[k]];
-				if(define){
-					var filter = define.filter;
-					var filter_num = filter.length;
-					for(i=0;i<filter_num;i++){
-						var url_filter = filter[i].filter;
-						var url_filter_num = url_filter.length;
-						for(j=0;j<url_filter_num;j++){
-							url_filter[j] = StringRegExpListFromAsteriskWord(url_filter[j]);
+			list_num = multi_url_filter_asset.length;
+			for(i=0;i<list_num;i++){
+				defines = _proj[multi_url_filter_asset[i]];
+				if(defines){
+					define_num = defines.length;
+					for(j=0;j<define_num;j++){
+						define = defines[j];
+						url_filters = define.filter;
+						url_filter_num = url_filters.length;
+						for(k=0;k<url_filter_num;k++){
+							url_filters[k] = StringRegExpListFromAsteriskWord(url_filters[k]);
 						}
 					}
 				}
 			}
+
+			var single_url_filter_asset = [
+				"expand_short_url"
+			];
+			list_num = single_url_filter_asset.length;
+			for(i=0;i<list_num;i++){
+				define = _proj[single_url_filter_asset[i]];
+				if(define){
+					url_filters = define.filter;
+					url_filter_num = url_filters.length;
+					for(j=0;j<url_filter_num;j++){
+						url_filters[j] = StringRegExpListFromAsteriskWord(url_filters[j]);
+					}
+				}
+			}
+
+			var multi_filter_list_asset = [
+				"replacement_to_link"
+			];
+			list_num = multi_filter_list_asset.length;
+			for(i=0;i<list_num;i++){
+				defines = _proj[multi_filter_list_asset[i]];
+				if(defines){
+					define_num = defines.length;
+					for(j=0;j<define_num;j++){
+						define = defines[j];
+						filters = define.filter;
+						filter_num = filters.length;
+						for(k=0;k<filter_num;k++){
+							url_filters = filters[k].filter;
+							url_filter_num = url_filters.length;
+							for(l=0;l<url_filter_num;l++){
+								url_filters[l] = StringRegExpListFromAsteriskWord(url_filters[l]);
+							}
+						}
+					}
+				}
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// オブジェクトからインポート(バックグラウンド用)
+		// --------------------------------------------------------------------------------
+		_container.importObjectForBackground = function(obj){
+			_proj = obj;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -19514,12 +19609,21 @@
 				return false;
 			}
 
-			var a = _proj.access_block.filter;
 			var i;
-			var num = a.length;
-			for(i=0;i<num;i++){
-				if(StringUrlMatchRegExpList(url,a[i])){
-					return true;
+			var j;
+			var filters;
+			var filter_num;
+			var define;
+			var defines = _proj.access_block;
+			var define_num = defines.length;
+			for(i=0;i<define_num;i++){
+				define = defines[i];
+				filters = define.filter;
+				filter_num = filters.length;
+				for(j=0;j<filter_num;j++){
+					if(StringUrlMatchRegExpList(url,filters[j])){
+						return true;
+					}
 				}
 			}
 			return false;
@@ -19656,22 +19760,27 @@
 		// --------------------------------------------------------------------------------
 		// プロジェクトの定義からフィルタを取得
 		// --------------------------------------------------------------------------------
-		function ProjectDefineGetFilterFromURL(define,element){
+		function ProjectDefinesGetFilterFromURL(defines,element){
+			var i;
+			var define_num = defines.length;
+			for(i=0;i<define_num;i++){
+				var define = defines[i]
 				var filters = define.filter;
-				var i;
+				var j;
 				var filter_num = filters.length;
-				for(i=0;i<filter_num;i++){
-					var filter = filters[i];
+				for(j=0;j<filter_num;j++){
+					var filter = filters[j];
 					var a = filter.filter;
-					var j;
+					var k;
 					var num = a.length;
-					for(j=0;j<num;j++){
-						if(StringUrlMatchRegExpList(element.href,a[j])){
+					for(k=0;k<num;k++){
+						if(StringUrlMatchRegExpList(element.href,a[k])){
 							return filter;
 						}
 					}
 				}
-				return null;
+			}
+			return null;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -19784,7 +19893,7 @@
 			// 初期化
 			// --------------------------------------------------------------------------------
 			(function(){
-				_filter = ProjectDefineGetFilterFromURL(_proj.replacement_to_link,element);
+				_filter = ProjectDefinesGetFilterFromURL(_proj.replacement_to_link,element);
 			})();
 
 			return _link_container;
@@ -21255,6 +21364,31 @@
 		};
 
 		// --------------------------------------------------------------------------------
+		// トリミング範囲をセット
+		// --------------------------------------------------------------------------------
+		_container.setTrimRect = function(rect){
+			// クリックイベントを外す
+			removeEventClick();
+
+			var div = DocumentCreateElement("div");
+			// スタイルをセット
+			ElementSetStyle(div,
+				"overflow:hidden;"
+			);
+			// スタイルを追加
+			ElementAddStyle(_element_current,project.getStyleSheetExpandImagePopup());
+			div.appendChild(_image);
+			_element_current = div;
+
+			// クリックイベント
+			addEventClick();
+
+			_trim_rect = ObjectCopy(rect);
+			_trim_rect.width  = _trim_rect.right - _trim_rect.left;
+			_trim_rect.height = _trim_rect.bottom - _trim_rect.top;
+		};
+
+		// --------------------------------------------------------------------------------
 		// ポップアップ
 		// --------------------------------------------------------------------------------
 		_container.popup = function(element){
@@ -21291,10 +21425,10 @@
 		function addEventClick(){
 			removeEventClick();
 
-			if(_image.addEventListener){
-				_image.addEventListener("click",_container.release,false);
-			}else if(_image.attachEvent){
-				_image.attachEvent("onclick",_container.release);
+			if(_element_current.addEventListener){
+				_element_current.addEventListener("click",_container.release,false);
+			}else if(_element_current.attachEvent){
+				_element_current.attachEvent("onclick",_container.release);
 			}
 		}
 
@@ -21302,10 +21436,10 @@
 		// クリックイベントを外す（内部用）
 		// --------------------------------------------------------------------------------
 		function removeEventClick(){
-			if(_image.removeEventListener){
-				_image.removeEventListener("click",_container.release,false);
-			}else if(_image.detachEvent){
-				_image.detachEvent("onclick",_container.release);
+			if(_element_current.removeEventListener){
+				_element_current.removeEventListener("click",_container.release,false);
+			}else if(_element_current.detachEvent){
+				_element_current.detachEvent("onclick",_container.release);
 			}
 		}
 
@@ -21611,74 +21745,145 @@
 			);
 
 			// スタイルを追加
-			ElementAddStyle(_image,project.getStyleSheetExpandImagePopup());
+			ElementAddStyle(_element_current,project.getStyleSheetExpandImagePopup());
 
 			// 最前面
-			_image.style.zIndex = 0x7FFFFFFF - 1;
-			_image.style.position = project.getStylePositionPopupImage();
+			_element_current.style.zIndex = 0x7FFFFFFF - 1;
+			_element_current.style.position = project.getStylePositionPopupImage();
 
-			_image.style.left   = "0px";
-			_image.style.top    = "0px";
-			_image.style.width  = "0px";
-			_image.style.height = "0px";
+			_element_current.style.left   = "0px";
+			_element_current.style.top    = "0px";
+			_element_current.style.width  = "0px";
+			_element_current.style.height = "0px";
 
-			_image.style.visibility = "hidden";
+			if(_trim_rect){
+				_image.style.position = "absolute";
+			}
+
+			_element_current.style.visibility = "hidden";
+
+			var client_size = DocumentGetClientSize(document);
+			var client_rect = {
+				left  :1,
+				top   :1,
+				right :client_size.width  - 1,
+				bottom:client_size.height - 1
+			};
 
 			// スタイルのサイズを取得
-			_element_parent.appendChild(_image);
-			var bounding_size = ElementGetBoundingClientRect(_image);
+			_element_parent.appendChild(_element_current);
+			var bounding_size = ElementGetBoundingClientRect(_element_current);
 			work.style_w = bounding_size.right  - bounding_size.left;
 			work.style_h = bounding_size.bottom - bounding_size.top;
 
-			// デフォルトサイズをセット
+			// ネイティブサイズ
 			var natural_size = ImageGetNaturalSize(_image);
-			_image.style.width  = natural_size.width  + "px";
-			_image.style.height = natural_size.height + "px";
-
-			// サイズをセット
-			var scale = project.getScalePercentPopupImage() / 100;
-			_image.style.width  = (natural_size.width * scale) + "px";
-			_image.style.height = (natural_size.height * scale) + "px";
-
-			// 終了サイズ
-			var end_w = _image.width;
-			var end_h = _image.height;
-
-			// バウンディングサイズ
-			bounding_size = ElementGetBoundingClientRect(_image);
-
-			// 幅と高さがクライアント領域を超える場合補正
-			var client_size = DocumentGetClientSize(document);
-			client_size.width -= 2;
-			client_size.height -= 2;
-			if(client_size.width < end_w + work.style_w){
-				var w = (client_size.width - work.style_w);
-				end_h *= w / end_w;
-				end_w = w;
-			}
-			if(client_size.height < end_h + work.style_h){
-				var h = (client_size.height - work.style_h);
-				end_w *= h / end_h;
-				end_h = h;
+			if(_trim_rect){
+				natural_size.width  = _trim_rect.width;
+				natural_size.height = _trim_rect.height;
 			}
 
 			// 開始矩形
 			var begin_rect = new Object();
 			if(_element_begin_area){
-				begin_rect = ElementGetBoundingClientRect(_element_begin_area);
-				begin_rect.right  -= work.style_w;
-				begin_rect.bottom -= work.style_h;
+				if(_trim_rect){
+					begin_rect = ElementGetViewClientRect(_element_begin_area);
+				}else{
+					begin_rect = ElementGetContentClientRect(_element_begin_area);
+				}
 			}else{
 				// マウス座標をセット
 				var w = work.style_w * 0.5;
 				var h = work.style_h * 0.5;
 				var mouse_pos = input_mouse.getPositionClient();
 				begin_rect.left   = mouse_pos.x - w;
-				begin_rect.right  = mouse_pos.x - w;
+				begin_rect.right  = mouse_pos.x + w;
 				begin_rect.top    = mouse_pos.y - h;
-				begin_rect.bottom = mouse_pos.y - h;
+				begin_rect.bottom = mouse_pos.y + h;
 			}
-			work.begin_rect = begin_rect;
+
+			// 終了サイズ
+			var scale = project.getScalePercentPopupImage() / 100;
+			var end_w = natural_size.width  * scale;
+			var end_h = natural_size.height * scale;
+			_element_current.style.width  = (end_w) + "px";
+			_element_current.style.height = (end_h) + "px";
+
+			var statusbar_h = 0;
+
+			// クライアントサイズを修正
+			switch(project.getOriginPopupImage()){
+			case "adsorb_element":
+				client_rect.bottom -= statusbar_h;
+				var rect = {
+					left  :begin_rect.left   - 1,
+					right :begin_rect.right  + 1,
+					top   :begin_rect.top    - 1,
+					bottom:begin_rect.bottom + 1
+				};
+				var l = rect.left - client_rect.left;
+				var r = client_rect.right - rect.right;
+				var t = rect.top - client_rect.top;
+				var b = client_rect.bottom - rect.bottom;
+				var w0;
+				var h0;
+				if(l < r)	w0 = r;
+				else		w0 = l;
+				if(t < b)	h0 = b;
+				else		h0 = t;
+				var w1 = natural_size.width * h0 / natural_size.height;
+				var h1 = natural_size.height * w0 / natural_size.width;
+				if(w1 > client_size.width)	w1 = client_size.width;
+				if(h1 > client_size.height)	h1 = client_size.height;
+				if(w0 * h1 > h0 * w1){
+					if(l > r)	client_rect.right = rect.left;
+					else		client_rect.left = rect.right;
+				}else{
+					if(t > b)	client_rect.bottom = rect.top;
+					else		client_rect.top = rect.bottom;
+				}
+				break;
+			case "adsorb_mouse":
+				client_rect.bottom -= statusbar_h;
+				var distance = 10;
+				var mouse_pos = input_mouse.getPositionClient();
+				var l = (mouse_pos.x - distance) - client_rect.left;
+				var r = client_rect.right - (mouse_pos.x + distance);
+				var t = (mouse_pos.y - distance) - client_rect.top;
+				var b = client_rect.bottom - (mouse_pos.y + distance);
+				var w0;
+				var h0;
+				if(l < r)	w0 = r;
+				else		w0 = l;
+				if(t < b)	h0 = b;
+				else		h0 = t;
+				var w1 = natural_size.width * h0 / natural_size.height;
+				var h1 = natural_size.height * w0 / natural_size.width;
+				if(w1 > client_size.width)	w1 = client_size.width;
+				if(h1 > client_size.height)	h1 = client_size.height;
+				if(w0 * h1 > h0 * w1){
+					if(l > r)	client_rect.right = (mouse_pos.x - distance);
+					else		client_rect.left = (mouse_pos.x + distance);
+				}else{
+					if(t > b)	client_rect.bottom = (mouse_pos.y - distance);
+					else		client_rect.top = (mouse_pos.y + distance);
+				}
+				break;
+			}
+
+			// 幅と高さがクライアント領域を超える場合補正
+			client_rect.width  = client_rect.right - client_rect.left;
+			client_rect.height = client_rect.bottom - client_rect.top;
+			if(client_rect.width < end_w + work.style_w){
+				var w = (client_rect.width - work.style_w);
+				end_h *= w / end_w;
+				end_w = w;
+			}
+			if(client_rect.height < end_h + work.style_h){
+				var h = (client_rect.height - work.style_h);
+				end_w *= h / end_h;
+				end_h = h;
+			}
 
 			// 終了座標
 			var end_x;
@@ -21688,8 +21893,16 @@
 			case "center":
 				var x = (begin_rect.right + begin_rect.left) * 0.5;
 				var y = (begin_rect.bottom + begin_rect.top) * 0.5;
-				end_x = x - ((end_w) * 0.5);
-				end_y = y - ((end_h) * 0.5);
+				end_x = x - ((end_w + work.style_w) * 0.5);
+				end_y = y - ((end_h + work.style_h) * 0.5);
+				if(begin_rect.right - begin_rect.left < work.style_w){
+					begin_rect.left = x - work.style_w / 2;
+					begin_rect.right = begin_rect.left + work.style_w;
+				}
+				if(begin_rect.bottom - begin_rect.top < work.style_h){
+					begin_rect.top = y - work.style_h / 2;
+					begin_rect.bottom = begin_rect.top  + work.style_h;
+				}
 				break;
 			case "upper_left":
 				end_x = begin_rect.left;
@@ -21700,15 +21913,29 @@
 				end_y = begin_rect.top;
 				break;
 			case "client_center":
-				end_x = (client_size.width  * 0.5) - ((end_w + work.style_w) * 0.5);
-				end_y = (client_size.height * 0.5) - ((end_h + work.style_h) * 0.5);
+				end_x = (client_rect.width  * 0.5) - ((end_w + work.style_w) * 0.5);
+				end_y = (client_rect.height * 0.5) - ((end_h + work.style_h) * 0.5);
+				var x = (begin_rect.right + begin_rect.left) * 0.5;
+				var y = (begin_rect.bottom + begin_rect.top) * 0.5;
+				if(begin_rect.right - begin_rect.left < work.style_w){
+					begin_rect.left = x - work.style_w / 2;
+					begin_rect.right = begin_rect.left + work.style_w;
+				}
+				if(begin_rect.bottom - begin_rect.top < work.style_h){
+					begin_rect.top = y - work.style_h / 2;
+					begin_rect.bottom = begin_rect.top  + work.style_h;
+				}
 				break;
 			}
 
-			if(end_x < 1)	end_x = 1;
-			if(end_y < 1)	end_y = 1;
-			if(end_x + end_w + work.style_w > client_size.width  + 1)	end_x = client_size.width  + 1 - end_w - work.style_w;
-			if(end_y + end_h + work.style_h > client_size.height + 1)	end_y = client_size.height + 1 - end_h - work.style_h;
+			begin_rect.right  -= work.style_w;
+			begin_rect.bottom -= work.style_h;
+			work.begin_rect = begin_rect;
+
+			if(end_x < client_rect.left)	end_x = client_rect.left;
+			if(end_y < client_rect.top )	end_y = client_rect.top ;
+			if(end_x + end_w + work.style_w > client_rect.right )	end_x = client_rect.right  - end_w - work.style_w;
+			if(end_y + end_h + work.style_h > client_rect.bottom)	end_y = client_rect.bottom - end_h - work.style_h;
 
 			var end_rect = new Object();
 			end_rect.left   = end_x;
@@ -21760,9 +21987,9 @@
 			}
 
 			// マウスイベント有効化
-			_image.style.pointerEvents = "auto";
+			_element_current.style.pointerEvents = "auto";
 
-			_image.style.visibility = "visible";
+			_element_current.style.visibility = "visible";
 
 			if(project.getEnableAnimationPopupImage()){
 				task.setExecuteFunc(PopupImageFadeIn);
@@ -21850,7 +22077,7 @@
 				// アニメーション
 				if(project.getEnableAnimationPopupImage()){
 					// マウスイベント無効化
-					_image.style.pointerEvents = "none";
+					_element_current.style.pointerEvents = "none";
 					task.setExecuteFunc(PopupImageFadeOut);
 				}else{
 					task.setExecuteFunc(PopupImageClose);
@@ -21907,7 +22134,7 @@
 				_event_handler_revise_scroll = null;
 			}
 
-			DomNodeRemove(_image);
+			DomNodeRemove(_element_current);
 			_task = null;
 		}
 
@@ -21924,11 +22151,31 @@
 			var r = (end_rect.right  - begin_rect.right ) * d + begin_rect.right;
 			var t = (end_rect.top    - begin_rect.top   ) * d + begin_rect.top;
 			var b = (end_rect.bottom - begin_rect.bottom) * d + begin_rect.bottom;
+			var w = r - l;
+			var h = b - t;
 
-			_image.style.left = (l) + "px";
-			_image.style.top  = (t) + "px";
-			_image.style.width  = (r - l) + "px";
-			_image.style.height = (b - t) + "px";
+			var style = _element_current.style;
+			style.left = (l) + "px";
+			style.top  = (t) + "px";
+			style.width  = (w) + "px";
+			style.height = (h) + "px";
+
+			if(_trim_rect){
+				var style = _image.style;
+				var natural_size = ImageGetNaturalSize(_image);
+				var padding_rect = ElementGetPaddingWidth(_element_current);
+				var sx = w / _trim_rect.width;
+				var sy = h / _trim_rect.height;
+				l = _trim_rect.left * sx;
+				t = _trim_rect.top  * sy;
+				r = l + w;
+				b = t + h;
+				style.left = (-l + padding_rect.left) + "px";
+				style.top  = (-t + padding_rect.top ) + "px";
+				style.width  = (natural_size.width  * sx) + "px";
+				style.height = (natural_size.height * sy) + "px";
+				style.clip = "rect(" + (t) + "px " + (r) + "px " + (b) + "px " + (l) + "px)";
+			}
 		}
 
 		// --------------------------------------------------------------------------------
@@ -21936,7 +22183,7 @@
 		// --------------------------------------------------------------------------------
 		function PopupImageSetAlpha(task,v){
 			var work = task.getUserWork();
-			_image.style.opacity = v;
+			_element_current.style.opacity = v;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -21946,9 +22193,9 @@
 		var _element_anchor;
 		var _element_hit_area;
 		var _element_begin_area;
+		var _element_current;
 		var _task;
-		var _begin_rect;
-		var _end_rect;
+		var _trim_rect;
 		var _image;
 		var _analyze_work;
 		var _observer_remove;
@@ -21962,6 +22209,7 @@
 			_element_begin_area = null;
 			_task = null;
 			_image = image;
+			_element_current = _image;
 			image = null;
 
 			// 解析ワーク作成
@@ -22644,6 +22892,12 @@
 			},
 			menu_setting_expand_image_popup_origin_type_combo_box_item_client_center: {
 				message: "クライアント中央"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_adsorb_element: {
+				message: "エレメントに吸着"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_adsorb_mouse: {
+				message: "マウスカーソルに吸着"
 			},
 			menu_setting_expand_image_popup_time: {
 				message: "ポップアップ時間"
@@ -23846,6 +24100,12 @@
 			},
 			menu_setting_expand_image_popup_origin_type_combo_box_item_client_center: {
 				message: "client center"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_adsorb_element: {
+				message: "adsorb element"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_adsorb_mouse: {
+				message: "adsorb mouse"
 			},
 			menu_setting_expand_image_popup_time: {
 				message: "Popup Time"
@@ -25086,9 +25346,14 @@
 				loadError();
 				return;
 			}
-			
-			// Imageによる画像の読み込み
+
+			// Image による画像の読み込み
 			function tryLoadImage(){
+				// アンセキュアチェック
+				if(!project.checkAllowUnsecure(_request.url)){
+					loadError();
+					return;
+				}
 
 				// 開始関数を変更
 				_queue_element.onstart = function(){
@@ -25129,6 +25394,48 @@
 				tryAttachElement(true);
 			}
 
+			// data URL scheme による画像の読み込み
+			function tryLoadDataUriScheme(data){
+
+				// 開始関数を変更
+				_queue_element.onstart = function(){
+
+					var image = document.createElement("img");
+					function removeEvent(){
+						image.onload = null;
+						image.onerror = null;
+					}
+					image.onload = function(){
+						removeEvent();
+						// ロード完了を通知
+						_queue_element.complete();
+						// イメージを返す
+						loadSuccess(image);
+					};
+					image.onerror = function(){
+						removeEvent();
+						// ロード完了を通知
+						_queue_element.complete();
+						// キューに再登録
+						if(!tryAttachElement(false)){
+							// Image による画像の読み込み
+							tryLoadImage();
+							return;
+						}
+					};
+
+					// 読み込み開始
+					image.src = data;
+				};
+
+				// 通常リトライ回数
+				_count = 1;
+				// シングルリトライ回数
+				_single_count = 0;
+				// キューに登録
+				tryAttachElement(true);
+			}
+
 			// TrixieUserScript の場合処理しない
 			if(ExecuteAsTrixieUserScript()){
 				tryLoadImage();
@@ -25143,34 +25450,70 @@
 			_queue_element.onstart = function(){
 
 				// 読み込みを開始する
-				var result = loadXMLHttpRequest(function(result,xhr){
+				var result;
+				if(project.getSecureCurrent() && (_request.url.indexOf("http://") == 0)){
+					var result = loadDataUriScheme(function(result,xhr){
 
-					// ロード完了を通知
-					_queue_element.complete();
+						// ロード完了を通知
+						_queue_element.complete();
 
-					// ロード成功
-					if(result){
-
-						// Imageによる画像の読み込み
-						tryLoadImage();
-
-					// 失敗
-					}else{
-						if(xhr.status == 0){
-							// Imageによる画像の読み込み
-							tryLoadImage();
-						}else if(xhr.status == 401){
-							// 認証エラー
-							loadError();
-						}else{
-							// キューに再登録
-							if(!tryAttachElement(false)){
-								// Imageによる画像の読み込み
+						// ロード成功
+						if(result){
+							if(xhr.dataUriScheme){
+								// data URL scheme による画像の読み込み
+								tryLoadDataUriScheme(xhr.dataUriScheme);
+							}else{
+								// Image による画像の読み込み
 								tryLoadImage();
 							}
+
+						// 失敗
+						}else{
+							if(xhr.status == 0){
+								// Image による画像の読み込み
+								tryLoadImage();
+							}else if(xhr.status == 401){
+								// 認証エラー
+								loadError();
+							}else{
+								// キューに再登録
+								if(!tryAttachElement(false)){
+									// Image による画像の読み込み
+									tryLoadImage();
+								}
+							}
 						}
-					}
-				});
+					});
+				}else{
+					result = loadXMLHttpRequest(function(result,xhr){
+
+						// ロード完了を通知
+						_queue_element.complete();
+
+						// ロード成功
+						if(result){
+
+							// Imageによる画像の読み込み
+							tryLoadImage();
+
+						// 失敗
+						}else{
+							if(xhr.status == 0){
+								// Imageによる画像の読み込み
+								tryLoadImage();
+							}else if(xhr.status == 401){
+								// 認証エラー
+								loadError();
+							}else{
+								// キューに再登録
+								if(!tryAttachElement(false)){
+									// Imageによる画像の読み込み
+									tryLoadImage();
+								}
+							}
+						}
+					});
+				}
 
 				// ロードエラー
 				if(!result){
@@ -25822,11 +26165,13 @@
 		// --------------------------------------------------------------------------------
 		function tryAttachElement(first){
 			if(_count > 0){
+				_single_type = false;
 				_count -= 1;
 				if(first)	_queue_element.attachFirst();
 				else		_queue_element.attachLast();
 				return true;
 			}else if(_single_count > 0){
+				_single_type = true;
 				_single_count -= 1;
 				_queue_element.attachSingle();
 				return true;
@@ -25844,6 +26189,102 @@
 				return false;
 			}
 
+			// プロトコルチェック
+			if(!_request.url.match(new RegExp("^(http|https|ftp)://(.*)$","i"))){
+				return false;
+			}
+
+			// バックグラウンドへ通信要求
+			if(1){
+				extension_message.sendRequest({command:"loadXMLHttpRequest",request:_request,single:_single_type}, function(receive) {
+					var xhr = receive;
+					switch(xhr.readyState){
+					case 4:
+						xhr.getAllResponseHeaders = function(){
+							return xhr.responseHeaders;
+						};
+
+						var response_header = ResponseHeadersParseObject(xhr.responseHeaders);
+						xhr.getResponseHeader = function(label){
+							return response_header[label];
+						};
+
+						if((200 <= xhr.status && xhr.status < 300) || xhr.status == 304){
+							// 成功を返す
+							response(true,xhr);
+						}else{
+							// 失敗を返す
+							response(false,xhr);
+						}
+						break;
+					}
+				});
+
+				return true;
+			}
+
+			// XMLHttpRequest 作成
+			var xhr = null;
+
+			// 未対応
+			if(!xhr){
+				return false;
+			}
+
+			var sended = false;
+
+			// ステート変更時に実行されるイベント
+			xhr.onreadystatechange = function(r){
+				if(!sended) return;
+				switch(xhr.readyState){
+				case 4:
+					if((200 <= xhr.status && xhr.status < 300) || xhr.status == 304){
+						// 成功を返す
+						response(true,xhr);
+					}else{
+						// 失敗を返す
+						response(false,xhr);
+					}
+					break;
+				}
+			};
+
+			// 読み込み開始
+			try{
+				xhr.open(_request.method,_request.url,true);
+			}catch(e){
+				return false;
+			}
+
+			var headers = _request.headers;
+			for(var name in headers){
+				xhr.setRequestHeader(name,headers[name]);
+			}
+
+			if(xhr.overrideMimeType && _request.override_mime_type){
+				xhr.overrideMimeType(_request.override_mime_type);
+			}
+
+			try{
+				xhr.send(_request.data);
+				sended = true;
+			}catch(e){
+				return false;
+			}
+
+			return true;
+
+		}
+
+		// --------------------------------------------------------------------------------
+		// data URI scheme 読み込み（内部用）
+		// --------------------------------------------------------------------------------
+		function loadDataUriScheme(response){
+
+			// アドレスチェック
+			if(!(_request.url)){
+				return false;
+			}
 
 			// プロトコルチェック
 			if(!_request.url.match(new RegExp("^(http|https|ftp)://(.*)$","i"))){
@@ -25852,8 +26293,8 @@
 
 			// バックグラウンドへ通信要求
 			if(1){
-				extension_message.sendRequest(JsonStringify({command:"loadXMLHttpRequest",request:_request}), function(receive) {
-					var xhr = JsonParse(receive);
+				extension_message.sendRequest({command:"loadDataUriScheme",request:_request,single:_single_type}, function(receive) {
+					var xhr = receive;
 					switch(xhr.readyState){
 					case 4:
 						xhr.getAllResponseHeaders = function(){
@@ -25888,21 +26329,40 @@
 			}
 
 			var sended = false;
+			var response_type = "";
 
 			// ステート変更時に実行されるイベント
 			xhr.onreadystatechange = function(r){
+				if(!sended) return;
 				switch(xhr.readyState){
 				case 4:
 					if((200 <= xhr.status && xhr.status < 300) || xhr.status == 304){
-						// 成功を返す
-						response(true,xhr);
-					}else{
-						if(sended){
-							// 失敗を返す
-							response(false,xhr);
+						switch(response_type){
+						case "arraybuffer":
+							Base64FromArrayBufferAsync(xhr.response,1*1024,function(base64){
+								// data URI scheme 変換
+								xhr.dataUriScheme = "data:" + xhr.getResponseHeader("Content-Type") + ";base64," + base64;
+								// 成功を返す
+								response(true,xhr);
+							});
+							break;
+						case "User-Defined":
+							Base64FromUserDefinedAsync(xhr.responseText,1*1024,function(base64){
+								// data URI scheme 変換
+								xhr.dataUriScheme = "data:" + xhr.getResponseHeader("Content-Type") + ";base64," + base64;
+								// 成功を返す
+								response(true,xhr);
+							});
+							break;
+						default:
+							// 成功を返す
+							response(true,xhr);
+							break;
 						}
+					}else{
+						// 失敗を返す
+						response(false,xhr);
 					}
-					break;
 				}
 			};
 
@@ -25917,11 +26377,13 @@
 			for(var name in headers){
 				xhr.setRequestHeader(name,headers[name]);
 			}
-
-			if(xhr.overrideMimeType && _request.override_mime_type){
-				xhr.overrideMimeType(_request.override_mime_type);
+			if(xhr.responseType !== undefined){
+				xhr.responseType = "arraybuffer";
+				response_type = "arraybuffer";
+			}else if(xhr.overrideMimeType){
+				xhr.overrideMimeType("text/plain; charset=x-user-defined");
+				response_type = "User-Defined";
 			}
-
 			try{
 				xhr.send(_request.data);
 				sended = true;
@@ -25957,6 +26419,7 @@
 		var _queue_element;
 		var _count;
 		var _single_count;
+		var _single_type;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
@@ -25980,6 +26443,7 @@
 	// タスクコンテナ
 	// --------------------------------------------------------------------------------
 	function TaskContainer(){
+
 		var _container = new Object();
 
 		// --------------------------------------------------------------------------------
@@ -25992,10 +26456,10 @@
 			// タスクを実行
 			// --------------------------------------------------------------------------------
 			_task.execute = function(level){
-				if(!_alive)	return;
-				if(_execute_func){
-					if(level & _level){
-						_execute_func(_task);
+				if(!_task._alive)	return;
+				if(_task._execute_func){
+					if(level & _task._level){
+						_task._execute_func(_task);
 					}
 				}
 			};
@@ -26004,23 +26468,8 @@
 			// タスクを破棄
 			// --------------------------------------------------------------------------------
 			_task.release = function(){
-				if(_alive){
-					_alive = false;
-
-					_task.releaseChild();
-					_task.removeParent();
-
-					if(_destructor_func){
-						_destructor_func(_task);
-					}
-
-					_user_work = null;
-					_task_count -= 1;
-
-					if(_task_count == 1){
-						if(_end_func)	_end_func();
-					}
-				}
+				_task.releaseChild();
+				TaskRelease(_task);
 			};
 
 			// --------------------------------------------------------------------------------
@@ -26034,12 +26483,12 @@
 					a.push(task);
 					task = task._next;
 				}
-
 				var i;
 				var num = a.length;
 				for(i=0;i<num;i++){
 					task = a[i];
-					task.release();
+					task.releaseChild();
+					TaskRelease(task);
 				}
 			};
 
@@ -26047,7 +26496,7 @@
 			// 子タスクとして登録
 			// --------------------------------------------------------------------------------
 			_task.attachChild = function(task){
-				_task.removeParent();
+				task.removeParent();
 				var prev = _task._child;
 				var next = prev._next;
 				prev._next = task;
@@ -26055,19 +26504,23 @@
 				task._prev = prev;
 				task._next = next;
 				task._parent = _task;
+				_task._child_count += 1;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 自身の親子関係を外す
 			// --------------------------------------------------------------------------------
 			_task.removeParent = function(){
-				var prev = _task._prev;
-				var next = _task._next;
-				prev._next = next;
-				next._prev = prev;
-				_task._prev = _task;
-				_task._next = _task;
-				_task._parent = null;
+				if(_task._parent){
+					_task._parent._child_count -= 1;
+					var prev = _task._prev;
+					var next = _task._next;
+					prev._next = next;
+					next._prev = prev;
+					_task._prev = _task;
+					_task._next = _task;
+					_task._parent = null;
+				}
 			};
 
 			// --------------------------------------------------------------------------------
@@ -26095,8 +26548,9 @@
 			// --------------------------------------------------------------------------------
 			_task.getChild = function(func){
 				var a = new Array();
-				var task = _task._child._next;
-				while(task != _task){
+				var child = _task._child;
+				var task = child._next;
+				while(task != child){
 					a.push(task);
 					task = task._next;
 				}
@@ -26113,35 +26567,35 @@
 			// 親を取得
 			// --------------------------------------------------------------------------------
 			_task.getParent = function(){
-				return _parent;
+				return _task._parent;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 実行関数をゲット
 			// --------------------------------------------------------------------------------
 			_task.getExecuteFunc = function(){
-				return _execute_func;
+				return _task._execute_func;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 実行関数をセット
 			// --------------------------------------------------------------------------------
 			_task.setExecuteFunc = function(func){
-				_execute_func = func;
+				_task._execute_func = func;
 			};
 
 			// --------------------------------------------------------------------------------
 			// デストラクタ関数をゲット
 			// --------------------------------------------------------------------------------
 			_task.getDestructorFunc = function(){
-				return _destructor_func;
+				return _task._destructor_func;
 			};
 
 			// --------------------------------------------------------------------------------
 			// デストラクタ関数をゲット
 			// --------------------------------------------------------------------------------
 			_task.setDestructorFunc = function(func){
-				_destructor_func = func;
+				_task._destructor_func = func;
 			};
 
 			// --------------------------------------------------------------------------------
@@ -26173,62 +26627,51 @@
 			// --------------------------------------------------------------------------------
 			// 自身の直前の優先度に位置するタスクを取得
 			// --------------------------------------------------------------------------------
-			_container.getPrioPrev = function(){
-				return _container._prio_prev;
+			_task.getPrioPrev = function(){
+				return _task._prio_prev;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 自身の直後の優先度に位置するタスクを取得
 			// --------------------------------------------------------------------------------
-			_container.getPrioNext = function(){
-				return _container._prio_next;
+			_task.getPrioNext = function(){
+				return _task._prio_next;
 			};
 
 			// --------------------------------------------------------------------------------
-			// 自身の直後の優先度に位置するタスクを取得
+			// 子の総数を取得
 			// --------------------------------------------------------------------------------
-			_container.getCountChild = function(){
-				return _child_count;
+			_task.getCountChild = function(){
+				return _task._child_count;
 			};
 
 			// --------------------------------------------------------------------------------
 			// タスクレベルをゲット
 			// --------------------------------------------------------------------------------
 			_task.getLevel = function(){
-				return _level;
+				return _task._level;
 			};
 
 			// --------------------------------------------------------------------------------
 			// タスクレベルをセット
 			// --------------------------------------------------------------------------------
 			_task.setLevel = function(level){
-				_level = level;
+				_task._level = level;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 生存状態をゲット
 			// --------------------------------------------------------------------------------
 			_task.getAlive = function(){
-				return _alive;
+				return _task._alive;
 			};
 
 			// --------------------------------------------------------------------------------
 			// ユーザーワークを取得
 			// --------------------------------------------------------------------------------
 			_task.getUserWork = function(){
-				return _user_work;
+				return _task._user_work;
 			};
-
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _parent;
-			var _execute_func = null;
-			var _destructor_func = null;
-			var _level;
-			var _alive;
-			var _user_work = new Object();
-			var _child_count = 0;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -26237,12 +26680,22 @@
 			_task._prio_next = _task;
 			_task._prev = _task;
 			_task._next = _task;
+			_task._parent = null;
+			_task._child_count = 0;
 			_task._child = new Object();
 			_task._child._prev = _task._child;
 			_task._child._next = _task._child;
-			_alive = true;
-			_level = 0xffffffff;
-			_parent = parent;
+			_task._alive = true;
+			_task._level = 0xffffffff;
+			_task._user_work = new Object();
+			_task._execute_func = null;
+			_task._destructor_func = null;
+			_container.attachPrioLast(_task);
+
+			if(parent){
+				parent.attachChild(_task);
+			}
+
 			_container.attachPrioLast(_task);
 
 			if(_task_count == 1){
@@ -26297,7 +26750,7 @@
 			var num = a.length;
 			for(i=0;i<num;i++){
 				task = a[i];
-				task.release();
+				TaskRelease(task);
 				prev = task._prio_prev;
 				next = task._prio_next;
 				prev._prio_next = next;
@@ -26353,6 +26806,28 @@
 		}
 
 		// --------------------------------------------------------------------------------
+		// 開放（内部用）
+		// --------------------------------------------------------------------------------
+		function TaskRelease(task){
+			if(task._alive){
+				task._alive = false;
+
+				if(task._destructor_func){
+					task._destructor_func(task);
+				}
+
+				task.removeParent();
+
+				task._user_work = null;
+				_task_count -= 1;
+
+				if(_task_count == 1){
+					if(_end_func)	_end_func();
+				}
+			}
+		}
+
+		// --------------------------------------------------------------------------------
 		// タスク総数を取得
 		// --------------------------------------------------------------------------------
 		_container.getCountTask = function(){
@@ -26401,7 +26876,7 @@
 		// --------------------------------------------------------------------------------
 		// 要素を作成
 		// --------------------------------------------------------------------------------
-		_container.createElement = function(current_url){
+		function createElement(current_url){
 			var _element = new Object();
 
 			// --------------------------------------------------------------------------------
@@ -26455,7 +26930,7 @@
 			})();
 
 			return _element;
-		};
+		}
 
 		// --------------------------------------------------------------------------------
 		// URL を登録
@@ -26467,7 +26942,7 @@
 				element.remove();
 			}else{
 				// 要素を新規作成
-				element = _container.createElement(current_url);
+				element = createElement(current_url);
 			}
 
 			// 最新へ登録
@@ -31725,6 +32200,221 @@
 	}
 
 	// --------------------------------------------------------------------------------
+	// バイナリから Base64 文字列に変換する (同期実行)
+	// --------------------------------------------------------------------------------
+	function Base64FromArrayBuffer(ary_buffer){
+		var dic = [
+			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
+			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
+			'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
+			'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
+		];
+		var str = "";
+		var num = ary_buffer.byteLength;
+		var a = new Uint8Array(ary_buffer);
+		var i;
+		var m = 0;
+		var n = 0;
+		for(i=0;i<num;i++){
+			switch(m){
+			case 0:
+				str += dic[(a[i] >> 2)];
+				n = (a[i] & 0x03) << 4;
+				m = 2;
+				break;
+			case 2:
+				str += dic[n | (a[i] >> 4)];
+				n = (a[i] & 0x0f) << 2;
+				m = 1;
+				break;
+			case 1:
+				str += dic[n | (a[i] >> 6)];
+				str += dic[(a[i] & 0x3f)];
+				m = 0;
+				break;
+			}
+		}
+		if(m){
+			str += dic[n];
+		}
+		if(m == 2){
+			str += "==";
+		}else if(m == 1){
+			str += "=";
+		}
+		return str;
+	}
+
+	// --------------------------------------------------------------------------------
+	// バイナリから Base64 文字列に変換する (非同期実行)
+	// --------------------------------------------------------------------------------
+	function Base64FromArrayBufferAsync(ary_buffer,increment,callback){
+		var dic = [
+			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
+			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
+			'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
+			'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
+		];
+		var str = "";
+		var num = ary_buffer.byteLength;
+		var a = new Uint8Array(ary_buffer);
+		var i = 0;
+		var j = 0;
+		var m = 0;
+		var n = 0;
+
+		function f(){
+			while(i<num){
+				switch(m){
+				case 0:
+					str += dic[(a[i] >> 2)];
+					n = (a[i] & 0x03) << 4;
+					m = 2;
+					break;
+				case 2:
+					str += dic[n | (a[i] >> 4)];
+					n = (a[i] & 0x0f) << 2;
+					m = 1;
+					break;
+				case 1:
+					str += dic[n | (a[i] >> 6)];
+					str += dic[(a[i] & 0x3f)];
+					m = 0;
+					break;
+				}
+
+				i ++;
+				j ++;
+				if(j > increment){
+					j = 0;
+					execute_queue.attachFirst(f,null);
+					return;
+				}
+			}
+			if(m){
+				str += dic[n];
+			}
+			if(m == 2){
+				str += "==";
+			}else if(m == 1){
+				str += "=";
+			}
+			callback(str);
+		}
+
+		execute_queue.attachLast(f,null);
+	}
+
+	// --------------------------------------------------------------------------------
+	// x-user-defined 文字列から Base64 文字列に変換する (同期実行)
+	// --------------------------------------------------------------------------------
+	function Base64_From_UserDefined(user_defined){
+		var dic = [
+			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
+			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
+			'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
+			'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
+		];
+		var str = "";
+		var num = str.length;
+		var a = user_defined;
+		var i;
+		var m = 0;
+		var n = 0;
+		var b = 0;
+		for(i=0;i<num;i++){
+			b = a.charCodeAt(i) & 0xff;
+			switch(m){
+			case 0:
+				str += dic[(b >> 2)];
+				n = (b & 0x03) << 4;
+				m = 2;
+				break;
+			case 2:
+				str += dic[n | (b >> 4)];
+				n = (b & 0x0f) << 2;
+				m = 1;
+				break;
+			case 1:
+				str += dic[n | (b >> 6)];
+				str += dic[(b & 0x3f)];
+				m = 0;
+				break;
+			}
+		}
+		if(m){
+			str += dic[n];
+		}
+		if(m == 2){
+			str += "==";
+		}else if(m == 1){
+			str += "=";
+		}
+		return str;
+	}
+
+	// --------------------------------------------------------------------------------
+	// x-user-defined 文字列から Base64 文字列に変換する (非同期実行)
+	// --------------------------------------------------------------------------------
+	function Base64FromUserDefinedAsync(user_defined,increment,callback){
+		var dic = [
+			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
+			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
+			'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
+			'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
+		];
+		var str = "";
+		var num = user_defined.length;
+		var a = user_defined;
+		var i = 0;
+		var j = 0;
+		var m = 0;
+		var n = 0;
+		var b = 0;
+		function f(){
+			while(i<num){
+				b = a.charCodeAt(i) & 0xff;
+				switch(m){
+				case 0:
+					str += dic[(b >> 2)];
+					n = (b & 0x03) << 4;
+					m = 2;
+					break;
+				case 2:
+					str += dic[n | (b >> 4)];
+					n = (b & 0x0f) << 2;
+					m = 1;
+					break;
+				case 1:
+					str += dic[n | (b >> 6)];
+					str += dic[(b & 0x3f)];
+					m = 0;
+					break;
+				}
+
+				i ++;
+				j ++;
+				if(j > increment){
+					j = 0;
+					execute_queue.attachFirst(f,null);
+					return;
+				}
+			}
+			if(m){
+				str += dic[n];
+			}
+			if(m == 2){
+				str += "==";
+			}else if(m == 1){
+				str += "=";
+			}
+			callback(str);
+		}
+
+		execute_queue.attachLast(f,null);
+	}
+
+	// --------------------------------------------------------------------------------
 	// レスポンスヘッダから Object に変換
 	// --------------------------------------------------------------------------------
 	function ResponseHeadersParseObject(str){
@@ -32884,6 +33574,39 @@
 		};
 	}
 
+	// ------------------------------------------------------------
+	// DOM オブジェクトの構築が完了したか調べる関数
+	// ------------------------------------------------------------
+	function DocumentGetLoadedDomContent(document_obj,callback){
+
+		function DOMContentLoadedFunc(e){
+			document_obj.removeEventListener("readystatechange" , DOMContentLoadedFunc);
+			callback();
+		}
+
+		function ReadyStateChangeFunc(e){
+			switch(document_obj.readyState){
+			case "interactive":
+			case "complete":
+				document_obj.detachEvent("onreadystatechange" , ReadyStateChangeFunc);
+				callback();
+			}
+		}
+
+		switch(document_obj.readyState){
+		case "interactive":
+		case "complete":
+			callback();
+			return;
+		}
+
+		if(document_obj.addEventListener){
+			document_obj.addEventListener("DOMContentLoaded" , DOMContentLoadedFunc);
+		}else if(document_obj.attachEvent){
+			document_obj.attachEvent("onreadystatechange" , ReadyStateChangeFunc);
+		}
+	}
+
 	// --------------------------------------------------------------------------------
 	// エレメント作成
 	// --------------------------------------------------------------------------------
@@ -33460,7 +34183,7 @@
 	}
 
 	// --------------------------------------------------------------------------------
-	// エレメントのクライアント領域の矩形を取得
+	// エレメントのクライアント領域のバウンディング矩形を取得
 	// --------------------------------------------------------------------------------
 	function ElementGetBoundingClientRect(element){
 		if(!(element.getBoundingClientRect))	return null;
@@ -33482,6 +34205,128 @@
 		}
 
 		return o;
+	}
+
+	// --------------------------------------------------------------------------------
+	// エレメントのクライアント領域のコンテンツ矩形を取得
+	// --------------------------------------------------------------------------------
+	function ElementGetContentClientRect(element){
+		var rect = ElementGetBoundingClientRect(element);
+		var style = ElementGetComputedStyle(element,null);
+		if(style){
+			var re = new RegExp("^([-0-9.]+)px$","i");
+			var list = [
+				{style:"paddingLeft"   ,key:"left"   ,sign: 1},
+				{style:"paddingRight"  ,key:"right"  ,sign:-1},
+				{style:"paddingTop"    ,key:"top"    ,sign: 1},
+				{style:"paddingBottom" ,key:"bottom" ,sign:-1},
+				{style:"borderLeftWidth"   ,key:"left"   ,sign: 1},
+				{style:"borderRightWidth"  ,key:"right"  ,sign:-1},
+				{style:"borderTopWidth"    ,key:"top"    ,sign: 1},
+				{style:"borderBottomWidth" ,key:"bottom" ,sign:-1}
+			];
+			var i;
+			var num = list.length;
+			for(i=0;i<num;i++){
+				var param = list[i];
+				if(style[param.style]){
+					var m = style[param.style].match(re);
+					if(m){
+						rect[param.key] += parseFloat(m[0]) * param.sign;
+					}
+				}
+			}
+		}
+		return rect;
+	}
+
+	// --------------------------------------------------------------------------------
+	// エレメントのクライアント領域の可視矩形を取得
+	// --------------------------------------------------------------------------------
+	function ElementGetViewClientRect(element){
+		var rect = ElementGetBoundingClientRect(element);
+		var overflow_hidden = {"scroll":1,"hidden":1,"auto":1};
+		var display_inline = {"inline":1,"none":1,"table-column":1,"table-column-group":1};
+
+		while(element){
+			var r = ElementGetBoundingClientRect(element);
+			if(!r) break;
+
+			if(element.tagName == "BODY") break;
+
+			var style = ElementGetComputedStyle(element,null);
+			if(style){
+				if(!display_inline[style.display]){
+					if(overflow_hidden[style.overflow]){
+						if(r.bottom < rect.bottom) rect.bottom = r.bottom;
+						if(r.top    > rect.top   ) rect.top    = r.top;
+						if(r.right  < rect.right ) rect.right  = r.right;
+						if(r.left   > rect.left  ) rect.left   = r.left;
+					}
+				}
+			}
+
+			element = element.offsetParent;
+		}
+		return rect;
+	}
+
+	// --------------------------------------------------------------------------------
+	// エレメントのパディングサイズを取得
+	// --------------------------------------------------------------------------------
+	function ElementGetPaddingWidth(element){
+		var rect = {left:0,right:0,top:0,bottom:0};
+		var style = ElementGetComputedStyle(element,null);
+		if(style){
+			var re = new RegExp("^([-0-9.]+)px$","i");
+			var list = [
+				{style:"paddingLeft"   ,key:"left"  },
+				{style:"paddingRight"  ,key:"right" },
+				{style:"paddingTop"    ,key:"top"   },
+				{style:"paddingBottom" ,key:"bottom"}
+			];
+			var i;
+			var num = list.length;
+			for(i=0;i<num;i++){
+				var param = list[i];
+				if(style[param.style]){
+					var m = style[param.style].match(re);
+					if(m){
+						rect[param.key] = parseFloat(m[0]);
+					}
+				}
+			}
+		}
+		return rect;
+	}
+
+	// --------------------------------------------------------------------------------
+	// エレメントのボーダーサイズを取得
+	// --------------------------------------------------------------------------------
+	function ElementGetBoaderWidth(element){
+		var rect = {left:0,right:0,top:0,bottom:0};
+		var style = ElementGetComputedStyle(element,null);
+		if(style){
+			var re = new RegExp("^([-0-9.]+)px$","i");
+			var list = [
+				{style:"borderLeftWidth"   ,key:"left"  },
+				{style:"borderRightWidth"  ,key:"right" },
+				{style:"borderTopWidth"    ,key:"top"   },
+				{style:"borderBottomWidth" ,key:"bottom"}
+			];
+			var i;
+			var num = list.length;
+			for(i=0;i<num;i++){
+				var param = list[i];
+				if(style[param.style]){
+					var m = style[param.style].match(re);
+					if(m){
+						rect[param.key] += parseFloat(m[0]);
+					}
+				}
+			}
+		}
+		return rect;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -33586,10 +34431,18 @@
 	// --------------------------------------------------------------------------------
 	function ElementGetComputedStyle(element,pseudo_element){
 		var document_obj = element.ownerDocument;
-		var window_obj = document_obj.defaultView;
-		if(!(window_obj.getComputedStyle)) return null;
-
-		return window_obj.getComputedStyle(element,pseudo_element);
+		if(document_obj){
+			var window_obj = document_obj.defaultView;
+			if(window_obj){
+				if(window_obj.getComputedStyle !== undefined){
+					return window_obj.getComputedStyle(element,pseudo_element);
+				}
+			}
+		}
+		if(element.currentStyle !== undefined){
+			return element.currentStyle;
+		}
+		return null;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -33747,10 +34600,8 @@
 			if(_observer_remove_node){
 				_observer_remove_node.release();
 				_observer_remove_node = null;
-			}else{
-				if(node.removeEventListener){
-					node.removeEventListener('DOMNodeRemovedFromDocument',detectForMutationEvent);
-				}
+			}else if(node.removeEventListener){
+				node.removeEventListener('DOMNodeRemovedFromDocument',detectForMutationEvent);
 			}
 		};
 

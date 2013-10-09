@@ -167,11 +167,25 @@ function FirefoxAddonGetSelf(){
 }
 
 // --------------------------------------------------------------------------------
+// Firefox アドオン用 Timers 取得
+// --------------------------------------------------------------------------------
+function FirefoxAddonGetTimers(){
+	return  require("sdk/timers");
+}
+
+// --------------------------------------------------------------------------------
 // アドオン開始
 // --------------------------------------------------------------------------------
 exports.main = function(options, callback) {
 	var obj = new Object();
     var data = FirefoxAddonGetSelf().data;
+
+	// タイマー関数をグローバル化
+	var timers = FirefoxAddonGetTimers();
+	obj.setTimeout = timers.setTimeout;
+	obj.clearTimeout = timers.clearTimeout;
+	obj.setInterval = timers.setInterval;
+	obj.clearInterval = timers.clearInterval;
 
 	var loader = XPCOM_Get_mozIJSSubScriptLoader();
 	loader.loadSubScript(data.url("PageExpand.js"),obj,"UTF-8");

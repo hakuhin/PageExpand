@@ -999,13 +999,13 @@ function PageExpand(execute_type){
 			var _check_box_enable_mixed_content;
 			var _ui_define;
 			var _ui_define_select_params = [
-				{asset:"access_block",type:PageExpandConfig.MENU_TYPE_SETTING_ACCESS_BLOCK,select:"single" },
+				{asset:"access_block",type:PageExpandConfig.MENU_TYPE_SETTING_ACCESS_BLOCK,select:"multiple" },
 				{asset:"replacement_to_element",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_ELEMENT,select:"multiple" },
 				{asset:"replacement_to_text",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_TEXT,select:"multiple" },
 				{asset:"replacement_to_anchor",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_ANCHOR,select:"multiple" },
-				{asset:"replacement_to_link",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_LINK,select:"single" },
-				{asset:"replacement_to_referer",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_REFERER,select:"single" },
-				{asset:"replacement_to_useragent",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_USERAGENT,select:"single" },
+				{asset:"replacement_to_link",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_LINK,select:"multiple" },
+				{asset:"replacement_to_referer",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_REFERER,select:"multiple" },
+				{asset:"replacement_to_useragent",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_USERAGENT,select:"multiple" },
 				{asset:"make_link_to_text",type:PageExpandConfig.MENU_TYPE_SETTING_MAKE_LINK_TO_TEXT,select:"single" },
 				{asset:"expand_short_url",type:PageExpandConfig.MENU_TYPE_SETTING_EXPAND_SHORT_URL,select:"single" },
 				{asset:"expand_text",type:PageExpandConfig.MENU_TYPE_SETTING_EXPAND_TEXT,select:"single" },
@@ -2537,6 +2537,8 @@ function PageExpand(execute_type){
 				combo_box_popup_origin_type.attachItem(_i18n.getMessage("menu_setting_expand_image_popup_origin_type_combo_box_item_upper_left"),"upper_left");
 				combo_box_popup_origin_type.attachItem(_i18n.getMessage("menu_setting_expand_image_popup_origin_type_combo_box_item_upper_right"),"upper_right");
 				combo_box_popup_origin_type.attachItem(_i18n.getMessage("menu_setting_expand_image_popup_origin_type_combo_box_item_client_center"),"client_center");
+				combo_box_popup_origin_type.attachItem(_i18n.getMessage("menu_setting_expand_image_popup_origin_type_combo_box_item_adsorb_element"),"adsorb_element");
+				combo_box_popup_origin_type.attachItem(_i18n.getMessage("menu_setting_expand_image_popup_origin_type_combo_box_item_adsorb_mouse"),"adsorb_mouse");
 				combo_box_popup_origin_type.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.popup.origin_type = v;
@@ -3919,7 +3921,7 @@ function PageExpand(execute_type){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				UI_Text(parent,"PageExpand ver.1.2.2");
+				UI_Text(parent,"PageExpand ver.1.2.3");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -4643,7 +4645,7 @@ function PageExpand(execute_type){
 				ElementSetStyle(_input,"width:100%; padding:2px; background-color:#fff;");
 				container.appendChild(_input);
 
-				_input.oninput = _input.onchange = function(){
+				_input.oninput = function(){
 					_container.oninput(_input.value);
 				};
 			})();
@@ -4771,7 +4773,7 @@ function PageExpand(execute_type){
 				ElementSetStyle(_input_pattern,"width:100%; padding:2px; background-color:#fff;");
 				input_pattern_container.appendChild(_input_pattern);
 
-				_input_pattern.oninput = _input_pattern.onchange = function(){
+				_input_pattern.oninput = function(){
 					oninput();
 				};
 
@@ -4869,7 +4871,7 @@ function PageExpand(execute_type){
 				ElementSetStyle(_textarea,"width:100%; height:100px;");
 				container.appendChild(_textarea);
 
-				_textarea.oninput = _textarea.onchange = function(){
+				_textarea.oninput = function(){
 					_container.oninput(_textarea.value);
 				};
 			})();
@@ -4938,7 +4940,7 @@ function PageExpand(execute_type){
 				_textarea = DocumentCreateElement("textarea");
 				ElementSetStyle(_textarea,"width:100%; height:300px; background-color:#fff;");
 				_body.appendChild(_textarea);
-				_textarea.oninput = _textarea.onchange = function(){
+				_textarea.oninput = function(){
 
 					try{
 						(function(){
@@ -5018,7 +5020,7 @@ function PageExpand(execute_type){
 				ElementSetStyle(_input,"width:100%; padding:2px; background-color:#fff;");
 				container.appendChild(_input);
 
-				_input.oninput = _input.onchange = function(){
+				_input.oninput = function(){
 					var v = parseInt(_input.value);
 					if(isNaN(v)){v = 0;}
 					if(v < _min)	v = _min;
@@ -8462,13 +8464,13 @@ function PageExpand(execute_type){
 					filter:[],
 					enable_unsecure:false,
 					enable_mixed_content:false,
-					access_block:{enable:false,id:""},
+					access_block:{enable:false,id:[]},
 					replacement_to_element:{enable:false,id:[]},
 					replacement_to_text:{enable:false,id:[]},
 					replacement_to_anchor:{enable:false,id:[]},
-					replacement_to_link:{enable:false,id:""},
-					replacement_to_referer:{enable:false,id:""},
-					replacement_to_useragent:{enable:false,id:""},
+					replacement_to_link:{enable:false,id:[]},
+					replacement_to_referer:{enable:false,id:[]},
+					replacement_to_useragent:{enable:false,id:[]},
 					make_link_to_text:{enable:false,id:""},
 					expand_short_url:{enable:false,id:""},
 					expand_text:{enable:false,id:""},
@@ -9480,7 +9482,7 @@ function PageExpand(execute_type){
 				func(e);
 
 				// バックグラウンドへプロジェクト更新を通知
-				extension_message.sendRequest(JsonStringify({command:"reloadPageExpandProject"}),function(response){});
+				extension_message.sendRequest({command:"reloadPageExpandProject"},function(response){});
 			});
 		}
 

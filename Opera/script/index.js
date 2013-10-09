@@ -30,12 +30,17 @@ function PageExpand(execute_type){
 
 				// プロジェクトを更新
 				page_expand_project = proj;
+				updateProject("");
+
+				// 設定更新
+				loader_queue.setMaxThread(project.getLoadThreadMax());
+				execute_queue.setOccupancyTime(project.getExecuteQueueOccupancyTime());
+				execute_queue.setSleepTime(project.getExecuteQueueSleepTime());
 
 				// ロケール
 				_i18n = new InternationalMessage(page_expand_project.getLanguage());
 
 				// コンテキストメニューを再構築
-				updateProject("");
 				createContextMenu();
 
 				// ツールバーメニューを更新
@@ -54,7 +59,7 @@ function PageExpand(execute_type){
 		// --------------------------------------------------------------------------------
 		function updateProject(url){
 			project = new Project();
-			project.importObject(ObjectCopy(page_expand_project.getProject(url)));
+			project.importObjectForBackground(page_expand_project.getProject(url));
 		}
 
 		// --------------------------------------------------------------------------------
@@ -125,7 +130,7 @@ function PageExpand(execute_type){
 						onclick: function (e) {
 							var tab = OperaExtensionGetSelectedTab();
 							if(tab){
-								extension_message.sendRequestToContent(tab, JsonStringify({command: "executePageExpand"}),function(response){});
+								extension_message.sendRequestToContent(tab, {command: "executePageExpand"},function(response){});
 							}
 						}
 					}));
@@ -137,7 +142,7 @@ function PageExpand(execute_type){
 					onclick: function (e) {
 						var tab = OperaExtensionGetSelectedTab();
 						if(tab){
-							extension_message.sendRequestToContent(tab, JsonStringify({command: "executeDebug"}),function(response){});
+							extension_message.sendRequestToContent(tab, {command: "executeDebug"},function(response){});
 						}
 					}
 				}));
@@ -236,13 +241,22 @@ function PageExpand(execute_type){
 			}
 
 			// 登録
-			var define = page_expand_project.getAccessBlockForOperaExtension();
-			if(define){
-				var filter = define.filter;
-				num = filter.length;
-				for(i=0;i<num;i++){
-					_url_filter.push(filter[i]);
-					url_filter.block.add(filter[i]);
+			var defines = page_expand_project.getAccessBlockForOperaExtension();
+			if(defines){
+				var i;
+				var j;
+				var filters;
+				var filter_num;
+				var define;
+				var define_num = defines.length;
+				for(i=0;i<define_num;i++){
+					define = defines[i];
+					filters = define.filter;
+					filter_num = filters.length;
+					for(j=0;j<filter_num;j++){
+						_url_filter.push(filters[j]);
+						url_filter.block.add(filters[j]);
+					}
 				}
 			}
 		}
@@ -298,48 +312,132 @@ function PageExpand(execute_type){
 
 			// XMLHttpRequest 通信
 			command_dictionary["loadXMLHttpRequest"] = function(param,sender,sendResponse){
-				var completed = false;
-				try{
-					var request = param.request;
-					var xhr = XMLHttpRequestCreate();
+				var queue_element = loader_queue.createElement();
+				queue_element.onstart = function(){
+					var completed = false;
+					try{
+						var request = param.request;
+						var xhr = XMLHttpRequestCreate();
 
-					// ステート変更時に実行されるイベント
-					xhr.onreadystatechange = function(r){
-						switch(xhr.readyState){
-						case 4:
-							if(!completed){
-								var response = new Object();
-								response.readyState = xhr.readyState;
-								response.status = xhr.status;
-								response.responseText = xhr.responseText;
-								response.responseHeaders = xhr.getAllResponseHeaders();
-								sendResponse(JsonStringify(response));
-								completed = true;
+						// ステート変更時に実行されるイベント
+						xhr.onreadystatechange = function(r){
+							switch(xhr.readyState){
+							case 4:
+								if(!completed){
+									queue_element.complete();
+									queue_element.release();
+
+									var response = new Object();
+									response.readyState = xhr.readyState;
+									response.status = xhr.status;
+									response.responseText = xhr.responseText;
+									response.responseHeaders = xhr.getAllResponseHeaders();
+									sendResponse(response);
+									completed = true;
+								}
+								break;
 							}
-							break;
-						}
-					};
+						};
 
-					// 読み込み開始
-					xhr.open(request.method,request.url,true);
-					var headers = request.headers;
-					for(var name in headers){
-						xhr.setRequestHeader(name,headers[name]);
+						// 読み込み開始
+						xhr.open(request.method,request.url,true);
+						var headers = request.headers;
+						for(var name in headers){
+							xhr.setRequestHeader(name,headers[name]);
+						}
+						if(xhr.overrideMimeType && request.override_mime_type){
+							xhr.overrideMimeType(request.override_mime_type);
+						}
+						xhr.send(request.data);
+					}catch(e){
+						if(!completed){
+							queue_element.complete();
+							queue_element.release();
+
+							var response = new Object();
+							response.readyState = 4;
+							response.status = 0;
+							response.responseText = "";
+							response.responseHeaders = {};
+							sendResponse(response);
+							completed = true;
+						}
 					}
-					if(xhr.overrideMimeType && request.override_mime_type){
-						xhr.overrideMimeType(request.override_mime_type);
+				};
+				if(param.single){
+					queue_element.attachSingle();
+				}else{
+					queue_element.attachLast();
+				}
+			};
+
+			// data URI scheme 読み込み
+			command_dictionary["loadDataUriScheme"] = function(param,sender,sendResponse){
+				var queue_element = loader_queue.createElement();
+				queue_element.onstart = function(){
+					var completed = false;
+					try{
+						var request = param.request;
+						var xhr = XMLHttpRequestCreate();
+
+						// ステート変更時に実行されるイベント
+						xhr.onreadystatechange = function(r){
+							switch(xhr.readyState){
+							case 4:
+								if(!completed){
+									queue_element.complete();
+									queue_element.release();
+
+									var response = new Object();
+									response.readyState = xhr.readyState;
+									response.status = xhr.status;
+									response.responseHeaders = xhr.getAllResponseHeaders();
+									if(xhr.response){
+										Base64FromArrayBufferAsync(xhr.response,1*1024,function(base64){
+											// data URI scheme 変換
+											response.dataUriScheme = "data:" + xhr.getResponseHeader("Content-Type") + ";base64," + base64;
+											sendResponse(response);
+										});
+									}else{
+										sendResponse(response);
+									}
+									completed = true;
+								}
+								break;
+							}
+						};
+
+						// 読み込み開始
+						xhr.open(request.method,request.url,true);
+						var headers = request.headers;
+						for(var name in headers){
+							xhr.setRequestHeader(name,headers[name]);
+						}
+						if(xhr.overrideMimeType && request.override_mime_type){
+							xhr.overrideMimeType(request.override_mime_type);
+						}
+						xhr.responseType = "arraybuffer";
+						xhr.send(request.data);
+					}catch(e){
+						if(!completed){
+							queue_element.complete();
+							queue_element.release();
+
+							var response = new Object();
+							response.readyState = 4;
+							response.status = 0;
+							response.response = null;
+							response.responseText = "";
+							response.responseHeaders = {};
+							sendResponse(response);
+							completed = true;
+						}
 					}
-					xhr.send(request.data);
-				}catch(e){
-					if(!completed){
-						var response = new Object();
-						response.readyState = 4;
-						response.status = 0;
-						response.responseText = "";
-						response.responseHeaders = {};
-						sendResponse(JsonStringify(response));
-						completed = true;
-					}
+				};
+				if(param.single){
+					queue_element.attachSingle();
+				}else{
+					queue_element.attachLast();
 				}
 			};
 
@@ -373,7 +471,7 @@ function PageExpand(execute_type){
 			command_dictionary["executePageExpand"] = function(param,sender,sendResponse){
 				var tab = OperaExtensionGetSelectedTab();
 				if(tab){
-					extension_message.sendRequestToContent(tab, JsonStringify({command: "executePageExpand"}),function(response){});
+					extension_message.sendRequestToContent(tab, {command: "executePageExpand"},function(response){});
 				}
 			};
 
@@ -381,7 +479,7 @@ function PageExpand(execute_type){
 			command_dictionary["executeDebug"] = function(param,sender,sendResponse){
 				var tab = OperaExtensionGetSelectedTab();
 				if(tab){
-					extension_message.sendRequestToContent(tab, JsonStringify({command: "executeDebug"}),function(response){});
+					extension_message.sendRequestToContent(tab, {command: "executeDebug"},function(response){});
 				}
 			};
 
@@ -419,7 +517,7 @@ function PageExpand(execute_type){
 				// コンテンツスクリプトとの通信
 				// --------------------------------------------------------------------------------
 				extension_message.addListener(function(request, sender, sendResponse) {
-					var param = JsonParse(request);
+					var param = request;
 
 					var callback = command_dictionary[param.command];
 					if(callback){
@@ -447,6 +545,17 @@ function PageExpand(execute_type){
 	// Opera のバックグラウンドとして動作
 	// --------------------------------------------------------------------------------
 	case "OperaExtensionBackGround":
+		// --------------------------------------------------------------------------------
+		// バックグラウンド用初期化
+		// --------------------------------------------------------------------------------
+		{
+			// 実行キュー
+			execute_queue = new ExecuteQueue();
+
+			// ローダーキュー
+			loader_queue = new LoaderQueue();
+		}
+
 		PageExpandBackGroundForOpera();
 		break;
 
