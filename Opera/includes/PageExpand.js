@@ -29,12 +29,110 @@ function PageExpand(execute_type){
 		execute_queue.setOccupancyTime(project.getExecuteQueueOccupancyTime());
 		execute_queue.setSleepTime(project.getExecuteQueueSleepTime());
 
+		// --------------------------------------------------------------------------------
+		// タッチ入力
+		// --------------------------------------------------------------------------------
+		(function(){
+			if(project.enableInputTouch()){
+				// タッチ入力
+				input_touch = new InputTouch();
+
+				// 仮想マウスポインタ
+				var virtual_mouse_pointer = new VirtualMousePointer(document);
+
+				// タッチ補助
+				var touch_assist;
+				if(project.enableDoubleTouchAssist()){
+					touch_assist = new DoubleTouchAssist();
+				}
+
+				var enable_old = false;
+				var touch_max = 0;
+
+				// タッチ入力更新
+				var event_update = input_touch.createEventHandler("update");
+				event_update.setFunction(function (e){
+					var enable_now = e.getEnableTouch();
+					if(enable_now){
+						var touch_list = e.getTouchList();
+						var touch_num = touch_list.length;
+						if(touch_max <= 1){
+							if(touch_num == 1){
+								input_mouse.setInputTouch(e);
+								virtual_mouse_pointer.setPosition(input_touch.getPositionAverage());
+							}else if(touch_num == 2){
+								var touch0 = touch_list[0];
+								var touch1 = touch_list[1];
+								if(touch0 && touch1){
+									var pos = {
+										x:touch0.clientX,
+										y:touch0.clientY
+									};
+									var vec = {
+										x:touch1.clientX - touch0.clientX,
+										y:touch1.clientY - touch0.clientY
+									};
+									virtual_mouse_pointer.setPosition(pos);
+									virtual_mouse_pointer.addVector(vec);
+
+									if(touch_assist){
+										touch_assist.setShow(pos,vec);
+									}
+								}
+							}
+							touch_max = touch_num;
+						}
+					}else{
+						touch_max = 0;
+					}
+					enable_old = enable_now;
+				});
+			}
+		})();
+
+		// --------------------------------------------------------------------------------
+		// ルートウィンドウのマウス操作
+		// --------------------------------------------------------------------------------
+		(function(){
+			if(window_manager.existWindowRoot()){
+				function mouseMove (e){
+					if(!(task_container.getCountTask())) return;
+
+					var offset = window_manager.getPositionFromRoot();
+
+					// マウス入力を更新
+					input_mouse.setMouseEvent({
+						clientX:e.clientX - offset.x,
+						clientY:e.clientY - offset.y,
+						detail:e.detail,
+						screenX:e.screenX,
+						screenY:e.screenY,
+						ctrlKey:e.ctrlKey,
+						shiftKey:e.shiftKey,
+						altKey:e.altKey,
+						metaKey:e.metaKey,
+						button:e.button
+					});
+				}
+
+				var document_obj = window_manager.getWindowRoot().document;
+				if(document_obj.addEventListener){
+					document_obj.addEventListener("mousemove",mouseMove);
+				}else if(document_obj.attachEvent){
+					document_obj.attachEvent("onmousemove",mouseMove);
+				}
+			}
+		})();
+
+		// --------------------------------------------------------------------------------
+		// 変更オブザーバー未対応
+		// --------------------------------------------------------------------------------
 		if(!MutationObserverSupported()){
 			(function(){
 				// アンカー監視
 				var task = task_container.createTask();
 				task.setExecuteFunc(function(task){
-					anchor_monitor.execute();
+					document_observer_modify_node.execute();
 				});
 			})();
 		}
@@ -233,6 +331,11 @@ function PageExpand(execute_type){
 	// --------------------------------------------------------------------------------
 	function DomNodeAnalyzePhaseAnalyzeElement(node){
 
+		// ゲスト検出
+		if(analyze_work_dictionary.verifyGuest(node)){
+			return;
+		}
+
 		// クローン検出
 		if(analyze_work_dictionary.verifyClone(node)){
 			// スクロール補正
@@ -251,60 +354,21 @@ function PageExpand(execute_type){
 
 		}
 
-		if(!AnalyzeWorkGetInitializedAnchorElement(work)){
+		if(!AnalyzeWorkGetInitializedObserverElement(work)){
 
 			// --------------------------------------------------------------------------------
 			// アンカー
 			// --------------------------------------------------------------------------------
-			var tag_name = node.tagName.toUpperCase();
-			if(tag_name == "A"){
-				// 初期化済み
-				AnalyzeWorkSetInitializedAnchorElement(work);
+			if(node.tagName == "A"){
 
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(work,false);
+				// 要素を監視
+				AnalyzeWorkObserveElement(work);
 
-				// イベントディスパッチャー生成
-				AnalyzeWorkSetEventDispatcher(work,new EventDispatcher());
-
-				// リムーブ監視
-				var observer_remove = new DomNodeObserverRemoveFromDocument(node);
-				observer_remove.setFunction(function(){
-
-					// 修正カウンタ加算
-					AnalyzeWorkAddModifyCount(work);
-
-					var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-					if(event_dispatcher){
-						// イベント発火
-						event_dispatcher.dispatchEvent("release",null);
-						event_dispatcher.removeAll();
-						AnalyzeWorkClearEventDispatcher(work);
-					}
-
-					// アンカー監視を破棄
-					if(monitor_element){
-						monitor_element.release();
-						monitor_element = null;
-						AnalyzeWorkClearAnchorMonitorElement(work);
-					}
-
-					// リムーブ監視を破棄
-					if(observer_remove){
-						observer_remove.release();
-						observer_remove = null;
-					}
-
-					// 解析辞書除外
-					analyze_work_dictionary.removeAnalyzeWork(work);
-
-				});
-
-				// アンカー監視
-				var monitor_element = anchor_monitor.createElement();
-				AnalyzeWorkSetAnchorMonitorElement(work,monitor_element);
-				monitor_element.setAnchorElement(node);
-				monitor_element.setFunction(function (){
+				// アドレス変更監視
+				var observer_modify_element = document_observer_modify_node.createElement();
+				AnalyzeWorkSetObserverModifyAnchor(work,observer_modify_element);
+				observer_modify_element.setElement(node,"href");
+				observer_modify_element.setFunction(function (){
 
 					// 修正カウンタ加算
 					AnalyzeWorkAddModifyCount(work);
@@ -331,6 +395,18 @@ function PageExpand(execute_type){
 
 					// 再解析
 					DomNodeAnalyzePhaseAnalyzeElement(node);
+				});
+
+				// 破棄イベント
+				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
+				var event_handler = event_dispatcher.createEventHandler("destructor");
+				event_handler.setFunction(function(){
+					// アドレス変更監視を破棄
+					if(observer_modify_element){
+						observer_modify_element.release();
+						observer_modify_element = null;
+						AnalyzeWorkClearObserverModifyAnchor(work);
+					}
 				});
 
 				// アンカー要素を登録
@@ -502,22 +578,22 @@ function PageExpand(execute_type){
 		if(!anchor) return;
 
 		// アンカー
-		var tag_name = anchor.tagName.toUpperCase();
-		if(tag_name != "A")	return;
+		if(anchor.tagName != "A")	return;
 
 		// document に未登録
 		if(!DomNodeGetAttachedDocument(element))	return;
 
-		var node = element;
-		while(node){
-			if(node.tagName){
-				var name = node.tagName.toLowerCase();
-				// 実行対象外のタグ
-				if(name == "head")	return;
-				if(name == "script")	return;
-				if(name == "style")	return;
+		// 実行対象外のタグ
+		var selector_result = ElementMatchesSelector(element,"head *,script *,style *");
+		if(selector_result === undefined){
+			var node = element;
+			var illegal = {HEAD:1,SCRIPT:1,STYLE:1};
+			while(node){
+				if(illegal[node.tagName]) return;
+				node = node.parentNode;
 			}
-			node = node.parentNode;
+		}else if(selector_result){
+			return;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -547,17 +623,19 @@ function PageExpand(execute_type){
 			// 解析済みチェック
 			if(!AnalyzeWorkGetAnalyzedExpandThumbnailImage(work)){
 				AnalyzeWorkSetAnalyzedExpandThumbnailImage(work);
-
-				// 実行キューに登録
-				execute_queue.attachForExpandElement(ElementExpandThumbnailImage,param);
+				if(project.getEnableThumbnailImage()){
+					// 実行キューに登録
+					execute_queue.attachForExpandElement(ElementExpandThumbnailImage,param);
+				}
 			}
 
 			// 解析済みチェック
 			if(!AnalyzeWorkGetAnalyzedExpandPopupImage(work)){
 				AnalyzeWorkSetAnalyzedExpandPopupImage(work);
-
-				// 実行キューに登録
-				execute_queue.attachForExpandElement(ElementExpandPopupImage,param);
+				if(project.getEnablePopupImage()){
+					// 実行キューに登録
+					execute_queue.attachForExpandElement(ElementExpandPopupImage,param);
+				}
 			}
 		}
 
@@ -726,19 +804,23 @@ function PageExpand(execute_type){
 		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
 
 		var text_node = AnalyzeWorkGetDomNode(work);
+		var element = text_node.parentNode;
+		if(!element) return;
 
 		// document に未登録
-		if(!DomNodeGetAttachedDocument(text_node))	return;
+		if(!DomNodeGetAttachedDocument(element))	return;
 
-		var node = text_node;
-		while(node){
-			if(node.tagName){
-				var name = node.tagName.toLowerCase();
-				// 実行対象外のタグ
-				if(name == "script")	return;
-				if(name == "style")	return;
+		// 実行対象外のタグ
+		var selector_result = ElementMatchesSelector(element,"script *,style *,script,style");
+		if(selector_result === undefined){
+			var node = text_node;
+			var illegal = {SCRIPT:1,STYLE:1};
+			while(node){
+				if(illegal[node.tagName]) return;
+				node = node.parentNode;
 			}
-			node = node.parentNode;
+		}else if(selector_result){
+			return;
 		}
 
 		ElementReplacementToText(param);
@@ -758,22 +840,22 @@ function PageExpand(execute_type){
 		if(!anchor) return;
 
 		// アンカー
-		var tag_name = anchor.tagName.toUpperCase();
-		if(tag_name != "A")	return;
+		if(anchor.tagName != "A")	return;
 
 		// document に未登録
 		if(!DomNodeGetAttachedDocument(element))	return;
 
-		var node = element;
-		while(node){
-			if(node.tagName){
-				var name = node.tagName.toLowerCase();
-				// 実行対象外のタグ
-				if(name == "head")	return;
-				if(name == "script")	return;
-				if(name == "style")	return;
+		// 実行対象外のタグ
+		var selector_result = ElementMatchesSelector(element,"head *,script *,style *");
+		if(selector_result === undefined){
+			var node = element;
+			var illegal = {HEAD:1,SCRIPT:1,STYLE:1};
+			while(node){
+				if(illegal[node.tagName]) return;
+				node = node.parentNode;
 			}
-			node = node.parentNode;
+		}else if(selector_result){
+			return;
 		}
 
 		if((anchor.name) && !(anchor.href))	return;
@@ -795,22 +877,22 @@ function PageExpand(execute_type){
 		if(!anchor) return;
 
 		// アンカー
-		var tag_name = anchor.tagName.toUpperCase();
-		if(tag_name != "A")	return;
+		if(anchor.tagName != "A")	return;
 
 		// document に未登録
 		if(!DomNodeGetAttachedDocument(element))	return;
 
-		var node = element;
-		while(node){
-			if(node.tagName){
-				var name = node.tagName.toLowerCase();
-				// 実行対象外のタグ
-				if(name == "head")	return;
-				if(name == "script")	return;
-				if(name == "style")	return;
+		// 実行対象外のタグ
+		var selector_result = ElementMatchesSelector(element,"head *,script *,style *");
+		if(selector_result === undefined){
+			var node = element;
+			var illegal = {HEAD:1,SCRIPT:1,STYLE:1};
+			while(node){
+				if(illegal[node.tagName]) return;
+				node = node.parentNode;
 			}
-			node = node.parentNode;
+		}else if(selector_result){
+			return;
 		}
 
 		if(!(anchor.href))	return;
@@ -827,22 +909,23 @@ function PageExpand(execute_type){
 		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
 
 		var text_node = AnalyzeWorkGetDomNode(work);
+		var element = text_node.parentNode;
+		if(!element) return;
 
 		// document に未登録
-		if(!DomNodeGetAttachedDocument(text_node))	return;
+		if(!DomNodeGetAttachedDocument(element))	return;
 
-		var node = text_node;
-		while(node){
-			if(node.tagName){
-				var name = node.tagName.toLowerCase();
-				// 実行対象外のタグ
-				if(name == "head")	return;
-				if(name == "script")	return;
-				if(name == "style")	return;
-				if(name == "a")		return;
-				if(name == "textarea")	return;
+		// 実行対象外のタグ
+		var selector_result = ElementMatchesSelector(element,"script *,style *,a *,textarea *,script,style,a,textarea");
+		if(selector_result === undefined){
+			var node = text_node;
+			var illegal = {SCRIPT:1,STYLE:1,A:1,TEXTAREA:1};
+			while(node){
+				if(illegal[node.tagName]) return;
+				node = node.parentNode;
 			}
-			node = node.parentNode;
+		}else if(selector_result){
+			return;
 		}
 
 		ElementMakeLinkToText(param);
@@ -862,22 +945,22 @@ function PageExpand(execute_type){
 		if(!anchor) return;
 
 		// アンカー
-		var tag_name = anchor.tagName.toUpperCase();
-		if(tag_name != "A")	return;
+		if(anchor.tagName != "A")	return;
 
 		// document に未登録
 		if(!DomNodeGetAttachedDocument(element))	return;
 
-		var node = element;
-		while(node){
-			if(node.tagName){
-				var name = node.tagName.toLowerCase();
-				// 実行対象外のタグ
-				if(name == "head")	return;
-				if(name == "script")	return;
-				if(name == "style")	return;
+		// 実行対象外のタグ
+		var selector_result = ElementMatchesSelector(element,"head *,script *,style *");
+		if(selector_result === undefined){
+			var node = element;
+			var illegal = {HEAD:1,SCRIPT:1,STYLE:1};
+			while(node){
+				if(illegal[node.tagName]) return;
+				node = node.parentNode;
 			}
-			node = node.parentNode;
+		}else if(selector_result){
+			return;
 		}
 
 		if(!(anchor.href))	return;
@@ -896,8 +979,7 @@ function PageExpand(execute_type){
 		var element = AnalyzeWorkGetDomNode(work);
 
 		// イメージ
-		var tag_name = element.tagName.toUpperCase();
-		if(tag_name != "IMG")	return;
+		if(element.tagName != "IMG")	return;
 
 		// document に未登録
 		if(!DomNodeGetAttachedDocument(element))	return;
@@ -918,16 +1000,17 @@ function PageExpand(execute_type){
 		// document に未登録
 		if(!DomNodeGetAttachedDocument(dom_node))	return;
 
-		var node = dom_node;
-		while(node){
-			if(node.tagName){
-				var name = node.tagName.toLowerCase();
-				// 実行対象外のタグ
-				if(name == "head")	return;
-				if(name == "script")	return;
-				if(name == "style")	return;
+		// 実行対象外のタグ
+		var selector_result = ElementMatchesSelector(dom_node,"head *,script *,style *");
+		if(selector_result === undefined){
+			var node = dom_node;
+			var illegal = {HEAD:1,SCRIPT:1,STYLE:1};
+			while(node){
+				if(illegal[node.tagName]) return;
+				node = node.parentNode;
 			}
-			node = node.parentNode;
+		}else if(selector_result){
+			return;
 		}
 
 		ElementExpandBbs(param);
@@ -968,46 +1051,10 @@ function PageExpand(execute_type){
 				}
 
 				// --------------------------------------------------------------------------------
-				// アンカー用の初期化
+				// 要素を監視
 				// --------------------------------------------------------------------------------
-				if(!AnalyzeWorkGetInitializedAnchorElement(work)){
+				AnalyzeWorkObserveElement(work);
 
-					// 初期化済み
-					AnalyzeWorkSetInitializedAnchorElement(work);
-
-					// 解析辞書登録
-					analyze_work_dictionary.attachAnalyzeWork(work,false);
-
-					// イベントディスパッチャー生成
-					AnalyzeWorkSetEventDispatcher(work,new EventDispatcher());
-
-					// リムーブ監視
-					var observer_remove = new DomNodeObserverRemoveFromDocument(element);
-					observer_remove.setFunction(function(){
-
-						// 修正カウンタ加算
-						AnalyzeWorkAddModifyCount(work);
-
-						var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-						if(event_dispatcher){
-							// イベント発火
-							event_dispatcher.dispatchEvent("release",null);
-							event_dispatcher.removeAll();
-							AnalyzeWorkClearEventDispatcher(work);
-						}
-
-						// リムーブ監視を破棄
-						if(observer_remove){
-							observer_remove.release();
-							observer_remove = null;
-						}
-
-						// 解析辞書除外
-						analyze_work_dictionary.removeAnalyzeWork(work);
-
-					});
-
-				}
 			}
 
 			// 縮小画像のポップアップのフェーズへ
@@ -1115,9 +1162,9 @@ function PageExpand(execute_type){
 			//リンクの変更をアンカーに反映する
 			if(replacement_to_link.getEnableReflectToAnchor()){
 				if(obj.result){
-					var monitor_element = AnalyzeWorkGetAnchorMonitorElement(work);
+					var monitor_element = AnalyzeWorkGetObserverModifyAnchor(work);
 					if(monitor_element){
-						monitor_element.setBaseUrl(obj.url);
+						monitor_element.setBaseValue(obj.url);
 					}
 					anchor.href = obj.url;
 				}
@@ -1236,9 +1283,9 @@ function PageExpand(execute_type){
 			loader.onload = function(v){
 				if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
 
-				var monitor_element = AnalyzeWorkGetAnchorMonitorElement(work);
+				var monitor_element = AnalyzeWorkGetObserverModifyAnchor(work);
 				if(monitor_element){
-					monitor_element.setBaseUrl(v);
+					monitor_element.setBaseValue(v);
 				}
 
 				// 取得結果をセット
@@ -1368,8 +1415,13 @@ function PageExpand(execute_type){
 
 				// 解析ワーク作成
 				text_area_analyze_work = AnalyzeWorkCreate(text_area);
+
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
+
 				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(text_area_analyze_work,true);
+				analyze_work_dictionary.attachAnalyzeWork(text_area_analyze_work,attach_options);
 
 				// テキストエリアのリムーブ監視
 				observer_remove = new DomNodeObserverRemoveFromDocument(text_area);
@@ -1533,10 +1585,16 @@ function PageExpand(execute_type){
 
 					// 解析ワーク作成
 					thumbnail_analyze_work = AnalyzeWorkCreate(thumbnail_image);
+
 					// 解析済み
 					AnalyzeWorkSetAnalyzedPopupReducedImage(thumbnail_analyze_work);
+
+					// 解析辞書登録オプション
+					var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+					attach_options.SetOutsider();
+
 					// 解析辞書登録
-					analyze_work_dictionary.attachAnalyzeWork(thumbnail_analyze_work,true);
+					analyze_work_dictionary.attachAnalyzeWork(thumbnail_analyze_work,attach_options);
 
 					complete();
 
@@ -1978,8 +2036,13 @@ function PageExpand(execute_type){
 
 				// 解析ワーク作成
 				audio_analyze_work = AnalyzeWorkCreate(audio);
+
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
+
 				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(audio_analyze_work,true);
+				analyze_work_dictionary.attachAnalyzeWork(audio_analyze_work,attach_options);
 
 				complete();
 
@@ -2150,8 +2213,13 @@ function PageExpand(execute_type){
 
 					// 解析ワーク作成
 					iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+					// 解析辞書登録オプション
+					var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+					attach_options.SetOutsider();
+
 					// 解析辞書登録
-					analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+					analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 					// インラインフレームのリムーブ監視
 					observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
@@ -2267,8 +2335,13 @@ function PageExpand(execute_type){
 
 					// 解析ワーク作成
 					iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+					// 解析辞書登録オプション
+					var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+					attach_options.SetOutsider();
+
 					// 解析辞書登録
-					analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+					analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 					// インラインフレームのリムーブ監視
 					observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
@@ -2462,8 +2535,13 @@ function PageExpand(execute_type){
 
 				// 解析ワーク作成
 				iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
+
 				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 				// インラインフレームのリムーブ監視
 				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
@@ -2671,8 +2749,13 @@ function PageExpand(execute_type){
 
 				// 解析ワーク作成
 				video_analyze_work = AnalyzeWorkCreate(video);
+
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
+
 				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(video_analyze_work,true);
+				analyze_work_dictionary.attachAnalyzeWork(video_analyze_work,attach_options);
 
 				complete();
 
@@ -2824,8 +2907,13 @@ function PageExpand(execute_type){
 
 			// 解析ワーク作成
 			iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+			// 解析辞書登録オプション
+			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+			attach_options.SetOutsider();
+
 			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+			analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 			// インラインフレームのリムーブ監視
 			observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
@@ -3197,8 +3285,13 @@ function PageExpand(execute_type){
 
 						// 解析ワーク作成
 						video_analyze_work = AnalyzeWorkCreate(video);
+
+						// 解析辞書登録オプション
+						var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+						attach_options.SetOutsider();
+
 						// 解析辞書登録
-						analyze_work_dictionary.attachAnalyzeWork(video_analyze_work,true);
+						analyze_work_dictionary.attachAnalyzeWork(video_analyze_work,attach_options);
 
 						// エレメントのリムーブ監視
 						observer_remove = new DomNodeObserverRemoveFromDocument(video);
@@ -3337,8 +3430,13 @@ function PageExpand(execute_type){
 
 				// 解析ワーク作成
 				iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
+
 				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 				// インラインフレームのリムーブ監視
 				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
@@ -3430,8 +3528,13 @@ function PageExpand(execute_type){
 
 				// 解析ワーク作成
 				iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
+
 				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 				// インラインフレームのリムーブ監視
 				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
@@ -3523,8 +3626,13 @@ function PageExpand(execute_type){
 
 				// 解析ワーク作成
 				iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
+
 				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 				// インラインフレームのリムーブ監視
 				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
@@ -3616,8 +3724,13 @@ function PageExpand(execute_type){
 
 				// 解析ワーク作成
 				iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
+
 				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 				// インラインフレームのリムーブ監視
 				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
@@ -3709,8 +3822,13 @@ function PageExpand(execute_type){
 
 				// 解析ワーク作成
 				iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
+
 				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 				// インラインフレームのリムーブ監視
 				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
@@ -3793,8 +3911,13 @@ function PageExpand(execute_type){
 
 				// 解析ワーク作成
 				iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
+
 				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 				iframe = DocumentCreateElement('iframe');
 				iframe.frameBorder = "0";
@@ -4204,8 +4327,13 @@ function PageExpand(execute_type){
 
 				// 解析ワーク作成
 				iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
+
 				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 				// インラインフレームのリムーブ監視
 				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
@@ -4376,8 +4504,13 @@ function PageExpand(execute_type){
 
 			// 解析ワーク作成
 			iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+			// 解析辞書登録オプション
+			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+			attach_options.SetOutsider();
+
 			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+			analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 			// インラインフレームのリムーブ監視
 			observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
@@ -4546,8 +4679,13 @@ function PageExpand(execute_type){
 
 			// 解析ワーク作成
 			iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+			// 解析辞書登録オプション
+			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+			attach_options.SetOutsider();
+
 			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+			analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 			// インラインフレームのリムーブ監視
 			observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
@@ -4716,8 +4854,13 @@ function PageExpand(execute_type){
 
 			// 解析ワーク作成
 			video_analyze_work = AnalyzeWorkCreate(video);
+
+			// 解析辞書登録オプション
+			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+			attach_options.SetOutsider();
+
 			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(video_analyze_work,true);
+			analyze_work_dictionary.attachAnalyzeWork(video_analyze_work,attach_options);
 
 			// インラインフレームのリムーブ監視
 			observer_remove = new DomNodeObserverRemoveFromDocument(video);
@@ -4930,8 +5073,13 @@ function PageExpand(execute_type){
 
 				// 解析ワーク作成
 				iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
+
 				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 				// インラインフレームのリムーブ監視
 				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
@@ -5102,8 +5250,13 @@ function PageExpand(execute_type){
 
 				// 解析ワーク作成
 				iframe_analyze_work = AnalyzeWorkCreate(iframe);
+
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
+
 				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,true);
+				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
 				// インラインフレームのリムーブ監視
 				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
@@ -5145,10 +5298,10 @@ function PageExpand(execute_type){
 		}
 		AnalyzeWorkSetAnalyzedPopupReducedImage(work);
 
-
-		var observer_remove;
 		var popup_image;
 		var event_dispatcher;
+		var event_handler;
+		var observer_modify_element;
 
 		// イベント解放
 		function releaseEvent(){
@@ -5166,17 +5319,10 @@ function PageExpand(execute_type){
 			// イベント解放
 			releaseEvent();
 
-			// リムーブ監視を破棄
-			if(observer_remove){
-				observer_remove.release();
-				observer_remove = null;
-			}
-
-			// イベントディスパッチャーを破棄
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			if(event_dispatcher){
-				event_dispatcher.removeAll();
-				AnalyzeWorkClearEventDispatcher(work);
+			// アドレス変更監視を破棄
+			if(observer_modify_element){
+				observer_modify_element.release();
+				observer_modify_element = null;
 			}
 
 			// ポップアップイメージを破棄
@@ -5184,9 +5330,6 @@ function PageExpand(execute_type){
 				popup_image.suicide();
 				popup_image = null;
 			}
-
-			// 解析辞書除外
-			analyze_work_dictionary.removeAnalyzeWork(work);
 		}
 
 		// 読み込み完了
@@ -5285,8 +5428,9 @@ function PageExpand(execute_type){
 
 					if(trim_rect){
 						var natural_size　= ImageGetNaturalSize(element);
-						var boader_rect = ElementGetBoaderWidth(element);
-						var padding_rect = ElementGetPaddingWidth(element);
+						var computed_style = ElementGetComputedStyle(element,null);
+						var boader_rect = ComputedStyleGetBoaderWidth(computed_style);
+						var padding_rect = ComputedStyleGetPaddingWidth(computed_style);
 
 						var px = bounding_rect.left + boader_rect.left + padding_rect.left;
 						var py = bounding_rect.top  + boader_rect.top  + padding_rect.top;
@@ -5308,23 +5452,48 @@ function PageExpand(execute_type){
 				popup_image.ontrim();
 				AnalyzeWorkSetPopupImage(work,popup_image);
 			}else{
-				// 解放
-				releasePopupReducedImage();
+				// 解放イベント発行
+				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
+				if(event_dispatcher){
+					event_dispatcher.dispatchEvent("release_popup_image",null);
+				}
 			}
 		}
 
-		// 解析辞書登録
-		analyze_work_dictionary.attachAnalyzeWork(work,false);
+		// 要素を監視
+		AnalyzeWorkObserveElement(work);
+		event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
 
-		// イベントディスパッチャー
-		event_dispatcher = new EventDispatcher();
+		// ポップアップイメージの破棄イベント
+		event_handler = event_dispatcher.createEventHandler("release_popup_image");
+		event_handler.setFunction(function(){
+			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
+			if(event_dispatcher){
+				if(AnalyzeWorkGetOverrodeAnchorElement(work)){
+					event_dispatcher.dispatchEvent("release",null);
+				}else{
+					event_dispatcher.dispatchEvent("destructor",null);
+				}
+			}
+		});
+
+		// 開放イベント
 		event_handler = event_dispatcher.createEventHandler("release");
 		event_handler.setFunction(releasePopupReducedImage);
-		AnalyzeWorkSetEventDispatcher(work,event_dispatcher);
 
-		// リムーブ監視
-		observer_remove = new DomNodeObserverRemoveFromDocument(element);
-		observer_remove.setFunction(releasePopupReducedImage);
+		// アドレス変更監視
+		var observer_modify_element = document_observer_modify_node.createElement();
+		observer_modify_element.setElement(element,"src");
+		observer_modify_element.setFunction(function (){
+
+			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
+			if(event_dispatcher){
+				event_dispatcher.dispatchEvent("destructor",null);
+			}
+
+			// 再解析
+			DomNodeAnalyzePhaseAnalyzeElement(element);
+		});
 
 		// ロード完了済み
 		if(element.complete){
@@ -5358,7 +5527,7 @@ function PageExpand(execute_type){
 					// 解放イベント発行
 					var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
 					if(event_dispatcher){
-						event_dispatcher.dispatchEvent("release",null);
+						event_dispatcher.dispatchEvent("release_popup_image",null);
 					}
 				}
 			}
@@ -5366,8 +5535,7 @@ function PageExpand(execute_type){
 
 		if(element.nodeType == 1){
 			// イメージ
-			var tag_name = element.tagName.toUpperCase();
-			if(tag_name == "IMG"){
+			if(element.tagName == "IMG"){
 				analyze(element);
 			}
 
@@ -5422,7 +5590,7 @@ function PageExpand(execute_type){
 				observer_remove.setFunction(releaseExpandBbs);
 
 				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(work,false);
+				analyze_work_dictionary.attachAnalyzeWork(work);
 			}
 		}
 

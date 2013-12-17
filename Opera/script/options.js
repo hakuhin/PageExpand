@@ -32,10 +32,13 @@ function PageExpand(execute_type){
 				_item.onmousedown = click;
 				_style.fontSize = "12px";
 				_style.width = "230px";
-				_style.background = "#DDD";
-				_style.webkitBoxShadow = _style.mozBoxShadow = _style.boxShadow = "";
+				_style.boxShadow = "";
 				_style.padding = "2px 10px 2px 0px";
+				_style.marginTop = "0px";
 				_style.marginBottom = "1px";
+
+				_brightness = 0.75;
+				updateBackgroundColor();
 			};
 
 			// --------------------------------------------------------------------------------
@@ -44,7 +47,9 @@ function PageExpand(execute_type){
 			_container.over = function(){
 				_container.normal();
 				_style.width = "240px";
-				_style.background = "#eee";
+
+				_brightness = 0.9375;
+				updateBackgroundColor();
 			};
 
 			// --------------------------------------------------------------------------------
@@ -56,10 +61,36 @@ function PageExpand(execute_type){
 				_item.onmousedown = null;
 				_style.fontSize = "16px";
 				_style.width = "250px";
-				_style.background = "#FFF";
 				_style.padding = "10px 5px 10px 0px";
-				_style.marginBottom = "5px";
-				_style.webkitBoxShadow = _style.mozBoxShadow = _style.boxShadow = "3px 3px 3px #888";
+				_style.marginTop = "2px";
+				_style.marginBottom = "3px";
+
+				var brightness = 0.25;
+				var r = (_color >> 16) & 0xFF;
+				var g = (_color >>  8) & 0xFF;
+				var b = (_color >>  0) & 0xFF;
+				r = Math.floor(r * brightness);
+				g = Math.floor(g * brightness);
+				b = Math.floor(b * brightness);
+				_style.boxShadow = "0px 1px 2px #" + r.toString(16) + g.toString(16) + b.toString(16);
+
+				var brightness = 1.0;
+				var r = (_color >> 16) & 0xFF;
+				var g = (_color >>  8) & 0xFF;
+				var b = (_color >>  0) & 0xFF;
+				r = Math.floor(r * brightness);
+				g = Math.floor(g * brightness);
+				b = Math.floor(b * brightness);
+				var liner_gradient = "linear-gradient(left, #" + r.toString(16) + g.toString(16) + b.toString(16) + " 25px, #ffffff 25px)";
+				_style.background = "#FFF";
+				_style.backgroundImage = liner_gradient;
+				var none = {"none":1,"initial":1};
+				if(none[_style.backgroundImage]) _style.backgroundImage = "-webkit-" + liner_gradient;
+				if(none[_style.backgroundImage]) _style.backgroundImage = "-moz-" + liner_gradient;
+				if(none[_style.backgroundImage]) _style.backgroundImage = "-ms-" + liner_gradient;
+				if(none[_style.backgroundImage]) _style.backgroundImage = "-o-" + liner_gradient;
+
+				_brightness = 1.0;
 			};
 
 			// --------------------------------------------------------------------------------
@@ -71,9 +102,31 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// 背景カラーをセット
+			// --------------------------------------------------------------------------------
+			_container.setBackgroundColor = function(argb){
+				_color = argb;
+				updateBackgroundColor();
+			};
+
+			// --------------------------------------------------------------------------------
+			// 背景カラー更新
+			// --------------------------------------------------------------------------------
+			function updateBackgroundColor(){
+				var r = (_color >> 16) & 0xFF;
+				var g = (_color >>  8) & 0xFF;
+				var b = (_color >>  0) & 0xFF;
+				r = Math.floor(r * _brightness);
+				g = Math.floor(g * _brightness);
+				b = Math.floor(b * _brightness);
+				_style.background = "#" + r.toString(16) + g.toString(16) + b.toString(16);
+			}
+
+			// --------------------------------------------------------------------------------
 			// クリック時のイベント
 			// --------------------------------------------------------------------------------
 			function click(){
+				_config.pushHistory(id);
 				_config.MenuItemSelect(id);
 			}
 
@@ -82,18 +135,42 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			var _item;
 			var _style;
+			var _color;
+			var _brightness;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
 			// --------------------------------------------------------------------------------
-			_item = DocumentCreateElement("div");
-			ElementSetStyle(_item,"width:250px; text-align:right; padding:5px 10px 5px 0px; margin:0px 0px 2px auto; border-radius:5px 0px 0px 5px; -webkit-border-radius:5px 0px 0px 5px; -moz-border-radius:5px 0px 0px 5px;");
+			_item = DocumentCreateElement("a");
+			_item.href = "";
+			_item.onclick = function(){ return false; };
+			ElementSetStyle(_item,"display:block; width:250px; text-decoration:none; text-align:right; padding:5px 10px 5px 0px; margin:0px 0px 2px auto; border-radius:5px 0px 0px 5px;");
 			_style = _item.style;
 			ElementSetTextContent(_item,label);
 			_menu_window.appendChild(_item);
 
+			_color = 0xFFFFFFFF;
+			_brightness = 1.0;
+			updateBackgroundColor();
+
 			return _container;
 		}
+
+		// --------------------------------------------------------------------------------
+		// 履歴を作成
+		// --------------------------------------------------------------------------------
+		_config.pushHistory = function(id){
+
+			// 履歴更新
+			var index = _history_state.index;
+			_history_state.scroll_pos = WindowGetScrollPosition(window);
+			history.replaceState({ index:index , menu:_history_state.selected_menu }, "", "");
+
+			// 履歴作成
+			index += 1;
+			_history_state_list[index] = _history_state = { index:index , selected_menu:id };
+			history.pushState({ index:index , menu:id }, "", "");
+		};
 
 		// --------------------------------------------------------------------------------
 		// メニューアイテム選択
@@ -112,7 +189,10 @@ function PageExpand(execute_type){
 
 			item = _menu_items[id];
 			item.active();
+
 			ContentClear();
+			_history_state.selected_menu = id;
+
 			if(param.callback){
 				return param.callback();
 			}
@@ -132,6 +212,7 @@ function PageExpand(execute_type){
 			var node = child_nodes[i];
 				DomNodeRemove(node);
 			}
+			WindowSetScrollPositionY (window,0);
 		}
 
 		// --------------------------------------------------------------------------------
@@ -147,9 +228,11 @@ function PageExpand(execute_type){
 			var _text_area_filter_url;
 			var _check_box_enable_icon_address_bar;
 			var _check_box_enable_context_menu;
-			var _check_box_enable_enable_startup;
+			var _check_box_enable_startup;
 			var _check_box_enable_debug_mode;
 			var _check_box_enable_output_log;
+			var _check_box_enable_input_touch;
+			var _check_box_enable_double_touch_assist;
 			var _stepper_load_thread_max;
 			var _stepper_execute_queue_time_occupancy;
 			var _stepper_execute_queue_sleep_time;
@@ -212,9 +295,9 @@ function PageExpand(execute_type){
 				};
 
 				// ロード完了時から動作を開始するか
-				_check_box_enable_enable_startup = UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_enable_startup"));
-				_check_box_enable_enable_startup.onchange = function(v){
-					standard.enable_enable_startup = v;
+				_check_box_enable_startup = UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_startup"));
+				_check_box_enable_startup.onchange = function(v){
+					standard.enable_startup = v;
 					projectModify();
 				};
 
@@ -244,6 +327,25 @@ function PageExpand(execute_type){
 				_stepper_load_thread_max.setMaximum(99999);
 				_stepper_load_thread_max.oninput = function(v){
 					standard.load_thread_max = v;
+					projectModify();
+				};
+
+				// タッチ操作設定
+				var container = new UI_InlineContainer(_content_window,_i18n.getMessage("menu_setting_standard_touch"));
+				container.setWidth(400);
+				var parent = container.getElement();
+
+				// タッチ操作を有効
+				_check_box_enable_input_touch = UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_input_touch"));
+				_check_box_enable_input_touch.onchange = function(v){
+					standard.enable_input_touch = v;
+					projectModify();
+				};
+
+				// ダブルタッチ補助線を表示
+				_check_box_enable_double_touch_assist = UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_double_touch_assist"));
+				_check_box_enable_double_touch_assist.onchange = function(v){
+					standard.enable_double_touch_assist = v;
 					projectModify();
 				};
 
@@ -305,7 +407,7 @@ function PageExpand(execute_type){
 					projectSave(function(e){
 						var export_obj = page_expand_project.exportObject();
 						// プリセットを除去
-						export_obj = page_expand_project.removePresetFromObject(export_obj);
+						export_obj = PageExpandProjectObjectRemovePreset(export_obj);
 						export_obj.setting_export = {
 							type:"setting"
 						};
@@ -396,8 +498,8 @@ function PageExpand(execute_type){
 
 								delete import_obj.setting_export;
 
-								// プリセットをマージ
-								import_obj = proj_new.margePresetFromObject(import_obj);
+								// プリセットを付加
+								import_obj = PageExpandProjectObjectAppendPreset(import_obj);
 
 								proj_new.importObject(import_obj);
 								page_expand_project = proj_new;
@@ -550,7 +652,7 @@ function PageExpand(execute_type){
 				_check_box_enable_context_menu.setValue(standard.enable_context_menu);
 
 				// ロード完了時から動作を開始するか
-				_check_box_enable_enable_startup.setValue(standard.enable_enable_startup);
+				_check_box_enable_startup.setValue(standard.enable_startup);
 
 				// デバッグモードが有効であるか
 				_check_box_enable_debug_mode.setValue(standard.enable_debug_mode);
@@ -558,9 +660,14 @@ function PageExpand(execute_type){
 				// ログ出力が有効であるか
 				_check_box_enable_output_log.setValue(standard.enable_output_log);
 
-
 				// 最大同時ダウンロード数
 				_stepper_load_thread_max.setValue(standard.load_thread_max);
+
+				// タッチ操作が有効であるか
+				_check_box_enable_input_touch.setValue(standard.enable_input_touch);
+
+				// ダブルタッチ操作補助線を表示するか
+				_check_box_enable_double_touch_assist.setValue(standard.enable_double_touch_assist);
 
 				// 最大CPU占有時間
 				_stepper_execute_queue_time_occupancy.setValue(standard.execute_queue.time_occupancy);
@@ -600,11 +707,26 @@ function PageExpand(execute_type){
 							var m = url.match(regexp);
 							if(m){
 								_expand_bbs_list.select(i);
+								_expand_bbs_list.replaceHistory();
 								return;
 							}
 						}
 					}
 				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_expand_bbs_list.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_expand_bbs_list.replaceHistory();
 			};
 
 			// --------------------------------------------------------------------------------
@@ -618,6 +740,7 @@ function PageExpand(execute_type){
 
 				_text_input_name.setValue(LocaleObjectGetString(c.name));
 				_check_box_enable_expand_bbs.setValue(c.enable);
+				_form_container_enable.setVisible(c.enable);
 				_regexp_list_filter.attachArray(c.filter);
 				_text_area_script_initialize.setValue(c.script_initialize);
 				_check_box_popup_enable_animation.setValue(c.popup.enable_animation);
@@ -661,6 +784,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			var _expand_bbs_list;
 			var _form_container;
+			var _form_container_enable;
 			var _text_input_name;
 			var _check_box_enable_expand_bbs;
 			var _regexp_list_filter;
@@ -697,6 +821,9 @@ function PageExpand(execute_type){
 						select(id);
 					}
 				};
+				_expand_bbs_list.onreload = function(){
+					_config.MenuItemSelect(PageExpandConfig.MENU_TYPE_SETTING_EXPAND_BBS);
+				};
 
 				// フォームコンテナ
 				_form_container = new UI_FormContainer(_content_window);
@@ -725,12 +852,17 @@ function PageExpand(execute_type){
 					getSelectedExpandBbs(function(c){
 						c.enable = v;
 					});
+					_form_container_enable.setVisible(v);
 					_expand_bbs_list.update();
 					projectModify();
 				};
 
+				_form_container_enable = new UI_FormContainer(form_parent);
+				_form_container_enable.setVisible(false);
+				var form_parent_enable = _form_container_enable.getElement();
+
 				// 動作URLの設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_bbs_filter_url"));
+				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_filter_url"));
 				var parent = container.getElement();
 				_regexp_list_filter = UI_RegExpList(parent);
 				_regexp_list_filter.onchange = function(v){
@@ -742,7 +874,7 @@ function PageExpand(execute_type){
 				};
 
 				// ポップアップの設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_bbs_popup_check_box_container"));
+				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_popup_check_box_container"));
 				var parent = container.getElement();
 
 				// ポップアップ時のアニメーション動作を有効
@@ -756,7 +888,7 @@ function PageExpand(execute_type){
 				};
 
 				// ポップアップの配置基点
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_bbs_popup_origin_type"));
+				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_popup_origin_type"));
 				var parent = container.getElement();
 				_combo_box_popup_origin_type = UI_ComboBox(parent);
 				_combo_box_popup_origin_type.attachItem(_i18n.getMessage("menu_setting_expand_bbs_popup_origin_type_combo_box_item_adsorb_top_bottom"),"adsorb_top_bottom");
@@ -770,7 +902,7 @@ function PageExpand(execute_type){
 				};
 
 				// ポップアップの配置位置
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_bbs_popup_position_type"));
+				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_popup_position_type"));
 				var parent = container.getElement();
 				_combo_box_popup_position_type = UI_ComboBox(parent);
 				_combo_box_popup_position_type.attachItem(_i18n.getMessage("menu_setting_expand_bbs_popup_position_type_combo_box_item_absolute"),"absolute");
@@ -784,7 +916,7 @@ function PageExpand(execute_type){
 				};
 
 				// ポップアップサイズ
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_bbs_popup_percent"));
+				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_popup_percent"));
 				var parent = container.getElement();
 				// 横方向パーセント (0～100)
 				UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_percent_h"));
@@ -812,7 +944,7 @@ function PageExpand(execute_type){
 				};
 
 				// ポップアップ時間
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_bbs_popup_time"));
+				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_popup_time"));
 				var parent = container.getElement();
 				// 開くまでに待機する時間（ミリ秒）
 				UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_time_wait_open"));
@@ -840,7 +972,7 @@ function PageExpand(execute_type){
 				};
 
 				// ポップアップのスタイル
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_bbs_popup_style_sheet"));
+				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_popup_style_sheet"));
 				var parent = container.getElement();
 				_text_input_popup_style_sheet = UI_TextInput(parent);
 				_text_input_popup_style_sheet.oninput = function(v){
@@ -852,7 +984,7 @@ function PageExpand(execute_type){
 				};
 
 				// 初期化スクリプト
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_bbs_script_initialize"));
+				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_script_initialize"));
 				var parent = container.getElement();
 				_text_area_script_initialize = UI_ScriptArea(parent);
 				_text_area_script_initialize.oninput = function(v){
@@ -864,7 +996,7 @@ function PageExpand(execute_type){
 				};
 
 				// コールバックスクリプト
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_bbs_script_callback"));
+				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_script_callback"));
 				var parent = container.getElement();
 				_text_area_script_callback = UI_ScriptArea(parent);
 				_text_area_script_callback.oninput = function(v){
@@ -904,10 +1036,25 @@ function PageExpand(execute_type){
 					for(j=0;j<filter_num;j++){
 						if(StringUrlMatchAsteriskWord(url,filter[j])){
 							_urlmap_list.select(i);
+							_urlmap_list.replaceHistory();
 							return;
 						}
 					}
 				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_urlmap_list.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_urlmap_list.replaceHistory();
 			};
 
 			// --------------------------------------------------------------------------------
@@ -924,6 +1071,7 @@ function PageExpand(execute_type){
 
 				// 有効
 				_check_box_enable_urlmap.setValue(c.enable);
+				_form_container_enable.setVisible(c.enable);
 
 				// フィルタ
 				_text_area_filter_url.joinArray(c.filter,"\n");
@@ -992,6 +1140,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			var _urlmap_list;
 			var _form_container;
+			var _form_container_enable;
 			var _text_input_name;
 			var _check_box_enable_urlmap;
 			var _text_area_filter_url;
@@ -1000,12 +1149,12 @@ function PageExpand(execute_type){
 			var _ui_define;
 			var _ui_define_select_params = [
 				{asset:"access_block",type:PageExpandConfig.MENU_TYPE_SETTING_ACCESS_BLOCK,select:"multiple" },
+				{asset:"replacement_to_referer",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_REFERER,select:"multiple" },
+				{asset:"replacement_to_useragent",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_USERAGENT,select:"multiple" },
 				{asset:"replacement_to_element",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_ELEMENT,select:"multiple" },
 				{asset:"replacement_to_text",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_TEXT,select:"multiple" },
 				{asset:"replacement_to_anchor",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_ANCHOR,select:"multiple" },
 				{asset:"replacement_to_link",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_LINK,select:"multiple" },
-				{asset:"replacement_to_referer",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_REFERER,select:"multiple" },
-				{asset:"replacement_to_useragent",type:PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_USERAGENT,select:"multiple" },
 				{asset:"make_link_to_text",type:PageExpandConfig.MENU_TYPE_SETTING_MAKE_LINK_TO_TEXT,select:"single" },
 				{asset:"expand_short_url",type:PageExpandConfig.MENU_TYPE_SETTING_EXPAND_SHORT_URL,select:"single" },
 				{asset:"expand_text",type:PageExpandConfig.MENU_TYPE_SETTING_EXPAND_TEXT,select:"single" },
@@ -1068,12 +1217,17 @@ function PageExpand(execute_type){
 					getSelectedUrlMaps(function(c){
 						c.enable = v;
 					});
+					_form_container_enable.setVisible(v);
 					_urlmap_list.update();
 					projectModify();
 				};
 
+				_form_container_enable = new UI_FormContainer(form_parent);
+				_form_container_enable.setVisible(false);
+				var form_parent_enable = _form_container_enable.getElement();
+
 				// 動作 URL
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_urlmap_filter_url"));
+				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_urlmap_filter_url"));
 				var parent = container.getElement();
 				_text_area_filter_url = UI_TextArea(parent);
 				_text_area_filter_url.oninput = function(v){
@@ -1086,7 +1240,7 @@ function PageExpand(execute_type){
 				UI_TextHint(parent,_i18n.getMessage("menu_setting_urlmap_filter_url_hint"));
 
 				// セキュリティ
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_urlmap_unsecure_check_box_container"));
+				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_urlmap_unsecure_check_box_container"));
 				var parent = container.getElement();
 
 				// アンセキュア
@@ -1122,13 +1276,14 @@ function PageExpand(execute_type){
 						var asset = param.asset;
 
 						// 各定義
-						var container = new UI_InlineContainer(form_parent,_i18n.getMessage("menu_setting_" + param.asset));
+						var container = new UI_InlineContainer(form_parent_enable,_i18n.getMessage("menu_setting_" + param.asset));
 						container.setWidth(280);
 						var parent = container.getElement();
 						
 						if(!_menu_support_param[type].urlmap){
 							container.setAlpha(0.5);
 						}
+						container.setBackgroundColor(_menu_item_param[type].bgcolor);
 
 						switch(param.select){
 						case "single":
@@ -1166,8 +1321,10 @@ function PageExpand(execute_type){
 
 							// ボタン押下
 							combo_box.onclick = function(){
+								_config.pushHistory(type);
 								var content = _config.MenuItemSelect(type);
 								content.select(combo_box.getSelectedIndex());
+								content.replaceHistory();
 							};
 							break;
 						case "multiple":
@@ -1175,6 +1332,7 @@ function PageExpand(execute_type){
 							_ui_define.push(multi_list);
 
 							multi_list.setAsset(param.asset);
+							multi_list.setMenuId(type);
 							multi_list.setDefineData(proj[param.asset]);
 							multi_list.onchange = function(){
 								_urlmap_list.update();
@@ -1202,11 +1360,32 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_define_list.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_define_list.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// 選択（内部用 ）
 			// --------------------------------------------------------------------------------
 			function select(id){
 				var c = ProjectObjectGetActiveData(_define[id]);
 				if(!c)	return;
+
+				// ワイルドカード
+				if(_define[id].id == "wildcard"){
+					_wildcard_container.setVisible(true);
+				}else{
+					_wildcard_container.setVisible(false);
+				}
 
 				// 名前
 				_text_input_name.setValue(LocaleObjectGetString(c.name));
@@ -1240,9 +1419,11 @@ function PageExpand(execute_type){
 				// リスト選択時
 				_define_list.onselect = function(id){
 					if(id < 0 || _define.length <= id){
-						_form_container.setVisible(false);
+						_form_container_inner.setVisible(false);
+						_form_container_outer.setVisible(false);
 					}else{
-						_form_container.setVisible(true);
+						_form_container_inner.setVisible(true);
+						_form_container_outer.setVisible(true);
 						select(id);
 					}
 				};
@@ -1276,7 +1457,7 @@ function PageExpand(execute_type){
 			// フォームエレメントを取得
 			// --------------------------------------------------------------------------------
 			_container.getElementForm = function(){
-				return _form_container.getElement();
+				return _form_container_outer.getElement();
 			};
 
 			// --------------------------------------------------------------------------------
@@ -1321,7 +1502,9 @@ function PageExpand(execute_type){
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _title;
-			var _form_container;
+			var _form_container_inner;
+			var _form_container_outer;
+			var _wildcard_container;
 			var _text_input_name;
 			var _define_list;
 			var _define;
@@ -1332,8 +1515,12 @@ function PageExpand(execute_type){
 			(function(){
 				_title = new UI_Title(_content_window,"");
 
+				// グループ
+				var group = new UI_GroupContainer(_content_window);
+				var group_parent = group.getElement();
+
 				// 定義一覧
-				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_setting_define_list"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_define_list"));
 				var parent = container.getElement();
 				_define_list = UI_DefineList(parent);
 				_define_list.onreload = function(){
@@ -1341,9 +1528,22 @@ function PageExpand(execute_type){
 				};
 
 				// フォームコンテナ
-				_form_container = new UI_FormContainer(_content_window);
-				var form_parent = _form_container.getElement();
-				_form_container.setVisible(false);
+				_form_container_inner = new UI_FormContainer(group_parent);
+				var form_parent = _form_container_inner.getElement();
+				_form_container_inner.setVisible(false);
+
+				// ワイルドカードについて
+				_wildcard_container = new UI_FormContainer(form_parent);
+				var wildcard_parent = _wildcard_container.getElement();
+				_wildcard_container.setVisible(false);
+
+				// ワイルドカードについて
+				var container = new UI_LineContainer(wildcard_parent,_i18n.getMessage("menu_setting_define_wildcard_detail"));
+				var parent = container.getElement();
+				var unordered_list = UI_UnorderedList(parent);
+				unordered_list.addListItem(_i18n.getMessage("menu_setting_define_wildcard_detail_0"));
+				unordered_list.addListItem(_i18n.getMessage("menu_setting_define_wildcard_detail_1"));
+				unordered_list.addListItem(_i18n.getMessage("menu_setting_define_wildcard_detail_2"));
 
 				// 定義名
 				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_define_name"));
@@ -1356,6 +1556,11 @@ function PageExpand(execute_type){
 					_container.update();
 					projectModify();
 				};
+
+				// フォームコンテナ
+				_form_container_outer = new UI_FormContainer(_content_window);
+				var form_parent = _form_container_outer.getElement();
+				_form_container_outer.setVisible(false);
 			})();
 
 			return _container;
@@ -1375,6 +1580,20 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
@@ -1391,8 +1610,12 @@ function PageExpand(execute_type){
 				// タイトル
 				_setting_define.setTitle(_i18n.getMessage("menu_setting_access_block"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// アクセス遮断 URL
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_access_block_filter_url"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_access_block_filter_url"));
 				var parent = container.getElement();
 				_text_area_filter_url = UI_TextArea(parent);
 				_text_area_filter_url.oninput = function(v){
@@ -1443,6 +1666,20 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
@@ -1459,8 +1696,12 @@ function PageExpand(execute_type){
 				// タイトル
 				_setting_define.setTitle(_i18n.getMessage("menu_setting_replacement_to_element"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// コールバックスクリプト
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_replacement_to_element_script"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_element_script"));
 				var parent = container.getElement();
 				_text_area_script = UI_ScriptArea(parent);
 				_text_area_script.oninput = function(v){
@@ -1510,6 +1751,20 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
@@ -1526,8 +1781,12 @@ function PageExpand(execute_type){
 				// タイトル
 				_setting_define.setTitle(_i18n.getMessage("menu_setting_replacement_to_text"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// コールバックスクリプト
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_replacement_to_text_script"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_text_script"));
 				var parent = container.getElement();
 				_text_area_script = UI_ScriptArea(parent);
 				_text_area_script.oninput = function(v){
@@ -1577,6 +1836,20 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
@@ -1594,8 +1867,12 @@ function PageExpand(execute_type){
 				// タイトル
 				_setting_define.setTitle(_i18n.getMessage("menu_setting_replacement_to_anchor"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// コールバックスクリプト
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_replacement_to_anchor_script"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_anchor_script"));
 				var parent = container.getElement();
 				_text_area_allow_url = UI_ScriptArea(parent);
 				_text_area_allow_url.oninput = function(v){
@@ -1645,6 +1922,28 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// リストからフィルタを選択
+			// --------------------------------------------------------------------------------
+			_container.selectFilterFromList = function(list){
+				_filter_list.selectFromList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+				_filter_list.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
@@ -1654,7 +1953,8 @@ function PageExpand(execute_type){
 			var _text_area_script;
 			var _check_box_enable_reflect_to_anchor;
 			var _check_box_enable_cache;
-			var _form_container_filter;
+			var _form_container_filter_inner;
+			var _form_container_filter_outer;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -1688,20 +1988,28 @@ function PageExpand(execute_type){
 						}
 					}
 
-					_form_container_filter.setVisible(visible);
+					_form_container_filter_inner.setVisible(visible);
+					_form_container_filter_outer.setVisible(visible);
 				}
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// ファイルタリスト
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_replacement_to_link_filter_list"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_link_filter_list"));
 				var parent = container.getElement();
 				_filter_list = UI_FilterList(parent);
 				_filter_list.onselect = function(id){
 					filterListUpdate(id);
 				};
+				_filter_list.onchange = function(id){
+					_setting_define.update();
+				};
 
-				_form_container_filter = new UI_FormContainer(form_parent);
-				_form_container_filter.setVisible(false);
-				var form_parent_filter = _form_container_filter.getElement();
+				_form_container_filter_inner = new UI_FormContainer(group_parent);
+				_form_container_filter_inner.setVisible(false);
+				var form_parent_filter = _form_container_filter_inner.getElement();
 
 				// フィルタ名
 				var container = new UI_LineContainer(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_link_filter_name"));
@@ -1712,14 +2020,23 @@ function PageExpand(execute_type){
 						LocaleObjectSetString(c.name,v);
 					});
 					_filter_list.update();
+					_setting_define.update();
 					projectModify();
 				};
+
+				_form_container_filter_outer = new UI_FormContainer(form_parent);
+				_form_container_filter_outer.setVisible(false);
+				var form_parent_filter = _form_container_filter_outer.getElement();
 
 				// フィルタ設定
 				var title = new UI_TitleSub(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_link_filter"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent_filter);
+				var group_parent = group.getElement();
+
 				// 対象 URL
-				var container = new UI_LineContainer(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_link_filter_filter_url"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_link_filter_filter_url"));
 				var parent = container.getElement();
 				_text_area_filter_url = UI_TextArea(parent);
 				_text_area_filter_url.oninput = function(v){
@@ -1732,7 +2049,7 @@ function PageExpand(execute_type){
 				UI_TextHint(parent,_i18n.getMessage("menu_setting_replacement_to_link_filter_filter_url_hint"));
 
 				// ハイパーリンクの設定
-				var container = new UI_LineContainer(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_link_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_link_check_box_container"));
 				var parent = container.getElement();
 
 				//リンクの変更をアンカーに反映する
@@ -1759,7 +2076,7 @@ function PageExpand(execute_type){
 				
 
 				// コールバックスクリプト
-				var container = new UI_LineContainer(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_link_filter_script"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_link_filter_script"));
 				var parent = container.getElement();
 				_text_area_script = UI_ScriptArea(parent);
 				_text_area_script.oninput = function(v){
@@ -1775,7 +2092,9 @@ function PageExpand(execute_type){
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_link");
 				_setting_define.setFunctionForNewData(createPlacementToLinkData);
-				_filter_list.setFunctionForNewData(createPlacementToLinkFilterItemData);
+				_filter_list.setFunctionForNewDefineData(createPlacementToLinkData);
+				_filter_list.setFunctionForNewFilterData(createPlacementToLinkFilterItemData);
+				_filter_list.setDefineAssetName("replacement_to_link");
 
 				// リスト選択
 				_setting_define.onselect = function(id){
@@ -1818,6 +2137,28 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// リストからフィルタを選択
+			// --------------------------------------------------------------------------------
+			_container.selectFilterFromList = function(list){
+				_filter_list.selectFromList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+				_filter_list.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
@@ -1828,7 +2169,8 @@ function PageExpand(execute_type){
 			var _text_input_send_custom;
 			var _text_regexp_send_regexp;
 			var _text_input_send_replacement;
-			var _form_container_filter;
+			var _form_container_filter_inner;
+			var _form_container_filter_outer;
 			var _form_container_send_custom;
 
 			// --------------------------------------------------------------------------------
@@ -1865,7 +2207,8 @@ function PageExpand(execute_type){
 						}
 					}
 
-					_form_container_filter.setVisible(visible);
+					_form_container_filter_inner.setVisible(visible);
+					_form_container_filter_outer.setVisible(visible);
 				}
 
 				// 送信タイプ更新
@@ -1873,17 +2216,24 @@ function PageExpand(execute_type){
 					_form_container_send_custom.setVisible(_combo_box_send_type.getValue() == "custom");
 				}
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// ファイルタリスト
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_list"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_list"));
 				var parent = container.getElement();
 				_filter_list = UI_FilterList(parent);
 				_filter_list.onselect = function(id){
 					filterListUpdate(id);
 				};
+				_filter_list.onchange = function(id){
+					_setting_define.update();
+				};
 
-				_form_container_filter = new UI_FormContainer(form_parent);
-				_form_container_filter.setVisible(false);
-				var form_parent_filter = _form_container_filter.getElement();
+				_form_container_filter_inner = new UI_FormContainer(group_parent);
+				_form_container_filter_inner.setVisible(false);
+				var form_parent_filter = _form_container_filter_inner.getElement();
 
 				// フィルタ名
 				var container = new UI_LineContainer(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_referer_filter_name"));
@@ -1894,14 +2244,23 @@ function PageExpand(execute_type){
 						LocaleObjectSetString(c.name,v);
 					});
 					_filter_list.update();
+					_setting_define.update();
 					projectModify();
 				};
+
+				_form_container_filter_outer = new UI_FormContainer(form_parent);
+				_form_container_filter_outer.setVisible(false);
+				var form_parent_filter = _form_container_filter_outer.getElement();
 
 				// フィルタ設定
 				var title = new UI_TitleSub(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_referer_filter"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent_filter);
+				var group_parent = group.getElement();
+
 				// 対象 URL
-				var container = new UI_LineContainer(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_referer_filter_filter_url"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_filter_url"));
 				var parent = container.getElement();
 				_text_area_filter_url = UI_TextArea(parent);
 				_text_area_filter_url.oninput = function(v){
@@ -1914,7 +2273,7 @@ function PageExpand(execute_type){
 				UI_TextHint(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_filter_url_hint"));
 
 				// 基本送信データ
-				var container = new UI_LineContainer(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type_combo_box_item"));
@@ -1947,7 +2306,7 @@ function PageExpand(execute_type){
 				};
 
 				// 基本送信データを正規表現で置換
-				var container = new UI_LineContainer(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp_match"));
@@ -1975,7 +2334,9 @@ function PageExpand(execute_type){
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_referer");
 				_setting_define.setFunctionForNewData(createPlacementToRefererData);
-				_filter_list.setFunctionForNewData(createPlacementToRefererFilterItemData);
+				_filter_list.setFunctionForNewDefineData(createPlacementToRefererData);
+				_filter_list.setFunctionForNewFilterData(createPlacementToRefererFilterItemData);
+				_filter_list.setDefineAssetName("replacement_to_referer");
 
 				// リスト選択
 				_setting_define.onselect = function(id){
@@ -2018,6 +2379,28 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// リストからフィルタを選択
+			// --------------------------------------------------------------------------------
+			_container.selectFilterFromList = function(list){
+				_filter_list.selectFromList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+				_filter_list.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
@@ -2025,7 +2408,8 @@ function PageExpand(execute_type){
 			var _text_input_name;
 			var _text_area_filter_url;
 			var _text_input_send_custom;
-			var _form_container_filter;
+			var _form_container_filter_inner;
+			var _form_container_filter_outer;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -2054,20 +2438,28 @@ function PageExpand(execute_type){
 						}
 					}
 
-					_form_container_filter.setVisible(visible);
+					_form_container_filter_inner.setVisible(visible);
+					_form_container_filter_outer.setVisible(visible);
 				}
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// ファイルタリスト
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_list"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_list"));
 				var parent = container.getElement();
 				_filter_list = UI_FilterList(parent);
 				_filter_list.onselect = function(id){
 					filterListUpdate(id);
 				};
+				_filter_list.onchange = function(id){
+					_setting_define.update();
+				};
 
-				_form_container_filter = new UI_FormContainer(form_parent);
-				_form_container_filter.setVisible(false);
-				var form_parent_filter = _form_container_filter.getElement();
+				_form_container_filter_inner = new UI_FormContainer(group_parent);
+				_form_container_filter_inner.setVisible(false);
+				var form_parent_filter = _form_container_filter_inner.getElement();
 
 				// フィルタ名
 				var container = new UI_LineContainer(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_name"));
@@ -2078,14 +2470,23 @@ function PageExpand(execute_type){
 						LocaleObjectSetString(c.name,v);
 					});
 					_filter_list.update();
+					_setting_define.update();
 					projectModify();
 				};
+
+				_form_container_filter_outer = new UI_FormContainer(form_parent);
+				_form_container_filter_outer.setVisible(false);
+				var form_parent_filter = _form_container_filter_outer.getElement();
 
 				// フィルタ設定
 				var title = new UI_TitleSub(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_useragent_filter"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent_filter);
+				var group_parent = group.getElement();
+
 				// 対象 URL
-				var container = new UI_LineContainer(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_filter_url"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_filter_url"));
 				var parent = container.getElement();
 				_text_area_filter_url = UI_TextArea(parent);
 				_text_area_filter_url.oninput = function(v){
@@ -2098,7 +2499,7 @@ function PageExpand(execute_type){
 				UI_TextHint(parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_filter_url_hint"));
 
 				// 基本送信データ
-				var container = new UI_LineContainer(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_send"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_send"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_send_custom"));
@@ -2118,7 +2519,9 @@ function PageExpand(execute_type){
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_useragent");
 				_setting_define.setFunctionForNewData(createPlacementToUserAgentData);
-				_filter_list.setFunctionForNewData(createPlacementToUserAgentFilterItemData);
+				_filter_list.setFunctionForNewDefineData(createPlacementToUserAgentData);
+				_filter_list.setFunctionForNewFilterData(createPlacementToUserAgentFilterItemData);
+				_filter_list.setDefineAssetName("replacement_to_useragent");
 
 				// リスト選択
 				_setting_define.onselect = function(id){
@@ -2161,6 +2564,20 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
@@ -2177,8 +2594,12 @@ function PageExpand(execute_type){
 				// タイトル
 				_setting_define.setTitle(_i18n.getMessage("menu_setting_make_link_to_text"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// コールバックスクリプト
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_make_link_to_text_script"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_make_link_to_text_script"));
 				var parent = container.getElement();
 				_text_area_script = UI_ScriptArea(parent);
 				_text_area_script.oninput = function(v){
@@ -2228,6 +2649,20 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
@@ -2245,8 +2680,12 @@ function PageExpand(execute_type){
 				// タイトル
 				_setting_define.setTitle(_i18n.getMessage("menu_setting_expand_short_url"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// 対象 URL
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_short_url_filter_url"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_short_url_filter_url"));
 				var parent = container.getElement();
 				_text_area_filter_url = UI_TextArea(parent);
 				_text_area_filter_url.oninput = function(v){
@@ -2297,6 +2736,20 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
@@ -2316,8 +2769,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_text_inline"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// インライン表示の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_text_inline_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_text_inline_check_box_container"));
 				var parent = container.getElement();
 
 				// 同じURLは展開しない
@@ -2332,7 +2789,7 @@ function PageExpand(execute_type){
 				};
 
 				// リンクからインライン表示する条件
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_text_inline_script_allow"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_text_inline_script_allow"));
 				var parent = container.getElement();
 				var text_area_inline_script_allow = UI_ScriptArea(parent);
 				text_area_inline_script_allow.oninput = function(v){
@@ -2345,7 +2802,7 @@ function PageExpand(execute_type){
 				};
 
 				// テキストの挿入位置
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_text_inline_script_insert"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_text_inline_script_insert"));
 				var parent = container.getElement();
 				var text_area_inline_script_insert = UI_ScriptArea(parent);
 				text_area_inline_script_insert.oninput = function(v){
@@ -2399,11 +2856,29 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
 			var _form_container;
+			var _form_container_thumbnail;
+			var _form_container_popup;
+			var _form_container_reduced_image;
 			var _form_container_unload;
+			var _selected_id;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -2416,11 +2891,91 @@ function PageExpand(execute_type){
 				// タイトル
 				_setting_define.setTitle(_i18n.getMessage("menu_setting_expand_image"));
 
+				// フォーム更新
+				function formUpdate(){
+					var c = ProjectObjectGetActiveData(define[_selected_id]);
+					if(c){
+						_form_container_thumbnail.setVisible(c.thumbnail.enable_thumbnail);
+						_form_container_popup.setVisible((c.thumbnail.enable_thumbnail || c.popup.enable_popup_mouseover || c.reduced_image.enable_popup));
+						_form_container_reduced_image.setVisible(c.reduced_image.enable_popup);
+					}
+				}
+
+				// 縮小イメージ設定
+				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_image_reduced_image"));
+
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
+				// 有効/無効
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_image_reduced_image_check_box_container"));
+				var parent = container.getElement();
+
+				// 縮小されたイメージをマウスオーバーするとポップアップ表示
+				var check_box_reduced_image_enable_popup = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_popup_enable_popup"));
+				check_box_reduced_image_enable_popup.onchange = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.reduced_image.enable_popup = v;
+					});
+
+					formUpdate();
+					_setting_define.update();
+					projectModify();
+				};
+
+				_form_container_reduced_image = new UI_FormContainer(group_parent);
+				_form_container_reduced_image.setVisible(false);
+				var form_parent_reduced_image = _form_container_reduced_image.getElement();
+
+
+				// 縮小イメージのポップアップ化条件
+				var container = new UI_LineContainer(form_parent_reduced_image,_i18n.getMessage("menu_setting_expand_image_reduced_image_allow_slcale_less_then"));
+				var parent = container.getElement();
+
+				// 縮小率
+				var stepper_popup_allow_slcale_less_then = UI_NumericStepper(parent);
+				stepper_popup_allow_slcale_less_then.setMinimum(0);
+				stepper_popup_allow_slcale_less_then.setMaximum(100);
+				stepper_popup_allow_slcale_less_then.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.reduced_image.popup_allow_slcale_less_then = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
+				UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_reduced_image_allow_slcale_less_then_text"));
+
 				// サムネイル表示設定
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_image_thumbnail"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
+				// 有効/無効
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_enable_check_box_container"));
+				var parent = container.getElement();
+
+				// サムネイルを表示する
+				var check_box_enable_thumbnail = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_enable_thumbnail"));
+				check_box_enable_thumbnail.onchange = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.thumbnail.enable_thumbnail = v;
+					});
+
+					formUpdate();
+					_setting_define.update();
+					projectModify();
+				};
+
+				_form_container_thumbnail = new UI_FormContainer(group_parent);
+				_form_container_thumbnail.setVisible(false);
+				var form_parent_thumbnail = _form_container_thumbnail.getElement();
+
 				// サムネイル表示設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_check_box_container"));
+				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_thumbnail_check_box_container"));
 				var parent = container.getElement();
 
 				// サムネイルにマウスオーバーするとポップアップ表示
@@ -2446,7 +3001,7 @@ function PageExpand(execute_type){
 				};
 
 				// イメージのロード設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_load_start_type"));
+				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_load_start_type"));
 				var parent = container.getElement();
 				var combo_box_thumbnail_load_type = UI_ComboBox(parent);
 				combo_box_thumbnail_load_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_start_type_preload"),"preload");
@@ -2461,7 +3016,7 @@ function PageExpand(execute_type){
 				};
 
 				// リンクからサムネイル化する条件
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_script_allow"));
+				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_thumbnail_script_allow"));
 				var parent = container.getElement();
 				var text_area_thumbnail_script_allow = UI_ScriptArea(parent);
 				text_area_thumbnail_script_allow.oninput = function(v){
@@ -2474,7 +3029,7 @@ function PageExpand(execute_type){
 				};
 
 				// サムネイルの挿入位置
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_script_insert"));
+				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_thumbnail_script_insert"));
 				var parent = container.getElement();
 				var text_area_thumbnail_script_insert = UI_ScriptArea(parent);
 				text_area_thumbnail_script_insert.oninput = function(v){
@@ -2489,8 +3044,32 @@ function PageExpand(execute_type){
 				// ポップアップ表示設定
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_image_popup"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
+				// 有効/無効
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_image_popup_enable_check_box_container"));
+				var parent = container.getElement();
+
+				// ポップアップ表示の有無
+				var check_box_popup_enable_popup_mouseover = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_popup_enable_popup_mouseover"));
+				check_box_popup_enable_popup_mouseover.onchange = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.popup.enable_popup_mouseover = v;
+					});
+
+					formUpdate();
+					_setting_define.update();
+					projectModify();
+				};
+
+				_form_container_popup = new UI_FormContainer(group_parent);
+				_form_container_popup.setVisible(false);
+				var form_parent_popup = _form_container_popup.getElement();
+
 				// ポップアップ表示設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_popup_check_box_container"));
+				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_check_box_container"));
 				var parent = container.getElement();
 
 				// ポップアップ時のスケールアニメーション動作を有効
@@ -2515,7 +3094,7 @@ function PageExpand(execute_type){
 				};
 
 				// イメージのロード設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_load_start_type"));
+				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_load_start_type"));
 				var parent = container.getElement();
 				var combo_box_popup_load_type = UI_ComboBox(parent);
 				combo_box_popup_load_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_start_type_preload"),"preload");
@@ -2530,7 +3109,7 @@ function PageExpand(execute_type){
 				};
 
 				// ポップアップイメージの配置基点
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_popup_origin_type"));
+				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_origin_type"));
 				var parent = container.getElement();
 				var combo_box_popup_origin_type = UI_ComboBox(parent);
 				combo_box_popup_origin_type.attachItem(_i18n.getMessage("menu_setting_expand_image_popup_origin_type_combo_box_item_center"),"center");
@@ -2549,7 +3128,7 @@ function PageExpand(execute_type){
 				};
 
 				// ポップアップイメージの配置位置
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_popup_position_type"));
+				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_position_type"));
 				var parent = container.getElement();
 				var combo_box_popup_position_type = UI_ComboBox(parent);
 				combo_box_popup_position_type.attachItem(_i18n.getMessage("menu_setting_expand_image_popup_position_type_combo_box_item_absolute"),"absolute");
@@ -2564,7 +3143,7 @@ function PageExpand(execute_type){
 				};
 
 				// ポップアップイメージの表示サイズ
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_popup_size"));
+				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_size"));
 				var parent = container.getElement();
 				// 拡大率（パーセント）
 				UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_popup_size_scale"));
@@ -2581,7 +3160,7 @@ function PageExpand(execute_type){
 				};
 
 				// ポップアップ時間
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_popup_time"));
+				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_time"));
 				var parent = container.getElement();
 				// 開くまでに待機する時間（ミリ秒）
 				UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_popup_time_wait_open"));
@@ -2611,7 +3190,7 @@ function PageExpand(execute_type){
 				};
 
 				// リンクからポップアップ表示する条件
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_popup_script_allow"));
+				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_script_allow"));
 				var parent = container.getElement();
 				var text_area_popup_script_allow = UI_ScriptArea(parent);
 				text_area_popup_script_allow.oninput = function(v){
@@ -2623,47 +3202,15 @@ function PageExpand(execute_type){
 					projectModify();
 				};
 
-				// 縮小イメージ設定
-				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_image_reduced_image"));
-
-				// 縮小イメージ設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_reduced_image_check_box_container"));
-				var parent = container.getElement();
-
-				// 縮小されたイメージをマウスオーバーするとポップアップ表示
-				var check_box_reduced_image_enable_popup = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_popup_enable_popup"));
-				check_box_reduced_image_enable_popup.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.reduced_image.enable_popup = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-
-				// 縮小イメージのポップアップ化条件
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_reduced_image_allow_slcale_less_then"));
-				var parent = container.getElement();
-
-				// 縮小率
-				var stepper_popup_allow_slcale_less_then = UI_NumericStepper(parent);
-				stepper_popup_allow_slcale_less_then.setMinimum(0);
-				stepper_popup_allow_slcale_less_then.setMaximum(100);
-				stepper_popup_allow_slcale_less_then.oninput = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.reduced_image.popup_allow_slcale_less_then = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-				UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_reduced_image_allow_slcale_less_then_text"));
-
 				// イメージのロード設定
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_image_load"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// イメージ読み込み設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_load_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_image_load_check_box_container"));
 				var parent = container.getElement();
 
 				// 読み込み進捗表示を有効
@@ -2677,8 +3224,24 @@ function PageExpand(execute_type){
 					projectModify();
 				};
 
+				// イメージのソースタイプ
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_image_load_src_type"));
+				var parent = container.getElement();
+				var combo_box_load_src_type = UI_ComboBox(parent);
+				combo_box_load_src_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_src_type_combo_box_item_url"),"url");
+				combo_box_load_src_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_src_type_combo_box_item_mixed_content"),"mixed_content");
+				combo_box_load_src_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_src_type_combo_box_item_data_uri_scheme"),"data_uri_scheme");
+				combo_box_load_src_type.onchange = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.load.src_type = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
+
 				// イメージのアンロード設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_image_load_unload_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_image_load_unload_check_box_container"));
 				var parent = container.getElement();
 
 				// イメージのアンロードを有効
@@ -2693,7 +3256,7 @@ function PageExpand(execute_type){
 					projectModify();
 				};
 
-				_form_container_unload = new UI_FormContainer(form_parent);
+				_form_container_unload = new UI_FormContainer(group_parent);
 				_form_container_unload.setVisible(false);
 				var form_parent_unload = _form_container_unload.getElement();
 
@@ -2724,6 +3287,8 @@ function PageExpand(execute_type){
 					var c = ProjectObjectGetActiveData(define[id]);
 					if(!c)	return;
 
+					// サムネイルを表示
+					check_box_enable_thumbnail.setValue(c.thumbnail.enable_thumbnail);
 					// サムネイルにマウスオーバーするとポップアップ表示
 					check_box_enable_popup_mouseover.setValue(c.thumbnail.enable_popup_mouseover);
 					// 同じイメージがすでに配置されている場合サムネイルを表示しない
@@ -2734,6 +3299,8 @@ function PageExpand(execute_type){
 					text_area_thumbnail_script_allow.setValue(c.thumbnail.script_allow);
 					// サムネイルの挿入位置
 					text_area_thumbnail_script_insert.setValue(c.thumbnail.script_insert);
+					// ポップアップ表示の有無
+					check_box_popup_enable_popup_mouseover.setValue(c.popup.enable_popup_mouseover);
 					// ポップアップ時のアニメーション動作を有効
 					check_box_enable_animation_scale.setValue(c.popup.enable_animation_scale);
 					check_box_enable_animation_alpha.setValue(c.popup.enable_animation_alpha);
@@ -2757,11 +3324,16 @@ function PageExpand(execute_type){
 					stepper_popup_allow_slcale_less_then.setValue(c.reduced_image.popup_allow_slcale_less_then);
 					// 読み込み進捗表示
 					check_box_image_load_enable_notify.setValue(c.load.enable_notify);
+					// 読み込みソースタイプ
+					combo_box_load_src_type.setValue(c.load.src_type);
 					// イメージのアンロードを有効
 					check_box_enable_unload.setValue(c.load.enable_unload);
 					_form_container_unload.setVisible(c.load.enable_unload);
 					// イメージのアンロード条件
 					stepper_unload_allow_size_more_then.setValue(c.load.unload_allow_size_more_then);
+
+					_selected_id = id;
+					formUpdate();
 				};
 
 				// リロード
@@ -2788,6 +3360,20 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
@@ -2807,8 +3393,12 @@ function PageExpand(execute_type){
 				// インライン表示の設定
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_sound_inline"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// インライン表示の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_sound_inline_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_check_box_container"));
 				var parent = container.getElement();
 
 				// 同じオーディオがすでに配置されている場合サムネイルを表示しない
@@ -2823,7 +3413,7 @@ function PageExpand(execute_type){
 				};
 
 				// 最大同時表示数
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_sound_inline_sound_max"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_sound_max"));
 				var parent = container.getElement();
 
 				var stepper_inline_sound_max = UI_NumericStepper(parent);
@@ -2839,7 +3429,7 @@ function PageExpand(execute_type){
 				};
 
 				// リンクからインライン表示する条件
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_sound_inline_script_allow"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_script_allow"));
 				var parent = container.getElement();
 				var text_area_inline_script_allow = UI_ScriptArea(parent);
 				text_area_inline_script_allow.oninput = function(v){
@@ -2852,7 +3442,7 @@ function PageExpand(execute_type){
 				};
 
 				// オーディオの挿入位置
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_sound_inline_script_insert"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_script_insert"));
 				var parent = container.getElement();
 				var text_area_inline_script_insert = UI_ScriptArea(parent);
 				text_area_inline_script_insert.oninput = function(v){
@@ -2867,8 +3457,12 @@ function PageExpand(execute_type){
 				// HTMLAudioElement の設定
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_sound_inline_element"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// リンクからインライン表示する条件
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_sound_inline_element_script_allow"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_element_script_allow"));
 				var parent = container.getElement();
 				var text_area_audio_element_script_allow = UI_ScriptArea(parent);
 				text_area_audio_element_script_allow.oninput = function(v){
@@ -2883,8 +3477,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_sound_inline_soundcloud"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// soundcloud.com の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_sound_inline_soundcloud_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_soundcloud_check_box_container"));
 				var parent = container.getElement();
 
 				// Flash 版プレイヤーを表示
@@ -2912,8 +3510,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_sound_inline_mixcloud"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// www.mixcloud.com の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_sound_inline_mixcloud_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_mixcloud_check_box_container"));
 				var parent = container.getElement();
 
 				// プレイヤーを表示
@@ -2978,6 +3580,20 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
@@ -2997,8 +3613,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// インライン表示の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_check_box_container"));
 				var parent = container.getElement();
 
 				// 同じURLは展開しない
@@ -3013,7 +3633,7 @@ function PageExpand(execute_type){
 				};
 
 				// 最大同時表示数
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_video_max"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_video_max"));
 				var parent = container.getElement();
 
 				var stepper_inline_video_max = UI_NumericStepper(parent);
@@ -3029,7 +3649,7 @@ function PageExpand(execute_type){
 				};
 
 				// リンクからインライン表示する条件
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_script_allow"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_script_allow"));
 				var parent = container.getElement();
 				var text_area_inline_script_allow = UI_ScriptArea(parent);
 				text_area_inline_script_allow.oninput = function(v){
@@ -3042,7 +3662,7 @@ function PageExpand(execute_type){
 				};
 
 				// エレメントの挿入位置
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_script_insert"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_script_insert"));
 				var parent = container.getElement();
 				var text_area_inline_script_insert = UI_ScriptArea(parent);
 				text_area_inline_script_insert.oninput = function(v){
@@ -3057,8 +3677,12 @@ function PageExpand(execute_type){
 				// HTMLVideoElement の設定
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_element"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// リンクからインライン表示する条件
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_element_script_allow"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_element_script_allow"));
 				var parent = container.getElement();
 				var text_area_video_element_script_allow = UI_ScriptArea(parent);
 				text_area_video_element_script_allow.oninput = function(v){
@@ -3073,8 +3697,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_youtube"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// www.youtube.com の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_youtube_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_youtube_check_box_container"));
 				var parent = container.getElement();
 
 				// ビデオを表示
@@ -3091,8 +3719,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// www.nicovideo.jp の設定"
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_check_box_container"));
 				var parent = container.getElement();
 
 				// ビデオを表示
@@ -3175,8 +3807,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// www.ustream.tv の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream_check_box_container"));
 				var parent = container.getElement();
 
 				// 配信ビデオを表示
@@ -3204,8 +3840,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_dailymotion"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// www.dailymotion.com の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_dailymotion_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_dailymotion_check_box_container"));
 				var parent = container.getElement();
 
 				// ビデオを表示
@@ -3222,8 +3862,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_video"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// vimeo.com の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_video_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_video_check_box_container"));
 				var parent = container.getElement();
 
 				// ビデオを表示
@@ -3240,8 +3884,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_fc2video"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// video.fc2.com の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_fc2video_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_fc2video_check_box_container"));
 				var parent = container.getElement();
 
 				// ビデオを表示
@@ -3258,8 +3906,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_liveleak"));
 
-				// video.fc2.com の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_liveleak_check_box_container"));
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
+				// www.liveleak.com の設定
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_liveleak_check_box_container"));
 				var parent = container.getElement();
 
 				// ビデオを表示
@@ -3347,6 +3999,20 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
@@ -3366,8 +4032,12 @@ function PageExpand(execute_type){
 				// インライン表示の設定
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_iframe_inline"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// インライン表示の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_iframe_inline_check_box_container"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_iframe_inline_check_box_container"));
 				var parent = container.getElement();
 
 				// 同じURLは展開しない
@@ -3382,7 +4052,7 @@ function PageExpand(execute_type){
 				};
 
 				// リンクからインライン表示する条件
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_iframe_inline_script_allow"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_iframe_inline_script_allow"));
 				var parent = container.getElement();
 				var text_area_inline_script_allow = UI_ScriptArea(parent);
 				text_area_inline_script_allow.oninput = function(v){
@@ -3395,7 +4065,7 @@ function PageExpand(execute_type){
 				};
 
 				// HTMLIFrameElement の挿入位置
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_iframe_inline_script_insert"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_iframe_inline_script_insert"));
 				var parent = container.getElement();
 				var text_area_inline_script_insert = UI_ScriptArea(parent);
 				text_area_inline_script_insert.oninput = function(v){
@@ -3449,6 +4119,20 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
+			};
+
+			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
@@ -3468,8 +4152,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_text"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// HTMLTextAreaElement の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_text_element"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_text_element"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_text_element_inline"));
@@ -3485,8 +4173,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_image"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// HTMImageElement の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element_inline"));
@@ -3512,8 +4204,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// HTMLAudioElement の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_element"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_element"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_element_inline_audio"));
@@ -3527,7 +4223,7 @@ function PageExpand(execute_type){
 				};
 
 				// SoundCloud の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud_inline_player_flash"));
@@ -3551,7 +4247,7 @@ function PageExpand(execute_type){
 				};
 
 				// MixCloud の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_mixcloud"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_mixcloud"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_mixcloud_inline_player"));
@@ -3567,8 +4263,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// HTMLVideoElement の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_element"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_element"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_element_inline_video"));
@@ -3582,7 +4282,7 @@ function PageExpand(execute_type){
 				};
 
 				// www.youtube.com の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_youtube"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_youtube"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_youtube_inline_video"));
@@ -3596,7 +4296,7 @@ function PageExpand(execute_type){
 				};
 
 				// www.nicovideo.jp の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_video"));
@@ -3670,7 +4370,7 @@ function PageExpand(execute_type){
 				};
 
 				// www.ustream.tv の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream_inline_video_record"));
@@ -3694,7 +4394,7 @@ function PageExpand(execute_type){
 				};
 
 				// www.dailymotion.com の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_dailymotion"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_dailymotion"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_dailymotion_inline_video"));
@@ -3708,7 +4408,7 @@ function PageExpand(execute_type){
 				};
 
 				// vimeo.com の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_vimeo"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_vimeo"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_vimeo_inline_video"));
@@ -3722,7 +4422,7 @@ function PageExpand(execute_type){
 				};
 
 				// video.fc2.com の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_fc2video"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_fc2video"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_fc2video_inline_video"));
@@ -3736,7 +4436,7 @@ function PageExpand(execute_type){
 				};
 
 				// LiveLeak の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_liveleak"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_liveleak"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_liveleak_inline_video"));
@@ -3752,8 +4452,12 @@ function PageExpand(execute_type){
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_iframe"));
 
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
 				// HTMLIFrameElement の設定
-				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_iframe_element"));
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_iframe_element"));
 				var parent = container.getElement();
 
 				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_iframe_element_inline"));
@@ -3822,6 +4526,20 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			_container.select = function(id){
 				_setting_define.select(id);
+			};
+
+			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				_setting_define.selectFromIdList(list);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				_setting_define.replaceHistory();
 			};
 
 			// --------------------------------------------------------------------------------
@@ -3921,7 +4639,7 @@ function PageExpand(execute_type){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				UI_Text(parent,"PageExpand ver.1.2.4");
+				UI_Text(parent,"PageExpand ver.1.3.0");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -3964,12 +4682,12 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			(function(){
 				_window = DocumentCreateElement("div");
-				ElementSetStyle(_window,"margin:0px 0px 20px; padding:10px; background:#fcfcfc; border-radius:10px; -webkit-border-radius:10px; -moz-border-radius:10px; -webkit-box-shadow:0px 0px 2px #ccc; -moz-box-shadow:0px 0px 2px #ccc; box-shadow:0px 0px 2px #ccc;");
+				ElementSetStyle(_window,"margin:0px 0px 20px; padding:10px; background:#fcfcfc; border-radius:10px; box-shadow:0px 0px 2px #ccc;");
 				parent.appendChild(_window);
 
 				if(label){
 					var div = DocumentCreateElement("div");
-					ElementSetStyle(div,"padding:5px 0px 5px 20px; margin:0px 0px 10px; background:#666; color:#fff; border-radius:10px; -webkit-border-radius:10px; -moz-border-radius:10px; -webkit-box-shadow:0px 0px 3px #000; -moz-box-shadow:0px 0px 3px #000; box-shadow:0px 0px 3px #000;");
+					ElementSetStyle(div,"padding:5px 0px 5px 20px; margin:0px 0px 10px; background:#666; color:#fff; border-radius:10px; box-shadow:0px 1px 1px #000;");
 					ElementSetTextContent(div,label);
 					_window.appendChild(div);
 				}
@@ -4003,6 +4721,28 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// 背景カラーをセット
+			// --------------------------------------------------------------------------------
+			_container.setBackgroundColor = function(argb){
+				var color = argb;
+				var brightness = 0.9;
+				var r = (color >> 16) & 0xFF;
+				var g = (color >>  8) & 0xFF;
+				var b = (color >>  0) & 0xFF;
+				r = Math.floor(r * brightness);
+				g = Math.floor(g * brightness);
+				b = Math.floor(b * brightness);
+				var style = _label.style;
+				var liner_gradient = "linear-gradient(right, #" + r.toString(16) + g.toString(16) + b.toString(16) + " 25px, #666 25px)";
+				style.backgroundImage = liner_gradient;
+				var none = {"none":1,"initial":1};
+				if(none[style.backgroundImage]) style.backgroundImage = "-webkit-" + liner_gradient;
+				if(none[style.backgroundImage]) style.backgroundImage = "-moz-" + liner_gradient;
+				if(none[style.backgroundImage]) style.backgroundImage = "-ms-" + liner_gradient;
+				if(none[style.backgroundImage]) style.backgroundImage = "-o-" + liner_gradient;
+			};
+
+			// --------------------------------------------------------------------------------
 			// エレメント取得
 			// --------------------------------------------------------------------------------
 			_container.getElement = function(){
@@ -4013,6 +4753,7 @@ function PageExpand(execute_type){
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _window;
+			var _label;
 			var _body;
 
 			// --------------------------------------------------------------------------------
@@ -4020,14 +4761,14 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			(function(){
 				_window = DocumentCreateElement("div");
-				ElementSetStyle(_window,"width:350px; margin:0px 5px 20px 0px; padding:10px; background:#fcfcfc; display:inline-table; vertical-align:top; border-radius:10px; -webkit-border-radius:10px; -moz-border-radius:10px; -webkit-box-shadow:0px 0px 2px #ccc; -moz-box-shadow:0px 0px 2px #ccc; box-shadow:0px 0px 2px #ccc;");
+				ElementSetStyle(_window,"width:350px; margin:0px 5px 20px 0px; padding:10px; background:#fcfcfc; display:inline-table; vertical-align:top; border-radius:10px; box-shadow:0px 0px 2px #ccc;");
 				parent.appendChild(_window);
 
 				if(label){
-					var div = DocumentCreateElement("div");
-					ElementSetStyle(div,"padding:5px 0px 5px 20px; margin:0px 0px 10px; background:#666; color:#fff; border-radius:10px; -webkit-border-radius:10px; -moz-border-radius:10px; -webkit-box-shadow:0px 0px 3px #000; -moz-box-shadow:0px 0px 3px #000; box-shadow:0px 0px 3px #000;");
-					ElementSetTextContent(div,label);
-					_window.appendChild(div);
+					_label = DocumentCreateElement("div");
+					ElementSetStyle(_label,"padding:5px 0px 5px 20px; margin:0px 0px 10px; background:#666; color:#fff; border-radius:10px; box-shadow:0px 1px 1px #000;");
+					ElementSetTextContent(_label,label);
+					_window.appendChild(_label);
 				}
 
 				_body = DocumentCreateElement("div");
@@ -4074,6 +4815,36 @@ function PageExpand(execute_type){
 				_form = DocumentCreateElement("form");
 				parent.appendChild(_form);
 				_container.setVisible(true);
+			})();
+
+			return _container;
+		}
+
+		// --------------------------------------------------------------------------------
+		// グループコンテナ
+		// --------------------------------------------------------------------------------
+		function UI_GroupContainer(parent){
+			var _container = new Object();
+
+			// --------------------------------------------------------------------------------
+			// エレメント取得
+			// --------------------------------------------------------------------------------
+			_container.getElement = function(){
+				return _div;
+			};
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _div;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_div = DocumentCreateElement("div");
+				_div.style.cssText = "padding-left:10px; padding-right:10px; border-left:20px #f4f4f4 solid; border-right:20px #f4f4f4 solid;";
+				parent.appendChild(_div);
 			})();
 
 			return _container;
@@ -4169,7 +4940,7 @@ function PageExpand(execute_type){
 			// リサイズ（内部用 ）
 			// --------------------------------------------------------------------------------
 			function resize(){
-				var scroll_pos = DocumentGetScrollPos();
+				var scroll_pos = WindowGetScrollPosition(window);
 				var client_size = DocumentGetClientSize(document);
 				var dialog_rect = ElementGetBoundingClientRect(_window);
 
@@ -4240,7 +5011,7 @@ function PageExpand(execute_type){
 				parent.appendChild(_background);
 
 				_window = DocumentCreateElement("div");
-				ElementSetStyle(_window,"position:absolute; width:800px; padding:10px 20px 5px; background:#00F; background-color:#FFF; border-radius:5px; -webkit-border-radius:5px; -moz-border-radius:5px; box-shadow:5px 5px 10px #444; -webkit-box-shadow:5px 5px 10px #444; -moz-box-shadow:5px 5px 10px #444;");
+				ElementSetStyle(_window,"position:absolute; width:800px; padding:10px 20px 5px; background:#00F; background-color:#FFF; border-radius:5px; box-shadow:5px 5px 10px #444;");
 
 			})();
 
@@ -5313,14 +6084,15 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			// 選択されたアイテムをすべて取得
 			// --------------------------------------------------------------------------------
-			_container.getSelectedIndices = function(){
+			_container.getSelectedValues = function(){
 				var ary = new Array();
 				var a = _list.options;
 				var i;
 				var num = a.length;
 				for(i=0;i<num;i++){
-					if(a[i].selected){
-						ary.push(i);
+					var option = a[i];
+					if(option.selected){
+						ary.push(option.value);
 					}
 				}
 				return ary;
@@ -5423,34 +6195,40 @@ function PageExpand(execute_type){
 			// 削除
 			// --------------------------------------------------------------------------------
 			function deleteClick(){
+				var changed = false;
 				var a = _list.options;
 				var i;
 				var num = a.length;
+
 				for(i=num-1;i>=0;i--){
 					var item = a[i];
 					if(item.selected){
 						// 抹消
 						_regexp_list.splice(i,1);
 						removeItem(item);
+						changed = true;
 					}
 				}
 
-				var a = _list.options;
-				var i;
-				var num = a.length;
-				for(i=0;i<num;i++){
-					a[i].value = i;
-				}
+				if(changed){
+					var a = _list.options;
+					var i;
+					var num = a.length;
+					for(i=0;i<num;i++){
+						a[i].value = i;
+					}
 
-				_container.update();
-				onselect(_list.selectedIndex);
-				_container.onchange(_regexp_list);
+					_container.update();
+					onselect(_list.selectedIndex);
+					_container.onchange(_regexp_list);
+				}
 			}
 
 			// --------------------------------------------------------------------------------
 			// 優先度アップ（内部用 ）
 			// --------------------------------------------------------------------------------
 			function moveUpClick(){
+				var changed = false;
 				var t;
 				var a = _list.options;
 				var i;
@@ -5474,17 +6252,21 @@ function PageExpand(execute_type){
 						t = _regexp_list[k];
 						_regexp_list[k] = _regexp_list[j];
 						_regexp_list[j] = t;
+						changed = true;
 					}
 				}
 
-				_container.update();
-				_container.onchange(_regexp_list);
+				if(changed){
+					_container.update();
+					_container.onchange(_regexp_list);
+				}
 			}
 
 			// --------------------------------------------------------------------------------
 			// 優先度ダウン（内部用 ）
 			// --------------------------------------------------------------------------------
 			function moveDownClick(){
+				var changed = false;
 				var t;
 				var a = _list.options;
 				var i;
@@ -5508,11 +6290,14 @@ function PageExpand(execute_type){
 						t = _regexp_list[k];
 						_regexp_list[k] = _regexp_list[j];
 						_regexp_list[j] = t;
+						changed = true;
 					}
 				}
 
-				_container.update();
-				_container.onchange(_regexp_list);
+				if(changed){
+					_container.update();
+					_container.onchange(_regexp_list);
+				}
 			}
 
 			// --------------------------------------------------------------------------------
@@ -5566,7 +6351,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			// アイテム追加（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  attachItem(id){
+			function attachItem(id){
 				var item = DocumentCreateElement("option");
 				ElementSetStyle(item,"margin:2px 0px;");
 
@@ -5574,7 +6359,7 @@ function PageExpand(execute_type){
 				_list.appendChild(item);
 
 				item.onmousedown = item.onmouseup = function(){
-					_select_id = id;
+					_select_mouse = id;
 				};
 				updateItem(item);
 			}
@@ -5582,7 +6367,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			// アイテム更新（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  updateItem(item){
+			function updateItem(item){
 				var id = parseInt(item.value);
 				ElementSetTextContent(item,"" + RegExpObjectGetRegExp(_regexp_list[id]));
 			}
@@ -5590,7 +6375,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			// アイテム削除（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  removeItem(item){
+			function removeItem(item){
 				DomNodeRemove(item);
 			}
 
@@ -5600,6 +6385,7 @@ function PageExpand(execute_type){
 			var _regexp_list;
 			var _list;
 			var _select_id;
+			var _select_mouse;
 			var _text_regexp;
 
 			// --------------------------------------------------------------------------------
@@ -5621,16 +6407,14 @@ function PageExpand(execute_type){
 				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
-					var a = _container.getSelectedIndices();
-					var i;
-					var num = a.length;
-					for(i=0;i<num;i++){
-						if(a[i] == _select_id){
-							onselect(_select_id);
-							return;
+					_select_id = _list.selectedIndex;
+					var o = _list.options[_select_mouse];
+					if(o !== undefined){
+						if(o.selected){
+							_select_id = _select_mouse;
 						}
 					}
-					onselect(_list.selectedIndex);
+					onselect(_select_id);
 				};
 
 				var button_container = DocumentCreateElement("div");
@@ -6018,6 +6802,174 @@ function PageExpand(execute_type){
 			}
 
 			// --------------------------------------------------------------------------------
+			// エクスポート（内部用 ）
+			// --------------------------------------------------------------------------------
+			function exportClick(){
+
+				var proj = page_expand_project.getObject();
+				var export_obj = new Object();
+				var ary = new Array();
+
+				var a = _list.options;
+				var i;
+				var num = a.length;
+
+				for(i=0;i<num;i++){
+					if(a[i].selected){
+						ary.push(ObjectCopy(_expand_bbs[i]));
+					}
+				}
+
+				export_obj.version = proj.version;
+				export_obj.setting_export = {
+					type:"expand_bbs"
+				};
+				export_obj.expand_bbs = ary;
+
+				// プリセットを除去
+				export_obj = PageExpandProjectObjectRemovePreset(export_obj);
+
+				// モーダルダイアログ作成
+				var dialog = UI_ModalDialog(_content_window);
+				var dialog_parent = dialog.getElement();
+
+				// タイトル
+				var title = new UI_Title(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_export_dialog"));
+
+				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_export_dialog_export"));
+				var parent = container.getElement();
+
+				var text_area = UI_TextArea(parent);
+				text_area.setValue(JsonStringify(export_obj));
+
+				UI_TextHint(parent,_i18n.getMessage("menu_setting_expand_bbs_export_dialog_export_hint"));
+
+				// Ok ボタン
+				var yes_no_button = UI_OkButton(dialog_parent);
+				yes_no_button.onclick = function(v){
+					// ダイアログ終了
+					dialog.close();
+				};
+
+				// ダイアログ開始
+				dialog.open();
+			}
+
+			// --------------------------------------------------------------------------------
+			// インポート（内部用 ）
+			// --------------------------------------------------------------------------------
+			function importClick(){
+
+				// モーダルダイアログ作成
+				var dialog = UI_ModalDialog(_content_window);
+				var dialog_parent = dialog.getElement();
+
+				// タイトル
+				var title = new UI_Title(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_import_dialog"));
+
+				// 名前
+				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_import_dialog_explanation"));
+				var parent = container.getElement();
+				var unordered_list = UI_UnorderedList(parent);
+				unordered_list.addListItem(_i18n.getMessage("menu_setting_expand_bbs_import_dialog_explanation_0"));
+				unordered_list.addListItem(_i18n.getMessage("menu_setting_expand_bbs_import_dialog_explanation_1"));
+				unordered_list.addListItem(_i18n.getMessage("menu_setting_expand_bbs_import_dialog_explanation_2"));
+
+				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_import_dialog_import"));
+				var parent = container.getElement();
+
+				var text_area_import = UI_TextArea(parent);
+
+				UI_TextHint(parent,_i18n.getMessage("menu_setting_expand_bbs_import_dialog_import_hint"));
+
+				// 実行しますか？
+				var container = new UI_LineContainer(dialog_parent,null);
+				var parent = container.getElement();
+				UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_import_dialog_confirm"));
+
+				// Yes No ボタン
+				var yes_no_button = UI_YesNoButton(dialog_parent);
+				yes_no_button.onclick = function(v){
+
+					if(v){
+						function ExpandBbsImportFailure(message){
+							// 結果を表示
+							var alert_dialog = UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_import_alert"));
+							UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_expand_bbs_import_alert_failure"));
+							UI_Text(alert_dialog.getElement(),message);
+							alert_dialog.oncomplete = function(){
+								// ダイアログ終了
+								dialog.close();
+							};
+							alert_dialog.open();
+						}
+
+						try{
+							var proj_obj = page_expand_project.getObject();
+							var import_obj = JsonParse(text_area_import.getValue());
+
+							// バージョンが一致しない
+							if(import_obj.version > proj_obj.version){
+								throw "Error: It is a version not supported.";
+							}
+
+							// 出力タイプチェック
+							var error = true;
+							try{
+								switch(import_obj.setting_export.type){
+								case "expand_bbs":
+									error = false;
+									break;
+								}
+							}catch(e){}
+
+							if(error){
+								throw "Error: It is a type not supported.";
+							}
+
+							// 定義をインポート
+							PageExpandProjectObjectImportExpandBbs(proj_obj,import_obj);
+
+							projectSave(function(e){
+								if(!e.result){
+									ExpandBbsImportFailure(e.message);
+									return;
+								}
+
+								text_area_import.setValue("");
+
+								// 結果を表示
+								var alert_dialog = UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_import_alert"));
+								UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_expand_bbs_import_alert_success"));
+								alert_dialog.oncomplete = function(){
+
+									// フェードアウト完了後
+									dialog.oncomplete = function(){
+
+										// リロード
+										_container.onreload();
+									};
+
+									// ダイアログ終了
+									dialog.close();
+								};
+								alert_dialog.open();
+							});
+
+						}catch(e){
+							ExpandBbsImportFailure(e);
+						}
+					}else{
+						// ダイアログ終了
+						dialog.close();
+					}
+				};
+
+				// ダイアログ開始
+				dialog.open();
+			}
+
+			// --------------------------------------------------------------------------------
 			// 選択されたアイテムをすべて取得
 			// --------------------------------------------------------------------------------
 			_container.getSelectedIndices = function(){
@@ -6044,17 +6996,70 @@ function PageExpand(execute_type){
 			_container.onselect = function(){};
 
 			// --------------------------------------------------------------------------------
+			// リロードイベント
+			// --------------------------------------------------------------------------------
+			_container.onreload = function(){};
+
+			// --------------------------------------------------------------------------------
 			// リストを選択
 			// --------------------------------------------------------------------------------
 			_container.select = function(id){
-				_list.selectedIndex = id;
+				_list.selectedIndex = _select_id = _select_mouse = id;
 				_container.onselect(id);
+			};
+
+			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				var dic = new Object();
+				var i;
+				var num = _expand_bbs.length;
+				for(i=0;i<num;i++){
+					dic[_expand_bbs[i].id] = i;
+				}
+				
+				num = list.length;
+				var index = dic[list[num - 1]];
+				if(index !== undefined){
+					_list.selectedIndex = _select_id = index;
+				}
+				var a = _list.options;
+				for(i=0;i<num;i++){
+					if(dic[list[i]] !== undefined){
+						var o = a[dic[list[i]]];
+						if(o) o.selected = true;
+					}
+				}
+				if(index !== undefined){
+					_container.onselect(index);
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				var selected_defines = new Array();
+				var a = _container.getSelectedIndices();
+				var i;
+				var num = a.length;
+				for(i=0;i<num;i++){
+					selected_defines.push(_expand_bbs[a[i]].id);
+				}
+				if(_expand_bbs[_select_id]){
+					selected_defines.push(_expand_bbs[_select_id].id);
+				}
+
+				// 履歴更新
+				_history_state.selected_defines = selected_defines;
+				delete _history_state.selected_filters;
 			};
 
 			// --------------------------------------------------------------------------------
 			// アイテム追加（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  attachItem(id){
+			function attachItem(id){
 				var item = DocumentCreateElement("option");
 				ElementSetStyle(item,"margin:2px 0px;");
 
@@ -6063,7 +7068,7 @@ function PageExpand(execute_type){
 				_list.appendChild(item);
 
 				item.onmousedown = item.onmouseup = function(){
-					_select_id = id;
+					_select_mouse = id;
 				};
 				updateItem(item);
 			}
@@ -6071,7 +7076,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			// アイテム更新（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  updateItem(item){
+			function updateItem(item){
 				var urlmap;
 				var c = _dictionary[item.value];
 				if(c.preset){
@@ -6087,7 +7092,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			// アイテム削除（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  removeItem(item){
+			function removeItem(item){
 				var c = _dictionary[item.value];
 				DomNodeRemove(item);
 				delete _dictionary[item.value];
@@ -6100,6 +7105,7 @@ function PageExpand(execute_type){
 			var _dictionary;
 			var _list;
 			var _select_id;
+			var _select_mouse;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -6122,16 +7128,15 @@ function PageExpand(execute_type){
 				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
-					var a = _container.getSelectedIndices();
-					var i;
-					var num = a.length;
-					for(i=0;i<num;i++){
-						if(a[i] == _select_id){
-							_container.onselect(_select_id);
-							return;
+					_select_id = _list.selectedIndex;
+					var o = _list.options[_select_mouse];
+					if(o !== undefined){
+						if(o.selected){
+							_select_id = _select_mouse;
 						}
 					}
-					_container.onselect(_list.selectedIndex);
+					_container.onselect(_select_id);
+					_container.replaceHistory();
 				};
 
 				var button_container = DocumentCreateElement("div");
@@ -6172,6 +7177,24 @@ function PageExpand(execute_type){
 				button_container.appendChild(button_prio_down);
 				button_prio_down.onclick = function(){
 					prioDownClick();
+				};
+
+				var button_export = DocumentCreateElement("input");
+				button_export.type = "button";
+				button_export.value = _i18n.getMessage("menu_setting_expand_bbs_button_export");
+				ElementSetStyle(button_export,"width:100%; padding:4px 0px; margin:0px;");
+				button_container.appendChild(button_export);
+				button_export.onclick = function(){
+					exportClick();
+				};
+
+				var button_import = DocumentCreateElement("input");
+				button_import.type = "button";
+				button_import.value = _i18n.getMessage("menu_setting_expand_bbs_button_import");
+				ElementSetStyle(button_import,"width:100%; padding:4px 0px; margin:0px;");
+				button_container.appendChild(button_import);
+				button_import.onclick = function(){
+					importClick();
 				};
 
 				UI_TextHint(parent,_i18n.getMessage("menu_setting_expand_bbs_list_hint"));
@@ -6446,9 +7469,57 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				var dic = new Object();
+				var i;
+				var num = _urlmap.length;
+				for(i=0;i<num;i++){
+					dic[_urlmap[i].id] = i;
+				}
+				
+				num = list.length;
+				var index = dic[list[num - 1]];
+				if(index !== undefined){
+					_list.selectedIndex = _select_id = index;
+				}
+				var a = _list.options;
+				for(i=0;i<num;i++){
+					if(dic[list[i]] !== undefined){
+						var o = a[dic[list[i]]];
+						if(o) o.selected = true;
+					}
+				}
+				if(index !== undefined){
+					_container.onselect(index);
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				var selected_defines = new Array();
+				var a = _container.getSelectedIndices();
+				var i;
+				var num = a.length;
+				for(i=0;i<num;i++){
+					selected_defines.push(_urlmap[a[i]].id);
+				}
+				if(_urlmap[_select_id]){
+					selected_defines.push(_urlmap[_select_id].id);
+				}
+
+				// 履歴更新
+				_history_state.selected_defines = selected_defines;
+				delete _history_state.selected_filters;
+			};
+
+			// --------------------------------------------------------------------------------
 			// アイテム追加（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  attachItem(id){
+			function attachItem(id){
 				var item = DocumentCreateElement("option");
 				ElementSetStyle(item,"margin:2px 0px;");
 
@@ -6457,7 +7528,7 @@ function PageExpand(execute_type){
 				_list.appendChild(item);
 
 				item.onmousedown = item.onmouseup = function(){
-					_select_id = id;
+					_select_mouse = id;
 				};
 				updateItem(item);
 			}
@@ -6465,7 +7536,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			// アイテム更新（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  updateItem(item){
+			function updateItem(item){
 				var urlmap;
 				var c = _dictionary[item.value];
 				if(c.preset){
@@ -6481,7 +7552,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			// アイテム削除（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  removeItem(item){
+			function removeItem(item){
 				var c = _dictionary[item.value];
 				DomNodeRemove(item);
 				delete _dictionary[item.value];
@@ -6494,6 +7565,7 @@ function PageExpand(execute_type){
 			var _dictionary;
 			var _list;
 			var _select_id;
+			var _select_mouse;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -6516,16 +7588,15 @@ function PageExpand(execute_type){
 				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
-					var a = _container.getSelectedIndices();
-					var i;
-					var num = a.length;
-					for(i=0;i<num;i++){
-						if(a[i] == _select_id){
-							_container.onselect(_select_id);
-							return;
+					_select_id = _list.selectedIndex;
+					var o = _list.options[_select_mouse];
+					if(o !== undefined){
+						if(o.selected){
+							_select_id = _select_mouse;
 						}
 					}
-					_container.onselect(_list.selectedIndex);
+					_container.onselect(_select_id);
+					_container.replaceHistory();
 				};
 
 				var button_container = DocumentCreateElement("div");
@@ -6798,7 +7869,7 @@ function PageExpand(execute_type){
 								if(!c)	continue;
 								var d = c[_define_id];
 								if(d.enable){
-									if(typeof(d.id) == "object"){
+									if((d.id) && (typeof(d.id) == "object")){
 										var ary = d.id;
 										var j;
 										var ary_num = ary.length;
@@ -6861,7 +7932,7 @@ function PageExpand(execute_type){
 										var c = urlmap_use[i].user;
 										if(!c)	continue;
 										var d = c[_define_id];
-										if(typeof(d.id) == "object"){
+										if((d.id) && (typeof(d.id) == "object")){
 											var ary = d.id;
 											var j;
 											var ary_num = ary.length;
@@ -7016,7 +8087,7 @@ function PageExpand(execute_type){
 				export_obj[_define_id] = ary;
 
 				// プリセットを除去
-				export_obj = page_expand_project.removePresetFromObject(export_obj);
+				export_obj = PageExpandProjectObjectRemovePreset(export_obj);
 
 				// モーダルダイアログ作成
 				var dialog = UI_ModalDialog(_content_window);
@@ -7118,7 +8189,7 @@ function PageExpand(execute_type){
 							}
 
 							// 定義をインポート
-							page_expand_project.importDefineObject(import_obj,_define_id);
+							PageExpandProjectObjectImportDefine(proj_obj,import_obj,_define_id);
 
 							projectSave(function(e){
 								if(!e.result){
@@ -7163,7 +8234,7 @@ function PageExpand(execute_type){
 			// 選択されたアイテムを取得
 			// --------------------------------------------------------------------------------
 			_container.getSelectedIndex = function(){
-				return _select_id;
+				return _select_id = _list.selectedIndex;
 			};
 
 			// --------------------------------------------------------------------------------
@@ -7201,14 +8272,62 @@ function PageExpand(execute_type){
 			// リストを選択
 			// --------------------------------------------------------------------------------
 			_container.select = function(id){
-				_list.selectedIndex = id;
+				_list.selectedIndex = _select_id = _select_mouse = id;
 				_container.onselect(id);
+			};
+
+			// --------------------------------------------------------------------------------
+			// リストから選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromIdList = function(list){
+				var dic = new Object();
+				var i;
+				var num = _define.length;
+				for(i=0;i<num;i++){
+					dic[_define[i].id] = i;
+				}
+				
+				num = list.length;
+				var index = dic[list[num - 1]];
+				if(index !== undefined){
+					_list.selectedIndex = _select_id = index;
+				}
+				var a = _list.options;
+				for(i=0;i<num;i++){
+					if(dic[list[i]] !== undefined){
+						var o = a[dic[list[i]]];
+						if(o) o.selected = true;
+					}
+				}
+				if(index !== undefined){
+					_container.onselect(index);
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				var selected_defines = new Array();
+				var a = _container.getSelectedIndices();
+				var i;
+				var num = a.length;
+				for(i=0;i<num;i++){
+					selected_defines.push(_define[a[i]].id);
+				}
+				if(_define[_select_id]){
+					selected_defines.push(_define[_select_id].id);
+				}
+
+				// 履歴更新
+				_history_state.selected_defines = selected_defines;
+				delete _history_state.selected_filters;
 			};
 
 			// --------------------------------------------------------------------------------
 			// アイテム追加（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  attachItem(id){
+			function attachItem(id){
 				var item = DocumentCreateElement("option");
 				ElementSetStyle(item,"margin:2px 0px;");
 
@@ -7217,7 +8336,7 @@ function PageExpand(execute_type){
 				_list.appendChild(item);
 
 				item.onmousedown = item.onmouseup = function(){
-					_select_id = id;
+					_select_mouse = id;
 				};
 				updateItem(item);
 			}
@@ -7225,7 +8344,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			// アイテム更新（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  updateItem(item){
+			function updateItem(item){
 				var define;
 				var c = _dictionary[item.value];
 				if(c.preset){
@@ -7234,6 +8353,14 @@ function PageExpand(execute_type){
 				if(c.user){
 					item.style.color = "#000";
 				}
+				if(c.id == "wildcard"){
+					if(c.preset){
+						item.style.color = "#f88";
+					}
+					if(c.user){
+						item.style.color = "#c00";
+					}
+				}
 				define = ProjectObjectGetActiveData(c);
 				ElementSetTextContent(item,LocaleObjectGetString(define.name));
 			}
@@ -7241,7 +8368,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			// アイテム削除（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  removeItem(item){
+			function removeItem(item){
 				var c = _dictionary[item.value];
 				DomNodeRemove(item);
 				delete _dictionary[item.value];
@@ -7256,6 +8383,7 @@ function PageExpand(execute_type){
 			var _dictionary;
 			var _list;
 			var _select_id;
+			var _select_mouse;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -7278,16 +8406,15 @@ function PageExpand(execute_type){
 				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
-					var a = _container.getSelectedIndices();
-					var i;
-					var num = a.length;
-					for(i=0;i<num;i++){
-						if(a[i] == _select_id){
-							_container.onselect(_select_id);
-							return;
+					_select_id = _list.selectedIndex;
+					var o = _list.options[_select_mouse];
+					if(o !== undefined){
+						if(o.selected){
+							_select_id = _select_mouse;
 						}
 					}
-					_container.onselect(_list.selectedIndex);
+					_container.onselect(_select_id);
+					_container.replaceHistory();
 				};
 
 				var button_container = DocumentCreateElement("div");
@@ -7360,7 +8487,6 @@ function PageExpand(execute_type){
 		function UI_FilterList(parent){
 			var _container = new Object();
 
-
 			// --------------------------------------------------------------------------------
 			// フィルタを関連付け
 			// --------------------------------------------------------------------------------
@@ -7401,10 +8527,24 @@ function PageExpand(execute_type){
 			};
 
 			// --------------------------------------------------------------------------------
-			// 新規データ作成用関数をセット
+			// 定義の識別名をセット
 			// --------------------------------------------------------------------------------
-			_container.setFunctionForNewData = function(f){
-				_new_data_func = f;
+			_container.setDefineAssetName = function(asset){
+				_define_id = asset;
+			};
+
+			// --------------------------------------------------------------------------------
+			// 新規定義データ作成用関数をセット
+			// --------------------------------------------------------------------------------
+			_container.setFunctionForNewDefineData = function(f){
+				_new_define_data_func = f;
+			};
+
+			// --------------------------------------------------------------------------------
+			// 新規フィルタデータ作成用関数をセット
+			// --------------------------------------------------------------------------------
+			_container.setFunctionForNewFilterData = function(f){
+				_new_filter_data_func = f;
 			};
 
 			// --------------------------------------------------------------------------------
@@ -7533,8 +8673,8 @@ function PageExpand(execute_type){
 							});
 						}else{
 							_container.writeDefinitions(function(c){
-								if(_new_data_func){
-									var filter_new = _new_data_func();
+								if(_new_filter_data_func){
+									var filter_new = _new_filter_data_func();
 									c.filter.unshift(filter_new);
 									filter_new.name = LocaleObjectCreate();
 									LocaleObjectSetString(filter_new.name,text_input_name.getValue());
@@ -7545,6 +8685,7 @@ function PageExpand(execute_type){
 						update();
 						projectModify();
 						_container.select(0);
+						_container.onchange();
 					}
 
 					// ダイアログ終了
@@ -7581,6 +8722,7 @@ function PageExpand(execute_type){
 				update();
 				projectModify();
 				_container.onselect(_list.selectedIndex);
+				_container.onchange();
 			}
 
 			// --------------------------------------------------------------------------------
@@ -7625,6 +8767,7 @@ function PageExpand(execute_type){
 
 				_container.update();
 				projectModify();
+				_container.onchange();
 			}
 
 			// --------------------------------------------------------------------------------
@@ -7669,6 +8812,191 @@ function PageExpand(execute_type){
 
 				_container.update();
 				projectModify();
+				_container.onchange();
+			}
+
+			// --------------------------------------------------------------------------------
+			// エクスポート（内部用 ）
+			// --------------------------------------------------------------------------------
+			function exportClick(){
+
+				var proj = page_expand_project.getObject();
+				var export_obj = new Object();
+				var ary = new Array();
+
+				var a = _list.options;
+				var i;
+				var num = a.length;
+
+				var filter = ProjectObjectGetActiveData(_definition_active).filter;
+				for(i=0;i<num;i++){
+					if(a[i].selected){
+						if(filter[i]){
+							ary.push(ObjectCopy(filter[i]));
+						}
+					}
+				}
+
+				export_obj.version = proj.version;
+				export_obj.setting_export = {
+					type:"filter",
+					asset:_define_id
+				};
+
+				var define = _new_define_data_func();
+				define.id = PageExpandProjectObjectDefineGenerateNewUserId(_definitions);
+				define.user.filter = ary;
+				export_obj[_define_id] = [define];
+
+				// プリセットを除去
+				export_obj = PageExpandProjectObjectRemovePreset(export_obj);
+
+				// モーダルダイアログ作成
+				var dialog = UI_ModalDialog(_content_window);
+				var dialog_parent = dialog.getElement();
+
+				// タイトル
+				var title = new UI_Title(dialog_parent,_i18n.getMessage("menu_setting_filter_export_dialog"));
+
+				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_filter_export_dialog_export"));
+				var parent = container.getElement();
+
+				var text_area = UI_TextArea(parent);
+				text_area.setValue(JsonStringify(export_obj));
+
+				UI_TextHint(parent,_i18n.getMessage("menu_setting_filter_export_dialog_export_hint"));
+
+				// Ok ボタン
+				var yes_no_button = UI_OkButton(dialog_parent);
+				yes_no_button.onclick = function(v){
+					// ダイアログ終了
+					dialog.close();
+				};
+
+				// ダイアログ開始
+				dialog.open();
+			}
+
+			// --------------------------------------------------------------------------------
+			// インポート（内部用 ）
+			// --------------------------------------------------------------------------------
+			function importClick(){
+
+				// モーダルダイアログ作成
+				var dialog = UI_ModalDialog(_content_window);
+				var dialog_parent = dialog.getElement();
+
+				// タイトル
+				var title = new UI_Title(dialog_parent,_i18n.getMessage("menu_setting_filter_import_dialog"));
+
+				// 名前
+				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_filter_import_dialog_explanation"));
+				var parent = container.getElement();
+				var unordered_list = UI_UnorderedList(parent);
+				unordered_list.addListItem(_i18n.getMessage("menu_setting_filter_import_dialog_explanation_0"));
+				unordered_list.addListItem(_i18n.getMessage("menu_setting_filter_import_dialog_explanation_1"));
+				unordered_list.addListItem(_i18n.getMessage("menu_setting_filter_import_dialog_explanation_2"));
+
+				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_filter_import_dialog_import"));
+				var parent = container.getElement();
+
+				var text_area_import = UI_TextArea(parent);
+
+				UI_TextHint(parent,_i18n.getMessage("menu_setting_filter_import_dialog_import_hint"));
+
+				// 実行しますか？
+				var container = new UI_LineContainer(dialog_parent,null);
+				var parent = container.getElement();
+				UI_Text(parent,_i18n.getMessage("menu_setting_filter_import_dialog_confirm"));
+
+				// Yes No ボタン
+				var yes_no_button = UI_YesNoButton(dialog_parent);
+				yes_no_button.onclick = function(v){
+
+					if(v){
+						function ExpandBbsImportFailure(message){
+							// 結果を表示
+							var alert_dialog = UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_filter_import_alert"));
+							UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_filter_import_alert_failure"));
+							UI_Text(alert_dialog.getElement(),message);
+							alert_dialog.oncomplete = function(){
+								// ダイアログ終了
+								dialog.close();
+							};
+							alert_dialog.open();
+						}
+
+						try{
+							var proj_obj = page_expand_project.getObject();
+							var import_obj = JsonParse(text_area_import.getValue());
+
+							// バージョンが一致しない
+							if(import_obj.version > proj_obj.version){
+								throw "Error: It is a version not supported.";
+							}
+
+							// 出力タイプチェック
+							var error = false;
+							try{
+								var setting_export = import_obj.setting_export;
+								if(setting_export.type != "filter"){
+									error = true;
+								}
+								if(setting_export.asset != _define_id){
+									error = true;
+								}
+							}catch(e){
+								error = true;
+							}
+
+							if(error){
+								throw "Error: It is a type not supported.";
+							}
+
+							// 最新のフィルタを追加
+							var filter_latest = PageExpandProjectObjectGetDefineFilterLatest(import_obj,_define_id);
+							_container.writeDefinitions(function(c){
+								var filter = c.filter;
+								c.filter = c.filter.concat(filter_latest);
+							});
+
+							projectSave(function(e){
+								if(!e.result){
+									ExpandBbsImportFailure(e.message);
+									return;
+								}
+
+								text_area_import.setValue("");
+
+								// 結果を表示
+								var alert_dialog = UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_filter_import_alert"));
+								UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_filter_import_alert_success"));
+								alert_dialog.oncomplete = function(){
+
+									// フェードアウト完了後
+									dialog.oncomplete = function(){
+										update();
+										projectModify();
+										_container.onchange();
+									};
+
+									// ダイアログ終了
+									dialog.close();
+								};
+								alert_dialog.open();
+							});
+
+						}catch(e){
+							ExpandBbsImportFailure(e);
+						}
+					}else{
+						// ダイアログ終了
+						dialog.close();
+					}
+				};
+
+				// ダイアログ開始
+				dialog.open();
 			}
 
 			// --------------------------------------------------------------------------------
@@ -7701,14 +9029,54 @@ function PageExpand(execute_type){
 			// リストを選択
 			// --------------------------------------------------------------------------------
 			_container.select = function(id){
-				_list.selectedIndex = id;
+				_list.selectedIndex = _select_id = _select_mouse = id;
 				_container.onselect(id);
+			};
+
+			// --------------------------------------------------------------------------------
+			// リストを選択
+			// --------------------------------------------------------------------------------
+			_container.selectFromList = function(list){
+				var dic = new Object();
+				var i;
+				var num = list.length;
+				var index = list[num - 1];
+				if(_definitions[index] !== undefined){
+					_list.selectedIndex = _select_id = index;
+				}
+				var a = _list.options;
+				for(i=0;i<num;i++){
+					var o = a[list[i]];
+					if(o) o.selected = true;
+				}
+				if(index !== undefined){
+					_container.onselect(index);
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// 履歴を上書き
+			// --------------------------------------------------------------------------------
+			_container.replaceHistory = function(){
+				var selected_filters = new Array();
+				var a = _container.getSelectedIndices();
+				var i;
+				var num = a.length;
+				for(i=0;i<num;i++){
+					selected_filters.push(a[i]);
+				}
+				if(_definitions[_select_id]){
+					selected_filters.push(_select_id);
+				}
+
+				// 履歴更新
+				_history_state.selected_filters = selected_filters;
 			};
 
 			// --------------------------------------------------------------------------------
 			// アイテム追加（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  attachItem(id){
+			function attachItem(id){
 				var item = DocumentCreateElement("option");
 				ElementSetStyle(item,"margin:2px 0px;");
 
@@ -7716,7 +9084,7 @@ function PageExpand(execute_type){
 				_list.appendChild(item);
 
 				item.onmousedown = item.onmouseup = function(){
-					_select_id = id;
+					_select_mouse = id;
 				};
 				updateItem(item);
 			}
@@ -7724,7 +9092,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			// アイテム更新（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  updateItem(item){
+			function updateItem(item){
 
 				item.style.color = "#000";
 				var id = parseInt(item.value);
@@ -7748,7 +9116,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			// アイテム削除（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  removeItem(item){
+			function removeItem(item){
 				DomNodeRemove(item);
 			}
 
@@ -7761,8 +9129,11 @@ function PageExpand(execute_type){
 			var _definition_active;
 			var _definition_multiple;
 			var _list;
+			var _define_id;
 			var _select_id;
-			var _new_data_func;
+			var _select_mouse;
+			var _new_define_data_func;
+			var _new_filter_data_func;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -7783,16 +9154,15 @@ function PageExpand(execute_type){
 				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
-					var a = _container.getSelectedIndices();
-					var i;
-					var num = a.length;
-					for(i=0;i<num;i++){
-						if(a[i] == _select_id){
-							_container.onselect(_select_id);
-							return;
+					_select_id = _list.selectedIndex;
+					var o = _list.options[_select_mouse];
+					if(o !== undefined){
+						if(o.selected){
+							_select_id = _select_mouse;
 						}
 					}
-					_container.onselect(_list.selectedIndex);
+					_container.onselect(_select_id);
+					_container.replaceHistory();
 				};
 
 				var button_container = DocumentCreateElement("div");
@@ -7835,6 +9205,24 @@ function PageExpand(execute_type){
 					prioDownClick();
 				};
 
+				var button_export = DocumentCreateElement("input");
+				button_export.type = "button";
+				button_export.value = _i18n.getMessage("menu_setting_filter_button_export");
+				ElementSetStyle(button_export,"width:100%; padding:4px 0px; margin:0px;");
+				button_container.appendChild(button_export);
+				button_export.onclick = function(){
+					exportClick();
+				};
+
+				var button_import = DocumentCreateElement("input");
+				button_import.type = "button";
+				button_import.value = _i18n.getMessage("menu_setting_filter_button_import");
+				ElementSetStyle(button_import,"width:100%; padding:4px 0px; margin:0px;");
+				button_container.appendChild(button_import);
+				button_import.onclick = function(){
+					importClick();
+				};
+
 				UI_TextHint(parent,_i18n.getMessage("menu_setting_filter_list_hint"));
 			})();
 
@@ -7852,6 +9240,13 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			_container.setAsset = function(asset){
 				_asset = asset;
+			};
+
+			// --------------------------------------------------------------------------------
+			// メニュー番号をセット
+			// --------------------------------------------------------------------------------
+			_container.setMenuId = function(id){
+				_menu_id = id;
 			};
 
 			// --------------------------------------------------------------------------------
@@ -7904,6 +9299,7 @@ function PageExpand(execute_type){
 				for(i=0;i<_urlmaps_max;i++){
 					attachItem(i);
 				}
+				updateUI();
 			};
 
 			// --------------------------------------------------------------------------------
@@ -7923,6 +9319,7 @@ function PageExpand(execute_type){
 				for(i=num-1;i>=0;i--){
 					removeItem(a[i]);
 				}
+				updateUI();
 			};
 
 			// --------------------------------------------------------------------------------
@@ -7935,6 +9332,7 @@ function PageExpand(execute_type){
 				for(i=0;i<num;i++){
 					updateItem(a[i]);
 				}
+				updateUI();
 			};
 
 			// --------------------------------------------------------------------------------
@@ -7942,6 +9340,41 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			function update(){
 				_container.attachUrlMaps(_urlmaps,_urlmap_active);
+			}
+
+			// --------------------------------------------------------------------------------
+			// UI 表示更新（内部用）
+			// --------------------------------------------------------------------------------
+			function updateUI(){
+				var _selected_index = _container.getSelectedIndex();
+				var disabled = (_selected_index < 0);
+
+				_button_prio_up.disabled = disabled;
+				_button_prio_down.disabled = disabled;
+				var a = _list.options;
+				var num = a.length;
+				if(num){
+					if(a[0].selected){
+						_button_prio_up.disabled = true;
+					}
+					if(a[num-1].selected){
+						_button_prio_down.disabled = true;
+					}
+				}
+
+				var display = "";
+				if(disabled) display = "none";
+				_button_prio_up.style.display = display;
+				_button_prio_down.style.display = display;
+				_button_delete.style.display = display;
+
+				num += 1;
+				if(num < 3) num = 3;
+				if(num > 10) num = 10;
+				if(!disabled){
+					if(num < 6) num = 6;
+				}
+				_list.size = num;
 			}
 
 			// --------------------------------------------------------------------------------
@@ -7988,6 +9421,7 @@ function PageExpand(execute_type){
 				var i;
 				var num = _define_data.length;
 				for(i=0;i<num;i++){
+					if(_define_data[i].id == "wildcard") continue;
 					var c = ProjectObjectGetActiveData(_define_data[i]);
 					list_box_filter.attachItem(LocaleObjectGetString(c.name),i);
 				}
@@ -7997,7 +9431,7 @@ function PageExpand(execute_type){
 				yes_no_button.onclick = function(v){
 
 					if(v){
-						var indeices = list_box_filter.getSelectedIndices();
+						var indeices = list_box_filter.getSelectedValues();
 						_container.writeUrlmaps(function(c){
 							var i;
 							var num = indeices.length;
@@ -8054,6 +9488,33 @@ function PageExpand(execute_type){
 				update();
 				onchange();
 				projectModify();
+			}
+
+			// --------------------------------------------------------------------------------
+			// 編集（内部用 ）
+			// --------------------------------------------------------------------------------
+			function editClick(){
+				var _selected_index = _container.getSelectedIndex();
+				var selected_defines = new Array();
+
+				if(_selected_index >= 0){
+					var ary = ProjectObjectGetActiveData(_urlmap_active)[_asset].id;
+
+					var a = _container.getSelectedIndices();
+					var i;
+					var num = a.length;
+					for(i=0;i<num;i++){
+						selected_defines.push(ary[a[i]]);
+					}
+					if(ary[_selected_index]){
+						selected_defines.push(ary[_selected_index]);
+					}
+				}
+
+				_config.pushHistory(_menu_id);
+				var content = _config.MenuItemSelect(_menu_id);
+				content.selectFromIdList(selected_defines);
+				content.replaceHistory();
 			}
 
 			// --------------------------------------------------------------------------------
@@ -8147,6 +9608,13 @@ function PageExpand(execute_type){
 			}
 
 			// --------------------------------------------------------------------------------
+			// 選択されたアイテムを取得
+			// --------------------------------------------------------------------------------
+			_container.getSelectedIndex = function(){
+				return _select_id = _list.selectedIndex;
+			};
+
+			// --------------------------------------------------------------------------------
 			// 選択されたアイテムをすべて取得
 			// --------------------------------------------------------------------------------
 			_container.getSelectedIndices = function(){
@@ -8185,14 +9653,14 @@ function PageExpand(execute_type){
 			// リストを選択
 			// --------------------------------------------------------------------------------
 			_container.select = function(id){
-				_list.selectedIndex = id;
+				_list.selectedIndex = _select_id = _select_mouse = id;
 				_container.onselect(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// アイテム追加（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  attachItem(id){
+			function attachItem(id){
 				var item = DocumentCreateElement("option");
 				ElementSetStyle(item,"margin:2px 0px;");
 
@@ -8200,7 +9668,7 @@ function PageExpand(execute_type){
 				_list.appendChild(item);
 
 				item.onmousedown = item.onmouseup = function(){
-					_select_id = id;
+					_select_mouse = id;
 				};
 				updateItem(item);
 			}
@@ -8208,7 +9676,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			// アイテム更新（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  updateItem(item){
+			function updateItem(item){
 
 				item.style.color = "#000";
 				var id = parseInt(item.value);
@@ -8236,7 +9704,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			// アイテム削除（内部用 ）
 			// --------------------------------------------------------------------------------
-			function  removeItem(item){
+			function removeItem(item){
 				DomNodeRemove(item);
 			}
 
@@ -8250,9 +9718,17 @@ function PageExpand(execute_type){
 			var _urlmap_multiple;
 			var _list;
 			var _select_id;
+			var _select_mouse;
 			var _asset;
+			var _menu_id;
 			var _define_dictionary;
 			var _define_data;
+			var _button_add;
+			var _button_delete;
+			var _button_edit;
+			var _button_prio_up;
+			var _button_prio_down;
+
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -8268,63 +9744,71 @@ function PageExpand(execute_type){
 
 				// リスト
 				_list = DocumentCreateElement("select");
-				_list.size = 5;
 				_list.multiple = true;
 				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
-					var a = _container.getSelectedIndices();
-					var i;
-					var num = a.length;
-					for(i=0;i<num;i++){
-						if(a[i] == _select_id){
-							_container.onselect(_select_id);
-							return;
+					_select_id = _list.selectedIndex;
+					var o = _list.options[_select_mouse];
+					if(o !== undefined){
+						if(o.selected){
+							_select_id = _select_mouse;
 						}
 					}
-					_container.onselect(_list.selectedIndex);
+					updateUI();
+					_container.onselect(_select_id);
 				};
 
 				var button_container = DocumentCreateElement("div");
 				ElementSetStyle(button_container,"display:table-cell; vertical-align:top; width:50px; line-height:0;");
 				container.appendChild(button_container);
 
-				var button_add = DocumentCreateElement("input");
-				button_add.type = "button";
-				button_add.value = _i18n.getMessage("menu_setting_urlmap_define_button_add");
-				ElementSetStyle(button_add,"width:100%; padding:1px 0px; margin:0px;");
-				button_container.appendChild(button_add);
-				button_add.onclick = function(){
+				_button_add = DocumentCreateElement("input");
+				_button_add.type = "button";
+				_button_add.value = _i18n.getMessage("menu_setting_urlmap_define_button_add");
+				ElementSetStyle(_button_add,"width:100%; padding:1px 0px; margin:0px;");
+				button_container.appendChild(_button_add);
+				_button_add.onclick = function(){
 					addClick();
 				};
 
-				var button_delete = DocumentCreateElement("input");
-				button_delete.type = "button";
-				button_delete.value = _i18n.getMessage("menu_setting_urlmap_define_button_remove");
-				ElementSetStyle(button_delete,"width:100%; padding:1px 0px; margin:0px;");
-				button_container.appendChild(button_delete);
-				button_delete.onclick = function(){
+				_button_delete = DocumentCreateElement("input");
+				_button_delete.type = "button";
+				_button_delete.value = _i18n.getMessage("menu_setting_urlmap_define_button_remove");
+				ElementSetStyle(_button_delete,"width:100%; padding:1px 0px; margin:0px;");
+				button_container.appendChild(_button_delete);
+				_button_delete.onclick = function(){
 					deleteClick();
 				};
 
-				var button_prio_up = DocumentCreateElement("input");
-				button_prio_up.type = "button";
-				button_prio_up.value = _i18n.getMessage("menu_setting_urlmap_define_button_prio_up");
-				ElementSetStyle(button_prio_up,"width:100%; padding:1px 0px; margin:0px;");
-				button_container.appendChild(button_prio_up);
-				button_prio_up.onclick = function(){
+				_button_edit = DocumentCreateElement("input");
+				_button_edit.type = "button";
+				_button_edit.value = _i18n.getMessage("menu_setting_urlmap_define_button_edit");
+				ElementSetStyle(_button_edit,"width:100%; padding:1px 0px; margin:0px;");
+				button_container.appendChild(_button_edit);
+				_button_edit.onclick = function(){
+					editClick();
+				};
+
+				_button_prio_up = DocumentCreateElement("input");
+				_button_prio_up.type = "button";
+				_button_prio_up.value = _i18n.getMessage("menu_setting_urlmap_define_button_prio_up");
+				ElementSetStyle(_button_prio_up,"width:100%; padding:1px 0px; margin:0px;");
+				button_container.appendChild(_button_prio_up);
+				_button_prio_up.onclick = function(){
 					prioUpClick();
 				};
 
-				var button_prio_down = DocumentCreateElement("input");
-				button_prio_down.type = "button";
-				button_prio_down.value = _i18n.getMessage("menu_setting_urlmap_define_button_prio_down");
-				ElementSetStyle(button_prio_down,"width:100%; padding:1px 0px; margin:0px;");
-				button_container.appendChild(button_prio_down);
-				button_prio_down.onclick = function(){
+				_button_prio_down = DocumentCreateElement("input");
+				_button_prio_down.type = "button";
+				_button_prio_down.value = _i18n.getMessage("menu_setting_urlmap_define_button_prio_down");
+				ElementSetStyle(_button_prio_down,"width:100%; padding:1px 0px; margin:0px;");
+				button_container.appendChild(_button_prio_down);
+				_button_prio_down.onclick = function(){
 					prioDownClick();
 				};
 
+				updateUI();
 			})();
 
 			return _container;
@@ -8912,9 +10396,10 @@ function PageExpand(execute_type){
 						locales:{}
 					},
 					thumbnail:{
-						load_type:"preload",
+						enable_thumbnail:false,
 						enable_popup_mouseover:false,
 						disable_same_image:false,
+						load_type:"preload",
 						script_allow:
 "[\n\t" + 
 	function(info,response){
@@ -8976,14 +10461,15 @@ function PageExpand(execute_type){
 "\n]"
 					},
 					popup:{
+						enable_popup_mouseover:false,
+						enable_animation_scale:false,
+						enable_animation_alpha:false,
 						load_type:"preload",
 						origin_type:"center",
 						position_type:"absolute",
 						scale_percent:100,
 						time_wait_open:0,
 						time_wait_close:0,
-						enable_animation_scale:false,
-						enable_animation_alpha:false,
 						script_allow:
 "[\n\t" + 
 	function(info,response){
@@ -9022,6 +10508,7 @@ function PageExpand(execute_type){
 					load:{
 						enable_notify:false,
 						enable_unload:false,
+						src_type:"mixed_content",
 						unload_allow_size_more_then:0
 					}
 				}
@@ -9520,40 +11007,42 @@ function PageExpand(execute_type){
 		var _content_window;
 		var _i18n;
 		var _menu_items;
+		var _history_state;
+		var _history_state_list;
 		var _menu_item_param = [
-			{asset:"menu_setting_standard",callback:ContentSettingStandard},
-			{asset:"menu_setting_expand_bbs",callback:ContentSettingExpandBbs},
-			{asset:"menu_setting_urlmap",callback:ContentSettingUrlMap},
-			{asset:"menu_setting_access_block",callback:ContentSettingAccessBlock},
-			{asset:"menu_setting_replacement_to_element",callback:ContentSettingReplacementToElement},
-			{asset:"menu_setting_replacement_to_text",callback:ContentSettingReplacementToText},
-			{asset:"menu_setting_replacement_to_anchor",callback:ContentSettingReplacementToAnchor},
-			{asset:"menu_setting_replacement_to_link",callback:ContentSettingReplacementToLink},
-			{asset:"menu_setting_replacement_to_referer",callback:ContentSettingReplacementToReferer},
-			{asset:"menu_setting_replacement_to_useragent",callback:ContentSettingReplacementToUserAgent},
-			{asset:"menu_setting_make_link_to_text",callback:ContentSettingMakeLinkToText},
-			{asset:"menu_setting_expand_short_url",callback:ContentSettingExpandShortUrl},
-			{asset:"menu_setting_expand_text",callback:ContentSettingExpandText},
-			{asset:"menu_setting_expand_image",callback:ContentSettingExpandImage},
-			{asset:"menu_setting_expand_sound",callback:ContentSettingExpandSound},
-			{asset:"menu_setting_expand_video",callback:ContentSettingExpandVideo},
-			{asset:"menu_setting_expand_iframe",callback:ContentSettingExpandIframe},
-			{asset:"menu_setting_style_sheet",callback:ContentSettingStyleSheet},
-			{asset:"menu_setting_experimental",callback:ContentSettingExperimental},
-			{asset:"menu_setting_language",callback:ContentSettingLanguage},
-			{asset:"menu_credit",callback:ContentCredit}
+			{asset:"menu_setting_standard",callback:ContentSettingStandard,bgcolor:0xFFFFFFFF},
+			{asset:"menu_setting_access_block",callback:ContentSettingAccessBlock,bgcolor:0xFFFFE0F0},
+			{asset:"menu_setting_replacement_to_referer",callback:ContentSettingReplacementToReferer,bgcolor:0xFFFFE0F0},
+			{asset:"menu_setting_replacement_to_useragent",callback:ContentSettingReplacementToUserAgent,bgcolor:0xFFFFE0F0},
+			{asset:"menu_setting_replacement_to_element",callback:ContentSettingReplacementToElement,bgcolor:0xFFE0E0FF},
+			{asset:"menu_setting_replacement_to_text",callback:ContentSettingReplacementToText,bgcolor:0xFFE0E0FF},
+			{asset:"menu_setting_replacement_to_anchor",callback:ContentSettingReplacementToAnchor,bgcolor:0xFFE0E0FF},
+			{asset:"menu_setting_replacement_to_link",callback:ContentSettingReplacementToLink,bgcolor:0xFFE0E0FF},
+			{asset:"menu_setting_make_link_to_text",callback:ContentSettingMakeLinkToText,bgcolor:0xFFE0E0FF},
+			{asset:"menu_setting_expand_short_url",callback:ContentSettingExpandShortUrl,bgcolor:0xFFE0E0FF},
+			{asset:"menu_setting_expand_text",callback:ContentSettingExpandText,bgcolor:0xFFE0E0FF},
+			{asset:"menu_setting_expand_image",callback:ContentSettingExpandImage,bgcolor:0xFFE0E0FF},
+			{asset:"menu_setting_expand_sound",callback:ContentSettingExpandSound,bgcolor:0xFFE0E0FF},
+			{asset:"menu_setting_expand_video",callback:ContentSettingExpandVideo,bgcolor:0xFFE0E0FF},
+			{asset:"menu_setting_expand_iframe",callback:ContentSettingExpandIframe,bgcolor:0xFFE0E0FF},
+			{asset:"menu_setting_style_sheet",callback:ContentSettingStyleSheet,bgcolor:0xFFE0E0FF},
+			{asset:"menu_setting_experimental",callback:ContentSettingExperimental,bgcolor:0xFFE0E0FF},
+			{asset:"menu_setting_urlmap",callback:ContentSettingUrlMap,bgcolor:0xFFFFF0D8},
+			{asset:"menu_setting_expand_bbs",callback:ContentSettingExpandBbs,bgcolor:0xFFFFFFFF},
+			{asset:"menu_setting_language",callback:ContentSettingLanguage,bgcolor:0xFFFFFFFF},
+			{asset:"menu_credit",callback:ContentCredit,bgcolor:0xFFFFFFFF}
 		];
 		var _menu_support_param = [
 			{menu:true,urlmap:true},
-			{menu:true,urlmap:true},
-			{menu:true,urlmap:true},
 			{menu:true,urlmap:false},
-			{menu:true,urlmap:true},
-			{menu:true,urlmap:true},
-			{menu:true,urlmap:true},
-			{menu:true,urlmap:true},
 			{menu:false,urlmap:false},
 			{menu:false,urlmap:false},
+			{menu:true,urlmap:true},
+			{menu:true,urlmap:true},
+			{menu:true,urlmap:true},
+			{menu:true,urlmap:true},
+			{menu:true,urlmap:true},
+			{menu:true,urlmap:true},
 			{menu:true,urlmap:true},
 			{menu:true,urlmap:true},
 			{menu:true,urlmap:true},
@@ -9575,6 +11064,10 @@ function PageExpand(execute_type){
 
 			_menu_items = new Array();
 
+			// 履歴オブジェクト
+			_history_state_list = new Array();
+			_history_state_list[0] = _history_state = {index:0};
+
 			// エレメントを全てクリア
 			var child_nodes = document.childNodes;
 			var i;
@@ -9590,7 +11083,7 @@ function PageExpand(execute_type){
 
 			// ボディ
 			var body = DocumentCreateElement("body");
-			ElementSetStyle(body,'background-color:#CCC; font-family:"メイリオ"; margin:0px; padding:0px;');
+			ElementSetStyle(body,'background-color:#CCC; font-family:"メイリオ"; margin:0px; padding:0px; overflow-y:scroll;');
 			html.appendChild(body);
 
 			// ロケール
@@ -9632,8 +11125,9 @@ function PageExpand(execute_type){
 					for(i=0;i<num;i++){
 						var param = _menu_item_param[i];
 						var item = new MenuItemCreate(_i18n.getMessage(param.asset),i);
-						_menu_items.push(item);
+						item.setBackgroundColor(param.bgcolor);
 						item.setSupport(_menu_support_param[i].menu);
+						_menu_items.push(item);
 					}
 				}
 
@@ -9644,21 +11138,57 @@ function PageExpand(execute_type){
 
 			// コンテンツ部
 			_content_window = DocumentCreateElement("div");
-			ElementSetStyle(_content_window,"width:auto; min-width:500px; display:table-cell; vertical-align:top; padding:10px 20px 50px; background-color:#FFF; border-radius:5px; -webkit-border-radius:5px; -moz-border-radius:5px; box-shadow:3px 3px 3px #888; -webkit-box-shadow:3px 3px 3px #888; -moz-box-shadow:3px 3px 3px #888;");
+			ElementSetStyle(_content_window,"width:auto; min-width:500px; display:table-cell; vertical-align:top; padding:10px 20px 50px; background-color:#FFF; border-radius:5px; box-shadow:3px 3px 3px #888;");
 			out_table.appendChild(_content_window);
 
 			// 基本設定
 			_config.MenuItemSelect(PageExpandConfig.MENU_TYPE_SETTING_STANDARD);
 
-		}
+			// --------------------------------------------------------------------------------
+			// 履歴復元
+			// --------------------------------------------------------------------------------
+			window.onpopstate = function(e){
+				var state = e.state;
+				if(!state) return;
 
+				// 履歴オブジェクト変更
+				_history_state = _history_state_list[state.index];
+				if(!_history_state){
+					_history_state_list[state.index] = _history_state = { index:state.index , selected_menu:state.menu };
+				}
+
+				var content;
+				if(_history_state.selected_menu !== undefined){
+					content = _config.MenuItemSelect(_history_state.selected_menu);
+				}
+				if(_history_state.selected_defines !== undefined){
+					content.selectFromIdList(_history_state.selected_defines);
+				}
+				if(_history_state.selected_filters !== undefined){
+					if(content.selectFilterFromList){
+						content.selectFilterFromList(_history_state.selected_filters);
+					}
+				}
+				if(_history_state.scroll_pos !== undefined){
+					WindowSetScrollPosition(window,_history_state.scroll_pos);
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// スクロール
+			// --------------------------------------------------------------------------------
+			window.onscroll = function(e){
+				_history_state.scroll_pos = WindowGetScrollPosition(window);
+			};
+
+		}
 
 		// --------------------------------------------------------------------------------
 		// 初期化関数
 		// --------------------------------------------------------------------------------
 		_config.initialize = function(func){
 			// フレームは動作させない
-			if (WindowGetInFrame()){
+			if (WindowIsChild(window)){
 				func(false);
 				return;
 			}
@@ -9685,24 +11215,24 @@ function PageExpand(execute_type){
 	// 定数
 	// --------------------------------------------------------------------------------
 	PageExpandConfig.MENU_TYPE_SETTING_STANDARD = 0;
-	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_BBS = 1;
-	PageExpandConfig.MENU_TYPE_SETTING_URL_MAPPING = 2;
-	PageExpandConfig.MENU_TYPE_SETTING_ACCESS_BLOCK = 3;
+	PageExpandConfig.MENU_TYPE_SETTING_ACCESS_BLOCK = 1;
+	PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_REFERER = 2;
+	PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_USERAGENT = 3;
 	PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_ELEMENT = 4;
 	PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_TEXT = 5;
 	PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_ANCHOR = 6;
 	PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_LINK = 7;
-	PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_REFERER = 8;
-	PageExpandConfig.MENU_TYPE_SETTING_REPLACEMENT_TO_USERAGENT = 9;
-	PageExpandConfig.MENU_TYPE_SETTING_MAKE_LINK_TO_TEXT = 10;
-	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_SHORT_URL = 11;
-	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_TEXT = 12;
-	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_IMAGE = 13;
-	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_SOUND = 14;
-	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_VIDEO = 15;
-	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_IFRAME = 16;
-	PageExpandConfig.MENU_TYPE_SETTING_STYLE_SHEET = 17;
-	PageExpandConfig.MENU_TYPE_SETTING_EXPERIMENTAL = 18;
+	PageExpandConfig.MENU_TYPE_SETTING_MAKE_LINK_TO_TEXT = 8;
+	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_SHORT_URL = 9;
+	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_TEXT = 10;
+	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_IMAGE = 11;
+	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_SOUND = 12;
+	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_VIDEO = 13;
+	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_IFRAME = 14;
+	PageExpandConfig.MENU_TYPE_SETTING_STYLE_SHEET = 15;
+	PageExpandConfig.MENU_TYPE_SETTING_EXPERIMENTAL = 16;
+	PageExpandConfig.MENU_TYPE_SETTING_URL_MAPPING = 17;
+	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_BBS = 18;
 	PageExpandConfig.MENU_TYPE_SETTING_LANGUAGE = 19;
 	PageExpandConfig.MENU_TYPE_CREDIT = 20;
 

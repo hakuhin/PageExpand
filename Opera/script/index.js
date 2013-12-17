@@ -348,6 +348,9 @@ function PageExpand(execute_type){
 						if(xhr.overrideMimeType && request.override_mime_type){
 							xhr.overrideMimeType(request.override_mime_type);
 						}
+						if(request.timeout){
+							xhr.timeout = request.timeout;
+						}
 						xhr.send(request.data);
 					}catch(e){
 						if(!completed){
@@ -415,6 +418,9 @@ function PageExpand(execute_type){
 						}
 						if(xhr.overrideMimeType && request.override_mime_type){
 							xhr.overrideMimeType(request.override_mime_type);
+						}
+						if(request.timeout){
+							xhr.timeout = request.timeout;
 						}
 						xhr.responseType = "arraybuffer";
 						xhr.send(request.data);

@@ -8,13 +8,6 @@
   "icon64": "data/icon64.png",
   "preferences": [
     {
-      "name": "",
-      "type": "radio",
-      "title": "",
-      "value": "",
-      "value": "",
-      "options": [{"value": "","label": "(This is dummy...)" }]
-    },{
       "name": "PreferenceControl",
       "type": "control",
       "title": "PageExpand Setting",
@@ -22,5 +15,5 @@
     }
   ],
   "id": "PageExpand@hakuhin.jp",
-  "version": "1.2.4"
+  "version": "1.3.0"
 }

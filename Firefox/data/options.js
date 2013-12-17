@@ -1,1 +1,1 @@
-PageExpand("FirefoxExtensionOption");
+exports.PageExpand("FirefoxExtensionOption");
