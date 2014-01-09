@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2013  http://hakuhin.jp
+// Hakuhin 2010-2014  http://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -699,18 +699,32 @@ function PageExpand(execute_type){
 					if(!c)	continue;
 
 					// アドレスチェック
-					var filter = c.filter;
-					var filter_num = filter.length;
-					for(j=0;j<filter_num;j++){
-						var regexp = RegExpObjectGetRegExp(filter[j]);
-						if(regexp){
-							var m = url.match(regexp);
-							if(m){
+					switch(c.filter.type){
+					case "asterisk":
+						var filter = c.filter.asterisk.filter;
+						var filter_num = filter.length;
+						for(j=0;j<filter_num;j++){
+							if(StringUrlMatchAsteriskWord(url,filter[j])){
 								_expand_bbs_list.select(i);
 								_expand_bbs_list.replaceHistory();
 								return;
 							}
 						}
+						break;
+					case "regexp":
+						var filter = c.filter.regexp.filter;
+						var filter_num = filter.length;
+						for(j=0;j<filter_num;j++){
+							var regexp = RegExpObjectGetRegExp(filter[j]);
+							if(regexp){
+								if(StringUrlMatchRegExpList(url,[regexp])){
+									_expand_bbs_list.select(i);
+									_expand_bbs_list.replaceHistory();
+									return;
+								}
+							}
+						}
+						break;
 					}
 				}
 			};
@@ -741,7 +755,7 @@ function PageExpand(execute_type){
 				_text_input_name.setValue(LocaleObjectGetString(c.name));
 				_check_box_enable_expand_bbs.setValue(c.enable);
 				_form_container_enable.setVisible(c.enable);
-				_regexp_list_filter.attachArray(c.filter);
+				_url_edit_container.attachObject(c.filter);
 				_text_area_script_initialize.setValue(c.script_initialize);
 				_check_box_popup_enable_animation.setValue(c.popup.enable_animation);
 				_combo_box_popup_origin_type.setValue(c.popup.origin_type);
@@ -787,7 +801,7 @@ function PageExpand(execute_type){
 			var _form_container_enable;
 			var _text_input_name;
 			var _check_box_enable_expand_bbs;
-			var _regexp_list_filter;
+			var _url_edit_container;
 			var _text_area_script_initialize;
 			var _check_box_popup_enable_animation;
 			var _combo_box_popup_origin_type;
@@ -864,8 +878,8 @@ function PageExpand(execute_type){
 				// 動作URLの設定
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_filter_url"));
 				var parent = container.getElement();
-				_regexp_list_filter = UI_RegExpList(parent);
-				_regexp_list_filter.onchange = function(v){
+				_url_edit_container = UI_UrlEditContainer(parent);
+				_url_edit_container.onchange = function(v){
 					getSelectedExpandBbs(function(c){
 						c.filter = ObjectCopy(v);
 					});
@@ -1031,14 +1045,32 @@ function PageExpand(execute_type){
 					if(!c)	continue;
 
 					// アドレスチェック
-					var filter = c.filter;
-					var filter_num = filter.length;
-					for(j=0;j<filter_num;j++){
-						if(StringUrlMatchAsteriskWord(url,filter[j])){
-							_urlmap_list.select(i);
-							_urlmap_list.replaceHistory();
-							return;
+					switch(c.filter.type){
+					case "asterisk":
+						var filter = c.filter.asterisk.filter;
+						var filter_num = filter.length;
+						for(j=0;j<filter_num;j++){
+							if(StringUrlMatchAsteriskWord(url,filter[j])){
+								_urlmap_list.select(i);
+								_urlmap_list.replaceHistory();
+								return;
+							}
 						}
+						break;
+					case "regexp":
+						var filter = c.filter.regexp.filter;
+						var filter_num = filter.length;
+						for(j=0;j<filter_num;j++){
+							var regexp = RegExpObjectGetRegExp(filter[j]);
+							if(regexp){
+								if(StringUrlMatchRegExpList(url,[regexp])){
+									_urlmap_list.select(i);
+									_urlmap_list.replaceHistory();
+									return;
+								}
+							}
+						}
+						break;
 					}
 				}
 			};
@@ -1074,7 +1106,7 @@ function PageExpand(execute_type){
 				_form_container_enable.setVisible(c.enable);
 
 				// フィルタ
-				_text_area_filter_url.joinArray(c.filter,"\n");
+				_url_edit_container.attachObject(c.filter);
 
 				// セキュリティ
 				_check_box_enable_unsecure.setValue(c.enable_unsecure);
@@ -1143,7 +1175,7 @@ function PageExpand(execute_type){
 			var _form_container_enable;
 			var _text_input_name;
 			var _check_box_enable_urlmap;
-			var _text_area_filter_url;
+			var _url_edit_container;
 			var _check_box_enable_unsecure;
 			var _check_box_enable_mixed_content;
 			var _ui_define;
@@ -1229,15 +1261,14 @@ function PageExpand(execute_type){
 				// 動作 URL
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_urlmap_filter_url"));
 				var parent = container.getElement();
-				_text_area_filter_url = UI_TextArea(parent);
-				_text_area_filter_url.oninput = function(v){
+				_url_edit_container = UI_UrlEditContainer(parent);
+				_url_edit_container.onchange = function(v){
 					getSelectedUrlMaps(function(c){
-						c.filter = _text_area_filter_url.spiritByLine();
+						c.filter = ObjectCopy(v);
 					});
 					_urlmap_list.update();
 					projectModify();
 				};
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_urlmap_filter_url_hint"));
 
 				// セキュリティ
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_urlmap_unsecure_check_box_container"));
@@ -1597,7 +1628,7 @@ function PageExpand(execute_type){
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
-			var _text_area_filter_url;
+			var _url_edit_container;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -1617,16 +1648,15 @@ function PageExpand(execute_type){
 				// アクセス遮断 URL
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_access_block_filter_url"));
 				var parent = container.getElement();
-				_text_area_filter_url = UI_TextArea(parent);
-				_text_area_filter_url.oninput = function(v){
+				_url_edit_container = UI_UrlEditContainer(parent);
+				_url_edit_container.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.filter = _text_area_filter_url.spiritByLine();
+						c.filter = ObjectCopy(v);
 					});
 
 					_setting_define.update();
 					projectModify();
 				};
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_access_block_filter_url_hint"));
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -1639,7 +1669,7 @@ function PageExpand(execute_type){
 					if(!c)	return;
 
 					// アクセス遮断 URL
-					_text_area_filter_url.joinArray(c.filter,"\n");
+					_url_edit_container.attachObject(c.filter);
 				};
 
 				// リロード
@@ -1949,7 +1979,7 @@ function PageExpand(execute_type){
 			var _setting_define;
 			var _filter_list;
 			var _text_input_name;
-			var _text_area_filter_url;
+			var _url_edit_container;
 			var _text_area_script;
 			var _check_box_enable_reflect_to_anchor;
 			var _check_box_enable_cache;
@@ -1979,7 +2009,7 @@ function PageExpand(execute_type){
 						if(0 <= id && id < filter.length){
 							var filter = filter[id];
 							_text_input_name.setValue(LocaleObjectGetString(filter.name));
-							_text_area_filter_url.joinArray(filter.filter,"\n");
+							_url_edit_container.attachObject(filter.filter);
 							_text_area_script.setValue(filter.script);
 							_check_box_enable_reflect_to_anchor.setValue(filter.enable_reflect_to_anchor);
 							_check_box_enable_cache.setValue(filter.enable_cache);
@@ -2038,15 +2068,14 @@ function PageExpand(execute_type){
 				// 対象 URL
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_link_filter_filter_url"));
 				var parent = container.getElement();
-				_text_area_filter_url = UI_TextArea(parent);
-				_text_area_filter_url.oninput = function(v){
+				_url_edit_container = UI_UrlEditContainer(parent);
+				_url_edit_container.onchange = function(v){
 					_filter_list.writeFilters(function(c){
-						c.filter = _text_area_filter_url.spiritByLine();
+						c.filter = ObjectCopy(v);
 					});
 					_setting_define.update();
 					projectModify();
 				};
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_replacement_to_link_filter_filter_url_hint"));
 
 				// ハイパーリンクの設定
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_link_check_box_container"));
@@ -2164,7 +2193,7 @@ function PageExpand(execute_type){
 			var _setting_define;
 			var _filter_list;
 			var _text_input_name;
-			var _text_area_filter_url;
+			var _url_edit_container;
 			var _combo_box_send_type;
 			var _text_input_send_custom;
 			var _text_regexp_send_regexp;
@@ -2196,7 +2225,7 @@ function PageExpand(execute_type){
 						if(0 <= id && id < filter.length){
 							var filter = filter[id];
 							_text_input_name.setValue(LocaleObjectGetString(filter.name));
-							_text_area_filter_url.joinArray(filter.filter,"\n");
+							_url_edit_container.attachObject(filter.filter);
 							_combo_box_send_type.setValue(filter.send_referer.type);
 							_text_input_send_custom.setValue(filter.send_referer.custom);
 							_text_regexp_send_regexp.setValue(filter.send_referer.regexp);
@@ -2262,15 +2291,14 @@ function PageExpand(execute_type){
 				// 対象 URL
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_filter_url"));
 				var parent = container.getElement();
-				_text_area_filter_url = UI_TextArea(parent);
-				_text_area_filter_url.oninput = function(v){
+				_url_edit_container = UI_UrlEditContainer(parent);
+				_url_edit_container.onchange = function(v){
 					_filter_list.writeFilters(function(c){
-						c.filter = _text_area_filter_url.spiritByLine();
+						c.filter = ObjectCopy(v);
 					});
 					_setting_define.update();
 					projectModify();
 				};
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_filter_url_hint"));
 
 				// 基本送信データ
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type"));
@@ -2406,7 +2434,7 @@ function PageExpand(execute_type){
 			var _setting_define;
 			var _filter_list;
 			var _text_input_name;
-			var _text_area_filter_url;
+			var _url_edit_container;
 			var _text_input_send_custom;
 			var _form_container_filter_inner;
 			var _form_container_filter_outer;
@@ -2431,7 +2459,7 @@ function PageExpand(execute_type){
 						if(0 <= id && id < filter.length){
 							var filter = filter[id];
 							_text_input_name.setValue(LocaleObjectGetString(filter.name));
-							_text_area_filter_url.joinArray(filter.filter,"\n");
+							_url_edit_container.attachObject(filter.filter);
 							_text_input_send_custom.setValue(filter.send_useragent.custom);
 
 							visible = true;
@@ -2488,15 +2516,14 @@ function PageExpand(execute_type){
 				// 対象 URL
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_filter_url"));
 				var parent = container.getElement();
-				_text_area_filter_url = UI_TextArea(parent);
-				_text_area_filter_url.oninput = function(v){
+				_url_edit_container = UI_UrlEditContainer(parent);
+				_url_edit_container.onchange = function(v){
 					_filter_list.writeFilters(function(c){
-						c.filter = _text_area_filter_url.spiritByLine();
+						c.filter = ObjectCopy(v);
 					});
 					_setting_define.update();
 					projectModify();
 				};
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_filter_url_hint"));
 
 				// 基本送信データ
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_send"));
@@ -2667,7 +2694,7 @@ function PageExpand(execute_type){
 			// --------------------------------------------------------------------------------
 			var _setting_define;
 			var _form_container;
-			var _text_area_filter_url;
+			var _url_edit_container;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -2687,16 +2714,15 @@ function PageExpand(execute_type){
 				// 対象 URL
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_short_url_filter_url"));
 				var parent = container.getElement();
-				_text_area_filter_url = UI_TextArea(parent);
-				_text_area_filter_url.oninput = function(v){
+				_url_edit_container = UI_UrlEditContainer(parent);
+				_url_edit_container.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.filter = _text_area_filter_url.spiritByLine();
+						c.filter = ObjectCopy(v);
 					});
 
 					_setting_define.update();
 					projectModify();
 				};
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_expand_short_url_filter_url_hint"));
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -2709,7 +2735,7 @@ function PageExpand(execute_type){
 					if(!c)	return;
 
 					// 対象 URL
-					_text_area_filter_url.joinArray(c.filter,"\n");
+					_url_edit_container.attachObject(c.filter);
 				};
 
 				// リロード
@@ -4639,12 +4665,12 @@ function PageExpand(execute_type){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				UI_Text(parent,"PageExpand ver.1.3.0");
+				UI_Text(parent,"PageExpand ver.1.3.1");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
 				var parent = container.getElement();
-				UI_Text(parent,'(c) Hakuhin 2010-2013');
+				UI_Text(parent,'(c) Hakuhin 2010-2014');
 				UI_AnchorText(parent,"http://hakuhin.jp/","http://hakuhin.jp/");
 			})();
 
@@ -5617,7 +5643,7 @@ function PageExpand(execute_type){
 			// 配列の各番地のデータに文字を挟んだ文字列をセット
 			// --------------------------------------------------------------------------------
 			_container.joinArray = function(ary,v){
-				_textarea.value = ary.join("\n");
+				_textarea.value = ary.join(v);
 			};
 
 			// --------------------------------------------------------------------------------
@@ -9815,6 +9841,107 @@ function PageExpand(execute_type){
 		}
 
 		// --------------------------------------------------------------------------------
+		// URL エディットコンテナ
+		// --------------------------------------------------------------------------------
+		function UI_UrlEditContainer(parent){
+			var _container = new Object();
+
+			// --------------------------------------------------------------------------------
+			// カスタムオブジェクトを関連付け
+			// --------------------------------------------------------------------------------
+			_container.attachObject = function(obj){
+				// クリア
+				_container.clear();
+
+				_filter_container = ObjectCopy(obj);
+				update();
+			};
+
+			// --------------------------------------------------------------------------------
+			// クリア
+			// --------------------------------------------------------------------------------
+			_container.clear = function(){
+				_text_area_filter_url.setValue("");
+				_regexp_list_filter.clear();
+			};
+
+			// --------------------------------------------------------------------------------
+			// 表示更新
+			// --------------------------------------------------------------------------------
+			function update(){
+				_form_container_asterisk.setVisible(false);
+				_form_container_regexp.setVisible(false);
+
+				_combo_box_type.setValue(_filter_container.type);
+
+				switch(_filter_container.type){
+				case "asterisk":
+					_text_area_filter_url.joinArray(_filter_container.asterisk.filter,"\n");
+					_form_container_asterisk.setVisible(true);
+					break;
+				case "regexp":
+					_regexp_list_filter.attachArray(_filter_container.regexp.filter);
+					_form_container_regexp.setVisible(true);
+					break;
+				}
+			}
+
+			// --------------------------------------------------------------------------------
+			// 更新イベント
+			// --------------------------------------------------------------------------------
+			_container.onchange = function(){};
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _filter_container;
+			var _combo_box_type;
+			var _regexp_list_filter;
+			var _text_area_filter_url;
+			var _form_container_asterisk;
+			var _form_container_regexp;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_combo_box_type = UI_ComboBox(parent);
+				_combo_box_type.attachItem(_i18n.getMessage("menu_setting_url_edit_container_combo_box_item_asterisk"),"asterisk");
+				_combo_box_type.attachItem(_i18n.getMessage("menu_setting_url_edit_container_combo_box_item_regexp"),"regexp");
+				_combo_box_type.onchange = function(v){
+					_filter_container.type = v;
+					update();
+					_container.onchange(_filter_container);
+				};
+
+				_form_container_asterisk = new UI_FormContainer(parent);
+				_form_container_asterisk.setVisible(false);
+				var form_parent_asterisk = _form_container_asterisk.getElement();
+
+				// アスタリスクリスト
+				_text_area_filter_url = UI_TextArea(form_parent_asterisk);
+				_text_area_filter_url.oninput = function(v){
+					_filter_container.asterisk.filter = _text_area_filter_url.spiritByLine();
+					_container.onchange(_filter_container);
+				};
+				UI_TextHint(form_parent_asterisk,_i18n.getMessage("menu_setting_url_edit_container_type_asterisk_hint"));
+
+				_form_container_regexp = new UI_FormContainer(parent);
+				_form_container_regexp.setVisible(false);
+				var form_parent_regexp = _form_container_regexp.getElement();
+
+				// 正規表現リスト
+				_regexp_list_filter = UI_RegExpList(form_parent_regexp);
+				_regexp_list_filter.onchange = function(v){
+					_filter_container.regexp.filter = ObjectCopy(v);
+					_container.onchange(_filter_container);
+				};
+			})();
+
+			return _container;
+		}
+
+		// --------------------------------------------------------------------------------
 		// プロジェクト用データからアクティブなオブジェクトを取得
 		// --------------------------------------------------------------------------------
 		function ProjectObjectGetActiveData(obj){
@@ -9865,7 +9992,15 @@ function PageExpand(execute_type){
 						locales:{}
 					},
 					enable:true,
-					filter:[],
+					filter:{
+						type:"asterisk",
+						asterisk:{
+							filter:[]
+						},
+						regexp:{
+							filter:[]
+						}
+					},
 					script_initialize:
 "[\n\t" + 
 	function(info,response){
@@ -9945,7 +10080,15 @@ function PageExpand(execute_type){
 						locales:{}
 					},
 					enable:false,
-					filter:[],
+					filter:{
+						type:"asterisk",
+						asterisk:{
+							filter:[]
+						},
+						regexp:{
+							filter:[]
+						}
+					},
 					enable_unsecure:false,
 					enable_mixed_content:false,
 					access_block:{enable:false,id:[]},
@@ -9979,7 +10122,15 @@ function PageExpand(execute_type){
 						standard:"",
 						locales:{}
 					},
-					filter:[]
+					filter:{
+						type:"asterisk",
+						asterisk:{
+							filter:[]
+						},
+						regexp:{
+							filter:[]
+						}
+					}
 				}
 			};
 		}
@@ -10135,9 +10286,15 @@ function PageExpand(execute_type){
 						en:""
 					}
 				},
-				filter:[
-					""
-				],
+				filter:{
+					type:"asterisk",
+					asterisk:{
+						filter:[]
+					},
+					regexp:{
+						filter:[]
+					}
+				},
 				enable_reflect_to_anchor:false,
 				enable_cache:false,
 				script:
@@ -10199,9 +10356,15 @@ function PageExpand(execute_type){
 						en:""
 					}
 				},
-				filter:[
-					""
-				],
+				filter:{
+					type:"asterisk",
+					asterisk:{
+						filter:[]
+					},
+					regexp:{
+						filter:[]
+					}
+				},
 				send_referer:{
 					type:"default",
 					custom:"",
@@ -10242,9 +10405,15 @@ function PageExpand(execute_type){
 						en:""
 					}
 				},
-				filter:[
-					""
-				],
+				filter:{
+					type:"asterisk",
+					asterisk:{
+						filter:[]
+					},
+					regexp:{
+						filter:[]
+					}
+				},
 				send_useragent:{
 					custom:""
 				}
@@ -10302,7 +10471,15 @@ function PageExpand(execute_type){
 						standard:"",
 						locales:{}
 					},
-					filter:[]
+					filter:{
+						type:"asterisk",
+						asterisk:{
+							filter:[]
+						},
+						regexp:{
+							filter:[]
+						}
+					}
 				}
 			};
 		}

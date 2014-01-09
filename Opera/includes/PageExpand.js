@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2013  http://hakuhin.jp
+// Hakuhin 2010-2014  http://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -1631,13 +1631,17 @@ function PageExpand(execute_type){
 								// イメージを複製
 								var image_clone = ImageClone(thumbnail_image);
 
-								// ポップアップイメージ
-								popup_image = new PopupImage(image_clone);
-								popup_image.setElementParent(document.body);
-								popup_image.setElementHitArea(thumbnail_image);
-								popup_image.setElementBeginArea(thumbnail_image);
-								AnalyzeWorkSetPopupImage(work,popup_image);
+								// ロード完了
+								ImageGetLoaded(image_clone,function(){
+									if(!thumbnail_image)	return;
 
+									// ポップアップイメージ
+									popup_image = new PopupImage(image_clone);
+									popup_image.setElementParent(document.body);
+									popup_image.setElementHitArea(thumbnail_image);
+									popup_image.setElementBeginArea(thumbnail_image);
+									AnalyzeWorkSetPopupImage(work,popup_image);
+								});
 							}
 						}
 
@@ -5390,67 +5394,78 @@ function PageExpand(execute_type){
 			if(allow){
 				// ポップアップイメージ
 				var image = ImageClone(element);
-				popup_image = new PopupImage(image);
-				popup_image.setElementParent(document.body);
-				popup_image.setElementAnchor(element);
-				popup_image.setElementHitArea(element);
-				popup_image.setElementBeginArea(element);
-				popup_image.ontrim = function (){
-					var trim_check = false;
-					var trim_rect = new Object();
-					var bounding_rect = ElementGetBoundingClientRect(element);
-					var view_rect = ObjectCopy(bounding_rect);
 
-					var overflow_hidden = {"scroll":1,"hidden":1,"auto":1};
-					var display_inline = {"inline":1,"none":1,"table-column":1,"table-column-group":1};
-					var node = element;
-					while(node){
-						var r = ElementGetBoundingClientRect(node);
-						if(!r) break;
+				// 絶対パスに変換
+				if(window_manager.existWindowRoot()){
+					image.src = element.src;
+				}
 
-						if(node.tagName == "BODY") break;
+				// ロード完了
+				ImageGetLoaded(image,function(){
+					if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
 
-						var style = ElementGetComputedStyle(node,null);
-						if(style){
-							if(!display_inline[style.display]){
-								if(overflow_hidden[style.overflow]){
-									if(r.bottom < view_rect.bottom) view_rect.bottom = r.bottom;
-									if(r.top    > view_rect.top   ) view_rect.top    = r.top;
-									if(r.right  < view_rect.right ) view_rect.right  = r.right;
-									if(r.left   > view_rect.left  ) view_rect.left   = r.left;
-									trim_check = true;
+					popup_image = new PopupImage(image);
+					popup_image.setElementParent(document.body);
+					popup_image.setElementAnchor(element);
+					popup_image.setElementHitArea(element);
+					popup_image.setElementBeginArea(element);
+					popup_image.ontrim = function (){
+						var trim_check = false;
+						var trim_rect = new Object();
+						var bounding_rect = ElementGetBoundingClientRect(element);
+						var view_rect = ObjectCopy(bounding_rect);
+
+						var overflow_hidden = {"scroll":1,"hidden":1,"auto":1};
+						var display_inline = {"inline":1,"none":1,"table-column":1,"table-column-group":1};
+						var node = element;
+						while(node){
+							var r = ElementGetBoundingClientRect(node);
+							if(!r) break;
+
+							if(node.tagName == "BODY") break;
+
+							var style = ElementGetComputedStyle(node,null);
+							if(style){
+								if(!display_inline[style.display]){
+									if(overflow_hidden[style.overflow]){
+										if(r.bottom < view_rect.bottom) view_rect.bottom = r.bottom;
+										if(r.top    > view_rect.top   ) view_rect.top    = r.top;
+										if(r.right  < view_rect.right ) view_rect.right  = r.right;
+										if(r.left   > view_rect.left  ) view_rect.left   = r.left;
+										trim_check = true;
+									}
 								}
 							}
+
+							node = node.offsetParent;
 						}
 
-						node = node.offsetParent;
-					}
+						if(trim_rect){
+							var natural_size　= ImageGetNaturalSize(element);
+							var computed_style = ElementGetComputedStyle(element,null);
+							var boader_rect = ComputedStyleGetBoaderWidth(computed_style);
+							var padding_rect = ComputedStyleGetPaddingWidth(computed_style);
 
-					if(trim_rect){
-						var natural_size　= ImageGetNaturalSize(element);
-						var computed_style = ElementGetComputedStyle(element,null);
-						var boader_rect = ComputedStyleGetBoaderWidth(computed_style);
-						var padding_rect = ComputedStyleGetPaddingWidth(computed_style);
+							var px = bounding_rect.left + boader_rect.left + padding_rect.left;
+							var py = bounding_rect.top  + boader_rect.top  + padding_rect.top;
+							var w = (bounding_rect.right  - px) - boader_rect.right  + padding_rect.right;
+							var h = (bounding_rect.bottom - py) - boader_rect.bottom + padding_rect.bottom;
+							var sx = natural_size.width  / w;
+							var sy = natural_size.height / h;
 
-						var px = bounding_rect.left + boader_rect.left + padding_rect.left;
-						var py = bounding_rect.top  + boader_rect.top  + padding_rect.top;
-						var w = (bounding_rect.right  - px) - boader_rect.right  + padding_rect.right;
-						var h = (bounding_rect.bottom - py) - boader_rect.bottom + padding_rect.bottom;
-						var sx = natural_size.width  / w;
-						var sy = natural_size.height / h;
+							trim_rect.left   = (view_rect.left   - px) * sx;
+							trim_rect.top    = (view_rect.top    - py) * sy;
+							trim_rect.right  = (view_rect.right  - px) * sx;
+							trim_rect.bottom = (view_rect.bottom - py) * sy;
+						}
 
-						trim_rect.left   = (view_rect.left   - px) * sx;
-						trim_rect.top    = (view_rect.top    - py) * sy;
-						trim_rect.right  = (view_rect.right  - px) * sx;
-						trim_rect.bottom = (view_rect.bottom - py) * sy;
-					}
-
-					if(trim_check){
-						popup_image.setTrimRect(trim_rect);
-					}
-				};
-				popup_image.ontrim();
-				AnalyzeWorkSetPopupImage(work,popup_image);
+						if(trim_check){
+							popup_image.setTrimRect(trim_rect);
+						}
+					};
+					popup_image.ontrim();
+					AnalyzeWorkSetPopupImage(work,popup_image);
+				});
 			}else{
 				// 解放イベント発行
 				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);

@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2013  http://hakuhin.jp
+// Hakuhin 2010-2014  http://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -251,7 +251,7 @@ function PageExpand(execute_type){
 				var define_num = defines.length;
 				for(i=0;i<define_num;i++){
 					define = defines[i];
-					filters = define.filter;
+					filters = define.filter.asterisk.filter;
 					filter_num = filters.length;
 					for(j=0;j<filter_num;j++){
 						_url_filter.push(filters[j]);
