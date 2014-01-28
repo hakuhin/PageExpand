@@ -1,1 +1,1 @@
-exports.PageExpand("FirefoxExtensionPopup");
+exports.PageExpand({execute_type:"FirefoxExtensionPopup",admin:window,window:window});

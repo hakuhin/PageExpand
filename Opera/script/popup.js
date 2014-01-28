@@ -8,7 +8,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand クラス
 // --------------------------------------------------------------------------------
-function PageExpand(execute_type){
+function PageExpand(page_expand_arguments){
 
 	// --------------------------------------------------------------------------------
 	// ポップアップメニュー
@@ -63,16 +63,16 @@ function PageExpand(execute_type){
 		function click(command){
 			switch(command){
 			case "configCurrentPage":
-				extension_message.sendRequest({command: "configCurrentPage"},function(response){});
+				extension_message.sendRequest({command: "configCurrentPage"});
 				break;
 			case "configCurrentBbs":
-				extension_message.sendRequest({command: "configCurrentBbs"},function(response){});
+				extension_message.sendRequest({command: "configCurrentBbs"});
 				break;
 			case "executePageExpand":
-				extension_message.sendRequest({command: "executePageExpand"},function(response){});
+				extension_message.sendRequest({command: "executePageExpand"});
 				break;
 			case "executeDebug":
-				extension_message.sendRequest({command: "executeDebug"},function(response){});
+				extension_message.sendRequest({command: "executeDebug"});
 				break;
 			}
 		}
@@ -252,7 +252,7 @@ function PageExpand(execute_type){
 	// --------------------------------------------------------------------------------
 	// 初期化
 	// --------------------------------------------------------------------------------
-	switch(execute_type){
+	switch(page_expand_arguments.execute_type){
 
 	// --------------------------------------------------------------------------------
 	// Opera のポップアップとして動作

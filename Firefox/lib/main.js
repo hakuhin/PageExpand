@@ -3,7 +3,7 @@
 // --------------------------------------------------------------------------------
 exports.main = function(options, callback) {
 	// バックグラウンド実行
-	require("PageExpand").PageExpand("FirefoxExtensionBackGround");
+	require("PageExpand").PageExpand({execute_type:"FirefoxExtensionBackGround",admin:this,window:{}});
 };
 
 // --------------------------------------------------------------------------------

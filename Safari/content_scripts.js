@@ -1,1 +1,1 @@
-PageExpand("SafariExtensionContentScript");
+PageExpand({execute_type:"SafariExtensionContentScript",admin:window,window:window});

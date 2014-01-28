@@ -1,1 +1,1 @@
-exports.PageExpand("FirefoxExtensionOption");
+exports.PageExpand({execute_type:"FirefoxExtensionOption",admin:window,window:window});

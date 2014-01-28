@@ -8,7 +8,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand クラス
 // --------------------------------------------------------------------------------
-function PageExpand(execute_type){
+function PageExpand(page_expand_arguments){
 
 	// --------------------------------------------------------------------------------
 	// PageExpand 実行開始
@@ -411,6 +411,14 @@ function PageExpand(execute_type){
 
 				// アンカー要素を登録
 				AnalyzeWorkSetAnchorElement(work,node);
+
+			// --------------------------------------------------------------------------------
+			// インラインフレーム
+			// --------------------------------------------------------------------------------
+			}else if(node.tagName == "IFRAME"){
+
+				// 要素を監視
+				AnalyzeWorkObserveElement(work);
 			}
 		}
 
@@ -424,6 +432,16 @@ function PageExpand(execute_type){
 		// --------------------------------------------------------------------------------
 		ElementAnalyzeAddressCollection(param);
 
+		// --------------------------------------------------------------------------------
+		// インラインフレーム内コンテンツ
+		// --------------------------------------------------------------------------------
+		if(0){
+			// 解析済みチェック
+			if(!AnalyzeWorkGetAnalyzedExpandIframeContent(work)){
+				AnalyzeWorkSetAnalyzedExpandIframeContent(work);
+				execute_queue.attachForExpandElement(ElementAnalyzePhaseExpandIframeContent,param);
+			}
+		}
 
 		// --------------------------------------------------------------------------------
 		// 掲示板解析
@@ -711,6 +729,24 @@ function PageExpand(execute_type){
 		}
 	}
 
+	// --------------------------------------------------------------------------------
+	// エレメントの解析フェーズ（インラインフレーム内コンテンツの展開）
+	// --------------------------------------------------------------------------------
+	function ElementAnalyzePhaseExpandIframeContent(param){
+		var work = param.work;
+		var modify = param.modify;
+		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+
+		var element = AnalyzeWorkGetDomNode(work);
+
+		// インラインフレーム
+		if(element.tagName != "IFRAME")	return;
+
+		// document に未登録
+		if(!DomNodeGetAttachedDocument(element))	return;
+
+		ElementExpandIframeContent(param);
+	}
 
 	// --------------------------------------------------------------------------------
 	// エレメントの解析（アドレスコレクション）
@@ -5287,6 +5323,25 @@ function PageExpand(execute_type){
 	}
 
 	// --------------------------------------------------------------------------------
+	// インラインフレーム内コンテンツの展開
+	// --------------------------------------------------------------------------------
+	function ElementExpandIframeContent(param){
+		var work = param.work;
+		var modify = param.modify;
+		var element = AnalyzeWorkGetDomNode(work);
+
+		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+
+		try{
+			var window_obj = element.contentWindow;
+			if(window_obj.document.URL.match(new RegExp("^(blob|data|about):","i"))){
+				PageExpand({execute_type:page_expand_arguments.execute_type,admin:admin,window:window_obj});
+			}
+		}catch(e){
+		}
+	}
+
+	// --------------------------------------------------------------------------------
 	// 縮小画像のポップアップ
 	// --------------------------------------------------------------------------------
 	function ElementPopupReducedImage(param){
@@ -5623,7 +5678,7 @@ function PageExpand(execute_type){
 	// --------------------------------------------------------------------------------
 	// 初期化
 	// --------------------------------------------------------------------------------
-	switch(execute_type){
+	switch(page_expand_arguments.execute_type){
 
 	// --------------------------------------------------------------------------------
 	// Opera のコンテンツスクリプトとして動作
@@ -5658,7 +5713,7 @@ function PageExpand(execute_type){
 		// --------------------------------------------------------------------------------
 		// バックグラウンドへプロジェクト取得の要求
 		// --------------------------------------------------------------------------------
-		extension_message.sendRequest({command:"getProject",url:document.URL}, function(response) {
+		extension_message.sendRequest({command:"getProject",url:WindowGetOwnerURL(window)}, function(response) {
 
 			// JSON 文字列からプロジェクトを作成
 			project = new Project();

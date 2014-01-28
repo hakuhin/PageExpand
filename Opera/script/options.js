@@ -8,7 +8,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand クラス
 // --------------------------------------------------------------------------------
-function PageExpand(execute_type){
+function PageExpand(page_expand_arguments){
 
 	// --------------------------------------------------------------------------------
 	// PageExpand コンフィグ
@@ -4665,7 +4665,7 @@ function PageExpand(execute_type){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				UI_Text(parent,"PageExpand ver.1.3.1");
+				UI_Text(parent,"PageExpand ver.1.3.2");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -11146,7 +11146,7 @@ function PageExpand(execute_type){
 				func(e);
 
 				// バックグラウンドへプロジェクト更新を通知
-				extension_message.sendRequest({command:"reloadPageExpandProject"},function(response){});
+				extension_message.sendRequest({command:"reloadPageExpandProject"});
 			});
 		}
 
@@ -11417,7 +11417,7 @@ function PageExpand(execute_type){
 	// --------------------------------------------------------------------------------
 	// 初期化
 	// --------------------------------------------------------------------------------
-	switch(execute_type){
+	switch(page_expand_arguments.execute_type){
 
 	// --------------------------------------------------------------------------------
 	// Opera のオプションとして動作

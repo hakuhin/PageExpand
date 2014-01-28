@@ -10,7 +10,7 @@
 // --------------------------------------------------------------------------------
 // ==UserScript==
 // @name           PageExpand
-// @version        1.3.1
+// @version        1.3.2
 // @namespace      http://hakuhin.jp/page_expand
 // @description    Image Zoom. Expand Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @include        http://*
@@ -29,7 +29,7 @@
 
 
 
-(function(execute_type){
+(function(page_expand_arguments){
 
 
 	// --------------------------------------------------------------------------------
@@ -43,6 +43,17 @@
 	// --------------------------------------------------------------------------------
 	// プライベート変数
 	// --------------------------------------------------------------------------------
+	// 特権 オブジェクト
+	var admin = page_expand_arguments.admin;
+
+	// Window オブジェクト
+	var window = page_expand_arguments.window;
+
+	// Document オブジェクト
+	var document = window.document;
+
+	// PageExpand 関数
+	var PageExpand = arguments.callee;
 
 	// PageExpand プロジェクト
 	var page_expand_project;
@@ -26914,167 +26925,120 @@
 
 			var element;
 			var css_text_msg = "text-align:left; color:#000; font-size:12px; line-height:1.0;";
-			var css_text_meter = "height:2px; min-height:0; border:1px #888 solid; margin:0px 5px 2px; line-height:1.0;";
-			var css_text_bar = "height:2px; min-height:0; background-color :#888; margin:0px 0px 2px; width:0%; line-height:1.0;";
 
 			// 実行キュー数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
 			background.appendChild(element);
-			var execute_queue_msg = DocumentCreateText("");
-			element.appendChild(execute_queue_msg);
+			var execute_queue_msg = new UI_Text(element);
 
 			// 実行フェーズ
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
 			background.appendChild(element);
-			var execute_queue_phase_msg = DocumentCreateText("");
-			element.appendChild(execute_queue_phase_msg);
+			var execute_queue_phase_msg = new UI_Text(element);
 
 			// 実行キューエラー数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
 			background.appendChild(element);
-			var execute_queue_error_msg = DocumentCreateText("");
-			element.appendChild(execute_queue_error_msg);
+			var execute_queue_error_msg = new UI_Text(element);
 
 			// ローダーキュー数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
 			background.appendChild(element);
-			var loader_queue_msg = DocumentCreateText("");
-			element.appendChild(loader_queue_msg);
+			var loader_queue_msg = new UI_Text(element);
 
 			// ローダーキューエラー数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var loader_queue_error_msg = DocumentCreateText("");
-			element.appendChild(loader_queue_error_msg);
+			var loader_queue_error_msg = new UI_Text(element);
 
 			// ローダースレッド数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
 			background.appendChild(element);
-			var loader_thread_msg = DocumentCreateText("");
-			element.appendChild(loader_thread_msg);
+			var loader_thread_msg = new UI_Text(element);
 
 			// ローダースレッドメーター
-			var loader_thread_meter = DocumentCreateElement("div");
-			ElementSetStyle(loader_thread_meter,css_text_meter);
-			background.appendChild(loader_thread_meter);
-
-			// ローダースレッドバー
-			var loader_thread_bar = DocumentCreateElement("div");
-			ElementSetStyle(loader_thread_bar,css_text_bar);
-			loader_thread_meter.appendChild(loader_thread_bar);
+			var loader_thread_meter = new UI_ProgressBar(background);
 
 			// タスク数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var task_count_msg = DocumentCreateText("");
-			element.appendChild(task_count_msg);
+			var task_count_msg = new UI_Text(element);
 
 			// イメージ数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var image_count_msg = DocumentCreateText("");
-			element.appendChild(image_count_msg);
+			var image_count_msg = new UI_Text(element);
 
 			// イメージスレッド数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
 			background.appendChild(element);
-			var image_thread_msg = DocumentCreateText("");
-			element.appendChild(image_thread_msg);
+			var image_thread_msg = new UI_Text(element);
 
 			// イメージスレッドメーター
-			var image_thread_meter = DocumentCreateElement("div");
-			ElementSetStyle(image_thread_meter,css_text_meter);
-			background.appendChild(image_thread_meter);
-
-			// イメージスレッドバー
-			var image_thread_bar = DocumentCreateElement("div");
-			ElementSetStyle(image_thread_bar,css_text_bar);
-			image_thread_meter.appendChild(image_thread_bar);
+			var image_thread_meter = new UI_ProgressBar(background);
 
 			// サウンド数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var sound_count_msg = DocumentCreateText("");
-			element.appendChild(sound_count_msg);
+			var sound_count_msg = new UI_Text(element);
 
 			// サウンドスレッド数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
 			background.appendChild(element);
-			var sound_thread_msg = DocumentCreateText("");
-			element.appendChild(sound_thread_msg);
+			var sound_thread_msg = new UI_Text(element);
 
 			// サウンドスレッドメーター
-			var sound_thread_meter = DocumentCreateElement("div");
-			ElementSetStyle(sound_thread_meter,css_text_meter);
-			background.appendChild(sound_thread_meter);
-
-			// サウンドスレッドバー
-			var sound_thread_bar = DocumentCreateElement("div");
-			ElementSetStyle(sound_thread_bar,css_text_bar);
-			sound_thread_meter.appendChild(sound_thread_bar);
+			var sound_thread_meter = new UI_ProgressBar(background);
 
 			// ビデオ数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var video_count_msg = DocumentCreateText("");
-			element.appendChild(video_count_msg);
+			var video_count_msg = new UI_Text(element);
 
 			// ビデオスレッド数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
 			background.appendChild(element);
-			var video_thread_msg = DocumentCreateText("");
-			element.appendChild(video_thread_msg);
+			var video_thread_msg = new UI_Text(element);
 
 			// ビデオスレッドメーター
-			var video_thread_meter = DocumentCreateElement("div");
-			ElementSetStyle(video_thread_meter,css_text_meter);
-			background.appendChild(video_thread_meter);
-
-			// ビデオスレッドバー
-			var video_thread_bar = DocumentCreateElement("div");
-			ElementSetStyle(video_thread_bar,css_text_bar);
-			video_thread_meter.appendChild(video_thread_bar);
+			var video_thread_meter = new UI_ProgressBar(background);
 
 			// リムーブ監視数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var observer_remove_msg = DocumentCreateText("");
-			element.appendChild(observer_remove_msg);
+			var observer_remove_msg = new UI_Text(element);
 
 			// 変更監視数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var observer_modify_msg = DocumentCreateText("");
-			element.appendChild(observer_modify_msg);
+			var observer_modify_msg = new UI_Text(element);
 
 			// スクロール監視数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var observer_scroll_msg = DocumentCreateText("");
-			element.appendChild(observer_scroll_msg);
+			var observer_scroll_msg = new UI_Text(element);
 
 			// アドレス数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var address_count_msg = DocumentCreateText("");
-			element.appendChild(address_count_msg);
+			var address_count_msg = new UI_Text(element);
 
 			var execute_queue_phase_msg_list = [
 				"interrupt",
@@ -27093,57 +27057,37 @@
 			_task.setExecuteFunc(function(task){
 
 				// 表示更新
-				DomNodeSetNodeValue(execute_queue_msg,"execute queue: " + execute_queue.getCountQueue());
-				DomNodeSetNodeValue(execute_queue_phase_msg,"execute phase: " + execute_queue_phase_msg_list[execute_queue.getPhase()]);
-				DomNodeSetNodeValue(execute_queue_error_msg,"execute error: " + execute_queue.getCountError());
-				DomNodeSetNodeValue(loader_queue_msg,"loader queue: " + loader_queue.getCountQueue());
-				DomNodeSetNodeValue(loader_queue_error_msg,"loader error: " + loader_queue.getCountError());
-				DomNodeSetNodeValue(loader_thread_msg,"loader thread: " + loader_queue.getCountThread() + " / " + loader_queue.getMaxThread());
-				var loader_percent;
-				if(loader_queue.getMaxThread() == 0){
-					loader_percent = 0;
-				}else{
-					loader_percent = Math.floor(loader_queue.getCountThread() / loader_queue.getMaxThread() * 100);
-				}
-				loader_thread_bar.style.width = loader_percent + "%";
+				execute_queue_msg.setText("execute queue: " + execute_queue.getCountQueue());
+				execute_queue_phase_msg.setText("execute phase: " + execute_queue_phase_msg_list[execute_queue.getPhase()]);
+				execute_queue_error_msg.setText("execute error: " + execute_queue.getCountError());
+				loader_queue_msg.setText("loader queue: " + loader_queue.getCountQueue());
+				loader_queue_error_msg.setText("loader error: " + loader_queue.getCountError());
+				loader_thread_msg.setText("loader thread: " + loader_queue.getCountThread() + " / " + loader_queue.getMaxThread());
+				loader_thread_meter.setValue(loader_queue.getCountThread());
+				loader_thread_meter.setMaximum(loader_queue.getMaxThread());
 
-				DomNodeSetNodeValue(task_count_msg,"task count: " + task_container.getCountTask());
+				task_count_msg.setText("task count: " + task_container.getCountTask());
 
 				var use_size = Math.floor(element_limitter_image.getByteSizeNow() / 1024 / 1024 * 100) / 100;
-				DomNodeSetNodeValue(image_count_msg,"image size: " + use_size);
-				DomNodeSetNodeValue(image_thread_msg,"image thread: " + element_limitter_image.getCountUse() + " / " + element_limitter_image.getCount());
-				var image_percent;
-				if(element_limitter_image.getCount() == 0){
-					image_percent = 0;
-				}else{
-					image_percent = Math.floor(element_limitter_image.getCountUse() / element_limitter_image.getCount() * 100);
-				}
-				image_thread_bar.style.width = image_percent + "%";
+				image_count_msg.setText("image size: " + use_size);
+				image_thread_msg.setText("image thread: " + element_limitter_image.getCountUse() + " / " + element_limitter_image.getCount());
+				image_thread_meter.setValue(element_limitter_image.getCountUse());
+				image_thread_meter.setMaximum(element_limitter_image.getCount());
 
-				DomNodeSetNodeValue(sound_count_msg,"sound count: " + element_limitter_sound.getCount());
-				DomNodeSetNodeValue(sound_thread_msg,"sound thread: " + element_limitter_sound.getCountUse() + " / " + element_limitter_sound.getMaxUse());
-				var sound_percent;
-				if(element_limitter_sound.getMaxUse() == 0){
-					sound_percent = 0;
-				}else{
-					sound_percent = Math.floor(element_limitter_sound.getCountUse() / element_limitter_sound.getMaxUse() * 100);
-				}
-				sound_thread_bar.style.width = sound_percent + "%";
+				sound_count_msg.setText("sound count: " + element_limitter_sound.getCount());
+				sound_thread_msg.setText("sound thread: " + element_limitter_sound.getCountUse() + " / " + element_limitter_sound.getMaxUse());
+				sound_thread_meter.setValue(element_limitter_sound.getCountUse());
+				sound_thread_meter.setMaximum(element_limitter_sound.getMaxUse());
 
-				DomNodeSetNodeValue(video_count_msg,"video count: " + element_limitter_video.getCount());
-				DomNodeSetNodeValue(video_thread_msg,"video thread: " + element_limitter_video.getCountUse() + " / " + element_limitter_video.getMaxUse());
-				var video_percent;
-				if(element_limitter_video.getMaxUse() == 0){
-					video_percent = 0;
-				}else{
-					video_percent = Math.floor(element_limitter_video.getCountUse() / element_limitter_video.getMaxUse() * 100);
-				}
-				video_thread_bar.style.width = video_percent + "%";
+				video_count_msg.setText("video count: " + element_limitter_video.getCount());
+				video_thread_msg.setText("video thread: " + element_limitter_video.getCountUse() + " / " + element_limitter_video.getMaxUse());
+				video_thread_meter.setValue(element_limitter_video.getCountUse());
+				video_thread_meter.setMaximum(element_limitter_video.getMaxUse());
 
-				DomNodeSetNodeValue(observer_remove_msg,"observer remove: " + document_observer_remove_node.getCount());
-				DomNodeSetNodeValue(observer_modify_msg,"observer modify: " + document_observer_modify_node.getCount());
-				DomNodeSetNodeValue(observer_scroll_msg,"observer scroll: " + document_observer_scroll.getCount());
-				DomNodeSetNodeValue(address_count_msg,"src count: " + address_collection.getCountAddress());
+				observer_remove_msg.setText("observer remove: " + document_observer_remove_node.getCount());
+				observer_modify_msg.setText("observer modify: " + document_observer_modify_node.getCount());
+				observer_scroll_msg.setText("observer scroll: " + document_observer_scroll.getCount());
+				address_count_msg.setText("src count: " + address_collection.getCountAddress());
 			});
 
 			_task.execute(0xffffffff);
@@ -27166,6 +27110,103 @@
 				release();
 			}
 		};
+
+		// --------------------------------------------------------------------------------
+		// テキスト（内部用）
+		// --------------------------------------------------------------------------------
+		function UI_Text(parent){
+			var _container = new Object();
+
+			// --------------------------------------------------------------------------------
+			// テキストをセット
+			// --------------------------------------------------------------------------------
+			_container.setText = function(value){
+				if(_text != value){
+					_text = value;
+					DomNodeSetNodeValue(_node,_text);
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _node;
+			var _text;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_node = DocumentCreateText("");
+				parent.appendChild(_node);
+			})();
+
+			return _container;
+		}
+
+		// --------------------------------------------------------------------------------
+		// ブログレスバー（内部用）
+		// --------------------------------------------------------------------------------
+		function UI_ProgressBar(parent){
+			var _container = new Object();
+
+			// --------------------------------------------------------------------------------
+			// 値をセット
+			// --------------------------------------------------------------------------------
+			_container.setValue = function(value){
+				if(_now != value){
+					_now = value;
+					update();
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// 最大値をセット
+			// --------------------------------------------------------------------------------
+			_container.setMaximum = function(value){
+				if(_max != value){
+					_max = value;
+					update();
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// 更新（内部用）
+			// --------------------------------------------------------------------------------
+			function update(){
+				var percent = 0;
+				if(_max){
+					percent = Math.floor(_now / _max * 100);
+				}
+				_bar.style.width = percent + "%";
+			}
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _mater;
+			var _bar;
+			var _now;
+			var _max;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_now = 0;
+				_max = 0;
+
+				_mater = DocumentCreateElement("div");
+				ElementSetStyle(_mater,"height:2px; min-height:0; border:1px #888 solid; margin:0px 5px 2px; line-height:1.0;");
+				parent.appendChild(_mater);
+
+				_bar = DocumentCreateElement("div");
+				ElementSetStyle(_bar,"height:2px; min-height:0; background-color :#888; margin:0px 0px 2px; width:0%; line-height:1.0;");
+				_mater.appendChild(_bar);
+			})();
+
+			return _container;
+		}
 
 		// --------------------------------------------------------------------------------
 		// プライベート変数
@@ -31847,7 +31888,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				UI_Text(parent,"PageExpand ver.1.3.1");
+				UI_Text(parent,"PageExpand ver.1.3.2");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -38993,6 +39034,14 @@
 
 				// アンカー要素を登録
 				AnalyzeWorkSetAnchorElement(work,node);
+
+			// --------------------------------------------------------------------------------
+			// インラインフレーム
+			// --------------------------------------------------------------------------------
+			}else if(node.tagName == "IFRAME"){
+
+				// 要素を監視
+				AnalyzeWorkObserveElement(work);
 			}
 		}
 
@@ -39006,6 +39055,16 @@
 		// --------------------------------------------------------------------------------
 		ElementAnalyzeAddressCollection(param);
 
+		// --------------------------------------------------------------------------------
+		// インラインフレーム内コンテンツ
+		// --------------------------------------------------------------------------------
+		if(1){
+			// 解析済みチェック
+			if(!AnalyzeWorkGetAnalyzedExpandIframeContent(work)){
+				AnalyzeWorkSetAnalyzedExpandIframeContent(work);
+				execute_queue.attachForExpandElement(ElementAnalyzePhaseExpandIframeContent,param);
+			}
+		}
 
 		// --------------------------------------------------------------------------------
 		// 掲示板解析
@@ -39293,6 +39352,24 @@
 		}
 	}
 
+	// --------------------------------------------------------------------------------
+	// エレメントの解析フェーズ（インラインフレーム内コンテンツの展開）
+	// --------------------------------------------------------------------------------
+	function ElementAnalyzePhaseExpandIframeContent(param){
+		var work = param.work;
+		var modify = param.modify;
+		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+
+		var element = AnalyzeWorkGetDomNode(work);
+
+		// インラインフレーム
+		if(element.tagName != "IFRAME")	return;
+
+		// document に未登録
+		if(!DomNodeGetAttachedDocument(element))	return;
+
+		ElementExpandIframeContent(param);
+	}
 
 	// --------------------------------------------------------------------------------
 	// エレメントの解析（アドレスコレクション）
@@ -43869,6 +43946,25 @@
 	}
 
 	// --------------------------------------------------------------------------------
+	// インラインフレーム内コンテンツの展開
+	// --------------------------------------------------------------------------------
+	function ElementExpandIframeContent(param){
+		var work = param.work;
+		var modify = param.modify;
+		var element = AnalyzeWorkGetDomNode(work);
+
+		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+
+		try{
+			var window_obj = element.contentWindow;
+			if(window_obj.document.URL.match(new RegExp("^(blob|data|about):","i"))){
+				PageExpand({execute_type:page_expand_arguments.execute_type,admin:admin,window:window_obj});
+			}
+		}catch(e){
+		}
+	}
+
+	// --------------------------------------------------------------------------------
 	// 縮小画像のポップアップ
 	// --------------------------------------------------------------------------------
 	function ElementPopupReducedImage(param){
@@ -44908,8 +45004,15 @@
 			begin_rect.top    += offset.y;
 			begin_rect.bottom += offset.y;
 
+			// 拡大縮小補正
+			var pixel_ratio = 1.0;
+			if(window.devicePixelRatio !== undefined){
+				pixel_ratio = 1 / window.devicePixelRatio;
+				if(pixel_ratio < 1.0) pixel_ratio = 1.0;
+			}
+
 			// 終了サイズ
-			var scale = project.getScalePercentPopupImage() / 100;
+			var scale = project.getScalePercentPopupImage() / 100 * pixel_ratio;
 			var end_w = natural_size.width  * scale;
 			var end_h = natural_size.height * scale;
 			_element_current.style.width  = (end_w) + "px";
@@ -48191,6 +48294,21 @@
 		};
 
 		// --------------------------------------------------------------------------------
+		// 割り込み用の処理を最後尾に追加
+		// --------------------------------------------------------------------------------
+		_container.attachLastForInterrupt = function(func,param){
+			var o = {func:func,param:param};
+			var _next = _queue_list[0];
+			var _prev = _next._prev;
+			o._prev = _prev;
+			o._next = _next;
+			_prev._next = o;
+			_next._prev = o;
+
+			attach(0);
+		};
+
+		// --------------------------------------------------------------------------------
 		// DOM オブジェクト除外用の処理を最前列に追加
 		// --------------------------------------------------------------------------------
 		_container.attachFirstForRemoveDomNode = function(func,param){
@@ -49609,8 +49727,15 @@
 
 			// バックグラウンドへ通信要求
 			if(0){
+				var responseText = "";
 				extension_message.sendRequest({command:"loadXMLHttpRequest",request:_request,single:_single_type}, function(receive) {
-					var xhr = receive;
+					if(receive.type == "data"){
+						responseText += receive.data;
+						return;
+					}
+
+					var xhr = receive.data;
+					xhr.responseText = responseText;
 					switch(xhr.readyState){
 					case 4:
 						xhr.getAllResponseHeaders = function(){
@@ -49715,8 +49840,15 @@
 
 			// バックグラウンドへ通信要求
 			if(0){
+				var dataUriScheme = "";
 				extension_message.sendRequest({command:"loadDataUriScheme",request:_request,single:_single_type}, function(receive) {
-					var xhr = receive;
+					if(receive.type == "data"){
+						dataUriScheme += receive.data;
+						return;
+					}
+
+					var xhr = receive.data;
+					xhr.dataUriScheme = dataUriScheme;
 					switch(xhr.readyState){
 					case 4:
 						xhr.getAllResponseHeaders = function(){
@@ -49765,8 +49897,19 @@
 				case 4:
 					if((200 <= xhr.status && xhr.status < 300) || xhr.status == 304){
 						switch(response_type){
+						case "blob":
+							var file_reader = new FileReader();
+							file_reader.onload = function(){
+								xhr.dataUriScheme = file_reader.result;
+								response(true,xhr);
+							};
+							file_reader.onerror = function(){
+								response(false,xhr);
+							};
+							file_reader.readAsDataURL(xhr.response);
+							break;
 						case "arraybuffer":
-							Base64FromArrayBufferAsync(xhr.response,1*1024,function(base64){
+							Base64_From_ArrayBuffer_Async(xhr.response,function(base64){
 								// data URI scheme 変換
 								xhr.dataUriScheme = "data:" + xhr.getResponseHeader("Content-Type") + ";base64," + base64;
 								// 成功を返す
@@ -49774,7 +49917,7 @@
 							});
 							break;
 						case "User-Defined":
-							Base64FromUserDefinedAsync(xhr.responseText,1*1024,function(base64){
+							Base64_From_XUserDefined_Async(xhr.responseText,function(base64){
 								// data URI scheme 変換
 								xhr.dataUriScheme = "data:" + xhr.getResponseHeader("Content-Type") + ";base64," + base64;
 								// 成功を返す
@@ -49805,8 +49948,11 @@
 				xhr.setRequestHeader(name,headers[name]);
 			}
 			if(xhr.responseType !== undefined){
-				xhr.responseType = "arraybuffer";
-				response_type = "arraybuffer";
+				if(window.FileReader){
+					xhr.responseType = response_type = "blob";
+				}else{
+					xhr.responseType = response_type = "arraybuffer";
+				}
 			}else if(xhr.overrideMimeType){
 				xhr.overrideMimeType("text/plain; charset=x-user-defined");
 				response_type = "User-Defined";
@@ -52452,6 +52598,13 @@
 	function AnalyzeWorkClearAnalyzedExpandInlineIframe(work){ ObjectDeleteProperty(work,"a_eif"); }
 	function AnalyzeWorkSetAnalyzedExpandInlineIframe(work){ work.a_eif = true; }
 	function AnalyzeWorkGetAnalyzedExpandInlineIframe(work){ return work.a_eif; }
+
+	// --------------------------------------------------------------------------------
+	// 「インラインフレーム内コンテンツ展開」の解析状況
+	// --------------------------------------------------------------------------------
+	function AnalyzeWorkClearAnalyzedExpandIframeContent(work){ ObjectDeleteProperty(work,"a_eic"); }
+	function AnalyzeWorkSetAnalyzedExpandIframeContent(work){ work.a_eic = true; }
+	function AnalyzeWorkGetAnalyzedExpandIframeContent(work){ return work.a_eic; }
 
 	// --------------------------------------------------------------------------------
 	// 「縮小画像のポップアップ」の解析状況
@@ -56420,218 +56573,130 @@
 	}
 
 	// --------------------------------------------------------------------------------
-	// バイナリから Base64 文字列に変換する (同期実行)
+	// ArrayBuffer から Base64 文字列に変換する関数 (非同期実行)
 	// --------------------------------------------------------------------------------
-	function Base64FromArrayBuffer(ary_buffer){
+	function Base64_From_ArrayBuffer_Async(ary_buffer,callback,increment){
 		var dic = [
 			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
 			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
 			'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
 			'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
 		];
-		var str = "";
-		var num = ary_buffer.byteLength;
-		var a = new Uint8Array(ary_buffer);
-		var i;
-		var m = 0;
+		var base64 = "";
+		var ary_u8 = new Uint8Array( ary_buffer );
+		var num = ary_u8.length;
 		var n = 0;
-		for(i=0;i<num;i++){
-			switch(m){
-			case 0:
-				str += dic[(a[i] >> 2)];
-				n = (a[i] & 0x03) << 4;
-				m = 2;
-				break;
-			case 2:
-				str += dic[n | (a[i] >> 4)];
-				n = (a[i] & 0x0f) << 2;
-				m = 1;
-				break;
-			case 1:
-				str += dic[n | (a[i] >> 6)];
-				str += dic[(a[i] & 0x3f)];
-				m = 0;
-				break;
-			}
-		}
-		if(m){
-			str += dic[n];
-		}
-		if(m == 2){
-			str += "==";
-		}else if(m == 1){
-			str += "=";
-		}
-		return str;
-	}
+		var b = 0;
 
-	// --------------------------------------------------------------------------------
-	// バイナリから Base64 文字列に変換する (非同期実行)
-	// --------------------------------------------------------------------------------
-	function Base64FromArrayBufferAsync(ary_buffer,increment,callback){
-		var dic = [
-			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
-			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
-			'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
-			'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
-		];
-		var str = "";
-		var num = ary_buffer.byteLength;
-		var a = new Uint8Array(ary_buffer);
+		if(increment === undefined){
+			increment = 1024;
+		}
+
 		var i = 0;
 		var j = 0;
-		var m = 0;
-		var n = 0;
-
 		function f(){
-			while(i<num){
-				switch(m){
-				case 0:
-					str += dic[(a[i] >> 2)];
-					n = (a[i] & 0x03) << 4;
-					m = 2;
-					break;
-				case 2:
-					str += dic[n | (a[i] >> 4)];
-					n = (a[i] & 0x0f) << 2;
-					m = 1;
-					break;
-				case 1:
-					str += dic[n | (a[i] >> 6)];
-					str += dic[(a[i] & 0x3f)];
-					m = 0;
-					break;
-				}
-
+			while(i < num){
+				b = ary_u8[i];
+				base64 += dic[(b >> 2)];
+				n = (b & 0x03) << 4;
 				i ++;
-				j ++;
+				if(i >= num) break;
+
+				b = ary_u8[i];
+				base64 += dic[n | (b >> 4)];
+				n = (b & 0x0f) << 2;
+				i ++;
+				if(i >= num) break;
+
+				b = ary_u8[i];
+				base64 += dic[n | (b >> 6)];
+				base64 += dic[(b & 0x3f)];
+				i ++;
+
+				j += 3;
 				if(j > increment){
 					j = 0;
-					execute_queue.attachFirst(f,null);
+					execute_queue.attachLast(f,null);
 					return;
 				}
 			}
+
+			var m = num % 3;
 			if(m){
-				str += dic[n];
+				base64 += dic[n];
 			}
-			if(m == 2){
-				str += "==";
-			}else if(m == 1){
-				str += "=";
+			if(m == 1){
+				base64 += "==";
+			}else if(m == 2){
+				base64 += "=";
 			}
-			callback(str);
+			callback(base64);
 		}
 
 		execute_queue.attachLast(f,null);
-	}
-
-	// --------------------------------------------------------------------------------
-	// x-user-defined 文字列から Base64 文字列に変換する (同期実行)
-	// --------------------------------------------------------------------------------
-	function Base64_From_UserDefined(user_defined){
-		var dic = [
-			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
-			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
-			'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
-			'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
-		];
-		var str = "";
-		var num = str.length;
-		var a = user_defined;
-		var i;
-		var m = 0;
-		var n = 0;
-		var b = 0;
-		for(i=0;i<num;i++){
-			b = a.charCodeAt(i) & 0xff;
-			switch(m){
-			case 0:
-				str += dic[(b >> 2)];
-				n = (b & 0x03) << 4;
-				m = 2;
-				break;
-			case 2:
-				str += dic[n | (b >> 4)];
-				n = (b & 0x0f) << 2;
-				m = 1;
-				break;
-			case 1:
-				str += dic[n | (b >> 6)];
-				str += dic[(b & 0x3f)];
-				m = 0;
-				break;
-			}
-		}
-		if(m){
-			str += dic[n];
-		}
-		if(m == 2){
-			str += "==";
-		}else if(m == 1){
-			str += "=";
-		}
-		return str;
 	}
 
 	// --------------------------------------------------------------------------------
 	// x-user-defined 文字列から Base64 文字列に変換する (非同期実行)
 	// --------------------------------------------------------------------------------
-	function Base64FromUserDefinedAsync(user_defined,increment,callback){
+	function Base64_From_XUserDefined_Async(x_user_defined,callback,increment){
 		var dic = [
 			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
 			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
 			'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
 			'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
 		];
-		var str = "";
-		var num = user_defined.length;
-		var a = user_defined;
-		var i = 0;
-		var j = 0;
-		var m = 0;
+		var base64 = "";
+		var num = x_user_defined.length;
 		var n = 0;
 		var b = 0;
-		function f(){
-			while(i<num){
-				b = a.charCodeAt(i) & 0xff;
-				switch(m){
-				case 0:
-					str += dic[(b >> 2)];
-					n = (b & 0x03) << 4;
-					m = 2;
-					break;
-				case 2:
-					str += dic[n | (b >> 4)];
-					n = (b & 0x0f) << 2;
-					m = 1;
-					break;
-				case 1:
-					str += dic[n | (b >> 6)];
-					str += dic[(b & 0x3f)];
-					m = 0;
-					break;
-				}
 
+		if(increment === undefined){
+			increment = 1024;
+		}
+
+		var i = 0;
+		var j = 0;
+		function f(){
+			while(i < num){
+				b = x_user_defined.charCodeAt(i) & 0xff;
+				base64 += dic[(b >> 2)];
+				n = (b & 0x03) << 4;
 				i ++;
-				j ++;
+				if(i >= num) break;
+
+				b = x_user_defined.charCodeAt(i) & 0xff;
+				base64 += dic[n | (b >> 4)];
+				n = (b & 0x0f) << 2;
+				i ++;
+				if(i >= num) break;
+
+				b = x_user_defined.charCodeAt(i) & 0xff;
+				base64 += dic[n | (b >> 6)];
+				base64 += dic[(b & 0x3f)];
+				i ++;
+
+				j += 3;
 				if(j > increment){
 					j = 0;
 					execute_queue.attachFirst(f,null);
 					return;
 				}
 			}
+
+			var m = num % 3;
 			if(m){
-				str += dic[n];
+				base64 += dic[n];
 			}
-			if(m == 2){
-				str += "==";
-			}else if(m == 1){
-				str += "=";
+			if(m == 1){
+				base64 += "==";
+			}else if(m == 2){
+				base64 += "=";
 			}
-			callback(str);
+			callback(base64);
 		}
 
-		execute_queue.attachLast(f,null);
+		execute_queue.attachFirst(f,null);
 	}
 
 	// --------------------------------------------------------------------------------
@@ -57954,6 +58019,24 @@
 	}
 
 	// --------------------------------------------------------------------------------
+	// 所有者となる Window の URL を取得
+	// --------------------------------------------------------------------------------
+	function WindowGetOwnerURL(window_obj){
+		var url = "";
+		var re = new RegExp("^(blob|data|about):","i");
+		try{
+			while(true){
+				url = window_obj.document.URL;
+				if(!url.match(re)) break;
+				window_obj = window_obj.parent;
+			}
+		}catch(e){
+		}
+
+		return url;
+	}
+
+	// --------------------------------------------------------------------------------
 	// HEAD 要素を取得
 	// --------------------------------------------------------------------------------
 	function DocumentGetHeadElement(document_obj){
@@ -58042,7 +58125,7 @@
 	function DocumentGetLoadedDomContent(document_obj,callback){
 
 		function DOMContentLoadedFunc(e){
-			document_obj.removeEventListener("readystatechange" , DOMContentLoadedFunc);
+			document_obj.removeEventListener("DOMContentLoaded" , DOMContentLoadedFunc);
 			callback();
 		}
 
@@ -59721,7 +59804,7 @@
 	// --------------------------------------------------------------------------------
 	// 初期化
 	// --------------------------------------------------------------------------------
-	switch(execute_type){
+	switch(page_expand_arguments.execute_type){
 
 	// --------------------------------------------------------------------------------
 	// ユーザースクリプトとして動作
@@ -59733,7 +59816,7 @@
 		page_expand_project.loadLocalStorage(function(result){
 
 			project = new Project();
-			project.importObject(ObjectCopy(page_expand_project.getProject(document.URL)));
+			project.importObject(ObjectCopy(page_expand_project.getProject(WindowGetOwnerURL(window))));
 
 			// ロケール
 			var _i18n = new InternationalMessage(page_expand_project.getLanguage());
@@ -59822,4 +59905,4 @@
 
 	};
 
-})("UserScript");
+})({execute_type:"UserScript",admin:window,window:window});

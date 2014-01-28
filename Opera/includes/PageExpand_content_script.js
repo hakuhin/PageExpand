@@ -1,1 +1,1 @@
-PageExpand("OperaExtensionContentScript");
+PageExpand({execute_type:"OperaExtensionContentScript",admin:window,window:window});

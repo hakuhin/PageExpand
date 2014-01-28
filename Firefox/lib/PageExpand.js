@@ -8,7 +8,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand クラス
 // --------------------------------------------------------------------------------
-function PageExpand(execute_type){
+function PageExpand(page_expand_arguments){
 
 	// --------------------------------------------------------------------------------
 	// 手動インポート
@@ -21,6 +21,15 @@ function PageExpand(execute_type){
 	// --------------------------------------------------------------------------------
 	// プライベート変数
 	// --------------------------------------------------------------------------------
+	// 特権 オブジェクト
+	var admin = page_expand_arguments.admin;
+
+	// Window オブジェクト
+	var window = page_expand_arguments.window;
+
+	// Document オブジェクト
+	var document = window.document;
+
 
 	// PageExpand プロジェクト
 	var page_expand_project;
@@ -108,19 +117,17 @@ function PageExpand(execute_type){
 	var setInterval;
 	var clearTimeout;
 	var clearInterval;
-	try{
-		setTimeout = window.setTimeout;
-		setInterval = window.setInterval;
-		clearTimeout = window.clearTimeout;
-		clearInterval = window.clearInterval;
-	}catch(e){
-		var addon_timers = FirefoxAddonGetTimers();
-		if(addon_timers){
-			setTimeout		 = addon_timers.setTimeout;
-			setInterval		 = addon_timers.setInterval;
-			clearTimeout	 = addon_timers.clearTimeout;
-			clearInterval	 = addon_timers.clearInterval;
-		}
+	var addon_timers = FirefoxAddonGetTimers();
+	if(addon_timers){
+		setTimeout		 = addon_timers.setTimeout;
+		setInterval		 = addon_timers.setInterval;
+		clearTimeout	 = addon_timers.clearTimeout;
+		clearInterval	 = addon_timers.clearInterval;
+	}else{
+		setTimeout = admin.setTimeout;
+		setInterval = admin.setInterval;
+		clearTimeout = admin.clearTimeout;
+		clearInterval = admin.clearInterval;
 	}
 
 
@@ -26923,167 +26930,120 @@ function PageExpand(execute_type){
 
 			var element;
 			var css_text_msg = "text-align:left; color:#000; font-size:12px; line-height:1.0;";
-			var css_text_meter = "height:2px; min-height:0; border:1px #888 solid; margin:0px 5px 2px; line-height:1.0;";
-			var css_text_bar = "height:2px; min-height:0; background-color :#888; margin:0px 0px 2px; width:0%; line-height:1.0;";
 
 			// 実行キュー数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
 			background.appendChild(element);
-			var execute_queue_msg = DocumentCreateText("");
-			element.appendChild(execute_queue_msg);
+			var execute_queue_msg = new UI_Text(element);
 
 			// 実行フェーズ
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
 			background.appendChild(element);
-			var execute_queue_phase_msg = DocumentCreateText("");
-			element.appendChild(execute_queue_phase_msg);
+			var execute_queue_phase_msg = new UI_Text(element);
 
 			// 実行キューエラー数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
 			background.appendChild(element);
-			var execute_queue_error_msg = DocumentCreateText("");
-			element.appendChild(execute_queue_error_msg);
+			var execute_queue_error_msg = new UI_Text(element);
 
 			// ローダーキュー数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
 			background.appendChild(element);
-			var loader_queue_msg = DocumentCreateText("");
-			element.appendChild(loader_queue_msg);
+			var loader_queue_msg = new UI_Text(element);
 
 			// ローダーキューエラー数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var loader_queue_error_msg = DocumentCreateText("");
-			element.appendChild(loader_queue_error_msg);
+			var loader_queue_error_msg = new UI_Text(element);
 
 			// ローダースレッド数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
 			background.appendChild(element);
-			var loader_thread_msg = DocumentCreateText("");
-			element.appendChild(loader_thread_msg);
+			var loader_thread_msg = new UI_Text(element);
 
 			// ローダースレッドメーター
-			var loader_thread_meter = DocumentCreateElement("div");
-			ElementSetStyle(loader_thread_meter,css_text_meter);
-			background.appendChild(loader_thread_meter);
-
-			// ローダースレッドバー
-			var loader_thread_bar = DocumentCreateElement("div");
-			ElementSetStyle(loader_thread_bar,css_text_bar);
-			loader_thread_meter.appendChild(loader_thread_bar);
+			var loader_thread_meter = new UI_ProgressBar(background);
 
 			// タスク数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var task_count_msg = DocumentCreateText("");
-			element.appendChild(task_count_msg);
+			var task_count_msg = new UI_Text(element);
 
 			// イメージ数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var image_count_msg = DocumentCreateText("");
-			element.appendChild(image_count_msg);
+			var image_count_msg = new UI_Text(element);
 
 			// イメージスレッド数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
 			background.appendChild(element);
-			var image_thread_msg = DocumentCreateText("");
-			element.appendChild(image_thread_msg);
+			var image_thread_msg = new UI_Text(element);
 
 			// イメージスレッドメーター
-			var image_thread_meter = DocumentCreateElement("div");
-			ElementSetStyle(image_thread_meter,css_text_meter);
-			background.appendChild(image_thread_meter);
-
-			// イメージスレッドバー
-			var image_thread_bar = DocumentCreateElement("div");
-			ElementSetStyle(image_thread_bar,css_text_bar);
-			image_thread_meter.appendChild(image_thread_bar);
+			var image_thread_meter = new UI_ProgressBar(background);
 
 			// サウンド数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var sound_count_msg = DocumentCreateText("");
-			element.appendChild(sound_count_msg);
+			var sound_count_msg = new UI_Text(element);
 
 			// サウンドスレッド数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
 			background.appendChild(element);
-			var sound_thread_msg = DocumentCreateText("");
-			element.appendChild(sound_thread_msg);
+			var sound_thread_msg = new UI_Text(element);
 
 			// サウンドスレッドメーター
-			var sound_thread_meter = DocumentCreateElement("div");
-			ElementSetStyle(sound_thread_meter,css_text_meter);
-			background.appendChild(sound_thread_meter);
-
-			// サウンドスレッドバー
-			var sound_thread_bar = DocumentCreateElement("div");
-			ElementSetStyle(sound_thread_bar,css_text_bar);
-			sound_thread_meter.appendChild(sound_thread_bar);
+			var sound_thread_meter = new UI_ProgressBar(background);
 
 			// ビデオ数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var video_count_msg = DocumentCreateText("");
-			element.appendChild(video_count_msg);
+			var video_count_msg = new UI_Text(element);
 
 			// ビデオスレッド数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
 			background.appendChild(element);
-			var video_thread_msg = DocumentCreateText("");
-			element.appendChild(video_thread_msg);
+			var video_thread_msg = new UI_Text(element);
 
 			// ビデオスレッドメーター
-			var video_thread_meter = DocumentCreateElement("div");
-			ElementSetStyle(video_thread_meter,css_text_meter);
-			background.appendChild(video_thread_meter);
-
-			// ビデオスレッドバー
-			var video_thread_bar = DocumentCreateElement("div");
-			ElementSetStyle(video_thread_bar,css_text_bar);
-			video_thread_meter.appendChild(video_thread_bar);
+			var video_thread_meter = new UI_ProgressBar(background);
 
 			// リムーブ監視数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var observer_remove_msg = DocumentCreateText("");
-			element.appendChild(observer_remove_msg);
+			var observer_remove_msg = new UI_Text(element);
 
 			// 変更監視数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var observer_modify_msg = DocumentCreateText("");
-			element.appendChild(observer_modify_msg);
+			var observer_modify_msg = new UI_Text(element);
 
 			// スクロール監視数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var observer_scroll_msg = DocumentCreateText("");
-			element.appendChild(observer_scroll_msg);
+			var observer_scroll_msg = new UI_Text(element);
 
 			// アドレス数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
 			background.appendChild(element);
-			var address_count_msg = DocumentCreateText("");
-			element.appendChild(address_count_msg);
+			var address_count_msg = new UI_Text(element);
 
 			var execute_queue_phase_msg_list = [
 				"interrupt",
@@ -27102,57 +27062,37 @@ function PageExpand(execute_type){
 			_task.setExecuteFunc(function(task){
 
 				// 表示更新
-				DomNodeSetNodeValue(execute_queue_msg,"execute queue: " + execute_queue.getCountQueue());
-				DomNodeSetNodeValue(execute_queue_phase_msg,"execute phase: " + execute_queue_phase_msg_list[execute_queue.getPhase()]);
-				DomNodeSetNodeValue(execute_queue_error_msg,"execute error: " + execute_queue.getCountError());
-				DomNodeSetNodeValue(loader_queue_msg,"loader queue: " + loader_queue.getCountQueue());
-				DomNodeSetNodeValue(loader_queue_error_msg,"loader error: " + loader_queue.getCountError());
-				DomNodeSetNodeValue(loader_thread_msg,"loader thread: " + loader_queue.getCountThread() + " / " + loader_queue.getMaxThread());
-				var loader_percent;
-				if(loader_queue.getMaxThread() == 0){
-					loader_percent = 0;
-				}else{
-					loader_percent = Math.floor(loader_queue.getCountThread() / loader_queue.getMaxThread() * 100);
-				}
-				loader_thread_bar.style.width = loader_percent + "%";
+				execute_queue_msg.setText("execute queue: " + execute_queue.getCountQueue());
+				execute_queue_phase_msg.setText("execute phase: " + execute_queue_phase_msg_list[execute_queue.getPhase()]);
+				execute_queue_error_msg.setText("execute error: " + execute_queue.getCountError());
+				loader_queue_msg.setText("loader queue: " + loader_queue.getCountQueue());
+				loader_queue_error_msg.setText("loader error: " + loader_queue.getCountError());
+				loader_thread_msg.setText("loader thread: " + loader_queue.getCountThread() + " / " + loader_queue.getMaxThread());
+				loader_thread_meter.setValue(loader_queue.getCountThread());
+				loader_thread_meter.setMaximum(loader_queue.getMaxThread());
 
-				DomNodeSetNodeValue(task_count_msg,"task count: " + task_container.getCountTask());
+				task_count_msg.setText("task count: " + task_container.getCountTask());
 
 				var use_size = Math.floor(element_limitter_image.getByteSizeNow() / 1024 / 1024 * 100) / 100;
-				DomNodeSetNodeValue(image_count_msg,"image size: " + use_size);
-				DomNodeSetNodeValue(image_thread_msg,"image thread: " + element_limitter_image.getCountUse() + " / " + element_limitter_image.getCount());
-				var image_percent;
-				if(element_limitter_image.getCount() == 0){
-					image_percent = 0;
-				}else{
-					image_percent = Math.floor(element_limitter_image.getCountUse() / element_limitter_image.getCount() * 100);
-				}
-				image_thread_bar.style.width = image_percent + "%";
+				image_count_msg.setText("image size: " + use_size);
+				image_thread_msg.setText("image thread: " + element_limitter_image.getCountUse() + " / " + element_limitter_image.getCount());
+				image_thread_meter.setValue(element_limitter_image.getCountUse());
+				image_thread_meter.setMaximum(element_limitter_image.getCount());
 
-				DomNodeSetNodeValue(sound_count_msg,"sound count: " + element_limitter_sound.getCount());
-				DomNodeSetNodeValue(sound_thread_msg,"sound thread: " + element_limitter_sound.getCountUse() + " / " + element_limitter_sound.getMaxUse());
-				var sound_percent;
-				if(element_limitter_sound.getMaxUse() == 0){
-					sound_percent = 0;
-				}else{
-					sound_percent = Math.floor(element_limitter_sound.getCountUse() / element_limitter_sound.getMaxUse() * 100);
-				}
-				sound_thread_bar.style.width = sound_percent + "%";
+				sound_count_msg.setText("sound count: " + element_limitter_sound.getCount());
+				sound_thread_msg.setText("sound thread: " + element_limitter_sound.getCountUse() + " / " + element_limitter_sound.getMaxUse());
+				sound_thread_meter.setValue(element_limitter_sound.getCountUse());
+				sound_thread_meter.setMaximum(element_limitter_sound.getMaxUse());
 
-				DomNodeSetNodeValue(video_count_msg,"video count: " + element_limitter_video.getCount());
-				DomNodeSetNodeValue(video_thread_msg,"video thread: " + element_limitter_video.getCountUse() + " / " + element_limitter_video.getMaxUse());
-				var video_percent;
-				if(element_limitter_video.getMaxUse() == 0){
-					video_percent = 0;
-				}else{
-					video_percent = Math.floor(element_limitter_video.getCountUse() / element_limitter_video.getMaxUse() * 100);
-				}
-				video_thread_bar.style.width = video_percent + "%";
+				video_count_msg.setText("video count: " + element_limitter_video.getCount());
+				video_thread_msg.setText("video thread: " + element_limitter_video.getCountUse() + " / " + element_limitter_video.getMaxUse());
+				video_thread_meter.setValue(element_limitter_video.getCountUse());
+				video_thread_meter.setMaximum(element_limitter_video.getMaxUse());
 
-				DomNodeSetNodeValue(observer_remove_msg,"observer remove: " + document_observer_remove_node.getCount());
-				DomNodeSetNodeValue(observer_modify_msg,"observer modify: " + document_observer_modify_node.getCount());
-				DomNodeSetNodeValue(observer_scroll_msg,"observer scroll: " + document_observer_scroll.getCount());
-				DomNodeSetNodeValue(address_count_msg,"src count: " + address_collection.getCountAddress());
+				observer_remove_msg.setText("observer remove: " + document_observer_remove_node.getCount());
+				observer_modify_msg.setText("observer modify: " + document_observer_modify_node.getCount());
+				observer_scroll_msg.setText("observer scroll: " + document_observer_scroll.getCount());
+				address_count_msg.setText("src count: " + address_collection.getCountAddress());
 			});
 
 			_task.execute(0xffffffff);
@@ -27175,6 +27115,103 @@ function PageExpand(execute_type){
 				release();
 			}
 		};
+
+		// --------------------------------------------------------------------------------
+		// テキスト（内部用）
+		// --------------------------------------------------------------------------------
+		function UI_Text(parent){
+			var _container = new Object();
+
+			// --------------------------------------------------------------------------------
+			// テキストをセット
+			// --------------------------------------------------------------------------------
+			_container.setText = function(value){
+				if(_text != value){
+					_text = value;
+					DomNodeSetNodeValue(_node,_text);
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _node;
+			var _text;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_node = DocumentCreateText("");
+				parent.appendChild(_node);
+			})();
+
+			return _container;
+		}
+
+		// --------------------------------------------------------------------------------
+		// ブログレスバー（内部用）
+		// --------------------------------------------------------------------------------
+		function UI_ProgressBar(parent){
+			var _container = new Object();
+
+			// --------------------------------------------------------------------------------
+			// 値をセット
+			// --------------------------------------------------------------------------------
+			_container.setValue = function(value){
+				if(_now != value){
+					_now = value;
+					update();
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// 最大値をセット
+			// --------------------------------------------------------------------------------
+			_container.setMaximum = function(value){
+				if(_max != value){
+					_max = value;
+					update();
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// 更新（内部用）
+			// --------------------------------------------------------------------------------
+			function update(){
+				var percent = 0;
+				if(_max){
+					percent = Math.floor(_now / _max * 100);
+				}
+				_bar.style.width = percent + "%";
+			}
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _mater;
+			var _bar;
+			var _now;
+			var _max;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_now = 0;
+				_max = 0;
+
+				_mater = DocumentCreateElement("div");
+				ElementSetStyle(_mater,"height:2px; min-height:0; border:1px #888 solid; margin:0px 5px 2px; line-height:1.0;");
+				parent.appendChild(_mater);
+
+				_bar = DocumentCreateElement("div");
+				ElementSetStyle(_bar,"height:2px; min-height:0; background-color :#888; margin:0px 0px 2px; width:0%; line-height:1.0;");
+				_mater.appendChild(_bar);
+			})();
+
+			return _container;
+		}
 
 		// --------------------------------------------------------------------------------
 		// プライベート変数
@@ -27375,7 +27412,7 @@ function PageExpand(execute_type){
 						var i;
 						var num = workers.length;
 						for(i=0;i<num;i++){
-							extension_message.sendRequestToContent(workers[i], {command: "executePageExpand"},function(response){});
+							extension_message.sendRequestToContent(workers[i], {command: "executePageExpand"});
 						}
 						break;
 
@@ -27384,7 +27421,7 @@ function PageExpand(execute_type){
 						var i;
 						var num = workers.length;
 						for(i=0;i<num;i++){
-							extension_message.sendRequestToContent(workers[i], {command: "executeDebug"},function(response){});
+							extension_message.sendRequestToContent(workers[i], {command: "executeDebug"});
 						}
 						break;
 					}
@@ -27471,7 +27508,7 @@ function PageExpand(execute_type){
 								panel: _popup
 							});
 							_widget.on("click",function(){
-								extension_message.sendRequestToContent(_popup, {command: "reloadPopupMenu"},function(response){});
+								extension_message.sendRequestToContent(_popup, {command: "reloadPopupMenu"});
 							});
 						}
 					}
@@ -27565,13 +27602,13 @@ function PageExpand(execute_type){
 			// PageExpandProject 取得
 			command_dictionary["getPageExpandProject"] = function(param,sender,sendResponse){
 				// JSON 文字列を返す
-				sendResponse(page_expand_project.exportJSON());
+				sendResponse(page_expand_project.exportJSON(),{complete:true});
 			};
 
 			// Project 取得
 			command_dictionary["getProject"] = function(param,sender,sendResponse){
 				// JSON 文字列を返す
-				sendResponse(JsonStringify(page_expand_project.getProject(param.url)));
+				sendResponse(JsonStringify(page_expand_project.getProject(param.url)),{complete:true});
 
 				var tab = FirefoxAddonGetTabs().activeTab;
 				updateProject(tab.url);
@@ -27584,14 +27621,14 @@ function PageExpand(execute_type){
 				page_expand_project.importJSON(param.json);
 				// ローカルストレージに保存
 				page_expand_project.saveLocalStorage(function(e){
-					sendResponse(e);
+					sendResponse(e,{complete:true});
 				});
 			};
 
 			// PageExpandProject 削除
 			command_dictionary["removePageExpandProject"] = function(param,sender,sendResponse){
 				removePageExpandProject(function(e){
-					sendResponse(e);
+					sendResponse(e,{complete:true});
 				});
 			};
 
@@ -27629,10 +27666,23 @@ function PageExpand(execute_type){
 								var response = new Object();
 								response.readyState = xhr.readyState;
 								response.status = xhr.status;
-								response.responseText = xhr.responseText;
 								response.responseHeaders = xhr.getAllResponseHeaders();
 								response.finalUrl = channel.URI.spec;
-								sendResponse(response);
+
+								var i = 0;
+								var size = 1024 * 128;
+								var total = xhr.responseText.length;
+								function f(){
+									sendResponse({type:"data",pos:i,total:total,data:xhr.responseText.substr(i,size)},{complete:false});
+
+									i += size;
+									if(i < total){
+										execute_queue.attachLast(f,null);
+										return;
+									}
+									sendResponse({type:"xhr",data:response},{complete:true});
+								}
+								execute_queue.attachLast(f,null);
 								break;
 							}
 						};
@@ -27670,10 +27720,23 @@ function PageExpand(execute_type){
 								var response = new Object();
 								response.readyState = 4;
 								response.status = xhr.status;
-								response.responseText = xhr.text;
 								response.responseHeaders = headers;
 								response.finalUrl = request.url;
-								sendResponse(response);
+
+								var i = 0;
+								var size = 1024 * 128;
+								var total = xhr.text.length;
+								function f(){
+									sendResponse({type:"data",pos:i,total:total,data:xhr.text.substr(i,size)},{complete:false});
+
+									i += size;
+									if(i < total){
+										execute_queue.attachLast(f,null);
+										return;
+									}
+									sendResponse({type:"xhr",data:response},{complete:true});
+								}
+								execute_queue.attachLast(f,null);
 							}
 						};
 						if(request.override_mime_type){
@@ -27734,13 +27797,25 @@ function PageExpand(execute_type){
 								response.status = xhr.status;
 								response.responseHeaders = xhr.getAllResponseHeaders();
 								if(xhr.response){
-									Base64FromArrayBufferAsync(xhr.response,1*1024,function(base64){
-										// data URI scheme 変換
-										response.dataUriScheme = "data:" + xhr.getResponseHeader("Content-Type") + ";base64," + base64;
-										sendResponse(response);
+									Base64_From_ArrayBuffer_Async(xhr.response,function(base64){
+										var i = 0;
+										var size = 1024 * 128;
+										var data = "data:" + xhr.getResponseHeader("Content-Type") + ";base64," + base64;
+										var total = data.length;
+										function f(){
+											sendResponse({type:"data",pos:i,total:total,data:data.substr(i,size)},{complete:false});
+
+											i += size;
+											if(i < total){
+												execute_queue.attachLast(f,null);
+												return;
+											}
+											sendResponse({type:"xhr",data:response},{complete:true});
+										}
+										execute_queue.attachLast(f,null);
 									});
 								}else{
-									sendResponse(response);
+									sendResponse({type:"xhr",data:response},{complete:true});
 								}
 								break;
 							}
@@ -27781,10 +27856,22 @@ function PageExpand(execute_type){
 								response.readyState = 4;
 								response.status = xhr.status;
 								response.responseHeaders = headers;
-								Base64FromUserDefinedAsync(xhr.text,1*1024,function(base64){
-									// data URI scheme 変換
-									response.dataUriScheme = "data:" + xhr.headers["Content-Type"] + ";base64," + base64;
-									sendResponse(response);
+								Base64_From_XUserDefined_Async(xhr.text,function(base64){
+									var i = 0;
+									var size = 1024 * 128;
+									var data = "data:" + xhr.headers["Content-Type"] + ";base64," + base64;
+									var total = data.length;
+									function f(){
+										sendResponse({type:"data",pos:i,total:total,data:data.substr(i,size)},{complete:false});
+
+										i += size;
+										if(i < total){
+											execute_queue.attachLast(f,null);
+											return;
+										}
+										sendResponse({type:"xhr",data:response},{complete:true});
+									}
+									execute_queue.attachLast(f,null);
 								});
 							}
 						};
@@ -27842,7 +27929,7 @@ function PageExpand(execute_type){
 				var i;
 				var num = workers.length;
 				for(i=0;i<num;i++){
-					extension_message.sendRequestToContent(workers[i], {command: "executePageExpand"},function(response){});
+					extension_message.sendRequestToContent(workers[i], {command: "executePageExpand"});
 				}
 			};
 
@@ -27852,7 +27939,7 @@ function PageExpand(execute_type){
 				var i;
 				var num = workers.length;
 				for(i=0;i<num;i++){
-					extension_message.sendRequestToContent(workers[i], {command: "executeDebug"},function(response){});
+					extension_message.sendRequestToContent(workers[i], {command: "executeDebug"});
 				}
 			};
 
@@ -27860,9 +27947,9 @@ function PageExpand(execute_type){
 			command_dictionary["getActiveURL"] = function(param,sender,sendResponse){
 				var tab = FirefoxAddonGetTabs().activeTab;
 				if(tab){
-					sendResponse(tab.url);
+					sendResponse(tab.url,{complete:true});
 				}else{
-					sendResponse("");
+					sendResponse("",{complete:true});
 				}
 			};
 
@@ -27890,7 +27977,7 @@ function PageExpand(execute_type){
 					if(callback){
 						callback(param,sender,sendResponse);
 					}else{
-						sendResponse("");
+						sendResponse("",{complete:true});
 					}
 				});
 
@@ -32695,7 +32782,7 @@ function PageExpand(execute_type){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				UI_Text(parent,"PageExpand ver.1.3.1");
+				UI_Text(parent,"PageExpand ver.1.3.2");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -39164,7 +39251,7 @@ function PageExpand(execute_type){
 				func(response);
 
 				// バックグラウンドへプロジェクト更新を通知
-				extension_message.sendRequest({command:"reloadPageExpandProject"},function(response){});
+				extension_message.sendRequest({command:"reloadPageExpandProject"});
 			});
 		}
 
@@ -39488,16 +39575,16 @@ function PageExpand(execute_type){
 		function click(command){
 			switch(command){
 			case "configCurrentPage":
-				extension_message.sendRequest({command: "configCurrentPage"},function(response){});
+				extension_message.sendRequest({command: "configCurrentPage"});
 				break;
 			case "configCurrentBbs":
-				extension_message.sendRequest({command: "configCurrentBbs"},function(response){});
+				extension_message.sendRequest({command: "configCurrentBbs"});
 				break;
 			case "executePageExpand":
-				extension_message.sendRequest({command: "executePageExpand"},function(response){});
+				extension_message.sendRequest({command: "executePageExpand"});
 				break;
 			case "executeDebug":
-				extension_message.sendRequest({command: "executeDebug"},function(response){});
+				extension_message.sendRequest({command: "executeDebug"});
 				break;
 			}
 		}
@@ -39849,6 +39936,14 @@ function PageExpand(execute_type){
 
 				// アンカー要素を登録
 				AnalyzeWorkSetAnchorElement(work,node);
+
+			// --------------------------------------------------------------------------------
+			// インラインフレーム
+			// --------------------------------------------------------------------------------
+			}else if(node.tagName == "IFRAME"){
+
+				// 要素を監視
+				AnalyzeWorkObserveElement(work);
 			}
 		}
 
@@ -39862,6 +39957,16 @@ function PageExpand(execute_type){
 		// --------------------------------------------------------------------------------
 		ElementAnalyzeAddressCollection(param);
 
+		// --------------------------------------------------------------------------------
+		// インラインフレーム内コンテンツ
+		// --------------------------------------------------------------------------------
+		if(1){
+			// 解析済みチェック
+			if(!AnalyzeWorkGetAnalyzedExpandIframeContent(work)){
+				AnalyzeWorkSetAnalyzedExpandIframeContent(work);
+				execute_queue.attachForExpandElement(ElementAnalyzePhaseExpandIframeContent,param);
+			}
+		}
 
 		// --------------------------------------------------------------------------------
 		// 掲示板解析
@@ -40149,6 +40254,24 @@ function PageExpand(execute_type){
 		}
 	}
 
+	// --------------------------------------------------------------------------------
+	// エレメントの解析フェーズ（インラインフレーム内コンテンツの展開）
+	// --------------------------------------------------------------------------------
+	function ElementAnalyzePhaseExpandIframeContent(param){
+		var work = param.work;
+		var modify = param.modify;
+		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+
+		var element = AnalyzeWorkGetDomNode(work);
+
+		// インラインフレーム
+		if(element.tagName != "IFRAME")	return;
+
+		// document に未登録
+		if(!DomNodeGetAttachedDocument(element))	return;
+
+		ElementExpandIframeContent(param);
+	}
 
 	// --------------------------------------------------------------------------------
 	// エレメントの解析（アドレスコレクション）
@@ -44725,6 +44848,25 @@ function PageExpand(execute_type){
 	}
 
 	// --------------------------------------------------------------------------------
+	// インラインフレーム内コンテンツの展開
+	// --------------------------------------------------------------------------------
+	function ElementExpandIframeContent(param){
+		var work = param.work;
+		var modify = param.modify;
+		var element = AnalyzeWorkGetDomNode(work);
+
+		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+
+		try{
+			var window_obj = element.contentWindow;
+			if(window_obj.document.URL.match(new RegExp("^(blob|data|about):","i"))){
+				PageExpand({execute_type:page_expand_arguments.execute_type,admin:admin,window:window_obj});
+			}
+		}catch(e){
+		}
+	}
+
+	// --------------------------------------------------------------------------------
 	// 縮小画像のポップアップ
 	// --------------------------------------------------------------------------------
 	function ElementPopupReducedImage(param){
@@ -45750,8 +45892,15 @@ function PageExpand(execute_type){
 			begin_rect.top    += offset.y;
 			begin_rect.bottom += offset.y;
 
+			// 拡大縮小補正
+			var pixel_ratio = 1.0;
+			if(window.devicePixelRatio !== undefined){
+				pixel_ratio = 1 / window.devicePixelRatio;
+				if(pixel_ratio < 1.0) pixel_ratio = 1.0;
+			}
+
 			// 終了サイズ
-			var scale = project.getScalePercentPopupImage() / 100;
+			var scale = project.getScalePercentPopupImage() / 100 * pixel_ratio;
 			var end_w = natural_size.width  * scale;
 			var end_h = natural_size.height * scale;
 			_element_current.style.width  = (end_w) + "px";
@@ -49033,6 +49182,21 @@ function PageExpand(execute_type){
 		};
 
 		// --------------------------------------------------------------------------------
+		// 割り込み用の処理を最後尾に追加
+		// --------------------------------------------------------------------------------
+		_container.attachLastForInterrupt = function(func,param){
+			var o = {func:func,param:param};
+			var _next = _queue_list[0];
+			var _prev = _next._prev;
+			o._prev = _prev;
+			o._next = _next;
+			_prev._next = o;
+			_next._prev = o;
+
+			attach(0);
+		};
+
+		// --------------------------------------------------------------------------------
 		// DOM オブジェクト除外用の処理を最前列に追加
 		// --------------------------------------------------------------------------------
 		_container.attachFirstForRemoveDomNode = function(func,param){
@@ -50444,9 +50608,16 @@ function PageExpand(execute_type){
 
 			// バックグラウンドへ通信要求
 			if(1){
-				_request.current_url = document.URL;
+				_request.current_url = WindowGetOwnerURL(window);
+				var responseText = "";
 				extension_message.sendRequest({command:"loadXMLHttpRequest",request:_request,single:_single_type}, function(receive) {
-					var xhr = receive;
+					if(receive.type == "data"){
+						responseText += receive.data;
+						return;
+					}
+
+					var xhr = receive.data;
+					xhr.responseText = responseText;
 					switch(xhr.readyState){
 					case 4:
 						xhr.getAllResponseHeaders = function(){
@@ -50546,9 +50717,16 @@ function PageExpand(execute_type){
 
 			// バックグラウンドへ通信要求
 			if(1){
-				_request.current_url = document.URL;
+				_request.current_url = WindowGetOwnerURL(window);
+				var dataUriScheme = "";
 				extension_message.sendRequest({command:"loadDataUriScheme",request:_request,single:_single_type}, function(receive) {
-					var xhr = receive;
+					if(receive.type == "data"){
+						dataUriScheme += receive.data;
+						return;
+					}
+
+					var xhr = receive.data;
+					xhr.dataUriScheme = dataUriScheme;
 					switch(xhr.readyState){
 					case 4:
 						xhr.getAllResponseHeaders = function(){
@@ -50592,8 +50770,19 @@ function PageExpand(execute_type){
 				case 4:
 					if((200 <= xhr.status && xhr.status < 300) || xhr.status == 304){
 						switch(response_type){
+						case "blob":
+							var file_reader = new FileReader();
+							file_reader.onload = function(){
+								xhr.dataUriScheme = file_reader.result;
+								response(true,xhr);
+							};
+							file_reader.onerror = function(){
+								response(false,xhr);
+							};
+							file_reader.readAsDataURL(xhr.response);
+							break;
 						case "arraybuffer":
-							Base64FromArrayBufferAsync(xhr.response,1*1024,function(base64){
+							Base64_From_ArrayBuffer_Async(xhr.response,function(base64){
 								// data URI scheme 変換
 								xhr.dataUriScheme = "data:" + xhr.getResponseHeader("Content-Type") + ";base64," + base64;
 								// 成功を返す
@@ -50601,7 +50790,7 @@ function PageExpand(execute_type){
 							});
 							break;
 						case "User-Defined":
-							Base64FromUserDefinedAsync(xhr.responseText,1*1024,function(base64){
+							Base64_From_XUserDefined_Async(xhr.responseText,function(base64){
 								// data URI scheme 変換
 								xhr.dataUriScheme = "data:" + xhr.getResponseHeader("Content-Type") + ";base64," + base64;
 								// 成功を返す
@@ -50632,8 +50821,11 @@ function PageExpand(execute_type){
 				xhr.setRequestHeader(name,headers[name]);
 			}
 			if(xhr.responseType !== undefined){
-				xhr.responseType = "arraybuffer";
-				response_type = "arraybuffer";
+				if(window.FileReader){
+					xhr.responseType = response_type = "blob";
+				}else{
+					xhr.responseType = response_type = "arraybuffer";
+				}
 			}else if(xhr.overrideMimeType){
 				xhr.overrideMimeType("text/plain; charset=x-user-defined");
 				response_type = "User-Defined";
@@ -53113,6 +53305,59 @@ function PageExpand(execute_type){
 		var _container = new Object();
 
 		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		_container.initialize = function(callback){
+
+			// ポート受信
+			self.port.on(_identity, function(message) {
+				self.port.removeListener(_identity,arguments.callee);
+				_identity = message;
+
+				// 受信用コールバック関数
+				var message_handler = function(message) {
+					var request = message;
+					switch(request.phase){
+					// リクエストを受信
+					case 0:
+						// イベントを発火
+						_event_dispatcher.dispatchEvent("message",request);
+						break;
+
+					// 返信を受信
+					case 1:
+						var callback = _callback_dictionary[request.id];
+
+						// コールバック関数を実行
+						if(callback){
+							callback(request.data);
+
+							// 辞書から外す
+							if(request.option.complete){
+								delete _callback_dictionary[request.id];
+							}
+						}
+
+						//self.postMessage({phase:2,id:request.id});
+						break;
+					}
+
+				};
+
+				// メッセージを受信する
+				self.port.on(_identity, message_handler,false);
+				self.on("message",message_handler,false);
+
+				if(callback){
+					callback();
+				}
+			},false);
+
+			// メッセージを送信
+			self.postMessage(_identity);
+		};
+
+		// --------------------------------------------------------------------------------
 		// リスナーをセット
 		// --------------------------------------------------------------------------------
 		_container.addListener = function(f){
@@ -53120,14 +53365,15 @@ function PageExpand(execute_type){
 			// イベントハンドラを作成
 			var event_handler = _event_dispatcher.createEventHandler("message");
 			event_handler.setFunction(function(request){
-				f(request.data,null,function(response){
+				f(request.data,null,function(response,option){
 					var receive = new Object();
-					receive.type = "receive";
+					receive.phase = 1;
 					receive.id = request.id;
 					receive.data = response;
+					receive.option = option;
 
 					// 返信
-					self.postMessage(receive);
+					self.port.emit(_identity,receive);
 				});
 			});
 		};
@@ -53138,18 +53384,18 @@ function PageExpand(execute_type){
 		_container.sendRequest = function(data,callback){
 
 			var request = new Object();
-			request.type = "request";
+			request.phase = 0;
 			request.id = _unique;
 			request.data = data;
 
 			// コールバック関数を辞書に登録
 			if(callback){
 				_callback_dictionary[_unique] = callback;
-				_unique ++;
 			}
+			_unique ++;
 
 			// メッセージを送信
-			self.postMessage(request);
+			self.port.emit(_identity,request);
 		};
 
 		// --------------------------------------------------------------------------------
@@ -53158,6 +53404,7 @@ function PageExpand(execute_type){
 		var _unique;
 		var _callback_dictionary;
 		var _event_dispatcher;
+		var _identity;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
@@ -53166,33 +53413,7 @@ function PageExpand(execute_type){
 			_unique = 0;
 			_callback_dictionary = new Array();
 			_event_dispatcher = new EventDispatcher();
-
-			// メッセージを受信する
-			self.on("message", function(message) {
-				var request = message;
-				switch(request.type){
-				// リクエストを受信
-				case "request":
-					// イベントを発火
-					_event_dispatcher.dispatchEvent("message",request);
-					break;
-
-				// 返信を受信
-				case "receive":
-					var callback = _callback_dictionary[request.id];
-
-					// コールバック関数を実行
-					if(callback){
-						callback(request.data);
-					}
-
-					// 辞書から外す
-					delete _callback_dictionary[request.id];
-					break;
-				}
-
-			},false);
-
+			_identity = "_" + (new Date()).getTime() +  "_" + Math.floor(Math.random() * 0xffffffff);
 		})();
 
 		return _container;
@@ -53211,28 +53432,40 @@ function PageExpand(execute_type){
 
 			// メッセージを受信する
 			worker.on("message",function(message){
-				var request = message;
-				switch(request.type){
-				// リクエストを受信
-				case "request":
-					// イベントを発火
-					_event_dispatcher.dispatchEvent("message",{request:request,sender:worker});
-					break;
+				var identity = "" + _unique;
+				_unique ++;
 
-				// 返信を受信
-				case "receive":
-					var callback = _callback_dictionary[request.id];
+				// 返信
+				worker.port.emit(message,identity);
 
-					// コールバック関数を実行
-					if(callback){
-						callback(request.data);
+				// ポート受信する
+				worker.port.on(identity,function(message){
+
+					var request = message;
+					switch(request.phase){
+					// リクエストを受信
+					case 0:
+						// イベントを発火
+						_event_dispatcher.dispatchEvent("message",{request:request,sender:{worker:worker,id:identity}});
+						break;
+
+					// 返信を受信
+					case 1:
+						var callback = _callback_dictionary[request.id];
+
+						// コールバック関数を実行
+						if(callback){
+							callback(request.data);
+
+							// 辞書から外す
+							if(request.option.complete){
+								delete _callback_dictionary[request.id];
+							}
+						}
+						break;
 					}
 
-					// 辞書から外す
-					delete _callback_dictionary[request.id];
-					break;
-				}
-
+				},false);
 			},false);
 		};
 
@@ -53245,15 +53478,19 @@ function PageExpand(execute_type){
 			var event_handler = _event_dispatcher.createEventHandler("message");
 			event_handler.setFunction(function(event){
 				var request = event.request;
-				var worker = event.sender;
-				f(request.data,worker,function(response){
+				var sender = event.sender;
+				f(request.data,sender.worker,function(response,option){
 					var receive = new Object();
-					receive.type = "receive";
+					receive.phase = 1;
 					receive.id = request.id;
 					receive.data = response;
+					receive.option = option;
 
-					// 返信
-					worker.postMessage(receive);
+					try{
+						// 返信
+						sender.worker.port.emit(event.sender.id,receive);
+					}catch(e){
+					}
 				});
 			});
 		};
@@ -53264,18 +53501,21 @@ function PageExpand(execute_type){
 		_container.sendRequestToContent = function(worker,data,callback){
 
 			var request = new Object();
-			request.type = "request";
+			request.phase = 0;
 			request.id = _unique;
 			request.data = data;
 
 			// コールバック関数を辞書に登録
 			if(callback){
 				_callback_dictionary[_unique] = callback;
-				_unique ++;
 			}
+			_unique ++;
 
-			// メッセージを送信
-			worker.postMessage(request);
+			try{
+				// メッセージを送信
+				worker.postMessage(request);
+			}catch(e){
+			}
 		};
 
 		// --------------------------------------------------------------------------------
@@ -53284,18 +53524,21 @@ function PageExpand(execute_type){
 		_container.sendRequestToBackground = function(worker,data,callback){
 
 			var request = new Object();
-			request.type = "request";
+			request.phase = 0;
 			request.id = _unique;
 			request.data = data;
 
 			// コールバック関数を辞書に登録
 			if(callback){
 				_callback_dictionary[_unique] = callback;
-				_unique ++;
 			}
+			_unique ++;
 
-			// メッセージを送信
-			worker.postMessage(request);
+			try{
+				// メッセージを送信
+				worker.postMessage(request);
+			}catch(e){
+			}
 		};
 
 		// --------------------------------------------------------------------------------
@@ -53537,6 +53780,13 @@ function PageExpand(execute_type){
 	function AnalyzeWorkClearAnalyzedExpandInlineIframe(work){ ObjectDeleteProperty(work,"a_eif"); }
 	function AnalyzeWorkSetAnalyzedExpandInlineIframe(work){ work.a_eif = true; }
 	function AnalyzeWorkGetAnalyzedExpandInlineIframe(work){ return work.a_eif; }
+
+	// --------------------------------------------------------------------------------
+	// 「インラインフレーム内コンテンツ展開」の解析状況
+	// --------------------------------------------------------------------------------
+	function AnalyzeWorkClearAnalyzedExpandIframeContent(work){ ObjectDeleteProperty(work,"a_eic"); }
+	function AnalyzeWorkSetAnalyzedExpandIframeContent(work){ work.a_eic = true; }
+	function AnalyzeWorkGetAnalyzedExpandIframeContent(work){ return work.a_eic; }
 
 	// --------------------------------------------------------------------------------
 	// 「縮小画像のポップアップ」の解析状況
@@ -57365,218 +57615,130 @@ function PageExpand(execute_type){
 	}
 
 	// --------------------------------------------------------------------------------
-	// バイナリから Base64 文字列に変換する (同期実行)
+	// ArrayBuffer から Base64 文字列に変換する関数 (非同期実行)
 	// --------------------------------------------------------------------------------
-	function Base64FromArrayBuffer(ary_buffer){
+	function Base64_From_ArrayBuffer_Async(ary_buffer,callback,increment){
 		var dic = [
 			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
 			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
 			'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
 			'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
 		];
-		var str = "";
-		var num = ary_buffer.byteLength;
-		var a = new Uint8Array(ary_buffer);
-		var i;
-		var m = 0;
+		var base64 = "";
+		var ary_u8 = new Uint8Array( ary_buffer );
+		var num = ary_u8.length;
 		var n = 0;
-		for(i=0;i<num;i++){
-			switch(m){
-			case 0:
-				str += dic[(a[i] >> 2)];
-				n = (a[i] & 0x03) << 4;
-				m = 2;
-				break;
-			case 2:
-				str += dic[n | (a[i] >> 4)];
-				n = (a[i] & 0x0f) << 2;
-				m = 1;
-				break;
-			case 1:
-				str += dic[n | (a[i] >> 6)];
-				str += dic[(a[i] & 0x3f)];
-				m = 0;
-				break;
-			}
-		}
-		if(m){
-			str += dic[n];
-		}
-		if(m == 2){
-			str += "==";
-		}else if(m == 1){
-			str += "=";
-		}
-		return str;
-	}
+		var b = 0;
 
-	// --------------------------------------------------------------------------------
-	// バイナリから Base64 文字列に変換する (非同期実行)
-	// --------------------------------------------------------------------------------
-	function Base64FromArrayBufferAsync(ary_buffer,increment,callback){
-		var dic = [
-			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
-			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
-			'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
-			'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
-		];
-		var str = "";
-		var num = ary_buffer.byteLength;
-		var a = new Uint8Array(ary_buffer);
+		if(increment === undefined){
+			increment = 1024;
+		}
+
 		var i = 0;
 		var j = 0;
-		var m = 0;
-		var n = 0;
-
 		function f(){
-			while(i<num){
-				switch(m){
-				case 0:
-					str += dic[(a[i] >> 2)];
-					n = (a[i] & 0x03) << 4;
-					m = 2;
-					break;
-				case 2:
-					str += dic[n | (a[i] >> 4)];
-					n = (a[i] & 0x0f) << 2;
-					m = 1;
-					break;
-				case 1:
-					str += dic[n | (a[i] >> 6)];
-					str += dic[(a[i] & 0x3f)];
-					m = 0;
-					break;
-				}
-
+			while(i < num){
+				b = ary_u8[i];
+				base64 += dic[(b >> 2)];
+				n = (b & 0x03) << 4;
 				i ++;
-				j ++;
+				if(i >= num) break;
+
+				b = ary_u8[i];
+				base64 += dic[n | (b >> 4)];
+				n = (b & 0x0f) << 2;
+				i ++;
+				if(i >= num) break;
+
+				b = ary_u8[i];
+				base64 += dic[n | (b >> 6)];
+				base64 += dic[(b & 0x3f)];
+				i ++;
+
+				j += 3;
 				if(j > increment){
 					j = 0;
-					execute_queue.attachFirst(f,null);
+					execute_queue.attachLast(f,null);
 					return;
 				}
 			}
+
+			var m = num % 3;
 			if(m){
-				str += dic[n];
+				base64 += dic[n];
 			}
-			if(m == 2){
-				str += "==";
-			}else if(m == 1){
-				str += "=";
+			if(m == 1){
+				base64 += "==";
+			}else if(m == 2){
+				base64 += "=";
 			}
-			callback(str);
+			callback(base64);
 		}
 
 		execute_queue.attachLast(f,null);
-	}
-
-	// --------------------------------------------------------------------------------
-	// x-user-defined 文字列から Base64 文字列に変換する (同期実行)
-	// --------------------------------------------------------------------------------
-	function Base64_From_UserDefined(user_defined){
-		var dic = [
-			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
-			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
-			'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
-			'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
-		];
-		var str = "";
-		var num = str.length;
-		var a = user_defined;
-		var i;
-		var m = 0;
-		var n = 0;
-		var b = 0;
-		for(i=0;i<num;i++){
-			b = a.charCodeAt(i) & 0xff;
-			switch(m){
-			case 0:
-				str += dic[(b >> 2)];
-				n = (b & 0x03) << 4;
-				m = 2;
-				break;
-			case 2:
-				str += dic[n | (b >> 4)];
-				n = (b & 0x0f) << 2;
-				m = 1;
-				break;
-			case 1:
-				str += dic[n | (b >> 6)];
-				str += dic[(b & 0x3f)];
-				m = 0;
-				break;
-			}
-		}
-		if(m){
-			str += dic[n];
-		}
-		if(m == 2){
-			str += "==";
-		}else if(m == 1){
-			str += "=";
-		}
-		return str;
 	}
 
 	// --------------------------------------------------------------------------------
 	// x-user-defined 文字列から Base64 文字列に変換する (非同期実行)
 	// --------------------------------------------------------------------------------
-	function Base64FromUserDefinedAsync(user_defined,increment,callback){
+	function Base64_From_XUserDefined_Async(x_user_defined,callback,increment){
 		var dic = [
 			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
 			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
 			'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
 			'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
 		];
-		var str = "";
-		var num = user_defined.length;
-		var a = user_defined;
-		var i = 0;
-		var j = 0;
-		var m = 0;
+		var base64 = "";
+		var num = x_user_defined.length;
 		var n = 0;
 		var b = 0;
-		function f(){
-			while(i<num){
-				b = a.charCodeAt(i) & 0xff;
-				switch(m){
-				case 0:
-					str += dic[(b >> 2)];
-					n = (b & 0x03) << 4;
-					m = 2;
-					break;
-				case 2:
-					str += dic[n | (b >> 4)];
-					n = (b & 0x0f) << 2;
-					m = 1;
-					break;
-				case 1:
-					str += dic[n | (b >> 6)];
-					str += dic[(b & 0x3f)];
-					m = 0;
-					break;
-				}
 
+		if(increment === undefined){
+			increment = 1024;
+		}
+
+		var i = 0;
+		var j = 0;
+		function f(){
+			while(i < num){
+				b = x_user_defined.charCodeAt(i) & 0xff;
+				base64 += dic[(b >> 2)];
+				n = (b & 0x03) << 4;
 				i ++;
-				j ++;
+				if(i >= num) break;
+
+				b = x_user_defined.charCodeAt(i) & 0xff;
+				base64 += dic[n | (b >> 4)];
+				n = (b & 0x0f) << 2;
+				i ++;
+				if(i >= num) break;
+
+				b = x_user_defined.charCodeAt(i) & 0xff;
+				base64 += dic[n | (b >> 6)];
+				base64 += dic[(b & 0x3f)];
+				i ++;
+
+				j += 3;
 				if(j > increment){
 					j = 0;
 					execute_queue.attachFirst(f,null);
 					return;
 				}
 			}
+
+			var m = num % 3;
 			if(m){
-				str += dic[n];
+				base64 += dic[n];
 			}
-			if(m == 2){
-				str += "==";
-			}else if(m == 1){
-				str += "=";
+			if(m == 1){
+				base64 += "==";
+			}else if(m == 2){
+				base64 += "=";
 			}
-			callback(str);
+			callback(base64);
 		}
 
-		execute_queue.attachLast(f,null);
+		execute_queue.attachFirst(f,null);
 	}
 
 	// --------------------------------------------------------------------------------
@@ -58820,6 +58982,24 @@ function PageExpand(execute_type){
 	}
 
 	// --------------------------------------------------------------------------------
+	// 所有者となる Window の URL を取得
+	// --------------------------------------------------------------------------------
+	function WindowGetOwnerURL(window_obj){
+		var url = "";
+		var re = new RegExp("^(blob|data|about):","i");
+		try{
+			while(true){
+				url = window_obj.document.URL;
+				if(!url.match(re)) break;
+				window_obj = window_obj.parent;
+			}
+		}catch(e){
+		}
+
+		return url;
+	}
+
+	// --------------------------------------------------------------------------------
 	// HEAD 要素を取得
 	// --------------------------------------------------------------------------------
 	function DocumentGetHeadElement(document_obj){
@@ -58908,7 +59088,7 @@ function PageExpand(execute_type){
 	function DocumentGetLoadedDomContent(document_obj,callback){
 
 		function DOMContentLoadedFunc(e){
-			document_obj.removeEventListener("readystatechange" , DOMContentLoadedFunc);
+			document_obj.removeEventListener("DOMContentLoaded" , DOMContentLoadedFunc);
 			callback();
 		}
 
@@ -60563,7 +60743,7 @@ function PageExpand(execute_type){
 	// --------------------------------------------------------------------------------
 	// 初期化
 	// --------------------------------------------------------------------------------
-	switch(execute_type){
+	switch(page_expand_arguments.execute_type){
 
 	// --------------------------------------------------------------------------------
 	// Firefox のコンテンツスクリプトとして動作
@@ -60572,95 +60752,98 @@ function PageExpand(execute_type){
 
 		// Firefox拡張機能通信
 		extension_message = new FirefoxExtensionMessageForContent();
+		extension_message.initialize(function(){
 
-		// コマンドキュー
-		var command_queue = new Array();
+			// コマンドキュー
+			var command_queue = new Array();
 
-		// 受信コールバック
-		var response_listener = null;
-		response_listener = function(request, sender, sendResponse){
-			command_queue.push({
-				request:request,
-				sender:sender,
-				sendResponse:sendResponse
+			// 受信コールバック
+			var response_listener = null;
+			response_listener = function(request, sender, sendResponse){
+				command_queue.push({
+					request:request,
+					sender:sender,
+					sendResponse:sendResponse
+				});
+			};
+
+			// --------------------------------------------------------------------------------
+			// バックグラウンドとの通信
+			// --------------------------------------------------------------------------------
+			extension_message.addListener(function(request, sender, sendResponse) {
+				if(response_listener){
+					response_listener(request, sender, sendResponse);
+				}
 			});
-		};
 
-		// --------------------------------------------------------------------------------
-		// バックグラウンドとの通信
-		// --------------------------------------------------------------------------------
-		extension_message.addListener(function(request, sender, sendResponse) {
-			if(response_listener){
-				response_listener(request, sender, sendResponse);
-			}
-		});
+			// --------------------------------------------------------------------------------
+			// バックグラウンドへプロジェクト取得の要求
+			// --------------------------------------------------------------------------------
+			extension_message.sendRequest({command:"getProject",url:WindowGetOwnerURL(window)}, function(response) {
 
-		// --------------------------------------------------------------------------------
-		// バックグラウンドへプロジェクト取得の要求
-		// --------------------------------------------------------------------------------
-		extension_message.sendRequest({command:"getProject",url:document.URL}, function(response) {
+				if(!response)	return;
 
-			if(!response)	return;
+				// JSON 文字列からプロジェクトを作成
+				project = new Project();
+				project.importJSON(response);
 
-			// JSON 文字列からプロジェクトを作成
-			project = new Project();
-			project.importJSON(response);
+				// 実行可能
+				if(project.getEnable()){
 
-			// 実行可能
-			if(project.getEnable()){
+					// PageExpand 初期化
+					PageExpandInitialize();
 
-				// PageExpand 初期化
-				PageExpandInitialize();
+					// 受信コールバック
+					response_listener = function(request, sender, sendResponse){
+						var param = request;
 
-				// 受信コールバック
-				response_listener = function(request, sender, sendResponse){
-					var param = request;
+						switch(param.command){
+						case "executePageExpand":
+							PageExpandStart();
+							break;
 
-					switch(param.command){
-					case "executePageExpand":
-						PageExpandStart();
-						break;
+						case "executeDebug":
+							// デバッグモード
+							page_expand_debug.setVisible(true);
+							break;
 
-					case "executeDebug":
-						// デバッグモード
-						page_expand_debug.setVisible(true);
-						break;
-
-					// 未知の要求
-					default:
-						break;
+						// 未知の要求
+						default:
+							break;
+						};
 					};
-				};
 
-				// フレーム内では動作させない
-				if (WindowIsChild(window)){
+					// フレーム内では動作させない
+					if (WindowIsChild(window)){
+					}else{
+						// アドレスバーアイコンが有効であるか
+						if(project.getEnableIconAddressBar()){
+							// バックグラウンドへポップアップアクション有効を通知
+							extension_message.sendRequest({command:"attachPopupAction"});
+						}
+					}
+
+					if(project.getEnableStartup()){
+						// 実行開始
+						PageExpandStart();
+					}
+
+					// コマンドキューを実行
+					(function(){
+						var i;
+						var num = command_queue.length;
+						for(i=0;i<num;i++){
+							var queue = command_queue[i];
+							response_listener(queue.request,queue.sender,queue.sendResponse);
+						}
+						command_queue = null;
+					})();
+
 				}else{
-					// アドレスバーアイコンが有効であるか
-					if(project.getEnableIconAddressBar()){
-						// バックグラウンドへポップアップアクション有効を通知
-						extension_message.sendRequest({command:"attachPopupAction"},function(response){});
-					}
+					response_listener = null;
 				}
+			});
 
-				if(project.getEnableStartup()){
-					// 実行開始
-					PageExpandStart();
-				}
-
-				// コマンドキューを実行
-				(function(){
-					var i;
-					var num = command_queue.length;
-					for(i=0;i<num;i++){
-						var queue = command_queue[i];
-						response_listener(queue.request,queue.sender,queue.sendResponse);
-					}
-					command_queue = null;
-				})();
-
-			}else{
-				response_listener = null;
-			}
 		});
 		break;
 
@@ -60671,37 +60854,39 @@ function PageExpand(execute_type){
 
 		// Firefox拡張機能通信
 		extension_message = new FirefoxExtensionMessageForContent();
+		extension_message.initialize(function(){
 
-		// PageExpand 初期化
-		PageExpandInitialize();
+			// PageExpand 初期化
+			PageExpandInitialize();
 
-		// バックグラウンドへプロジェクト取得の要求
-		extension_message.sendRequest({command:"getPageExpandProject"},function(response){
+			// バックグラウンドへプロジェクト取得の要求
+			extension_message.sendRequest({command:"getPageExpandProject"},function(response){
 
-			// JSON 文字列からプロジェクトを作成
-			page_expand_project = new PageExpandProject();
-			page_expand_project.importJSON(response);
+				// JSON 文字列からプロジェクトを作成
+				page_expand_project = new PageExpandProject();
+				page_expand_project.importJSON(response);
 
-			var config = new PageExpandConfig();
-			config.initialize(function(result){
-				var query = DocumentGetQuery();
-				var content;
+				var config = new PageExpandConfig();
+				config.initialize(function(result){
+					var query = DocumentGetQuery();
+					var content;
 
-				switch(query.type){
-				case "urlmap":
-					content = config.MenuItemSelect(PageExpandConfig.MENU_TYPE_SETTING_URL_MAPPING);
-					content.selectFromURL(decodeURIComponent(decodeURIComponent(query.url)));
-					break;
-				case "expand_bbs":
-					content = config.MenuItemSelect(PageExpandConfig.MENU_TYPE_SETTING_EXPAND_BBS);
-					content.selectFromURL(decodeURIComponent(decodeURIComponent(query.url)));
-					break;
-				default:
-					content = config.MenuItemSelect(PageExpandConfig.MENU_TYPE_SETTING_STANDARD);
-					break;
-				}
+					switch(query.type){
+					case "urlmap":
+						content = config.MenuItemSelect(PageExpandConfig.MENU_TYPE_SETTING_URL_MAPPING);
+						content.selectFromURL(decodeURIComponent(decodeURIComponent(query.url)));
+						break;
+					case "expand_bbs":
+						content = config.MenuItemSelect(PageExpandConfig.MENU_TYPE_SETTING_EXPAND_BBS);
+						content.selectFromURL(decodeURIComponent(decodeURIComponent(query.url)));
+						break;
+					default:
+						content = config.MenuItemSelect(PageExpandConfig.MENU_TYPE_SETTING_STANDARD);
+						break;
+					}
+				});
+
 			});
-
 		});
 		break;
 
@@ -60721,15 +60906,6 @@ function PageExpand(execute_type){
 		}
 
 
-		// タイマー関数
-		var addon_timers = FirefoxAddonGetTimers();
-		if(addon_timers){
-			this.setTimeout = addon_timers.setTimeout;
-			this.clearTimeout = addon_timers.clearTimeout;
-			this.setInterval = addon_timers.setInterval;
-			this.clearInterval = addon_timers.clearInterval;
-		}
-
 		PageExpandBackGroundForFirefox();
 		break;
 
@@ -60740,26 +60916,28 @@ function PageExpand(execute_type){
 
 		// Firefox拡張機能通信
 		extension_message = new FirefoxExtensionMessageForContent();
+		extension_message.initialize(function(){
 
-		var popup_menu = new PageExpandPopupMenu();
+			var popup_menu = new PageExpandPopupMenu();
 
-		// --------------------------------------------------------------------------------
-		// バックグラウンドとの通信
-		// --------------------------------------------------------------------------------
-		extension_message.addListener(function(request, sender, sendResponse) {
-			var param = request;
+			// --------------------------------------------------------------------------------
+			// バックグラウンドとの通信
+			// --------------------------------------------------------------------------------
+			extension_message.addListener(function(request, sender, sendResponse) {
+				var param = request;
 
-			switch(param.command){
-			case "reloadPopupMenu":
-				popup_menu.reload();
-				break;
+				switch(param.command){
+				case "reloadPopupMenu":
+					popup_menu.reload();
+					break;
 
-			// 未知の要求
-			default:
-				break;
-			};
+				// 未知の要求
+				default:
+					break;
+				};
+			});
+
 		});
-
 		break;
 
 	};
