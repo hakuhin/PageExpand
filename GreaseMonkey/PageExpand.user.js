@@ -10,7 +10,7 @@
 // --------------------------------------------------------------------------------
 // ==UserScript==
 // @name           PageExpand
-// @version        1.3.2
+// @version        1.3.3
 // @namespace      http://hakuhin.jp/page_expand
 // @description    Image Zoom. Expand Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @include        http://*
@@ -31888,7 +31888,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				UI_Text(parent,"PageExpand ver.1.3.2");
+				UI_Text(parent,"PageExpand ver.1.3.3");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -57749,61 +57749,39 @@
 		return nodes;
 	}
 
-	// --------------------------------------------------------------------------------
-	// オブジェクトをコピー
-	// --------------------------------------------------------------------------------
+	// ------------------------------------------------------------
+	// オブジェクトをコピーする関数
+	// ------------------------------------------------------------
 	function ObjectCopy(obj){
-		if(!obj)	return null;
+		if(obj === null) return null;
+		if(typeof(obj) != "object") return obj;
 
-		var o;
 		var s;
-		var p;
-		var root = new (obj.constructor)();
-		var que = new Array();
+		var o;
+		var k;
+		var r = new (obj.constructor)();
+		var q = new Array();
 
-		que.push({o:root,s:obj});
-
+		q.push({o:r,s:obj});
 		while(true){
-			p = que.pop();
-			if(!p)	break;
+			k = q.pop();
+			if(!k)	break;
 
-			o = p.o;
-			s = p.s;
-			if(s.constructor == Array){
-				var num = s.length;
-				for(p=0;p<num;p++){
-					switch(typeof(s[p])){
-					case "boolean":
-					case "number":
-					case "string":
-					case "null":
-						o[p] = s[p];
-						break;
-					case "object":
-						o[p] = new (s[p].constructor)();
-						que.push({o:o[p],s:s[p]});
-						break;
+			o = k.o;
+			s = k.s;
+			for(k in s){
+				if(typeof(s[k]) == "object"){
+					if(s[k]){
+						o[k] = new (s[k].constructor)();
+						q.push({o:o[k],s:s[k]});
+						continue;
 					}
 				}
-			}else{
-				for(p in s){
-					switch(typeof(s[p])){
-					case "boolean":
-					case "number":
-					case "string":
-					case "null":
-						o[p] = s[p];
-						break;
-					case "object":
-						o[p] = new (s[p].constructor)();
-						que.push({o:o[p],s:s[p]});
-						break;
-					}
-				}
+				o[k] = s[k];
 			}
 		}
 
-		return root;
+		return r;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -57928,11 +57906,11 @@
 			try{
 				var top = window_obj.top;
 				while(window_obj != top){
-				var parent = window_obj.parent;
-				if(parent.document.URL){}
-				_window_list.push(window_obj);
-				window_obj = parent;
-			}
+					var parent = window_obj.parent;
+					if(parent.document.URL){}
+					_window_list.push(window_obj);
+					window_obj = parent;
+				}
 			}catch(e){
 			}
 			_window_root = window_obj;
@@ -58025,11 +58003,12 @@
 		var url = "";
 		var re = new RegExp("^(blob|data|about):","i");
 		try{
-			while(true){
+			var top = window_obj.top;
+			do {
 				url = window_obj.document.URL;
 				if(!url.match(re)) break;
 				window_obj = window_obj.parent;
-			}
+			} while (window_obj != top);
 		}catch(e){
 		}
 
