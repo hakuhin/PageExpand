@@ -16,8 +16,7 @@ function PageExpand(page_expand_arguments){
 	// PageExpand バックグラウンド Opera 用
 	// --------------------------------------------------------------------------------
 	function PageExpandBackGroundForOpera(){
-
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// プロジェクトをロード（内部用）
@@ -337,7 +336,7 @@ function PageExpand(page_expand_arguments){
 									var i = 0;
 									var size = 1024 * 128;
 									var total = xhr.responseText.length;
-									function f(){
+									var f = function (){
 										sendResponse({type:"data",pos:i,total:total,data:xhr.responseText.substr(i,size)},{complete:false});
 
 										i += size;
@@ -346,7 +345,7 @@ function PageExpand(page_expand_arguments){
 											return;
 										}
 										sendResponse({type:"xhr",data:response},{complete:true});
-									}
+									};
 									execute_queue.attachLast(f,null);
 								}
 								break;
@@ -417,7 +416,7 @@ function PageExpand(page_expand_arguments){
 											var i = 0;
 											var size = 1024 * 128;
 											var total = file_reader.result.length;
-											function f(){
+											var f = function (){
 												sendResponse({type:"data",pos:i,total:total,data:file_reader.result.substr(i,size)},{complete:false});
 
 												i += size;
@@ -426,7 +425,7 @@ function PageExpand(page_expand_arguments){
 													return;
 												}
 												sendResponse({type:"xhr",data:response},{complete:true});
-											}
+											};
 											execute_queue.attachLast(f,null);
 										};
 										file_reader.onerror = function(){
@@ -567,8 +566,6 @@ function PageExpand(page_expand_arguments){
 			});
 
 		})();
-
-		return _container;
 	}
 
 

@@ -317,31 +317,31 @@ function PageExpand(page_expand_arguments){
 		// ルートウィンドウのマウス操作
 		// --------------------------------------------------------------------------------
 		(function(){
-			if(window_manager.existWindowRoot()){
-				function mouseMove (e){
-					if(!(task_container.getCountTask())) return;
+			if(!window_manager.existWindowRoot()) return;
 
-					var offset = window_manager.getPositionFromRoot();
+			function mouseMove (e){
+				if(!(task_container.getCountTask())) return;
 
-					// マウス入力を更新
-					input_mouse.setMouseEvent({
-						clientX:e.clientX - offset.x,
-						clientY:e.clientY - offset.y,
-						detail:e.detail,
-						screenX:e.screenX,
-						screenY:e.screenY,
-						ctrlKey:e.ctrlKey,
-						shiftKey:e.shiftKey,
-						altKey:e.altKey,
-						metaKey:e.metaKey,
-						button:e.button
-					});
-				}
+				var offset = window_manager.getPositionFromRoot();
 
-				var document_obj = window_manager.getWindowRoot().document;
-				if(document_obj.addEventListener){
-					document_obj.addEventListener("mousemove",mouseMove);
-				}
+				// マウス入力を更新
+				input_mouse.setMouseEvent({
+					clientX:e.clientX - offset.x,
+					clientY:e.clientY - offset.y,
+					detail:e.detail,
+					screenX:e.screenX,
+					screenY:e.screenY,
+					ctrlKey:e.ctrlKey,
+					shiftKey:e.shiftKey,
+					altKey:e.altKey,
+					metaKey:e.metaKey,
+					button:e.button
+				});
+			}
+
+			var document_obj = window_manager.getWindowRoot().document;
+			if(document_obj.addEventListener){
+				document_obj.addEventListener("mousemove",mouseMove);
 			}
 		})();
 
@@ -361,91 +361,89 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 更新イベント
 		// --------------------------------------------------------------------------------
-		{
-			// ロード完了時に実行
-			function DocumentLoaded(){
-				if(project.getEnableDebugMode()){
-					// デバッグモード
-					page_expand_debug.setVisible(true);
-				}
-
-				// 掲示板拡張初期化
-				if(project.getEnableExpandBbs()){
-					project.initializeScriptCallbackExpandBbs(function(response){
-						expand_bbs.initialized = true;
-						expand_bbs.enable = response.result;
-
-						var ary = expand_bbs.node_queue;
-						var num = ary.length;
-						var i;
-						for(i=0;i<num;i++){
-							execute_queue.attachForExpandBbs(ElementAnalyzeBbs,ary[i]);
-						}
-						expand_bbs.node_queue.length = 0;
-					});
-				}
-
-				if(document.addEventListener){
-					if(MutationObserverSupported()){
-						var mutation_observer = MutationObserverCreate(function(mutations) {
-							var i;
-							var num = mutations.length;
-							for(i=0;i<num;i++){
-								var nodes = mutations[i].addedNodes;
-								if(nodes){
-									var j;
-									var node_num = nodes.length;
-									for(j=0;j<node_num;j++){
-										execute_queue.attachLastForInsertDomNode(DomNodeAnalyzeRoot,nodes[j]);
-									}
-								}
-							}
-						});
-						mutation_observer.observe(document.documentElement,{subtree:true,childList:true});
-					}
-				}else{
-					// DOM の更新を検出できないのでタイマーによるチェック
-					(function(){
-						var frame = 0;
-						var elements = [];
-						var element_pos = 0;
-						var task = task_container.createTask();
-						task.setExecuteFunc(function(task){
-							if(frame <= 0){
-								var i;
-								var num = 5;
-								if(num > element_pos)	num = element_pos;
-								for(i=0;i<num;i++){
-									var element = elements[element_pos];
-									element_pos -= 1;
-									if(element){
-										if(!DomNodeGetInserted(element)){
-											execute_queue.attachLastForInsertDomNode(DomNodeAnalyzeRoot,element);
-										}
-									}
-								}
-								if(element_pos <= 0){
-									elements = ElementGetElementsByTagName(document.body,"*");
-									element_pos = elements.length;
-									if(element_pos > 0)	element_pos -= 1;
-									frame = 60;
-								}
-							}else if(execute_queue.getCountQueue() <= 0){
-								frame -= 1;
-							}
-						});
-					})();
-				}
-
-				// 解析開始
-				execute_queue.attachLastForInsertDomNode(DomNodeAnalyzeRoot,document.documentElement);
+		// ロード完了時に実行
+		function DocumentLoaded(){
+			if(project.getEnableDebugMode()){
+				// デバッグモード
+				page_expand_debug.setVisible(true);
 			}
 
-			// DOM 構築完了
-			DocumentGetLoadedDomContent(document,function(){
-				DocumentLoaded();
-			});
+			// 掲示板拡張初期化
+			if(project.getEnableExpandBbs()){
+				project.initializeScriptCallbackExpandBbs(function(response){
+					expand_bbs.initialized = true;
+					expand_bbs.enable = response.result;
+
+					var ary = expand_bbs.node_queue;
+					var num = ary.length;
+					var i;
+					for(i=0;i<num;i++){
+						execute_queue.attachForExpandBbs(ElementAnalyzeBbs,ary[i]);
+					}
+					expand_bbs.node_queue.length = 0;
+				});
+			}
+
+			if(document.addEventListener){
+				if(MutationObserverSupported()){
+					var mutation_observer = MutationObserverCreate(function(mutations) {
+						var i;
+						var num = mutations.length;
+						for(i=0;i<num;i++){
+							var nodes = mutations[i].addedNodes;
+							if(nodes){
+								var j;
+								var node_num = nodes.length;
+								for(j=0;j<node_num;j++){
+									execute_queue.attachLastForInsertDomNode(DomNodeAnalyzeRoot,nodes[j]);
+								}
+							}
+						}
+					});
+					mutation_observer.observe(document.documentElement,{subtree:true,childList:true});
+				}
+			}else{
+				// DOM の更新を検出できないのでタイマーによるチェック
+				(function(){
+					var frame = 0;
+					var elements = [];
+					var element_pos = 0;
+					var task = task_container.createTask();
+					task.setExecuteFunc(function(task){
+						if(frame <= 0){
+							var i;
+							var num = 5;
+							if(num > element_pos)	num = element_pos;
+							for(i=0;i<num;i++){
+								var element = elements[element_pos];
+								element_pos -= 1;
+								if(element){
+									if(!DomNodeGetInserted(element)){
+										execute_queue.attachLastForInsertDomNode(DomNodeAnalyzeRoot,element);
+									}
+								}
+							}
+							if(element_pos <= 0){
+								elements = ElementGetElementsByTagName(document.body,"*");
+								element_pos = elements.length;
+								if(element_pos > 0)	element_pos -= 1;
+								frame = 60;
+							}
+						}else if(execute_queue.getCountQueue() <= 0){
+							frame -= 1;
+						}
+					});
+				})();
+			}
+
+			// 解析開始
+			execute_queue.attachLastForInsertDomNode(DomNodeAnalyzeRoot,document.documentElement);
 		}
+
+		// DOM 構築完了
+		DocumentGetLoadedDomContent(document,function(){
+			DocumentLoaded();
+		});
 
 	}
 
@@ -454,12 +452,12 @@ function PageExpand(page_expand_arguments){
 	// PageExpand プロジェクト
 	// --------------------------------------------------------------------------------
 	function PageExpandProject(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// ローカルストレージからロード
 		// --------------------------------------------------------------------------------
-		_container.loadLocalStorage = function(func){
+		_this.loadLocalStorage = function(func){
 			_proj_src = null;
 
 			function projUpdate(){
@@ -504,8 +502,8 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ローカルストレージへセーブ
 		// --------------------------------------------------------------------------------
-		_container.saveLocalStorage = function(func){
-			var obj = _container.exportObject();
+		_this.saveLocalStorage = function(func){
+			var obj = _this.exportObject();
 			obj = PageExpandProjectObjectRemovePreset(obj);
 			LocalStorageSetItem(_key,JsonStringify(obj),function(e){
 				func(e);
@@ -515,7 +513,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ローカルストレージから削除
 		// --------------------------------------------------------------------------------
-		_container.removeLocalStorage = function(func){
+		_this.removeLocalStorage = function(func){
 			LocalStorageRemoveItem(_key,function(e){
 				func(e);
 			});
@@ -524,7 +522,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 同期ストレージからロード
 		// --------------------------------------------------------------------------------
-		_container.loadSyncStorage = function(func){
+		_this.loadSyncStorage = function(func){
 			SyncStorageGetItem(_key,function(e){
 				if(e.result){
 					var obj = null;
@@ -545,8 +543,8 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 同期ストレージへセーブ
 		// --------------------------------------------------------------------------------
-		_container.saveSyncStorage = function(func){
-			var obj = ObjectCopy(_container.getObject());
+		_this.saveSyncStorage = function(func){
+			var obj = ObjectCopy(_this.getObject());
 			obj = PageExpandProjectObjectRemovePreset(obj);
 			SyncStorageSetItem(_key,JsonStringify(obj),function(e){
 				func(e);
@@ -556,7 +554,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 同期ストレージから削除
 		// --------------------------------------------------------------------------------
-		_container.removeSyncStorage = function(func){
+		_this.removeSyncStorage = function(func){
 			SyncStorageRemoveItem(_key,function(e){
 				func(e);
 			});
@@ -565,7 +563,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------------------
-		_container.initialize = function(json){
+		_this.initialize = function(json){
 			_proj_src = null;
 			_proj_src = PageExpandProjectObjectUpdate(_proj_src,null);
 			// 辞書生成
@@ -575,7 +573,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// JSON 文字列からインポート
 		// --------------------------------------------------------------------------------
-		_container.importJSON = function(json){
+		_this.importJSON = function(json){
 			_proj_src = JsonParse(json);
 			_proj_src = PageExpandProjectObjectUpdate(_proj_src,null);
 			// 辞書生成
@@ -585,7 +583,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// オブジェクトからインポート
 		// --------------------------------------------------------------------------------
-		_container.importObject = function(obj){
+		_this.importObject = function(obj){
 			_proj_src = ObjectCopy(obj);
 			_proj_src = PageExpandProjectObjectUpdate(_proj_src,null);
 			// 辞書生成
@@ -595,28 +593,28 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// JSON 文字列をエクスポート
 		// --------------------------------------------------------------------------------
-		_container.exportJSON = function(){
+		_this.exportJSON = function(){
 			return JsonStringify(_proj_src);
 		};
 
 		// --------------------------------------------------------------------------------
 		// オブジェクトをエクスポート
 		// --------------------------------------------------------------------------------
-		_container.exportObject = function(){
+		_this.exportObject = function(){
 			return ObjectCopy(_proj_src);
 		};
 
 		// --------------------------------------------------------------------------------
 		// オブジェクトを直接取得
 		// --------------------------------------------------------------------------------
-		_container.getObject = function (){
+		_this.getObject = function (){
 			return _proj_src;
 		};
 
 		// --------------------------------------------------------------------------------
 		// プロジェクトオブジェクトを取得
 		// --------------------------------------------------------------------------------
-		_container.getProject = function (url){
+		_this.getProject = function (url){
 			if(!url){
 				return _project_unknown.getInstance();
 			}
@@ -864,7 +862,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ウェブリクエスト用オブジェクトを取得
 		// --------------------------------------------------------------------------------
-		_container.getWebRequest = function(current_url,url){
+		_this.getWebRequest = function(current_url,url){
 			var web_request_obj;
 			var cache_obj;
 
@@ -1308,7 +1306,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 言語を習得
 		// --------------------------------------------------------------------------------
-		_container.getLanguage = function(){
+		_this.getLanguage = function(){
 			try{
 				var type = _proj_src.language.type;
 				var code = [
@@ -1389,28 +1387,25 @@ function PageExpand(page_expand_arguments){
 			_enable_webrequest = true;
 			_enable_instance = false;
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// プロジェクト
 	// --------------------------------------------------------------------------------
 	function Project(){
-
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// JSON 文字列からインポート
 		// --------------------------------------------------------------------------------
-		_container.importJSON = function(json){
-			_container.importObject(JsonParse(json));
+		_this.importJSON = function(json){
+			_this.importObject(JsonParse(json));
 		};
 
 		// --------------------------------------------------------------------------------
 		// オブジェクトからインポート
 		// --------------------------------------------------------------------------------
-		_container.importObject = function(obj){
+		_this.importObject = function(obj){
 			_proj_src = obj;
 			instantiate();
 		};
@@ -1418,7 +1413,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// オブジェクトからインポート(バックグラウンド用)
 		// --------------------------------------------------------------------------------
-		_container.importObjectForBackground = function(obj){
+		_this.importObjectForBackground = function(obj){
 			_proj_src = obj;
 			_proj_ins = {
 				enable:_proj_src.enable,
@@ -1430,14 +1425,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// インスタンスを取得
 		// --------------------------------------------------------------------------------
-		_container.getInstance = function(){
+		_this.getInstance = function(){
 			return _proj_ins;
 		};
 
 		// --------------------------------------------------------------------------------
 		// インスタンスをセット
 		// --------------------------------------------------------------------------------
-		_container.setInstance = function(obj){
+		_this.setInstance = function(obj){
 			_proj_ins = obj;
 		};
 
@@ -1498,49 +1493,49 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 実行可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnable = function(){
+		_this.getEnable = function(){
 			return _proj_ins.enable;
 		};
 
 		// --------------------------------------------------------------------------------
 		// デバッグモードが有効であるか
 		// --------------------------------------------------------------------------------
-		_container.getEnableDebugMode = function(){
+		_this.getEnableDebugMode = function(){
 			return _proj_ins.standard.enable_debug_mode;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ログ出力が有効であるか
 		// --------------------------------------------------------------------------------
-		_container.getEnableOutputLog = function(){
+		_this.getEnableOutputLog = function(){
 			return _proj_ins.standard.enable_output_log;
 		};
 
 		// --------------------------------------------------------------------------------
 		// アドレスバーアイコンが有効であるか
 		// --------------------------------------------------------------------------------
-		_container.getEnableIconAddressBar = function(){
+		_this.getEnableIconAddressBar = function(){
 			return _proj_ins.standard.enable_icon_address_bar;
 		};
 
 		// --------------------------------------------------------------------------------
 		// コンテキストメニューが有効か
 		// --------------------------------------------------------------------------------
-		_container.getEnableContextMenu = function(){
+		_this.getEnableContextMenu = function(){
 			return _proj_ins.standard.enable_context_menu;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ロード完了時から動作を開始するか
 		// --------------------------------------------------------------------------------
-		_container.getEnableStartup = function(){
+		_this.getEnableStartup = function(){
 			return _proj_ins.standard.enable_startup;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ロードスレッドの最大数
 		// --------------------------------------------------------------------------------
-		_container.getLoadThreadMax = function(){
+		_this.getLoadThreadMax = function(){
 			var v = _proj_ins.standard.load_thread_max;
 			if(v < 1)	v = 1;
 			return v;
@@ -1549,7 +1544,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 実行キューの占有時間
 		// --------------------------------------------------------------------------------
-		_container.getExecuteQueueOccupancyTime = function(){
+		_this.getExecuteQueueOccupancyTime = function(){
 			var v = _proj_ins.standard.execute_queue.time_occupancy;
 			if(v < 0)		v = 0;
 			if(v > 5000)	v = 5000;
@@ -1559,7 +1554,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 実行キューのスリープ時間
 		// --------------------------------------------------------------------------------
-		_container.getExecuteQueueSleepTime = function(){
+		_this.getExecuteQueueSleepTime = function(){
 			var v = _proj_ins.standard.execute_queue.time_sleep;
 			if(v < 0)		v = 0;
 			if(v > 1000)	v = 1000;
@@ -1569,14 +1564,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// セキュアなページか
 		// --------------------------------------------------------------------------------
-		_container.getSecureCurrent = function(){
+		_this.getSecureCurrent = function(){
 			return _proj_ins.current_secure;
 		};
 
 		// --------------------------------------------------------------------------------
 		// アンセキュアなアクセスが許可されているか
 		// --------------------------------------------------------------------------------
-		_container.checkAllowUnsecure = function(url){
+		_this.checkAllowUnsecure = function(url){
 			if(_proj_ins.enable_unsecure)	return true;
 
 			if(_proj_ins.current_secure){
@@ -1590,7 +1585,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// IFRAME 要素の展開が可能か
 		// --------------------------------------------------------------------------------
-		_container.checkAllowExpandIframeElement = function(url){
+		_this.checkAllowExpandIframeElement = function(url){
 			if(_proj_ins.enable_mixed_content) return true;
 			if(_proj_ins.current_secure){
 				if(url.indexOf("http://") == 0){
@@ -1603,7 +1598,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// EMBED 要素の展開が可能か
 		// --------------------------------------------------------------------------------
-		_container.checkAllowExpandEmbedElement = function(url){
+		_this.checkAllowExpandEmbedElement = function(url){
 			if(_proj_ins.enable_mixed_content) return true;
 			if(_proj_ins.current_secure){
 				if(url.indexOf("http://") == 0){
@@ -1616,7 +1611,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// タッチ入力を使用するか
 		// --------------------------------------------------------------------------------
-		_container.enableInputTouch = function(){
+		_this.enableInputTouch = function(){
 			if(!(window.TouchEvent)) return false;
 			return _proj_ins.standard.enable_input_touch;
 		};
@@ -1624,7 +1619,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ダブルタッチ補助線を使用するか
 		// --------------------------------------------------------------------------------
-		_container.enableDoubleTouchAssist = function(){
+		_this.enableDoubleTouchAssist = function(){
 			if(!(window.TouchEvent)) return false;
 			return _proj_ins.standard.enable_double_touch_assist;
 		};
@@ -1632,7 +1627,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// アクセス遮断対象か調べる
 		// --------------------------------------------------------------------------------
-		_container.checkAccessBlock = function(url){
+		_this.checkAccessBlock = function(url){
 			if(!(_proj_ins.access_block)){
 				return false;
 			}
@@ -1660,14 +1655,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// エレメントの置換が可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableReplacementToElement = function(){
+		_this.getEnableReplacementToElement = function(){
 			return _proj_ins.replacement_to_element;
 		};
 
 		// --------------------------------------------------------------------------------
 		// エレメントの置換用関数を実行
 		// --------------------------------------------------------------------------------
-		_container.executeScriptReplacementToElement = function(element,response){
+		_this.executeScriptReplacementToElement = function(element,response){
 			var defines = _proj_ins.replacement_to_element;
 			var count = 0;
 			var define_num = defines.length;
@@ -1709,14 +1704,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// テキストの置換が可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableReplacementToText = function(){
+		_this.getEnableReplacementToText = function(){
 			return _proj_ins.replacement_to_text;
 		};
 
 		// --------------------------------------------------------------------------------
 		// テキストの置換用関数を実行
 		// --------------------------------------------------------------------------------
-		_container.executeScriptReplacementToText = function(element,response){
+		_this.executeScriptReplacementToText = function(element,response){
 			var defines = _proj_ins.replacement_to_text;
 			var count = 0;
 			var define_num = defines.length;
@@ -1758,14 +1753,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// アンカーの置換が可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableReplacementToAnchor = function(){
+		_this.getEnableReplacementToAnchor = function(){
 			return _proj_ins.replacement_to_anchor;
 		};
 
 		// --------------------------------------------------------------------------------
 		// アンカーの置換用関数を実行
 		// --------------------------------------------------------------------------------
-		_container.executeScriptReplacementToAnchor = function(element,event_dispatcher,response){
+		_this.executeScriptReplacementToAnchor = function(element,event_dispatcher,response){
 			var defines = _proj_ins.replacement_to_anchor;
 			var count = 0;
 			var define_num = defines.length;
@@ -1807,14 +1802,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ハイパーリンクの置換が可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableReplacementToLink = function(){
+		_this.getEnableReplacementToLink = function(){
 			return _proj_ins.replacement_to_link;
 		};
 
 		// --------------------------------------------------------------------------------
 		// リンク置換用オブジェクト取得
 		// --------------------------------------------------------------------------------
-		_container.getReplacementToLink = function(element){
+		_this.getReplacementToLink = function(element){
 			var _link_container = new Object();
 
 			// --------------------------------------------------------------------------------
@@ -1934,19 +1929,19 @@ function PageExpand(page_expand_arguments){
 		// リンク置換用辞書
 		// --------------------------------------------------------------------------------
 		function ReplacementToLinkDictionary(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// オブジェクトを取得
 			// --------------------------------------------------------------------------------
-			_container.getObject = function(key){
+			_this.getObject = function(key){
 				return _dictionary[key];
 			};
 
 			// --------------------------------------------------------------------------------
 			// オブジェクトをセット
 			// --------------------------------------------------------------------------------
-			_container.setObject = function(key,obj){
+			_this.setObject = function(key,obj){
 				_dictionary[key] = obj;
 			};
 
@@ -1959,35 +1954,33 @@ function PageExpand(page_expand_arguments){
 			// 初期化
 			// --------------------------------------------------------------------------------
 			_dictionary = new Object();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// リファラの置換が可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableReplacementToReferer = function(){
+		_this.getEnableReplacementToReferer = function(){
 			return _proj_ins.replacement_to_referer;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ユーザーエージェントの置換が可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableReplacementToUserAgent = function(){
+		_this.getEnableReplacementToUserAgent = function(){
 			return _proj_ins.replacement_to_useragent;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ハイパーリンク化が可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableMakeLinkToText = function(){
+		_this.getEnableMakeLinkToText = function(){
 			return _proj_ins.make_link_to_text;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ハイパーリンク化用関数を実行
 		// --------------------------------------------------------------------------------
-		_container.executeScriptMakeLinkToText = function(element,response){
+		_this.executeScriptMakeLinkToText = function(element,response){
 			var info = {text_node:element};
 			var ary = _proj_ins.make_link_to_text.script;
 			var i;
@@ -2006,14 +1999,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 短縮 URL の展開が可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableExpandShortUrl = function(){
+		_this.getEnableExpandShortUrl = function(){
 			return _proj_ins.expand_short_url;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 短縮 URL の展開対象か調べる
 		// --------------------------------------------------------------------------------
-		_container.checkExpandShortUrl = function(url){
+		_this.checkExpandShortUrl = function(url){
 			if(!(_proj_ins.expand_short_url)){
 				return false;
 			}
@@ -2032,7 +2025,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// BBSの展開が可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableExpandBbs = function(){
+		_this.getEnableExpandBbs = function(){
 			if(_proj_ins.expand_bbs){
 				return true;
 			}
@@ -2042,56 +2035,56 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 掲示板拡張ポップアップアニメーションが有効であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableAnimationPopupBbsResponse = function(){
+		_this.getEnableAnimationPopupBbsResponse = function(){
 			return _proj_ins.expand_bbs.popup.enable_animation;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 掲示板拡張ポップアップの表示座標系を取得
 		// --------------------------------------------------------------------------------
-		_container.getOriginPopupExpandBbsResponse = function(){
+		_this.getOriginPopupExpandBbsResponse = function(){
 			return _proj_ins.expand_bbs.popup.origin_type;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 掲示板拡張ポップアップの表示基点を取得
 		// --------------------------------------------------------------------------------
-		_container.getStylePositionPopupBbsResponse = function(){
+		_this.getStylePositionPopupBbsResponse = function(){
 			return _proj_ins.expand_bbs.popup.position_type;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 掲示板拡張ポップアップの表示基点を取得
 		// --------------------------------------------------------------------------------
-		_container.getPercentPopupBbsResponse = function(){
+		_this.getPercentPopupBbsResponse = function(){
 			return _proj_ins.expand_bbs.popup.percent;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 掲示板拡張ポップアップの開くまでに待機する時間を取得
 		// --------------------------------------------------------------------------------
-		_container.getTimeWaitOpenPopupExpandBbsResponse = function(){
+		_this.getTimeWaitOpenPopupExpandBbsResponse = function(){
 			return _proj_ins.expand_bbs.popup.time_wait_open;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 掲示板拡張ポップアップの閉じるまでに待機する時間を取得
 		// --------------------------------------------------------------------------------
-		_container.getTimeWaitClosePopupExpandBbsResponse = function(){
+		_this.getTimeWaitClosePopupExpandBbsResponse = function(){
 			return _proj_ins.expand_bbs.popup.time_wait_close;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 掲示板拡張レスポンスポップアップ表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandBbsPopupResponse = function(){
+		_this.getStyleSheetExpandBbsPopupResponse = function(){
 			return _proj_ins.expand_bbs.popup.style_sheet;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 掲示板拡張用初期化関数
 		// --------------------------------------------------------------------------------
-		_container.initializeScriptCallbackExpandBbs = function(response){
+		_this.initializeScriptCallbackExpandBbs = function(response){
 			var info = {work:expand_bbs.work};
 			var ary = _proj_ins.expand_bbs.script_initialize;
 			var i;
@@ -2106,7 +2099,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 掲示板拡張用コールバック関数
 		// --------------------------------------------------------------------------------
-		_container.executeScriptCallbackExpandBbs = function(element,response){
+		_this.executeScriptCallbackExpandBbs = function(element,response){
 			var info = {element:element,work:expand_bbs.work};
 			var ary = _proj_ins.expand_bbs.script_callback;
 			var i;
@@ -2125,14 +2118,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// テキストの展開が可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableExpandText = function(){
+		_this.getEnableExpandText = function(){
 			return _proj_ins.expand_text;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 同一のテキストはインライン展開しない
 		// --------------------------------------------------------------------------------
-		_container.getDisableSameInlineText = function(){
+		_this.getDisableSameInlineText = function(){
 			if(_proj_ins.expand_text){
 				return _proj_ins.expand_text.inline.disable_same_text;
 			}
@@ -2142,7 +2135,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		//テキストのインライン展開を許可するかコールバック関数
 		// --------------------------------------------------------------------------------
-		_container.executeScriptAllowInlineText = function(element,url,content_type,response){
+		_this.executeScriptAllowInlineText = function(element,url,content_type,response){
 			var info = {anchor_element:element,current_element:element,url:url,content_type:content_type};
 			var ary = _proj_ins.expand_text.inline.script_allow;
 			var i;
@@ -2161,7 +2154,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// テキストのインライン展開の挿入コールバック実行
 		// --------------------------------------------------------------------------------
-		_container.executeScriptInsertInlineText = function(element,textarea,event_dispatcher,response){
+		_this.executeScriptInsertInlineText = function(element,textarea,event_dispatcher,response){
 			var info = {anchor_element:element,current_element:element,textarea_element:textarea,event_dispatcher:event_dispatcher};
 			var ary = _proj_ins.expand_text.inline.script_insert;
 			var i;
@@ -2180,14 +2173,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// イメージの展開が可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableExpandImage = function(){
+		_this.getEnableExpandImage = function(){
 			return _proj_ins.expand_image;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 同一の画像はサムネイル化しない
 		// --------------------------------------------------------------------------------
-		_container.getDisableSameThumbnailImage = function(){
+		_this.getDisableSameThumbnailImage = function(){
 			if(_proj_ins.expand_image){
 				return _proj_ins.expand_image.thumbnail.disable_same_image;
 			}
@@ -2197,7 +2190,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ポップアップイメージを表示するか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnablePopupImage = function(){
+		_this.getEnablePopupImage = function(){
 			if(_proj_ins.expand_image){
 				return _proj_ins.expand_image.popup.enable_popup_mouseover;
 			}
@@ -2207,7 +2200,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ポップアップアニメーションが有効であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableAnimationPopupImage = function(){
+		_this.getEnableAnimationPopupImage = function(){
 			if(_proj_ins.expand_image.popup.enable_animation_scale)	return true;
 			if(_proj_ins.expand_image.popup.enable_animation_alpha)	return true;
 			return false;
@@ -2216,21 +2209,21 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ポップアップアニメーションが有効であるか取得（スケール）
 		// --------------------------------------------------------------------------------
-		_container.getEnableScaleAnimationPopupImage = function(){
+		_this.getEnableScaleAnimationPopupImage = function(){
 			return _proj_ins.expand_image.popup.enable_animation_scale;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ポップアップアニメーションが有効であるか取得（アルファ）
 		// --------------------------------------------------------------------------------
-		_container.getEnableAlphaAnimationPopupImage = function(){
+		_this.getEnableAlphaAnimationPopupImage = function(){
 			return _proj_ins.expand_image.popup.enable_animation_alpha;
 		};
 
 		// --------------------------------------------------------------------------------
 		// サムネイルイメージを表示するか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableThumbnailImage = function(){
+		_this.getEnableThumbnailImage = function(){
 			if(_proj_ins.expand_image){
 				return _proj_ins.expand_image.thumbnail.enable_thumbnail;
 			}
@@ -2240,14 +2233,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// サムネイルイメージをポップアップ化するか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnablePopupMouseoverToThumbnailImage = function(){
+		_this.getEnablePopupMouseoverToThumbnailImage = function(){
 			return _proj_ins.expand_image.thumbnail.enable_popup_mouseover;
 		};
 
 		// --------------------------------------------------------------------------------
 		// イメージのサムネイル展開を許可するかコールバック関数
 		// --------------------------------------------------------------------------------
-		_container.executeScriptAllowThumbnailImage = function(element,url,content_type,response){
+		_this.executeScriptAllowThumbnailImage = function(element,url,content_type,response){
 			var info = {anchor_element:element,current_element:element,url:url,content_type:content_type};
 			var ary = _proj_ins.expand_image.thumbnail.script_allow;
 			var i;
@@ -2266,7 +2259,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// サムネイルイメージの挿入コールバック実行
 		// --------------------------------------------------------------------------------
-		_container.executeScriptInsertThumbnailImage = function(element,image,event_dispatcher,response){
+		_this.executeScriptInsertThumbnailImage = function(element,image,event_dispatcher,response){
 			var info = {anchor_element:element,current_element:element,image_element:image,event_dispatcher:event_dispatcher};
 			var ary = _proj_ins.expand_image.thumbnail.script_insert;
 			var i;
@@ -2285,7 +2278,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// サムネイルイメージのプリロード設定を取得
 		// --------------------------------------------------------------------------------
-		_container.getEnablePreLoadThumbnailImage = function(){
+		_this.getEnablePreLoadThumbnailImage = function(){
 			if(_proj_ins.expand_image.thumbnail.load_type == "preload")	return true;
 			return false;
 		};
@@ -2293,7 +2286,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ポップアップイメージのプリロード設定を取得
 		// --------------------------------------------------------------------------------
-		_container.getEnablePreLoadPopupImage = function(){
+		_this.getEnablePreLoadPopupImage = function(){
 			if(_proj_ins.expand_image.popup.load_type == "preload")	return true;
 			return false;
 		};
@@ -2301,42 +2294,42 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ポップアップイメージの表示座標系を取得
 		// --------------------------------------------------------------------------------
-		_container.getOriginPopupImage = function(){
+		_this.getOriginPopupImage = function(){
 			return _proj_ins.expand_image.popup.origin_type;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ポップアップイメージの表示基点を取得
 		// --------------------------------------------------------------------------------
-		_container.getStylePositionPopupImage = function(){
+		_this.getStylePositionPopupImage = function(){
 			return _proj_ins.expand_image.popup.position_type;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ポップアップイメージの表示サイズを取得
 		// --------------------------------------------------------------------------------
-		_container.getScalePercentPopupImage = function(){
+		_this.getScalePercentPopupImage = function(){
 			return _proj_ins.expand_image.popup.scale_percent;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ポップアップイメージを開くまでに待機する時間を取得
 		// --------------------------------------------------------------------------------
-		_container.getTimeWaitOpenPopupImage = function(){
+		_this.getTimeWaitOpenPopupImage = function(){
 			return _proj_ins.expand_image.popup.time_wait_open;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ポップアップイメージを閉じるまでに待機する時間を取得
 		// --------------------------------------------------------------------------------
-		_container.getTimeWaitClosePopupImage = function(){
+		_this.getTimeWaitClosePopupImage = function(){
 			return _proj_ins.expand_image.popup.time_wait_close;
 		};
 
 		// --------------------------------------------------------------------------------
 		// イメージのポップアップ展開を許可するかコールバック関数
 		// --------------------------------------------------------------------------------
-		_container.executeScriptAllowPopupImage = function(element,url,content_type,response){
+		_this.executeScriptAllowPopupImage = function(element,url,content_type,response){
 			var info = {anchor_element:element,current_element:element,url:url,content_type:content_type};
 			var ary = _proj_ins.expand_image.popup.script_allow;
 			var i;
@@ -2355,7 +2348,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 縮小イメージのポップアップが可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnablePopupReducedImage = function(){
+		_this.getEnablePopupReducedImage = function(){
 			if(_proj_ins.expand_image){
 				return _proj_ins.expand_image.reduced_image.enable_popup;
 			}
@@ -2365,7 +2358,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 縮小イメージのポップアップが有効となる縮小値
 		// --------------------------------------------------------------------------------
-		_container.getScaleLessThenAllowPopupReducedImage = function(){
+		_this.getScaleLessThenAllowPopupReducedImage = function(){
 			if(_proj_ins.expand_image){
 				return _proj_ins.expand_image.reduced_image.popup_allow_slcale_less_then;
 			}
@@ -2375,7 +2368,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// イメージのロード通知が有効であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableLoadNotifyExpandImage = function(){
+		_this.getEnableLoadNotifyExpandImage = function(){
 			if(_proj_ins.expand_image){
 				return _proj_ins.expand_image.load.enable_notify;
 			}
@@ -2385,7 +2378,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// イメージのソースタイプを取得
 		// --------------------------------------------------------------------------------
-		_container.getSourceLoadExpandImage = function(){
+		_this.getSourceLoadExpandImage = function(){
 			if(_proj_ins.expand_image){
 				return _proj_ins.expand_image.load.src_type;
 			}
@@ -2395,7 +2388,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// イメージのアンロードが有効であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableUnloadExpandImage = function(){
+		_this.getEnableUnloadExpandImage = function(){
 			if(_proj_ins.expand_image){
 				return _proj_ins.expand_image.load.enable_unload;
 			}
@@ -2405,7 +2398,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// イメージのアンロードサイズを取得
 		// --------------------------------------------------------------------------------
-		_container.getSizeMoreThenAllowUnloadExpandImage = function(){
+		_this.getSizeMoreThenAllowUnloadExpandImage = function(){
 			if(_proj_ins.expand_image){
 				return _proj_ins.expand_image.load.unload_allow_size_more_then;
 			}
@@ -2415,14 +2408,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// サウンドの展開が可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableExpandSound = function(){
+		_this.getEnableExpandSound = function(){
 			return _proj_ins.expand_sound;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 同一のオーディオはインライン展開しない
 		// --------------------------------------------------------------------------------
-		_container.getDisableSameInlineSound = function(){
+		_this.getDisableSameInlineSound = function(){
 			if(_proj_ins.expand_sound){
 				return _proj_ins.expand_sound.inline.disable_same_audio;
 			}
@@ -2432,7 +2425,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// インライン表示オーディオの最大表示数
 		// --------------------------------------------------------------------------------
-		_container.getSoundMaxInlineSound = function(){
+		_this.getSoundMaxInlineSound = function(){
 			if(_proj_ins.expand_sound){
 				return _proj_ins.expand_sound.inline.sound_max;
 			}
@@ -2442,7 +2435,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		//オーディオのインライン展開を許可するかコールバック関数
 		// --------------------------------------------------------------------------------
-		_container.executeScriptAllowInlineSound = function(element,url,content_type,response){
+		_this.executeScriptAllowInlineSound = function(element,url,content_type,response){
 			var info = {anchor_element:element,current_element:element,url:url,content_type:content_type};
 			var ary = _proj_ins.expand_sound.inline.script_allow;
 			var i;
@@ -2461,7 +2454,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// オーディオのインライン展開の挿入コールバック実行
 		// --------------------------------------------------------------------------------
-		_container.executeScriptInsertInlineSound = function(element,audio,event_dispatcher,response){
+		_this.executeScriptInsertInlineSound = function(element,audio,event_dispatcher,response){
 			var info = {anchor_element:element,current_element:element,element:audio,event_dispatcher:event_dispatcher};
 			var ary = _proj_ins.expand_sound.inline.script_insert;
 			var i;
@@ -2480,7 +2473,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// AudioElement の展開を許可するかコールバック関数
 		// --------------------------------------------------------------------------------
-		_container.executeScriptAllowAudioElement = function(element,url,content_type,response){
+		_this.executeScriptAllowAudioElement = function(element,url,content_type,response){
 			var info = {anchor_element:element,current_element:element,url:url,content_type:content_type};
 			var ary = _proj_ins.expand_sound.audio_element.script_allow;
 			var i;
@@ -2499,35 +2492,35 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// SoundCloud のプレイヤー (Flash 版) を表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisiblePlayerFlashSoundcloud = function(){
+		_this.getVisiblePlayerFlashSoundcloud = function(){
 			return _proj_ins.expand_sound.soundcloud.visible_player_flash;
 		};
 
 		// --------------------------------------------------------------------------------
 		// SoundCloud のプレイヤー (HTML5 版) を表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisiblePlayerHtml5Soundcloud = function(){
+		_this.getVisiblePlayerHtml5Soundcloud = function(){
 			return _proj_ins.expand_sound.soundcloud.visible_player_html5;
 		};
 
 		// --------------------------------------------------------------------------------
 		// MixCloud のプレイヤーを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisiblePlayerMixcloud = function(){
+		_this.getVisiblePlayerMixcloud = function(){
 			return _proj_ins.expand_sound.mixcloud.visible_player;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ビデオの展開が可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableExpandVideo = function(){
+		_this.getEnableExpandVideo = function(){
 			return _proj_ins.expand_video;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 同一のビデオはインライン展開しない
 		// --------------------------------------------------------------------------------
-		_container.getDisableSameInlineVideo = function(){
+		_this.getDisableSameInlineVideo = function(){
 			if(_proj_ins.expand_video){
 				return _proj_ins.expand_video.inline.disable_same_video;
 			}
@@ -2537,7 +2530,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// インライン表示ビデオの最大表示数
 		// --------------------------------------------------------------------------------
-		_container.getVideoMaxInlineVideo = function(){
+		_this.getVideoMaxInlineVideo = function(){
 			if(_proj_ins.expand_video){
 				return _proj_ins.expand_video.inline.video_max;
 			}
@@ -2547,7 +2540,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ビデオのインライン展開を許可するかコールバック関数
 		// --------------------------------------------------------------------------------
-		_container.executeScriptAllowInlineVideo = function(element,url,content_type,response){
+		_this.executeScriptAllowInlineVideo = function(element,url,content_type,response){
 			var info = {anchor_element:element,current_element:element,url:url,content_type:content_type};
 			var ary = _proj_ins.expand_video.inline.script_allow;
 			var i;
@@ -2566,7 +2559,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ビデオのインライン展開の挿入コールバック実行
 		// --------------------------------------------------------------------------------
-		_container.executeScriptInsertInlineVideo = function(element,video,event_dispatcher,response){
+		_this.executeScriptInsertInlineVideo = function(element,video,event_dispatcher,response){
 			var info = {anchor_element:element,current_element:element,element:video,event_dispatcher:event_dispatcher};
 			var ary = _proj_ins.expand_video.inline.script_insert;
 			var i;
@@ -2585,7 +2578,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// VideoElement の展開を許可するかコールバック関数
 		// --------------------------------------------------------------------------------
-		_container.executeScriptAllowVideoElement = function(element,url,content_type,response){
+		_this.executeScriptAllowVideoElement = function(element,url,content_type,response){
 			var info = {anchor_element:element,current_element:element,url:url,content_type:content_type};
 			var ary = _proj_ins.expand_video.video_element.script_allow;
 			var i;
@@ -2604,105 +2597,105 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// youtube のビデオを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisibleVideoYoutube = function(){
+		_this.getVisibleVideoYoutube = function(){
 			return _proj_ins.expand_video.youtube.visible_video;
 		};
 
 		// --------------------------------------------------------------------------------
 		// nicovideo のビデオを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisibleVideoNicovideo = function(){
+		_this.getVisibleVideoNicovideo = function(){
 			return _proj_ins.expand_video.nicovideo.visible_video;
 		};
 
 		// --------------------------------------------------------------------------------
 		// nicovideo のビデオサムネイルを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisibleThumbnailVideoNicovideo = function(){
+		_this.getVisibleThumbnailVideoNicovideo = function(){
 			return _proj_ins.expand_video.nicovideo.visible_thumbnail_video;
 		};
 
 		// --------------------------------------------------------------------------------
 		// nicovideo のマイリストサムネイルを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisibleThumbnailMylistNicovideo = function(){
+		_this.getVisibleThumbnailMylistNicovideo = function(){
 			return _proj_ins.expand_video.nicovideo.visible_thumbnail_mylist;
 		};
 
 		// --------------------------------------------------------------------------------
 		// nicovideo のユーザーサムネイルを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisibleThumbnailUserNicovideo = function(){
+		_this.getVisibleThumbnailUserNicovideo = function(){
 			return _proj_ins.expand_video.nicovideo.visible_thumbnail_user;
 		};
 
 		// --------------------------------------------------------------------------------
 		// nicovideo のコミュニティサムネイルを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisibleThumbnailCommunityNicovideo = function(){
+		_this.getVisibleThumbnailCommunityNicovideo = function(){
 			return _proj_ins.expand_video.nicovideo.visible_thumbnail_community;
 		};
 
 		// --------------------------------------------------------------------------------
 		// nicovideo の生放送サムネイルを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisibleThumbnailLiveNicovideo = function(){
+		_this.getVisibleThumbnailLiveNicovideo = function(){
 			return _proj_ins.expand_video.nicovideo.visible_thumbnail_live;
 		};
 
 		// --------------------------------------------------------------------------------
 		// nicovideo の静画サムネイルを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisibleThumbnailSeigaNicovideo = function(){
+		_this.getVisibleThumbnailSeigaNicovideo = function(){
 			return _proj_ins.expand_video.nicovideo.visible_thumbnail_seiga;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ustream の配信ビデオを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisibleVideoLiveUstream = function(){
+		_this.getVisibleVideoLiveUstream = function(){
 			return _proj_ins.expand_video.ustream.visible_video_live;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ustream の録画ビデオを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisibleVideoRecordUstream = function(){
+		_this.getVisibleVideoRecordUstream = function(){
 			return _proj_ins.expand_video.ustream.visible_video_record;
 		};
 
 		// --------------------------------------------------------------------------------
 		// dailymotion の録画ビデオを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisibleVideoDailymotion = function(){
+		_this.getVisibleVideoDailymotion = function(){
 			return _proj_ins.expand_video.dailymotion.visible_video;
 		};
 
 		// --------------------------------------------------------------------------------
 		// vimeo の録画ビデオを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisibleVideoVimeo = function(){
+		_this.getVisibleVideoVimeo = function(){
 			return _proj_ins.expand_video.vimeo.visible_video;
 		};
 
 		// --------------------------------------------------------------------------------
 		// fc2video の録画ビデオを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisibleVideoFc2video = function(){
+		_this.getVisibleVideoFc2video = function(){
 			return _proj_ins.expand_video.fc2video.visible_video;
 		};
 
 		// --------------------------------------------------------------------------------
 		// LiveLeak の録画ビデオを表示するか
 		// --------------------------------------------------------------------------------
-		_container.getVisibleVideoLiveleak = function(){
+		_this.getVisibleVideoLiveleak = function(){
 			return _proj_ins.expand_video.liveleak.visible_video;
 		};
 
 		// --------------------------------------------------------------------------------
 		// テキストインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandTextInline = function(){
+		_this.getStyleSheetExpandTextInline = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_text.inline;
 			}
@@ -2712,7 +2705,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// サムネイルイメージのスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandImageThumbnail = function(){
+		_this.getStyleSheetExpandImageThumbnail = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_image.thumbnail;
 			}
@@ -2722,7 +2715,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ポップアップイメージのスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandImagePopup = function(){
+		_this.getStyleSheetExpandImagePopup = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_image.popup;
 			}
@@ -2732,7 +2725,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// サウンドインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandSoundInlineAudioElement = function(){
+		_this.getStyleSheetExpandSoundInlineAudioElement = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_sound.inline.audio_element.audio;
 			}
@@ -2742,7 +2735,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// SoundCloud インライン表示 Flash 版プレイヤーのスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandSoundSoundcloudInlinePlayerFlash = function(){
+		_this.getStyleSheetExpandSoundSoundcloudInlinePlayerFlash = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_sound.inline.soundcloud.player_flash;
 			}
@@ -2752,7 +2745,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// SoundCloud インライン表示 HTML5 版プレイヤーのスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandSoundSoundcloudInlinePlayerHtml5 = function(){
+		_this.getStyleSheetExpandSoundSoundcloudInlinePlayerHtml5 = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_sound.inline.soundcloud.player_html5;
 			}
@@ -2762,7 +2755,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// MixCloud インライン表示プレイヤーのスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandSoundMixcloudInlinePlayer = function(){
+		_this.getStyleSheetExpandSoundMixcloudInlinePlayer = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_sound.inline.mixcloud.player;
 			}
@@ -2772,7 +2765,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ビデオインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoInlineVideoElement = function(){
+		_this.getStyleSheetExpandVideoInlineVideoElement = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.video_element.video;
 			}
@@ -2782,7 +2775,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// youtube インライン表示ビデオのスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoYoutubeInlineVideo = function(){
+		_this.getStyleSheetExpandVideoYoutubeInlineVideo = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.youtube.video;
 			}
@@ -2792,7 +2785,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// nicovideo ビデオのインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoNicovideoInlineVideo = function(){
+		_this.getStyleSheetExpandVideoNicovideoInlineVideo = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.nicovideo.video;
 			}
@@ -2802,7 +2795,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// nicovideo ビデオサムネイルのインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoNicovideoInlineThumbnailVideo = function(){
+		_this.getStyleSheetExpandVideoNicovideoInlineThumbnailVideo = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.nicovideo.thumbnail_video;
 			}
@@ -2812,7 +2805,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// nicovideo マイリストサムネイルのインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoNicovideoInlineThumbnailMylist = function(){
+		_this.getStyleSheetExpandVideoNicovideoInlineThumbnailMylist = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.nicovideo.thumbnail_mylist;
 			}
@@ -2822,7 +2815,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// nicovideo ユーザーサムネイルのインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoNicovideoInlineThumbnailUser = function(){
+		_this.getStyleSheetExpandVideoNicovideoInlineThumbnailUser = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.nicovideo.thumbnail_user;
 			}
@@ -2832,7 +2825,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// nicovideo コミュニティサムネイルのインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoNicovideoInlineThumbnailCommunity = function(){
+		_this.getStyleSheetExpandVideoNicovideoInlineThumbnailCommunity = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.nicovideo.thumbnail_community;
 			}
@@ -2842,7 +2835,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// nicovideo 生放送サムネイルのインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoNicovideoInlineThumbnailLive = function(){
+		_this.getStyleSheetExpandVideoNicovideoInlineThumbnailLive = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.nicovideo.thumbnail_live;
 			}
@@ -2852,7 +2845,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// nicovideo 静画サムネイルのインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoNicovideoInlineThumbnailSeiga = function(){
+		_this.getStyleSheetExpandVideoNicovideoInlineThumbnailSeiga = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.nicovideo.thumbnail_seiga;
 			}
@@ -2862,7 +2855,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ustream 配信ビデオのインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoUstreamInlineVideoLive = function(){
+		_this.getStyleSheetExpandVideoUstreamInlineVideoLive = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.ustream.video_live;
 			}
@@ -2872,7 +2865,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ustream 録画ビデオのインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoUstreamInlineVideoRecord = function(){
+		_this.getStyleSheetExpandVideoUstreamInlineVideoRecord = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.ustream.video_record;
 			}
@@ -2882,7 +2875,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// dailymotion インライン表示ビデオのスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoDailymotionInlineVideo  = function(){
+		_this.getStyleSheetExpandVideoDailymotionInlineVideo  = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.dailymotion.video;
 			}
@@ -2892,7 +2885,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// vimeo インライン表示ビデオのスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoVimeoInlineVideo = function(){
+		_this.getStyleSheetExpandVideoVimeoInlineVideo = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.vimeo.video;
 			}
@@ -2902,7 +2895,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// fc2video インライン表示ビデオのスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoFc2videoInlineVideo = function(){
+		_this.getStyleSheetExpandVideoFc2videoInlineVideo = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.fc2video.video;
 			}
@@ -2912,7 +2905,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// LiveLeak インライン表示ビデオのスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandVideoLiveleakInlineVideo = function(){
+		_this.getStyleSheetExpandVideoLiveleakInlineVideo = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.liveleak.video;
 			}
@@ -2922,7 +2915,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// インラインフレームのインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_container.getStyleSheetExpandIframeInline = function(){
+		_this.getStyleSheetExpandIframeInline = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_iframe.inline;
 			}
@@ -2932,14 +2925,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// インラインフレームの展開が可能であるか取得
 		// --------------------------------------------------------------------------------
-		_container.getEnableExpandIframe = function(){
+		_this.getEnableExpandIframe = function(){
 			return _proj_ins.expand_iframe;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 同一のインラインフレームはインライン展開しない
 		// --------------------------------------------------------------------------------
-		_container.getDisableSameInlineIframe = function(){
+		_this.getDisableSameInlineIframe = function(){
 			if(_proj_ins.expand_iframe){
 				return _proj_ins.expand_iframe.inline.disable_same_iframe;
 			}
@@ -2949,7 +2942,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// インラインフレームのインライン展開を許可するかコールバック関数
 		// --------------------------------------------------------------------------------
-		_container.executeScriptAllowInlineIframe = function(element,url,content_type,response){
+		_this.executeScriptAllowInlineIframe = function(element,url,content_type,response){
 			var info = {anchor_element:element,current_element:element,url:url,content_type:content_type};
 			var ary = _proj_ins.expand_iframe.inline.script_allow;
 			var i;
@@ -2968,7 +2961,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// インラインフレームのインライン展開の挿入コールバック実行
 		// --------------------------------------------------------------------------------
-		_container.executeScriptInsertInlineIframe = function(element,iframe,event_dispatcher,response){
+		_this.executeScriptInsertInlineIframe = function(element,iframe,event_dispatcher,response){
 			var info = {anchor_element:element,current_element:element,iframe_element:iframe,event_dispatcher:event_dispatcher};
 			var ary = _proj_ins.expand_iframe.inline.script_insert;
 			var i;
@@ -2997,8 +2990,6 @@ function PageExpand(page_expand_arguments){
 		(function(){
 			_replacement_to_link_dictionary = new ReplacementToLinkDictionary();
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -6671,26 +6662,7 @@ function PageExpand(page_expand_arguments){
 
 			// リアルタイム検索用
 			var preset = getPreset(proj.replacement_to_anchor,"direct_link_realtime_search");
-			preset.script = 
-"[\n\t" + 
-	function(info,response){
-		var anchor_element = info.anchor_element;
-
-		// Yahoo! JAPAN リアルタイム検索
-		var url = anchor_element.href;
-		var r = new RegExp("^(http|https)://ord\\.yahoo\\.co\\.jp/o/realtime/.*[/][*][-](.*)$","i");
-		if(url.match(r)){
-			anchor_element.href = unescape(RegExp.$2);
-		}
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function(info,response){
-		response({});
-		return true;
-	}.toString() +
-"\n]";
+			preset.script = "";
 
 			// ツイッター用
 			var preset = getPreset(proj.replacement_to_anchor,"direct_link_twitter");
@@ -7936,385 +7908,12 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 簡易
 			updatePreset(proj.make_link_to_text,"simple",function(obj){
-				obj.script =
-"[\n\t" + 
-	function(info,response){
-		var text_node = info.text_node;
-
-		// 対応URIスキーム
-		var scheme_list = [
-			["https://","https://"],
-			["http://","http://"],
-			["ftp://","ftp://"]
-		];
-
-		// 辞書を作成
-		var i;
-		var num = scheme_list.length;
-		var str = "(";
-		var scheme_dictionary = new Object();
-		for(i=0;i<num;i++){
-			var scheme = scheme_list[i];
-			scheme_dictionary[scheme[0]] = scheme[1];
-			str += scheme[0];
-			if(i < num - 1){
-				str += "|";
-			}
-		}
-		str += ")";
-		var ignore_dictionary = {"WBR":1};
-		var inline_dictionary = {"SPAN":1,"FONT":1,"TT":1,"EM":1,"B":1,"I":1,"BIG":1,"SMALL":1};
-
-		// 正規表現を作成
-		var char = "[-a-zA-Z0-9<>#%_.!~*'();/?:@&=+$,]";
-		var search_regexp = new RegExp(str + "(" + char + "*)","ig");
-		var char_regexp = new RegExp("^(" + char + "*)","i");
-		var url_regexp = new RegExp("^(http|https|ftp)://(" + char + "{4,})$","");
-		var omit_regexp = new RegExp("\\.\\.\\.$","");
-
-		// テキストを取得
-		var base = DomNodeGetNodeValue(text_node);
-
-		var p = 0;
-		var b = 0;
-		var l1;
-		var l2;
-		var size = base.length;
-		base.replace(search_regexp, function(str,p1,p2,o,s){
-			p += o;
-			l1 = p1.length;
-			l2 = p2.length;
-			var url = scheme_dictionary[p1] + base.substr(p+l1,l2);
-
-			if(size > p + l1 + l2){
-
-				// 有効
-				if(url.match(url_regexp) && !url.match(omit_regexp)){
-
-					// 元のテキストノード
-					text_node.nodeValue = base.substring(b,p);
-
-					// アンカーを作成
-					var anchor_element = DocumentCreateElement('a');
-					anchor_element.href = url;
-					ElementSetTextContent(anchor_element,p1 + p2);
-					DomNode_InsertAfter(text_node,anchor_element);
-
-					p += l1 + l2;
-					b = p;
-
-					// 右側のテキストノードを作成
-					text_node = DocumentCreateText(base.substring(p));
-					DomNode_InsertAfter(anchor_element,text_node);
-
-				}
-
-			}else{
-				var nodes = new Array();
-
-				// 元のテキスト
-				var prev_text = base.substring(b,p);
-
-				// アンカーテキスト
-				nodes.push(DocumentCreateText(p1 + p2));
-
-				var next_node = text_node.nextSibling;
-				while(next_node){
-					if(next_node.nodeType == 1){
-						var result = false;
-						var tag_name = next_node.tagName;
-
-						// 無視するタグ
-						if(ignore_dictionary[tag_name]){
-							nodes.push(next_node);
-							result = true;
-
-						// テキストとして取得を試みるタグ
-						}else if(inline_dictionary[tag_name]){
-							var children = next_node.childNodes;
-							num = children.length;
-							for(i=0;i<num;i++){
-								var node = children[i];
-								if(node.nodeType == 3)	continue;
-								if(node.nodeType == 1){
-									if(ignore_dictionary[node.tagName]){
-										continue;
-									}
-								}
-								break;
-							}
-							if(i >= num){
-								base = ElementGetTextContent(next_node);
-								m = base.match(char_regexp);
-								if(m){
-									if(!RegExp.rightContext){
-										url += base.substr(0,m[1].length);
-										nodes.push(next_node);
-										result = true;
-									}
-								}
-							}
-						}
-
-						if(!result){
-							break;
-						}
-
-					}else if(next_node.nodeType == 3){
-						base = DomNodeGetNodeValue(next_node);
-
-						m = base.match(char_regexp);
-						if(m){
-							url += base.substr(0,m[1].length);
-							if(RegExp.rightContext){
-								// 有効
-								if(url.match(url_regexp) && !url.match(omit_regexp)){
-									// 元のテキストノード
-									next_node.nodeValue = base.substr(0,m[1].length);
-									nodes.push(next_node);
-
-									// 右側のテキストノードを作成
-									var node = DocumentCreateText(base.substring(m[1].length));
-									DomNode_InsertAfter(next_node,node);
-								}
-								break;
-							}else{
-								nodes.push(next_node);
-							}
-						}
-
-					}
-
-					next_node = next_node.nextSibling;
-				}
-
-				// 有効
-				if(url.match(url_regexp) && !url.match(omit_regexp)){
-
-					// 元のテキストノード
-					text_node.nodeValue = prev_text;
-
-					// アンカーを作成
-					var anchor_element = DocumentCreateElement('a');
-					anchor_element.href = url;
-					DomNode_InsertAfter(text_node,anchor_element);
-
-					num = nodes.length;
-					for(i=0;i<num;i++){
-						if(nodes[i]){
-							anchor_element.appendChild(nodes[i]);
-						}
-					}
-				}
-			}
-		});
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function(info,response){
-		response({});
-		return true;
-	}.toString() +
-"\n]";
+				obj.script = "";
 			});
 
 			// 詳細
 			updatePreset(proj.make_link_to_text,"detail",function(obj){
-				obj.script =
-"[\n\t" + 
-	function(info,response){
-		var text_node = info.text_node;
-
-		// 対応URIスキーム
-		var scheme_list = [
-			["https://","https://"],
-			["http://","http://"],
-			["ttps://","https://"],
-			["ttp://","http://"],
-			["ftp://","ftp://"],
-			["tps://","https://"],
-			["tp://","http://"]
-		];
-
-		// 辞書を作成
-		var i;
-		var num = scheme_list.length;
-		var str = "(";
-		var scheme_dictionary = new Object();
-		for(i=0;i<num;i++){
-			var scheme = scheme_list[i];
-			scheme_dictionary[scheme[0]] = scheme[1];
-			str += scheme[0];
-			if(i < num - 1){
-				str += "|";
-			}
-		}
-		str += ")";
-		var ignore_dictionary = {"WBR":1};
-		var inline_dictionary = {"SPAN":1,"FONT":1,"TT":1,"EM":1,"B":1,"I":1,"BIG":1,"SMALL":1};
-
-		// 正規表現を作成
-		var char = "[-a-zA-Z0-9<>#%_.!~*'();/?:@&=+$,]";
-		var search_regexp = new RegExp(str + "(" + char + "*)","ig");
-		var char_regexp = new RegExp("^(" + char + "*)","i");
-		var url_regexp = new RegExp("^(http|https|ftp)://(" + char + "{4,})$","");
-		var omit_regexp = new RegExp("\\.\\.\\.$","");
-
-		// テキストを取得
-		var base = DomNodeGetNodeValue(text_node);
-		var half = StringConvertFromAlphabeticFullToAlphabeticHalf(base);
-		half = StringConvertFromNumericFullToNumericHalf(half);
-		half = StringConvertFromSignFullToSignHalf(half);
-
-		var p = 0;
-		var b = 0;
-		var l1;
-		var l2;
-		var size = half.length;
-		half.replace(search_regexp, function(str,p1,p2,o,s){
-			p += o;
-			l1 = p1.length;
-			l2 = p2.length;
-			var url = scheme_dictionary[p1] + half.substr(p+l1,l2);
-
-			if(size > p + l1 + l2){
-
-				// 有効
-				if(url.match(url_regexp) && !url.match(omit_regexp)){
-
-					// 元のテキストノード
-					text_node.nodeValue = base.substring(b,p);
-
-					// アンカーを作成
-					var anchor_element = DocumentCreateElement('a');
-					anchor_element.href = url;
-					ElementSetTextContent(anchor_element,base.substr(p,l1+l2));
-					DomNode_InsertAfter(text_node,anchor_element);
-
-					p += l1 + l2;
-					b = p;
-
-					// 右側のテキストノードを作成
-					text_node = DocumentCreateText(base.substring(p));
-					DomNode_InsertAfter(anchor_element,text_node);
-
-				}
-
-			}else{
-				var nodes = new Array();
-
-				// 元のテキスト
-				var prev_text = base.substring(b,p);
-
-				// アンカーテキスト
-				nodes.push(DocumentCreateText(base.substr(p,l1+l2)));
-
-				var next_node = text_node.nextSibling;
-				while(next_node){
-					if(next_node.nodeType == 1){
-						var result = false;
-						var tag_name = next_node.tagName;
-
-						// 無視するタグ
-						if(ignore_dictionary[tag_name]){
-							nodes.push(next_node);
-							result = true;
-
-						// テキストとして取得を試みるタグ
-						}else if(inline_dictionary[tag_name]){
-							var children = next_node.childNodes;
-							num = children.length;
-							for(i=0;i<num;i++){
-								var node = children[i];
-								if(node.nodeType == 3)	continue;
-								if(node.nodeType == 1){
-									if(ignore_dictionary[node.tagName]){
-										continue;
-									}
-								}
-								break;
-							}
-							if(i >= num){
-								base = ElementGetTextContent(next_node);
-								half = StringConvertFromAlphabeticFullToAlphabeticHalf(base);
-								half = StringConvertFromNumericFullToNumericHalf(half);
-								half = StringConvertFromSignFullToSignHalf(half);
-								m = half.match(char_regexp);
-								if(m){
-									if(!RegExp.rightContext){
-										url += half.substr(0,m[1].length);
-										nodes.push(next_node);
-										result = true;
-									}
-								}
-							}
-						}
-
-						if(!result){
-							break;
-						}
-
-					}else if(next_node.nodeType == 3){
-						base = DomNodeGetNodeValue(next_node);
-						half = StringConvertFromAlphabeticFullToAlphabeticHalf(base);
-						half = StringConvertFromNumericFullToNumericHalf(half);
-						half = StringConvertFromSignFullToSignHalf(half);
-
-						m = half.match(char_regexp);
-						if(m){
-							url += half.substr(0,m[1].length);
-							if(RegExp.rightContext){
-								// 有効
-								if(url.match(url_regexp) && !url.match(omit_regexp)){
-									// 元のテキストノード
-									next_node.nodeValue = base.substr(0,m[1].length);
-									nodes.push(next_node);
-
-									// 右側のテキストノードを作成
-									var node = DocumentCreateText(base.substring(m[1].length));
-									DomNode_InsertAfter(next_node,node);
-								}
-								break;
-							}else{
-								nodes.push(next_node);
-							}
-						}
-
-					}
-
-					next_node = next_node.nextSibling;
-				}
-
-				// 有効
-				if(url.match(url_regexp) && !url.match(omit_regexp)){
-
-					// 元のテキストノード
-					text_node.nodeValue = prev_text;
-
-					// アンカーを作成
-					var anchor_element = DocumentCreateElement('a');
-					anchor_element.href = url;
-					DomNode_InsertAfter(text_node,anchor_element);
-
-					num = nodes.length;
-					for(i=0;i<num;i++){
-						if(nodes[i]){
-							anchor_element.appendChild(nodes[i]);
-						}
-					}
-				}
-			}
-		});
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function(info,response){
-		response({});
-		return true;
-	}.toString() +
-"\n]";
+				obj.script = "";
 			});
 
 			// --------------------------------------------------------------------------------
@@ -8749,88 +8348,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// インライン表示
 			updatePreset(proj.expand_text,"inline",function(obj){
-				obj.inline.script_insert = 
-"[\n\t" + 
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-		var textarea = info.textarea_element;
-		var event_dispatcher = info.event_dispatcher;
-		var style = textarea.style;
-
-		// ピクセル値によるサイズ指定
-		var width  = 400;
-
-		// スクロール補正
-		var revise_scroll = new DocumentReviseScroll();
-		revise_scroll.executeAttachElementBefore(textarea);
-
-		// 改行用
-		var div_prev = DocumentCreateElement("div");
-		var analyze_div_prev = new ElementAnalyzeManager(div_prev,true);
-		ElementSetStyle(div_prev,"height:0px;");
-		DomNode_InsertAfter(anchor_element,div_prev);
-
-		// テキストエリアを挿入
-		DomNode_InsertAfter(div_prev,textarea);
-
-		// 改行用
-		var div_next = DocumentCreateElement("div");
-		var analyze_div_next = new ElementAnalyzeManager(div_next,true);
-		ElementSetStyle(div_next,"height:0px;");
-		DomNode_InsertAfter(textarea,div_next);
-
-		// 高さを取得
-		var bounding_size = ElementGetBoundingClientRect(textarea);
-		var height = bounding_size.bottom  - bounding_size.top;
-
-		// スタイルのサイズを取得
-		style.width  = "0px";
-		style.height = "0px";
-		bounding_size = ElementGetBoundingClientRect(textarea);
-		var style_w = bounding_size.right  - bounding_size.left;
-		var style_h = bounding_size.bottom  - bounding_size.top;
-
-		// 親の幅を取得
-		var width_max = ElementGetClientWidth(textarea.parentNode);
-
-		// エレメントのサイズ
-		width  -= style_w;
-
-		// 最大幅補正
-		w = width_max - style_w;
-		if(w < width){
-			width = w;
-		}
-
-		// サイズをセット
-		style.width  = width  + "px";
-		style.height = (height - style_h) + "px";
-
-		// スクロール補正
-		revise_scroll.executeAttachElementAfter(textarea);
-
-		// 開放時に実行されるイベント
-		var event_handler = event_dispatcher.createEventHandler("release");
-		event_handler.setFunction(function (result){
-			if(analyze_div_prev){
-				analyze_div_prev.release();
-				analyze_div_prev = null;
-			}
-			if(analyze_div_next){
-				analyze_div_next.release();
-				analyze_div_next = null;
-			}
-			if(event_handler){
-				event_handler.release();
-				event_handler = null;
-			}
-		});
-
-		response();
-		return false;
-	}.toString() +
-"\n]";
+				obj.inline.script_insert = "";
 			});
 
 			// --------------------------------------------------------------------------------
@@ -9049,95 +8567,12 @@ function PageExpand(page_expand_arguments){
 	}.toString() +
 "\n]";
 
-
 			// --------------------------------------------------------------------------------
 			// サウンド展開定義
 			// --------------------------------------------------------------------------------
 			// インライン表示
 			updatePreset(proj.expand_sound,"inline",function(obj){
-				obj.inline.script_insert = 
-"[\n\t" + 
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-		var audio = info.element;
-		var event_dispatcher = info.event_dispatcher;
-		var style = audio.style;
-		var width;
-		var height;
-
-		// スクロール補正
-		var revise_scroll = new DocumentReviseScroll();
-		revise_scroll.executeAttachElementBefore(audio);
-
-		// 改行用
-		var div_prev = DocumentCreateElement("div");
-		var analyze_div_prev = new ElementAnalyzeManager(div_prev,true);
-		ElementSetStyle(div_prev,"height:0px;");
-		DomNode_InsertAfter(anchor_element,div_prev);
-
-		// オーディオを挿入
-		DomNode_InsertAfter(div_prev,audio);
-
-		// 改行用
-		var div_next = DocumentCreateElement("div");
-		var analyze_div_next = new ElementAnalyzeManager(div_next,true);
-		ElementSetStyle(div_next,"height:0px;");
-		DomNode_InsertAfter(audio,div_next);
-
-		// サイズを取得
-		var bounding_size = ElementGetBoundingClientRect(audio);
-		var width  = bounding_size.right  - bounding_size.left;
-		var height = bounding_size.bottom  - bounding_size.top;
-
-		// スタイルのサイズを取得
-		style.width  = "0px";
-		style.height = "0px";
-		bounding_size = ElementGetBoundingClientRect(audio);
-		var style_w = bounding_size.right  - bounding_size.left;
-		var style_h = bounding_size.bottom - bounding_size.top;
-
-		// 親の幅を取得
-		var width_max = ElementGetClientWidth(audio.parentNode);
-
-		// エレメントのサイズ
-		width  -= style_w;
-		height -= style_h;
-
-		// 最大幅補正
-		w = width_max - style_w;
-		if(w < width){
-			width = w;
-		}
-
-		// サイズをセット
-		style.width  = width  + "px";
-		style.height = height + "px";
-
-		// スクロール補正
-		revise_scroll.executeAttachElementAfter(audio);
-
-		// 開放時に実行されるイベント
-		var event_handler = event_dispatcher.createEventHandler("release");
-		event_handler.setFunction(function (result){
-			if(analyze_div_prev){
-				analyze_div_prev.release();
-				analyze_div_prev = null;
-			}
-			if(analyze_div_next){
-				analyze_div_next.release();
-				analyze_div_next = null;
-			}
-			if(event_handler){
-				event_handler.release();
-				event_handler = null;
-			}
-		});
-
-		response();
-		return false;
-	}.toString() +
-"\n]";
+				obj.inline.script_insert = "";
 			});
 
 			// --------------------------------------------------------------------------------
@@ -9145,90 +8580,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// インライン表示
 			updatePreset(proj.expand_video,"inline",function(obj){
-				obj.inline.script_insert = 
-"[\n\t" + 
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-		var video = info.element;
-		var event_dispatcher = info.event_dispatcher;
-		var style = video.style;
-		var width;
-		var height;
-
-		// スクロール補正
-		var revise_scroll = new DocumentReviseScroll();
-		revise_scroll.executeAttachElementBefore(video);
-
-		// 改行用
-		var div_prev = DocumentCreateElement("div");
-		var analyze_div_prev = new ElementAnalyzeManager(div_prev,true);
-		ElementSetStyle(div_prev,"height:0px;");
-		DomNode_InsertAfter(anchor_element,div_prev);
-
-		// ビデオを挿入
-		DomNode_InsertAfter(div_prev,video);
-
-		// 改行用
-		var div_next = DocumentCreateElement("div");
-		var analyze_div_next = new ElementAnalyzeManager(div_next,true);
-		ElementSetStyle(div_next,"height:0px;");
-		DomNode_InsertAfter(video,div_next);
-
-		// サイズを取得
-		var bounding_size = ElementGetBoundingClientRect(video);
-		var width  = bounding_size.right  - bounding_size.left;
-		var height = bounding_size.bottom  - bounding_size.top;
-
-		// スタイルのサイズを取得
-		style.width  = "0px";
-		style.height = "0px";
-		bounding_size = ElementGetBoundingClientRect(video);
-		var style_w = bounding_size.right  - bounding_size.left;
-		var style_h = bounding_size.bottom - bounding_size.top;
-
-		// 親の幅を取得
-		var width_max = ElementGetClientWidth(video.parentNode);
-
-		// エレメントのサイズ
-		width  -= style_w;
-		height -= style_h;
-
-		// 最大幅補正
-		w = width_max - style_w;
-		if(w < width){
-			height *= w / width;
-			width = w;
-		}
-
-		// サイズをセット
-		style.width  = width  + "px";
-		style.height = height + "px";
-
-		// スクロール補正
-		revise_scroll.executeAttachElementAfter(video);
-
-		// 開放時に実行されるイベント
-		var event_handler = event_dispatcher.createEventHandler("release");
-		event_handler.setFunction(function (result){
-			if(analyze_div_prev){
-				analyze_div_prev.release();
-				analyze_div_prev = null;
-			}
-			if(analyze_div_next){
-				analyze_div_next.release();
-				analyze_div_next = null;
-			}
-			if(event_handler){
-				event_handler.release();
-				event_handler = null;
-			}
-		});
-
-		response();
-		return false;
-	}.toString() +
-"\n]";
+				obj.inline.script_insert = "";
 			});
 
 			// --------------------------------------------------------------------------------
@@ -9236,197 +8588,12 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// Flash のインライン表示
 			updatePreset(proj.expand_iframe,"expand_flash_inline",function(obj){
-				obj.inline.script_insert = 
-"[\n\t" + 
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-		var iframe = info.iframe_element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// ピクセル値によるサイズ指定
-		width  = 640;
-		height = 480;
-
-		// スクロール補正
-		var revise_scroll = new DocumentReviseScroll();
-		revise_scroll.executeAttachElementBefore(iframe);
-
-		// div_dummy を作成
-		var div_dummy = DocumentCreateElement("div");
-		var analyze_div_dummy = new ElementAnalyzeManager(div_dummy,true);
-		ElementSetStyle(div_dummy,ElementGetStyle(iframe));
-		DomNode_InsertAfter(anchor_element,div_dummy);
-
-		// 改行を作成
-		var div_prev = DocumentCreateElement("div");
-		var analyze_div_prev = new ElementAnalyzeManager(div_prev,true);
-		ElementSetStyle(div_prev,"height:0px;");
-		DomNode_InsertAfter(anchor_element,div_prev);
-
-		// div を挿入
-		DomNode_InsertAfter(div_prev,div_dummy);
-
-		// 改行を作成
-		var div_next = DocumentCreateElement("div");
-		var analyze_div_next = new ElementAnalyzeManager(div_next,true);
-		ElementSetStyle(div_next,"height:0px");
-		DomNode_InsertAfter(div_dummy,div_next);
-
-		// スタイルのサイズを取得
-		div_dummy.style.width  = "0px";
-		div_dummy.style.height = "0px";
-		var bounding_size = ElementGetBoundingClientRect(div_dummy);
-		var style_w = bounding_size.right  - bounding_size.left;
-		var style_h = bounding_size.bottom - bounding_size.top;
-
-		// 親の幅を取得
-		var width_max = ElementGetClientWidth(div_dummy.parentNode);
-
-		// エレメントのサイズ
-		width  -= style_w;
-		height -= style_h;
-
-		// 最大幅補正
-		w = width_max - style_w;
-		if(w < width){
-			height *= w / width;
-			width = w;
-		}
-
-		// サイズをセット
-		div_dummy.style.width  = width  + "px";
-		div_dummy.style.height = height + "px";
-		iframe.style.width  = width  + "px";
-		iframe.style.height = height + "px";
-
-		// スクロール補正
-		revise_scroll.executeAttachElementAfter(iframe);
-
-		// クリック時に実行されるイベント
-		function click_func(e){
-			// iframe を挿入
-			DomNode_InsertAfter(div_dummy,iframe);
-			// div_dummy を解放
-			if(analyze_div_dummy){
-				analyze_div_dummy.release();
-				analyze_div_dummy = null;
-			}
-		}
-		if(div_dummy.addEventListener){
-			div_dummy.addEventListener("click",click_func,true);
-		}else if(div_dummy.attachEvent){
-			div_dummy.attachEvent("onclick",click_func);
-		}
-
-		// 開放時に実行されるイベント
-		var event_handler = event_dispatcher.createEventHandler("release");
-		event_handler.setFunction(function (result){
-			if(analyze_div_dummy){
-				analyze_div_dummy.release();
-				analyze_div_dummy = null;
-			}
-			if(analyze_div_prev){
-				analyze_div_prev.release();
-				analyze_div_prev = null;
-			}
-			if(analyze_div_next){
-				analyze_div_next.release();
-				analyze_div_next = null;
-			}
-			if(event_handler){
-				event_handler.release();
-				event_handler = null;
-			}
-		});
-
-		response();
-		return false;
-	}.toString() +
-"\n]";
+				obj.inline.script_insert = "";
 			});
 
 			// PDF のインライン表示
 			updatePreset(proj.expand_iframe,"expand_pdf_inline",function(obj){
-				obj.inline.script_insert = 
-"[\n\t" + 
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-		var iframe = info.iframe_element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// ピクセル値によるサイズ指定
-		width  = 597;
-		height = 844;
-
-		// スクロール補正
-		var revise_scroll = new DocumentReviseScroll();
-		revise_scroll.executeAttachElementBefore(iframe);
-
-		// 改行を作成
-		var div_prev = DocumentCreateElement("div");
-		var analyze_div_prev = new ElementAnalyzeManager(div_prev,true);
-		ElementSetStyle(div_prev,"height:0px;");
-		DomNode_InsertAfter(anchor_element,div_prev);
-
-		// iframe を挿入
-		DomNode_InsertAfter(div_prev,iframe);
-
-		// 改行を作成
-		var div_next = DocumentCreateElement("div");
-		var analyze_div_next = new ElementAnalyzeManager(div_next,true);
-		ElementSetStyle(div_next,"height:0px");
-		DomNode_InsertAfter(iframe,div_next);
-
-		// スタイルのサイズを取得
-		iframe.style.width  = "0px";
-		iframe.style.height = "0px";
-		var bounding_size = ElementGetBoundingClientRect(iframe);
-		var style_w = bounding_size.right  - bounding_size.left;
-		var style_h = bounding_size.bottom - bounding_size.top;
-
-		// 親の幅を取得
-		var width_max = ElementGetClientWidth(iframe.parentNode);
-
-		// エレメントのサイズ
-		width  -= style_w;
-		height -= style_h;
-
-		// 最大幅補正
-		w = width_max - style_w;
-		if(w < width){
-			width = w;
-		}
-
-		// サイズをセット
-		iframe.style.width  = width  + "px";
-		iframe.style.height = height + "px";
-
-		// スクロール補正
-		revise_scroll.executeAttachElementAfter(iframe);
-
-		// 開放時に実行されるイベント
-		var event_handler = event_dispatcher.createEventHandler("release");
-		event_handler.setFunction(function (result){
-			if(analyze_div_prev){
-				analyze_div_prev.release();
-				analyze_div_prev = null;
-			}
-			if(analyze_div_next){
-				analyze_div_next.release();
-				analyze_div_next = null;
-			}
-			if(event_handler){
-				event_handler.release();
-				event_handler = null;
-			}
-		});
-
-		response();
-		return false;
-	}.toString() +
-"\n]";
+				obj.inline.script_insert = "";
 			});
 
 			// --------------------------------------------------------------------------------
@@ -9704,37 +8871,7 @@ function PageExpand(page_expand_arguments){
 
 				// OGP "og:image"
 				filter[0].filter.push("*://seiga.nicovideo.jp/watch/bk*");
-				filter[0].script = 
-"[\n\t" + 
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-
-		// ローダーオブジェクトを作成
-		var loader = new Loader();
-
-		// 成功
-		loader.onload = function(str){
-			if(str.match(new RegExp("<meta[ \n\r\t]+?property[ \n\r\t]*?=[ \n\r\t]*?\"og:image\"[ \n\r\t]+?content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"))){
-				response({result:true,url:RegExp.$1,content_type:["image"]});
-				return;
-			}
-			response({result:false});
-		};
-
-		// 失敗
-		loader.onerror = function(){
-			response({result:false});
-		};
-
-		// テキストの読み込み
-		loader.setMethod("GET");
-		loader.setURL(anchor_element.href);
-		loader.loadText();
-
-		return true;
-	}.toString() +
-"\n]";
+				filter[0].script = "";
 
 				// OGP "twitter:*"
 				filter[1].script = 
@@ -11750,6 +10887,4676 @@ function PageExpand(page_expand_arguments){
 					flags:{i:true,g:false}
 				}
 			];
+			preset.script_initialize = "";
+			preset.script_callback = "";
+
+			// みみずん検索
+			var obj = addPreset(proj.expand_bbs,"mimizun",null);
+			var preset = obj.preset;
+			preset.filter = [
+				{
+					pattern:"^http://mimizun\\.com/log/2ch/[^/]+/[0-9]+",
+					flags:{i:true,g:false}
+				},{
+					pattern:"^http://mimizun\\.com/log/machi/[^/]+/[0-9]+",
+					flags:{i:true,g:false}
+				}
+			];
+			preset.script_initialize = "";
+			preset.script_callback = "";
+
+			// unkar.org
+			var obj = addPreset(proj.expand_bbs,"unkar",null);
+			var preset = obj.preset;
+			preset.filter = [
+				{
+					pattern:"^http://unkar\\.org/r/[^/]+/[0-9]+",
+					flags:{i:true,g:false}
+				}
+			];
+			preset.script_initialize = "";
+			preset.script_callback = "";
+
+			// あっとちゃんねるず
+			var obj = addPreset(proj.expand_bbs,"atchs",null);
+			var preset = obj.preset;
+			preset.filter = [
+				{
+					pattern:"^http://[^.]+\\.atchs\\.jp/test/read\\.cgi/[^/]+/[0-9]+",
+					flags:{i:true,g:false}
+				}
+			];
+			preset.script_initialize = "";
+			preset.script_callback = "";
+
+			// 4chan.org
+			var obj = addPreset(proj.expand_bbs,"4chan",null);
+			var preset = obj.preset;
+			preset.script_callback = 
+"[\n\t" + 
+	function(info,response){
+		var element = info.element;
+
+		// --------------------------------------------------------------------------------
+		// レスポンスダイアログを登録
+		// --------------------------------------------------------------------------------
+		function attachBbsResponseDialog(response,node,parent_dialog,type){
+
+			// --------------------------------------------------------------------------------
+			// レスアンカー
+			// --------------------------------------------------------------------------------
+			function forResponseAnchor(target){
+				if(BbsControlResponseAnchorExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlResponseAnchor を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var i;
+					var nodes = ElementGetElementsByTagName(target,"a");
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						var node = nodes[i];
+						var numbers = StringCreateResponseAnchorNumbers(ElementGetTextContent(node));
+						if(numbers.getCount()){
+							var control_res_anchor = new BbsControlResponseAnchor(node,false);
+							control_res_anchor.setResponseAnchorNumbers(numbers);
+						}
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlResponseAnchor を検索
+				// --------------------------------------------------------------------------------
+				BbsControlResponseAnchorSearch(target,function(control_res_anchor){
+
+					var element_res_anchor = control_res_anchor.getElement();
+					var numbers = control_res_anchor.getResponseAnchorNumbers();
+
+					// ダイアログを作成
+					var response_dialog = new BbsResponseDialog();
+					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+					response_dialog.setElementParent(node.parent);
+					response_dialog.setElementHitArea(element_res_anchor);
+					response_dialog.oncreate = function(_window,callback){
+
+						_window.className = "reply";
+
+						var created = false;
+						var i = 0;
+						var number_list = numbers.getNumberList();
+						var num = number_list.length;
+						if(!num) return false;
+
+						function f(){
+							var following = bbs_dictionary.getResponse(number_list[i]);
+							var clone = following.getCloneElements();
+
+							var j;
+							var clone_num = clone.length;
+							if(clone_num){
+								var container = DocumentCreateElement("table");
+								container.style.margin = "0px 0px 10px";
+								_window.appendChild(container);
+
+								var param = new Object();
+								param.parent = node.parent;
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									param[obj.name] = obj.element;
+									container.appendChild(obj.element);
+								}
+
+								// レスポンスダイアログを登録
+								attachBbsResponseDialog(following,param,response_dialog,"response");
+
+								created = true;
+							}
+
+							i += 1;
+							if(i < num){
+								execute_queue.attachFirst(f,null);
+							}else{
+								callback({result:created});
+							}
+						}
+						execute_queue.attachFirst(f,null);
+					};
+
+					return null;
+				});
+			}
+
+			// --------------------------------------------------------------------------------
+			// ID
+			// --------------------------------------------------------------------------------
+			function forId(target){
+				if(BbsControlIdExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlId を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var p;
+					var n;
+					var q;
+					var ignore_dictionary = {"A":1,"SCRIPT":1};
+					var queue = new Object();
+					q = {p:queue,n:queue,node:target};
+					queue.p = q;
+					queue.n = q;
+
+					while(queue.n != queue){
+						q = queue.n;
+						p = q.p;
+						n = q.n;
+						p.n = n;
+						n.p = p;
+						var node = q.node;
+						switch(node.nodeType){
+						case 1:
+							if(!(ignore_dictionary[node.tagName])){
+								var i;
+								var nodes = node.childNodes;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									n = queue;
+									p = n.p;
+									q = {p:p,n:n,node:nodes[i]};
+									p.n = q;
+									n.p = q;
+								}
+							}
+
+							// 名前欄
+							if(node.tagName == "SPAN"){
+								if(node.className == "hand"){
+									var m = ElementGetTextContent(node).match(new RegExp("^([a-zA-Z0-9+/.]{8})$","i"));
+									if(m){
+										// BbsControlId を生成
+										var control_id = new BbsControlId(null,true);
+										control_id.setId(m[1]);
+										var element_id = control_id.getElement();
+										DomNode_InsertAfter(node,element_id);
+									}
+								}
+							}
+
+							break;
+						case 3:
+							while(node){
+
+								// 本文
+								var m = DomNodeGetNodeValue(node).match(new RegExp("ID:(|[ ])([a-zA-Z0-9+/.]{8})","i"));
+								if(!m)	break;
+
+								// 元のテキストノード
+								DomNodeSetNodeValue(node,RegExp.leftContext);
+
+								// BbsControlId を生成
+								var control_id = new BbsControlId(null,false);
+								control_id.setId(m[2]);
+								var element_id = control_id.getElement();
+								ElementSetTextContent(element_id,m[0]);
+								DomNode_InsertAfter(node,element_id);
+
+								// 直後テキスト
+								node = DocumentCreateText(RegExp.rightContext);
+								DomNode_InsertAfter(element_id,node);
+							}
+							break;
+						}
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlId を検索
+				// --------------------------------------------------------------------------------
+				BbsControlIdSearch(target,function(control_id){
+
+					control_id.setResponse(response);
+
+					var id = control_id.getId();
+					var element_id = control_id.getElement();
+					var textnode_id = DocumentCreateText("");
+
+					element_id.appendChild(textnode_id);
+
+					// --------------------------------------------------------------------------------
+					// 変化があったときに実行されるイベント
+					// --------------------------------------------------------------------------------
+					control_id.onchange = function(count){
+						if(count > 1){
+							DomNodeSetNodeValue(textnode_id,"[" + count + "]");
+						}else{
+							DomNodeSetNodeValue(textnode_id,"");
+						}
+
+						var style = element_id.style;
+						if(count >= 5){
+							StyleDeclarationSetProperty(style,"color","#e80000");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else if(count >= 2){
+							StyleDeclarationRemoveProperty(style,"color");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else{
+							StyleDeclarationSetProperty(style,"color","#707070");
+							StyleDeclarationSetProperty(style,"font-size","small");
+						}
+						if(count > 1){
+							StyleDeclarationSetProperty(style,"margin","0px 4px 0px 4px");
+						}else{
+							StyleDeclarationRemoveProperty(style,"margin");
+						}
+					};
+					control_id.update();
+
+					// --------------------------------------------------------------------------------
+					// ポップアップ化
+					// --------------------------------------------------------------------------------
+					if(type == "id"){
+						if(response.getId() == id)	return null;
+					}
+
+					// ダイアログを作成
+					var response_dialog = new BbsResponseDialog();
+					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+					response_dialog.setElementParent(node.parent);
+					response_dialog.setElementHitArea(element_id);
+					response_dialog.oncreate = function(_window,callback){
+
+						_window.className = "reply";
+
+						var responses = bbs_dictionary.getResponsesFromId(id);
+						var i = 0;
+						var num = responses.length;
+						if(num <= 1) return false;
+
+						function f(){
+							var response_id = responses[i];
+							var clone = response_id.getCloneElements();
+
+							var j;
+							var clone_num = clone.length;
+							if(clone_num){
+								var container = DocumentCreateElement("table");
+								container.style.margin = "0px 0px 10px";
+								_window.appendChild(container);
+
+								var param = new Object();
+								param.parent = node.parent;
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									param[obj.name] = obj.element;
+									container.appendChild(obj.element);
+								}
+
+								// レスポンスダイアログを登録
+								attachBbsResponseDialog(response_id,param,response_dialog,"id");
+							}
+
+							i += 1;
+							if(i < num){
+								execute_queue.attachFirst(f,null);
+							}else{
+								callback({result:true});
+							}
+						}
+						execute_queue.attachFirst(f,null);
+					};
+
+					return null;
+				});
+			}
+
+			// --------------------------------------------------------------------------------
+			// トリップ
+			// --------------------------------------------------------------------------------
+			function forName(target){
+				if(BbsControlNameExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlName を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var p;
+					var n;
+					var q;
+					var ignore_dictionary = {"SCRIPT":1};
+					var queue = new Object();
+					q = {p:queue,n:queue,node:target};
+					queue.p = q;
+					queue.n = q;
+
+					while(queue.n != queue){
+						q = queue.n;
+						p = q.p;
+						n = q.n;
+						p.n = n;
+						n.p = p;
+						var node = q.node;
+						switch(node.nodeType){
+						case 1:
+							if(!(ignore_dictionary[node.tagName])){
+								var i;
+								var nodes = node.childNodes;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									n = queue;
+									p = n.p;
+									q = {p:p,n:n,node:nodes[i]};
+									p.n = q;
+									n.p = q;
+								}
+							}
+							break;
+						case 3:
+							while(node){
+
+								// 本文
+								var m = DomNodeGetNodeValue(node).match(new RegExp("(!|!!)([a-zA-Z0-9+/.]{10})","i"));
+								if(!m)	break;
+
+								// 元のテキストノード
+								DomNodeSetNodeValue(node,RegExp.leftContext);
+
+								// BbsControlName を生成
+								var control_name = new BbsControlName(null,false);
+								control_name.setName(m[0]);
+								var element_name = control_name.getElement();
+								ElementSetTextContent(element_name,m[0]);
+								DomNode_InsertAfter(node,element_name);
+
+								// 直後テキスト
+								node = DocumentCreateText(RegExp.rightContext);
+								DomNode_InsertAfter(element_name,node);
+							}
+							break;
+						}
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlName を検索
+				// --------------------------------------------------------------------------------
+				BbsControlNameSearch(target,function(control_name){
+
+					control_name.setResponse(response);
+
+					var name = control_name.getName();
+					var element_name = control_name.getElement();
+					var textnode_name = DocumentCreateText("");
+
+
+					// --------------------------------------------------------------------------------
+					// 変化があったときに実行されるイベント
+					// --------------------------------------------------------------------------------
+					control_name.onchange = function(count){
+						if(count > 1){
+							DomNodeSetNodeValue(textnode_name,"(" + count + ")");
+						}else{
+							DomNodeSetNodeValue(textnode_name,"");
+						}
+
+						var style = element_name.style;
+						if(count >= 5){
+							StyleDeclarationSetProperty(style,"color","#e80000");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else if(count >= 2){
+							StyleDeclarationRemoveProperty(style,"color");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else{
+							StyleDeclarationSetProperty(style,"color","#707070");
+							StyleDeclarationSetProperty(style,"font-size","small");
+						}
+					};
+					control_name.update();
+					element_name.appendChild(textnode_name);
+
+					// --------------------------------------------------------------------------------
+					// ポップアップ化
+					// --------------------------------------------------------------------------------
+					if(type == "name"){
+						if(response.getName() == name)	return null;
+					}
+
+					// ダイアログを作成
+					var response_dialog = new BbsResponseDialog();
+					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+					response_dialog.setElementParent(node.parent);
+					response_dialog.setElementHitArea(element_name);
+					response_dialog.oncreate = function(_window,callback){
+
+						_window.className = "reply";
+
+						var responses = bbs_dictionary.getResponsesFromName(name);
+						var i = 0;
+						var num = responses.length;
+						if(num <= 1) return false;
+
+						function f(){
+							var response_name = responses[i];
+							var clone = response_name.getCloneElements();
+
+							var j;
+							var clone_num = clone.length;
+							if(clone_num){
+								var container = DocumentCreateElement("table");
+								container.style.margin = "0px 0px 10px";
+								_window.appendChild(container);
+
+								var param = new Object();
+								param.parent = node.parent;
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									param[obj.name] = obj.element;
+									container.appendChild(obj.element);
+								}
+
+								// レスポンスダイアログを登録
+								attachBbsResponseDialog(response_name,param,response_dialog,"name");
+							}
+
+							i += 1;
+							if(i < num){
+								execute_queue.attachFirst(f,null);
+							}else{
+								callback({result:true});
+							}
+						}
+						execute_queue.attachFirst(f,null);
+					};
+
+					return null;
+				});
+			}
+
+			// --------------------------------------------------------------------------------
+			// フォロワー
+			// --------------------------------------------------------------------------------
+			function forFollower(target){
+				if(BbsControlFollowerExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlFollower を生成
+				// --------------------------------------------------------------------------------
+				var control_follower = new BbsControlFollower(null,true);
+				control_follower.setResponse(response);
+
+				var element_follower = control_follower.getElement();
+				var textnode_follower = DocumentCreateText("");
+
+				element_follower.appendChild(textnode_follower);
+
+				// --------------------------------------------------------------------------------
+				// 変化があったときに実行されるイベント
+				// --------------------------------------------------------------------------------
+				control_follower.onchange = function(count){
+					if(count){
+						textnode_follower.nodeValue = " follower(" + count + ")";
+					}else{
+						textnode_follower.nodeValue = "";
+					}
+
+					var style = element_follower.style;
+					if(count >= 3){
+						StyleDeclarationSetProperty(style,"color","#e80000");
+						StyleDeclarationRemoveProperty(style,"font-size");
+
+					}else{
+						StyleDeclarationSetProperty(style,"color","#707070");
+						StyleDeclarationSetProperty(style,"font-size","small");
+					}
+					if(count){
+						StyleDeclarationSetProperty(style,"margin","0px 4px 0px 0px");
+					}else{
+						StyleDeclarationRemoveProperty(style,"margin");
+					}
+				};
+				control_follower.update();
+				target.appendChild(element_follower);
+
+
+				// --------------------------------------------------------------------------------
+				// ポップアップ化
+				// --------------------------------------------------------------------------------
+				// ダイアログを作成
+				var response_dialog = new BbsResponseDialog();
+				if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+				response_dialog.setElementParent(node.parent);
+				response_dialog.setElementHitArea(element_follower);
+				response_dialog.oncreate = function(_window,callback){
+
+					_window.className = "reply";
+
+					var ary = response.getFollower();
+					var i = 0;
+					var num = ary.length;
+					if(num <= 0) return false;
+
+					function f(){
+						var follower = bbs_dictionary.getResponse(ary[i].getNumber());
+						var clone = follower.getCloneElements();
+
+						var j;
+						var clone_num = clone.length;
+						if(clone_num){
+							var container = DocumentCreateElement("table");
+							container.style.margin = "0px 0px 10px";
+							_window.appendChild(container);
+
+							var param = new Object();
+							param.parent = node.parent;
+							for(j=0;j<clone_num;j++){
+								var obj = clone[j];
+								param[obj.name] = obj.element;
+								container.appendChild(obj.element);
+							}
+
+							// レスポンスダイアログを登録
+							attachBbsResponseDialog(follower,param,response_dialog,"response");
+						}
+
+						i += 1;
+						if(i < num){
+							execute_queue.attachFirst(f,null);
+						}else{
+							callback({result:true});
+						}
+					}
+					execute_queue.attachFirst(f,null);
+				};
+			}
+
+			if(node.post_info){
+				forResponseAnchor(node.post_info);
+				forId(node.post_info);
+				forName(node.post_info);
+				forFollower(node.post_info);
+			}
+			if(node.post_message){
+				forResponseAnchor(node.post_message);
+				forId(node.post_message);
+				forName(node.post_message);
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// 文字列からレスポンス番号を取得
+		// --------------------------------------------------------------------------------
+		function StringCreateResponseAnchorNumbers(str){
+			var numbers = new ResponseAnchorNumbers();
+
+			var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞)([0-9０-９]+)","i");
+			var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("^([0-9０-９]+)","i");
+
+			var m = str.match(re_search);
+			if(m){
+				var p = m[1].length;
+				while(true){
+					// 番号-番号
+					m = str.substr(p).match(re_range);
+					if(m){
+						var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+						var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+						if(min < 1) min = 1;
+						if(max < 1) max = 1;
+						if(min > 0x7fffffff) min = 0x7fffffff;
+						if(max > 0x7fffffff) max = 0x7fffffff;
+						if(max < min){
+							var tmp = min;
+							min = max;
+							max = tmp;
+						}
+						if(max - min > 10000) max = min + 10000;
+						p += m[0].length;
+						numbers.addNumbers(min,max);
+					}else{
+						// 番号
+						m = str.substr(p).match(re_number);
+						if(m){
+							p += m[0].length;
+							var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							if(id < 1) id = 1;
+							if(id > 0x7fffffff) id = 0x7fffffff;
+							numbers.addNumber(id);
+						}
+					}
+
+					if(m){
+						// カンマ
+						if(RegExp.rightContext.search(",") == 0){
+							p += 1;
+							continue;
+						}
+					}
+					break;
+				}
+			}
+			return numbers;
+		}
+
+		// --------------------------------------------------------------------------------
+		// エレメントを解析
+		// --------------------------------------------------------------------------------
+		var useful = (function(){
+			var post_info = element;
+			var post_file;
+			var post_message;
+
+			try{
+				if(post_info.tagName != "DIV")	return false;
+				if(!(post_info.className.match(new RegExp("^postInfo","i"))))	return false;
+			}catch(e){
+				return false;
+			}
+
+			try{
+				post_message = post_info.nextSibling;
+				if(post_message.tagName == "DIV"){
+					if(post_message.className == "file"){
+						post_file = post_message;
+						post_message = post_file.nextSibling;
+					}
+				}
+			}catch(e){
+			}
+
+			try{
+				if(post_message.tagName != "BLOCKQUOTE")	return false;
+				if(post_message.className != "postMessage")	return false;
+			}catch(e){
+				return false;
+			}
+
+			if(!post_file){
+				try{
+					var node = post_info.previousSibling;
+					if(node.tagName == "DIV"){
+						if(node.className == "file"){
+							post_file = node;
+						}
+					}
+				}catch(e){
+				}
+			}
+
+			// document に未登録
+			if(!DomNodeGetAttachedDocument(post_info))	return false;
+
+			// ポップアップを除外
+			var board = false;
+			var node = post_info;
+			while(node){
+				if(node.className == "board"){
+					board = true;
+					break;
+				}
+				node = node.parentNode;
+			}
+			if(!board)	return false;
+
+			// --------------------------------------------------------------------------------
+			// クリーンアップ
+			// --------------------------------------------------------------------------------
+			(function(){
+				function cleanupInfo(target){
+					var nodes = ElementGetElementsByTagName(post_info,"span");
+					var i;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						var node = nodes[i];
+						if(node.className == "postertrip"){
+							// トリップ
+							var m = ElementGetTextContent(element).match(new RegExp("(!|!!)([a-zA-Z0-9+/.]{10})","i"));
+							if(m){
+								ElementSetTextContent(node,m[0]);
+							}
+							break;
+						}
+					}
+				}
+
+				function cleanupMessage(target){
+					BbsControlSearchTrash(target,function(element){
+						var node = element.firstChild;
+						if(!node)	return null;
+						if(node.nodeType != 3)	return null;
+
+						// ID
+						var m = node.nodeValue.match(new RegExp("^ID:(|[ ])([a-zA-Z0-9+/.]{8})","i"));
+						if(m){
+							// 直後テキスト
+							var node = DocumentCreateText(m[0]);
+							DomNode_InsertAfter(element,node);
+							DomNodeRemove(element);
+							return null;
+						}
+
+						// トリップ
+						var m = node.nodeValue.match(new RegExp("^(!|!!)([a-zA-Z0-9+/.]{10})","i"));
+						if(m){
+							// 直後テキスト
+							var node = DocumentCreateText(m[0]);
+							DomNode_InsertAfter(element,node);
+							DomNodeRemove(element);
+							return null;
+						}
+
+						return null;
+					});
+				}
+
+				if(post_info){
+					cleanupInfo(post_info);
+				}
+				if(post_message){
+					cleanupMessage(post_message);
+				}
+			})();
+
+			// ナンバーを取得
+			var info_text = ElementGetTextContent(post_info);
+			if(!(info_text.match(new RegExp("No\\.([0-9]+)","i"))))	return false;
+
+			// ナンバーからレスポンスオブジェクトを取得
+			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
+
+			// レスポンス解析
+			if(!response.getAnalyzed()){
+
+				// IDの取得
+				if(info_text.match(new RegExp("\\(ID:[ ]([a-zA-Z0-9+/.]+)\\)","i"))){
+					response.setId(RegExp.$1);
+				}
+
+				// 名前の取得
+				(function(){
+					var nodes = ElementGetElementsByTagName(post_info,"span");
+					var i;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						var node = nodes[i];
+						if(node.className == "postertrip"){
+							response.setName(ElementGetTextContent(node));
+							break;
+						}
+					}
+				})();
+
+				// フォロー解析
+				var dictionary = new Object();
+				(function(){
+					var nodes = ElementGetElementsByTagName(post_message,"a");
+					var i;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						var numbers = StringCreateResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
+						numbers.getNumbers(function(n){
+							if(!dictionary[n]){
+								var following = bbs_dictionary.getResponse(n);
+								following.addFollower(response);
+								dictionary[n] = true;
+							}
+						});
+					}
+				})();
+
+				// オリジナルエレメントをセット
+				if(post_info)		response.addOriginalElements("post_info",post_info);
+				if(post_file)		response.addOriginalElements("post_file",post_file);
+				if(post_message)	response.addOriginalElements("post_message",post_message);
+
+				// 消去時に実行されるイベント
+				response.onerase = function(){
+					var original = response.getOriginalElements();
+					if(original.length){
+						var node = original[0].element;
+						while(node){
+							if(node.className.match(new RegExp("^postContainer","i"))){
+								var revise_scroll = new DocumentReviseScroll();
+								revise_scroll.executeRemoveElementBefore(node);
+								DomNodeRemove(node);
+								revise_scroll.executeRemoveElementAfter(node);
+								break;
+							}
+							node = node.parentNode;
+						}
+					}
+				};
+
+				response.setAnalyzed();
+			}
+
+			// レスポンスダイアログを登録（ルート）
+			attachBbsResponseDialog(
+				response,
+				{
+					post_info:post_info,
+					post_file:post_file,
+					post_message:post_message,
+					parent:document.body
+				},
+				null,
+				null
+			);
+
+			return true;
+		})();
+
+		response({useful:useful});
+		return true;
+	}.toString() +
+"\n]";
+
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			// chaika
+			var obj = addPreset(proj.urlmap,"chaika","image_bbs");
+			obj.preset = {
+				name:{
+					standard:"chaika",
+					locales:{
+						ja:"chaika",
+						en:"chaika"
+					}
+				},
+				enable:true,
+				filter:[
+					"http://127.0.0.1:*/thread/http://2ch.net/*",
+					"http://127.0.0.1:*/thread/http://*.2ch.net/*",
+					"http://127.0.0.1:*/thread/http://*.bbspink.com/*",
+					"http://127.0.0.1:*/thread/http://jbbs.livedoor.jp/*"
+				],
+				enable_unsecure:false,
+				enable_mixed_content:false,
+				access_block:{enable:false,id:[]},
+				replacement_to_element:{enable:false,id:[]},
+				replacement_to_text:{enable:false,id:[]},
+				replacement_to_anchor:{enable:true,id:["direct_link_bbs","no_referrer"]},
+				replacement_to_link:{enable:true,id:["direct_link_generic"]},
+				replacement_to_referer:{enable:true,id:["replacement_link_url"]},
+				replacement_to_useragent:{enable:false,id:""},
+				make_link_to_text:{enable:true,id:"detail"},
+				expand_short_url:{enable:true,id:"detail"},
+				expand_text:{enable:false,id:""},
+				expand_image:{enable:true,id:"thumbnail_not_include_image"},
+				expand_sound:{enable:true,id:"inline"},
+				expand_video:{enable:true,id:"inline"},
+				expand_iframe:{enable:false,id:""},
+				style_sheet:{enable:true,id:"default"},
+				experimental:{enable:false,id:""}
+			};
+
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.14
+		// --------------------------------------------------------------------------------
+		if(proj.version < 14){
+			// バージョン値
+			proj.version = 14;
+
+			var wildcard_name = {
+				standard:"Wild Card",
+				locales:{
+					ja:"ワイルドカード",
+					en:"Wild Card"
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// アクセスブロック定義
+			// --------------------------------------------------------------------------------
+			removePreset("access_block","firefox_extension");
+			removePreset("access_block","opera_extension");
+
+			// ワイルドカード
+			var obj = addPreset(proj.access_block,"wildcard",null);
+			obj.preset = {
+				name:wildcard_name,
+				filter:[]
+			};
+
+			// --------------------------------------------------------------------------------
+			// リファラ置換定義
+			// --------------------------------------------------------------------------------
+			removePreset("replacement_to_referer","firefox_extension");
+
+			// ワイルドカード
+			var obj = addPreset(proj.replacement_to_referer,"wildcard",null);
+			obj.preset = {
+				name:wildcard_name,
+				filter:[]
+			};
+
+			// --------------------------------------------------------------------------------
+			// ユーザーエージェント置換定義
+			// --------------------------------------------------------------------------------
+			removePreset("replacement_to_useragent","firefox_extension");
+
+			// ワイルドカード
+			var obj = addPreset(proj.replacement_to_useragent,"wildcard",null);
+			obj.preset = {
+				name:wildcard_name,
+				filter:[]
+			};
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義
+			// --------------------------------------------------------------------------------
+			// 展開アシスト（アンカー内画像用）
+			var obj = addPreset(proj.replacement_to_element,"assist_image_in_anchor","assist_image_search");
+			obj.preset = {
+				name:{
+					standard:"Assist Expand (image in anchor)",
+					locales:{
+						ja:"展開アシスト（アンカー内画像用）",
+						en:"Assist Expand (image in anchor)"
+					}
+				},
+				script:
+"[\n\t" + 
+	function(info,response){
+		var element = info.element;
+		var result = (function(){
+
+			// イメージ要素
+			if(element.tagName == "IMG"){
+				return true;
+			}
+
+			// バックグラウンドイメージを含む
+			var style = ElementGetComputedStyle(element,null);
+			if(style){
+				if(style.backgroundImage.indexOf("url(") == 0){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			while(element){
+				if(element.tagName == "A"){
+					response({url:element.href});
+					return true;
+				}
+				element = element.parentNode;
+			}
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		response({});
+		return true;
+	}.toString() +
+"\n]"
+			};
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義
+			// --------------------------------------------------------------------------------
+			// 2ch.net 用
+			updatePreset(proj.replacement_to_anchor,"direct_link_bbs",function(obj){
+				obj.script = "";
+			});
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義
+			// --------------------------------------------------------------------------------
+			// 追加
+			update(proj.expand_image,"*",function(obj){
+				if((obj.thumbnail.enable_thumbnail) === undefined)		obj.thumbnail.enable_thumbnail = true;
+				if((obj.popup.enable_popup_mouseover) === undefined)	obj.popup.enable_popup_mouseover = true;
+				if((obj.load.src_type) === undefined)					obj.load.src_type = "mixed_content";
+			});
+
+			// ポップアップ表示（すべてのリンク）
+			var preset_popup_all = getPreset(proj.expand_image,"popup_all");
+			// ポップアップ表示（画像を含むリンク）
+			var preset_popup_include_image = getPreset(proj.expand_image,"popup_include_image");
+			// サムネイル表示（すべて）
+			var preset_thumbnail_all = getPreset(proj.expand_image,"thumbnail_all");
+			// サムネイル表示（画像を含まないリンク）
+			var preset_thumbnail_not_include_image = getPreset(proj.expand_image,"thumbnail_not_include_image");
+
+			preset_popup_all.thumbnail.enable_thumbnail = false;
+			preset_popup_include_image.thumbnail.enable_thumbnail = false;
+			preset_thumbnail_all.popup.enable_popup_mouseover = false;
+			preset_thumbnail_not_include_image.popup.enable_popup_mouseover = false;
+
+			preset_popup_all.thumbnail.script_allow = preset_thumbnail_all.thumbnail.script_allow;
+			preset_thumbnail_all.popup.script_allow = preset_popup_all.popup.script_allow;
+			preset_popup_include_image.thumbnail.script_allow = preset_thumbnail_not_include_image.thumbnail.script_allow;
+			preset_thumbnail_not_include_image.popup.script_allow = preset_popup_include_image.popup.script_allow;
+
+			// ポップアップ表示（アシスト要素のみ）
+			var obj = addPreset(proj.expand_image,"popup_image_in_anchor","thumbnail_all");
+			obj.preset = {
+				name:{
+					standard:"Popup (assist only)",
+					locales:{
+						ja:"ポップアップ表示（アシスト要素のみ）",
+						en:"Popup (assist only)"
+					}
+				},
+				thumbnail:{
+					enable_thumbnail:false,
+					enable_popup_mouseover:true,
+					disable_same_image:false,
+					load_type:"preload",
+					script_allow:"[]",
+					script_insert:preset_thumbnail_not_include_image.thumbnail.script_insert
+				},
+				popup:{
+					enable_popup_mouseover:true,
+					origin_type:"center",
+					position_type:"absolute",
+					time_wait_open:0,
+					time_wait_close:0,
+					enable_animation_scale:true,
+					enable_animation_alpha:true,
+					load_type:"preload",
+					scale_percent:100,
+					script_allow:"[]"
+				},
+				reduced_image:{
+					enable_popup:true,
+					popup_allow_slcale_less_then:70
+				},
+				load:{
+					enable_notify:true,
+					enable_unload:false,
+					src_type:"mixed_content",
+					unload_allow_size_more_then:256
+				}
+			};
+
+			obj.preset.thumbnail.script_allow = 
+"[\n\t" + 
+	function(info,response){
+		var current_element = info.current_element;
+		if(current_element.tagName == "A"){
+			response({result:false});
+			return true;
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		var current_element = info.current_element;
+		var parent = current_element.parentNode;
+		if(parent){
+			var width = ElementGetClientWidth(parent);
+
+			// 親の幅が小さすぎる場合サムネイル化しない
+			if(width < 50){
+				response({result:false});
+				return true;
+			}
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		var current_element = info.current_element;
+		var url = info.url;
+
+		var ext_list = [
+			"bmp",
+			"gif",
+			"jpg",
+			"jpe",
+			"jpeg",
+			"png"
+		];
+
+		var i;
+		var num = ext_list.length;
+		for(i=0;i<num;i++){
+			// URL が画像の拡張子である場合、サムネイル表示を試みる
+			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
+				response({result:true});
+				return true;
+			}
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		var current_element = info.current_element;
+		var content_type = info.content_type;
+
+		// コンテンツタイプに "image" が含まれる
+		if(content_type.join(",").match(/image/i)){
+			response({result:true});
+			return true;
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		// サムネイル表示しない
+		response({result:false});
+		return true;
+	}.toString() +
+"\n]";
+
+			obj.preset.popup.script_allow = 
+"[\n\t" + 
+	function(info,response){
+		var current_element = info.current_element;
+		if(current_element.tagName == "A"){
+			response({result:false});
+			return true;
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		var current_element = info.current_element;
+		var url = info.url;
+
+		var ext_list = [
+			"bmp",
+			"gif",
+			"jpg",
+			"jpe",
+			"jpeg",
+			"png"
+		];
+
+		var i;
+		var num = ext_list.length;
+		for(i=0;i<num;i++){
+			// URL が画像の拡張子である場合、ポップアップ表示を試みる
+			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
+				response({result:true});
+				return true;
+			}
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		var current_element = info.current_element;
+		var content_type = info.content_type;
+
+		// コンテンツタイプに "image" が含まれる
+		if(content_type.join(",").match(/image/i)){
+			response({result:true});
+			return true;
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		// ポップアップ表示しない
+		response({result:false});
+		return true;
+	}.toString() +
+"\n]";
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// ふたば☆ちゃんねる
+			var obj = addPreset(proj.expand_bbs,"2chan",null);
+			var preset = obj.preset;
+			preset.filter = [
+				{
+					pattern:"^http://[^.]+\\.2chan\\.net/[^/]+/res/[0-9]+.htm",
+					flags:{i:true,g:false}
+				}
+			];
+			preset.script_initialize = "";
+			preset.script_callback = "";
+
+			// chaika
+			var obj = addPreset(proj.expand_bbs,"chaika","atchs");
+			obj.preset = {
+				name:{
+					standard:"chaika",
+					locales:{
+						ja:"chaika",
+						en:"chaika"
+					}
+				},
+				enable:true,
+				filter:[
+					{
+						pattern:"^http://127\\.0\\.0\\.1:[0-9]+/thread/http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^http://127\\.0\\.0\\.1:[0-9]+/thread/http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^http://127\\.0\\.0\\.1:[0-9]+/thread/http://jbbs\\.shitaraba\\.net/bbs/read.cgi/[^/]+/[0-9]+/[0-9]+",
+						flags:{i:true,g:false}
+					}
+				],
+				script_initialize:"",
+				script_callback:"",
+				popup:{
+					origin_type:"adsorb_top_bottom",
+					position_type:"absolute",
+					enable_animation:true,
+					percent:{x:75,y:90},
+					time_wait_open:0,
+					time_wait_close:250,
+					style_sheet:"padding:20px 10px; border:1px solid #000; background:#FFF; overflow-y:auto; word-wrap:break-word; word-break:break-all;"
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			// スレッド掲示板
+			updatePreset(proj.urlmap,"bbs",function(obj){
+				obj.filter[6] = "*://jbbs.shitaraba.net/*";
+			});
+
+			// chaika
+			updatePreset(proj.urlmap,"chaika",function(obj){
+				obj.filter[3] = "http://127.0.0.1:*/thread/http://jbbs.shitaraba.net/*";
+			});
+
+			// ピクシブ
+			updatePreset(proj.urlmap,"pixiv",function(obj){
+				obj.replacement_to_element.id.unshift("assist_image_in_anchor");
+				obj.expand_image.id = "popup_image_in_anchor";
+			});
+
+			// --------------------------------------------------------------------------------
+			// 基本設定
+			// --------------------------------------------------------------------------------
+			proj.standard.enable_startup = proj.standard.enable_enable_startup;
+			delete proj.standard.enable_enable_startup;
+			proj.standard.enable_input_touch = true;
+			proj.standard.enable_double_touch_assist = false;
+
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.15
+		// --------------------------------------------------------------------------------
+		if(proj.version < 15){
+			// バージョン値
+			proj.version = 15;
+
+			// --------------------------------------------------------------------------------
+			// URLフィルタ形式を更新
+			// --------------------------------------------------------------------------------
+			var updateForAsteriskFilter = function(filter){
+				return {
+					type:"asterisk",
+					asterisk:{
+						filter:filter
+					},
+					regexp:{
+						filter:[]
+					}
+				};
+			};
+			var updateForRegExpFilter = function(filter){
+				return {
+					type:"regexp",
+					asterisk:{
+						filter:[]
+					},
+					regexp:{
+						filter:filter
+					}
+				};
+			};
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			update(proj.expand_bbs,"*",function(obj){
+				obj.filter = updateForRegExpFilter(obj.filter);
+			});
+
+			// ２ちゃんねる掲示板
+			var obj = addPreset(proj.expand_bbs,"2ch",null);
+			var preset = obj.preset;
+			preset.filter = {
+				type:"regexp",
+				asterisk:{
+					filter:[]
+				},
+				regexp:{
+					filter:[
+						{
+							pattern:"^http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						},{
+							pattern:"^http://(|[^.]+\\.)machi\\.to/bbs/read\\.cgi/[^/]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						},{
+							pattern:"^http://(|[^.]+\\.)machibbs\\.net/[^/]+/[^/]*[0-9]+.*$",
+							flags:{i:true,g:false}
+						},{
+							pattern:"^http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						},{
+							pattern:"^http://jbbs\\.shitaraba\\.net/bbs/read.cgi/[^/]+/[0-9]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						},{
+							pattern:"^http://[^.]+\\.kakiko\\.com/test/read\\.cgi/[^/]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						},{
+							pattern:"^http://[^.]+\\.60\\.kg/test/read\\.cgi/[^/]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						}
+					]
+				}
+			};
+			preset.script_initialize = "";
+			preset.script_callback = "";
+
+			// ログ速
+			var obj = addPreset(proj.expand_bbs,"logsoku",null);
+			var preset = obj.preset;
+			preset.filter = {
+				type:"regexp",
+				asterisk:{
+					filter:[]
+				},
+				regexp:{
+					filter:[
+						{
+							pattern:"^http://logsoku\\.com/thread/.*\\.2ch\\.net/[^/]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						},{
+							pattern:"^http://[^.]+\\.logsoku\\.com/r/[^/]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						},{
+							pattern:"^http://logsoku\\.com/r/[^/]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						}
+					]
+				}
+			};
+
+			// みみずん検索
+			var obj = addPreset(proj.expand_bbs,"mimizun",null);
+			var preset = obj.preset;
+			preset.filter = {
+				type:"regexp",
+				asterisk:{
+					filter:[]
+				},
+				regexp:{
+					filter:[
+						{
+							pattern:"^http://mimizun\\.com/log/2ch/[^/]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						},{
+							pattern:"^http://mimizun\\.com/log/machi/[^/]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						}
+					]
+				}
+			};
+
+			// unkar.org
+			var obj = addPreset(proj.expand_bbs,"unkar",null);
+			var preset = obj.preset;
+			preset.filter = {
+				type:"regexp",
+				asterisk:{
+					filter:[]
+				},
+				regexp:{
+					filter:[
+						{
+							pattern:"^http://unkar\\.org/r/[^/]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						}
+					]
+				}
+			};
+
+			// あっとちゃんねるず
+			var obj = addPreset(proj.expand_bbs,"atchs",null);
+			var preset = obj.preset;
+			preset.filter = {
+				type:"regexp",
+				asterisk:{
+					filter:[]
+				},
+				regexp:{
+					filter:[
+						{
+							pattern:"^http://[^.]+\\.atchs\\.jp/test/read\\.cgi/[^/]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						}
+					]
+				}
+			};
+
+			// chaika
+			var obj = addPreset(proj.expand_bbs,"chaika",null);
+			var preset = obj.preset;
+			preset.filter = {
+				type:"regexp",
+				asterisk:{
+					filter:[]
+				},
+				regexp:{
+					filter:[
+						{
+							pattern:"^http://127\\.0\\.0\\.1:[0-9]+/thread/http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						},{
+							pattern:"^http://127\\.0\\.0\\.1:[0-9]+/thread/http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						},{
+							pattern:"^http://127\\.0\\.0\\.1:[0-9]+/thread/http://jbbs\\.shitaraba\\.net/bbs/read.cgi/[^/]+/[0-9]+/[0-9]+.*$",
+							flags:{i:true,g:false}
+						}
+					]
+				}
+			};
+
+			// 4chan.org
+			var obj = addPreset(proj.expand_bbs,"4chan",null);
+			var preset = obj.preset;
+			preset.filter = {
+				type:"regexp",
+				asterisk:{
+					filter:[]
+				},
+				regexp:{
+					filter:[
+						{
+							pattern:"^(http|https)://boards\\.4chan\\.org/[^/]+/.*$",
+							flags:{i:true,g:false}
+						}
+					]
+				}
+			};
+
+			// ニコニコ大百科
+			var obj = addPreset(proj.expand_bbs,"nicovideo_dictionary",null);
+			var preset = obj.preset;
+			preset.script_initialize = "";
+			preset.script_callback = "";
+
+			// --------------------------------------------------------------------------------
+			// アクセスブロック定義
+			// --------------------------------------------------------------------------------
+			update(proj.access_block,"*",function(obj){
+				obj.filter = updateForAsteriskFilter(obj.filter);
+			});
+
+			// --------------------------------------------------------------------------------
+			// リファラ置換定義
+			// --------------------------------------------------------------------------------
+			update(proj.replacement_to_referer,"*",function(obj){
+				var filter = obj.filter;
+				var i;
+				var num = filter.length;
+				for(i=0;i<num;i++){
+					filter[i].filter = updateForAsteriskFilter(filter[i].filter);
+				}
+			});
+
+			// --------------------------------------------------------------------------------
+			// ユーザーエージェント置換定義
+			// --------------------------------------------------------------------------------
+			update(proj.replacement_to_useragent,"*",function(obj){
+				var filter = obj.filter;
+				var i;
+				var num = filter.length;
+				for(i=0;i<num;i++){
+					filter[i].filter = updateForAsteriskFilter(filter[i].filter);
+				}
+			});
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義
+			// --------------------------------------------------------------------------------
+			update(proj.replacement_to_link,"*",function(obj){
+				var filter = obj.filter;
+				var i;
+				var num = filter.length;
+				for(i=0;i<num;i++){
+					filter[i].filter = updateForAsteriskFilter(filter[i].filter);
+				}
+			});
+
+			// ウィキペディア用
+			var preset = getPreset(proj.replacement_to_link,"direct_link_wikipedia");
+			preset.filter[0].filter = {
+				type:"regexp",
+				asterisk:{
+					filter:[]
+				},
+				regexp:{
+					filter:[{
+						pattern:"^[^:]+://[^.]+\\.(|m\\.)(wikipedia|wikimedia|wiktionary|wikinews|wikiquote|wikibooks|wikisource|wikiversity|wikivoyage|mediawiki)\\.org/(wiki|w).*:.*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://en\\.uncyclopedia\\.co/(wiki|w).*:.*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://ansaikuropedia\\.org/(wiki|w).*:.*",
+						flags:{i:true,g:false}
+					}]
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// 短縮 URL 展開
+			// --------------------------------------------------------------------------------
+			update(proj.expand_short_url,"*",function(obj){
+				obj.filter = updateForAsteriskFilter(obj.filter);
+			});
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			update(proj.urlmap,"*",function(obj){
+				obj.filter = updateForAsteriskFilter(obj.filter);
+			});
+
+			// 画像検索サイト
+			var preset = getPreset(proj.urlmap,"image_search");
+			preset.filter = {
+				type:"regexp",
+				asterisk:{
+					filter:[]
+				},
+				regexp:{
+					filter:[{
+						pattern:"^[^:]+://[^.]+\\.google\\.(at|be|ca|ch|de|es|fr|it|nl|no|pl|ru|se|co\\.(id|in|jp|th|uk|za)|com|com\\.(ar|au|br|mx|sa|tr|tw))/(search[?].*tbm=isch|images[?]).*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://images\\.search\\.yahoo\\.com/search/images.*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://[^.]+\\.images\\.search\\.yahoo\\.com/search/images.*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://[^.]+\\.image\\.search\\.yahoo\\.com/search/images.*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://image\\.search\\.yahoo\\.co\\.jp/search[?].*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://image\\.yahoo\\.cn/s[?].*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://www\\.bing\\.com/images/search[?].*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://[^.]+\\.ask\\.com/pictures[?].*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://search\\.aol\\.(com|jp)/aol/image[?].*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://images\\.yandex\\.(ru|com)/.*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://bsearch\\.goo\\.ne\\.jp/(image|scrimg|similarity)\\.php[?].*MT=.*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://image\\.baidu\\.com/.*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://image\\.search\\.naver\\.com/.*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://[^.]*search\\.naver\\.jp/image[?].*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://image\\.search\\.biglobe\\.ne\\.jp/search[?].*",
+						flags:{i:true,g:false}
+					}]
+				}
+			};
+
+			// ウィキペディア
+			var preset = getPreset(proj.urlmap,"wikipedia");
+			preset.filter = {
+				type:"regexp",
+				asterisk:{
+					filter:[]
+				},
+				regexp:{
+					filter:[{
+						pattern:"^[^:]+://[^.]+\\.(|m\\.)(wikipedia|wikimedia|wiktionary|wikinews|wikiquote|wikibooks|wikisource|wikiversity|wikivoyage|mediawiki)\\.org/.*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://en\\.uncyclopedia\\.co/.*",
+						flags:{i:true,g:false}
+					},{
+						pattern:"^[^:]+://ansaikuropedia\\.org/.*",
+						flags:{i:true,g:false}
+					}]
+				}
+			};
+
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.16
+		// --------------------------------------------------------------------------------
+		if(proj.version < 16){
+			// バージョン値
+			proj.version = 16;
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義
+			// --------------------------------------------------------------------------------
+			// 2ch.net 用
+			updatePreset(proj.replacement_to_anchor,"direct_link_bbs",function(obj){
+				obj.script = 
+"[\n\t" + 
+	function(info,response){
+		var anchor_element = info.anchor_element;
+		var r;
+
+		// リンク先を取得
+		var url = anchor_element.href;
+
+		var list = [
+			// 2ちゃんねる
+			{search:"^http://ime\\.nu/",replace:"http://"},
+			{search:"^http://jump\\.2ch\\.net/[?]",replace:"http://"},
+			// まちBBS
+			{search:"^http://machi\\.to/bbs/link\\.cgi[?]URL=",replace:""},
+			// PINKちゃんねる
+			{search:"^http://pinktower\\.com/",replace:"http://"},
+			// したらば掲示板
+			{search:"^http://jbbs\\.shitaraba\\.net/bbs/link\\.cgi[?]url=",replace:""},
+			// ログ速
+			{search:"^http://l\\.moapi\\.net/",replace:""},
+			// かきこ
+			{search:"^http://fast\\.io/",replace:"http://"},
+			// あっとちゃんねるず
+			{search:"^http://z4c\\.in/",replace:"http://"},
+			{search:"^http://www[0-9]+\\.atchs\\.jp/j/",replace:"http://"}
+		];
+
+		var i;
+		var num = list.length;
+		for(i=0;i<num;i++){
+			r = new RegExp(list[i].search,"i");
+			if(url.match(r)){
+				anchor_element.href = url.replace(r,list[i].replace);
+				return false;
+			}
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		response({});
+		return true;
+	}.toString() +
+"\n]";
+			});
+
+			// リアルタイム検索用
+			updatePreset(proj.replacement_to_anchor,"direct_link_realtime_search",function(obj){
+				obj.script = 
+"[\n\t" + 
+	function(info,response){
+		var anchor_element = info.anchor_element;
+
+		// Yahoo! JAPAN リアルタイム検索
+		var url = anchor_element.href;
+		var r = new RegExp("^(http|https)://ord\\.yahoo\\.co\\.jp/o/realtime/.*/([*][-]|[*][*])(.*)$","i");
+		if(url.match(r)){
+			anchor_element.href = unescape(RegExp.$3);
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		response({});
+		return true;
+	}.toString() +
+"\n]";
+			});
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク化定義
+			// --------------------------------------------------------------------------------
+			// 簡易
+			updatePreset(proj.make_link_to_text,"simple",function(obj){
+				obj.script =
+"[\n\t" + 
+	function(info,response){
+		var text_node = info.text_node;
+
+		// 対応URIスキーム
+		var scheme_list = [
+			["https://","https://"],
+			["http://","http://"],
+			["ftp://","ftp://"]
+		];
+
+		// 辞書を作成
+		var i;
+		var num = scheme_list.length;
+		var str = "(";
+		var scheme_dictionary = new Object();
+		for(i=0;i<num;i++){
+			var scheme = scheme_list[i];
+			scheme_dictionary[scheme[0]] = scheme[1];
+			str += scheme[0];
+			if(i < num - 1){
+				str += "|";
+			}
+		}
+		str += ")";
+		var ignore_dictionary = {"WBR":1};
+		var inline_dictionary = {"SPAN":1,"FONT":1,"TT":1,"EM":1,"B":1,"S":1,"I":1,"BIG":1,"SMALL":1};
+
+		// 正規表現を作成
+		var char = "[-a-zA-Z0-9#%_.!~*';/?:@&=+$,]";
+		var search_regexp = new RegExp(str + "(" + char + "*)","ig");
+		var char_regexp = new RegExp("^(" + char + "*)","i");
+		var url_regexp = new RegExp("^(http|https|ftp)://(" + char + "{4,})$","");
+		var omit_regexp = new RegExp("\\.\\.\\.$","");
+
+		// テキストを取得
+		var base = DomNodeGetNodeValue(text_node);
+
+		var p = 0;
+		var b = 0;
+		var m;
+		var l1;
+		var l2;
+		var size = base.length;
+		base.replace(search_regexp, function(str,p1,p2,o,s){
+			p = o;
+			l1 = p1.length;
+			l2 = p2.length;
+			var url = scheme_dictionary[p1] + base.substr(p+l1,l2);
+
+			if(size > p + l1 + l2){
+
+				// 有効
+				if(url.match(url_regexp) && !url.match(omit_regexp)){
+
+					// 元のテキストノード
+					text_node.nodeValue = base.substring(b,p);
+
+					// アンカーを作成
+					var anchor_element = DocumentCreateElement('a');
+					anchor_element.href = url;
+					ElementSetTextContent(anchor_element,p1 + p2);
+					DomNode_InsertAfter(text_node,anchor_element);
+
+					p += l1 + l2;
+					b = p;
+
+					// 右側のテキストノードを作成
+					text_node = DocumentCreateText(base.substring(p));
+					DomNode_InsertAfter(anchor_element,text_node);
+
+				}
+
+			}else{
+				var nodes = new Array();
+
+				// 元のテキスト
+				var prev_text = base.substring(b,p);
+
+				// アンカーテキスト
+				nodes.push(DocumentCreateText(p1 + p2));
+
+				var next_node = text_node.nextSibling;
+				while(next_node){
+					if(next_node.nodeType == 1){
+						var result = false;
+						var tag_name = next_node.tagName;
+
+						// 無視するタグ
+						if(ignore_dictionary[tag_name]){
+							nodes.push(next_node);
+							result = true;
+
+						// テキストとして取得を試みるタグ
+						}else if(inline_dictionary[tag_name]){
+							var children = next_node.childNodes;
+							num = children.length;
+							for(i=0;i<num;i++){
+								var node = children[i];
+								if(node.nodeType == 3)	continue;
+								if(node.nodeType == 1){
+									if(ignore_dictionary[node.tagName]){
+										continue;
+									}
+								}
+								break;
+							}
+							if(i >= num){
+								base = ElementGetTextContent(next_node);
+								m = base.match(char_regexp);
+								if(m){
+									if(!RegExp.rightContext){
+										url += base.substr(0,m[1].length);
+										nodes.push(next_node);
+										result = true;
+									}
+								}
+							}
+						}
+
+						if(!result){
+							break;
+						}
+
+					}else if(next_node.nodeType == 3){
+						base = DomNodeGetNodeValue(next_node);
+
+						m = base.match(char_regexp);
+						if(m){
+							url += base.substr(0,m[1].length);
+							if(RegExp.rightContext){
+								// 有効
+								if(url.match(url_regexp) && !url.match(omit_regexp)){
+									// 元のテキストノード
+									next_node.nodeValue = base.substr(0,m[1].length);
+									nodes.push(next_node);
+
+									// 右側のテキストノードを作成
+									var node = DocumentCreateText(base.substring(m[1].length));
+									DomNode_InsertAfter(next_node,node);
+								}
+								break;
+							}else{
+								nodes.push(next_node);
+							}
+						}
+
+					}
+
+					next_node = next_node.nextSibling;
+				}
+
+				// 有効
+				if(url.match(url_regexp) && !url.match(omit_regexp)){
+
+					// 元のテキストノード
+					text_node.nodeValue = prev_text;
+
+					// アンカーを作成
+					var anchor_element = DocumentCreateElement('a');
+					anchor_element.href = url;
+					DomNode_InsertAfter(text_node,anchor_element);
+
+					num = nodes.length;
+					for(i=0;i<num;i++){
+						if(nodes[i]){
+							anchor_element.appendChild(nodes[i]);
+						}
+					}
+				}
+			}
+		});
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		response({});
+		return true;
+	}.toString() +
+"\n]";
+			});
+
+			// 詳細
+			updatePreset(proj.make_link_to_text,"detail",function(obj){
+				obj.script =
+"[\n\t" + 
+	function(info,response){
+		var text_node = info.text_node;
+
+		// 対応URIスキーム
+		var scheme_list = [
+			["https://","https://"],
+			["http://","http://"],
+			["ttps://","https://"],
+			["ttp://","http://"],
+			["ftp://","ftp://"],
+			["tps://","https://"]
+		];
+
+		// 辞書を作成
+		var i;
+		var num = scheme_list.length;
+		var str = "(";
+		var scheme_dictionary = new Object();
+		for(i=0;i<num;i++){
+			var scheme = scheme_list[i];
+			scheme_dictionary[scheme[0]] = scheme[1];
+			str += scheme[0];
+			if(i < num - 1){
+				str += "|";
+			}
+		}
+		str += ")";
+		var ignore_dictionary = {"WBR":1};
+		var inline_dictionary = {"SPAN":1,"FONT":1,"TT":1,"EM":1,"B":1,"S":1,"I":1,"BIG":1,"SMALL":1};
+
+		// 正規表現を作成
+		var char = "[-a-zA-Z0-9#%_.!~*';/?:@&=+$,]";
+		var search_regexp = new RegExp(str + "(" + char + "*)","ig");
+		var char_regexp = new RegExp("^(" + char + "*)","i");
+		var url_regexp = new RegExp("^(http|https|ftp)://(" + char + "{4,})$","");
+		var omit_regexp = new RegExp("\\.\\.\\.$","");
+
+		// テキストを取得
+		var base = DomNodeGetNodeValue(text_node);
+		var half = StringConvertFromAlphabeticFullToAlphabeticHalf(base);
+		half = StringConvertFromNumericFullToNumericHalf(half);
+		half = StringConvertFromSignFullToSignHalf(half);
+
+		var p = 0;
+		var b = 0;
+		var m;
+		var l1;
+		var l2;
+		var size = half.length;
+		half.replace(search_regexp, function(str,p1,p2,o,s){
+			p = o;
+			l1 = p1.length;
+			l2 = p2.length;
+			var url = scheme_dictionary[p1] + half.substr(p+l1,l2);
+
+			if(size > p + l1 + l2){
+
+				// 有効
+				if(url.match(url_regexp) && !url.match(omit_regexp)){
+
+					// 元のテキストノード
+					text_node.nodeValue = base.substring(b,p);
+
+					// アンカーを作成
+					var anchor_element = DocumentCreateElement('a');
+					anchor_element.href = url;
+					ElementSetTextContent(anchor_element,base.substr(p,l1+l2));
+					DomNode_InsertAfter(text_node,anchor_element);
+
+					p += l1 + l2;
+					b = p;
+
+					// 右側のテキストノードを作成
+					text_node = DocumentCreateText(base.substring(p));
+					DomNode_InsertAfter(anchor_element,text_node);
+
+				}
+
+			}else{
+				var nodes = new Array();
+
+				// 元のテキスト
+				var prev_text = base.substring(b,p);
+
+				// アンカーテキスト
+				nodes.push(DocumentCreateText(base.substr(p,l1+l2)));
+
+				var next_node = text_node.nextSibling;
+				while(next_node){
+					if(next_node.nodeType == 1){
+						var result = false;
+						var tag_name = next_node.tagName;
+
+						// 無視するタグ
+						if(ignore_dictionary[tag_name]){
+							nodes.push(next_node);
+							result = true;
+
+						// テキストとして取得を試みるタグ
+						}else if(inline_dictionary[tag_name]){
+							var children = next_node.childNodes;
+							num = children.length;
+							for(i=0;i<num;i++){
+								var node = children[i];
+								if(node.nodeType == 3)	continue;
+								if(node.nodeType == 1){
+									if(ignore_dictionary[node.tagName]){
+										continue;
+									}
+								}
+								break;
+							}
+							if(i >= num){
+								base = ElementGetTextContent(next_node);
+								half = StringConvertFromAlphabeticFullToAlphabeticHalf(base);
+								half = StringConvertFromNumericFullToNumericHalf(half);
+								half = StringConvertFromSignFullToSignHalf(half);
+								m = half.match(char_regexp);
+								if(m){
+									if(!RegExp.rightContext){
+										url += half.substr(0,m[1].length);
+										nodes.push(next_node);
+										result = true;
+									}
+								}
+							}
+						}
+
+						if(!result){
+							break;
+						}
+
+					}else if(next_node.nodeType == 3){
+						base = DomNodeGetNodeValue(next_node);
+						half = StringConvertFromAlphabeticFullToAlphabeticHalf(base);
+						half = StringConvertFromNumericFullToNumericHalf(half);
+						half = StringConvertFromSignFullToSignHalf(half);
+
+						m = half.match(char_regexp);
+						if(m){
+							url += half.substr(0,m[1].length);
+							if(RegExp.rightContext){
+								// 有効
+								if(url.match(url_regexp) && !url.match(omit_regexp)){
+									// 元のテキストノード
+									next_node.nodeValue = base.substr(0,m[1].length);
+									nodes.push(next_node);
+
+									// 右側のテキストノードを作成
+									var node = DocumentCreateText(base.substring(m[1].length));
+									DomNode_InsertAfter(next_node,node);
+								}
+								break;
+							}else{
+								nodes.push(next_node);
+							}
+						}
+
+					}
+
+					next_node = next_node.nextSibling;
+				}
+
+				// 有効
+				if(url.match(url_regexp) && !url.match(omit_regexp)){
+
+					// 元のテキストノード
+					text_node.nodeValue = prev_text;
+
+					// アンカーを作成
+					var anchor_element = DocumentCreateElement('a');
+					anchor_element.href = url;
+					DomNode_InsertAfter(text_node,anchor_element);
+
+					num = nodes.length;
+					for(i=0;i<num;i++){
+						if(nodes[i]){
+							anchor_element.appendChild(nodes[i]);
+						}
+					}
+				}
+			}
+		});
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		response({});
+		return true;
+	}.toString() +
+"\n]";
+			});
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義
+			// --------------------------------------------------------------------------------
+			// 直リンク（汎用）
+			updatePreset(proj.replacement_to_link,"direct_link_generic",function(obj){
+				var filter = obj.filter;
+
+				// OGP "og:image"
+				filter[0].script = 
+"[\n\t" + 
+	function(info,response){
+
+		var anchor_element = info.anchor_element;
+
+		// ローダーオブジェクトを作成
+		var loader = new Loader();
+
+		// 成功
+		loader.onload = function(str){
+			var m = str.match(new RegExp("<meta[^>]+?property[ \n\r\t]*=[ \n\r\t]*\"og:image\"[^>]*>","i"));
+			if(m){
+				m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
+				if(m){
+					response({result:true,url:m[1],content_type:["image"]});
+					return;
+				}
+			}
+			response({result:false});
+		};
+
+		// 失敗
+		loader.onerror = function(){
+			response({result:false});
+		};
+
+		// テキストの読み込み
+		loader.setMethod("GET");
+		loader.setURL(anchor_element.href);
+		loader.loadText();
+
+		return true;
+	}.toString() +
+"\n]";
+			});
+
+			// --------------------------------------------------------------------------------
+			// テキスト展開定義
+			// --------------------------------------------------------------------------------
+			// インライン表示
+			updatePreset(proj.expand_text,"inline",function(obj){
+				obj.inline.script_insert = 
+"[\n\t" + 
+	function(info,response){
+
+		var anchor_element = info.anchor_element;
+		var textarea = info.textarea_element;
+		var event_dispatcher = info.event_dispatcher;
+		var style = textarea.style;
+
+		// ピクセル値によるサイズ指定
+		var width  = 400;
+
+		// スクロール補正
+		var revise_scroll = new DocumentReviseScroll();
+		revise_scroll.executeAttachElementBefore(textarea);
+
+		// 改行用
+		var div_prev = DocumentCreateElement("div");
+		var analyze_div_prev = new ElementAnalyzeManager(div_prev,true);
+		ElementSetStyle(div_prev,"height:0px;");
+		DomNode_InsertAfter(anchor_element,div_prev);
+
+		// テキストエリアを挿入
+		DomNode_InsertAfter(div_prev,textarea);
+
+		// 改行用
+		var div_next = DocumentCreateElement("div");
+		var analyze_div_next = new ElementAnalyzeManager(div_next,true);
+		ElementSetStyle(div_next,"height:0px;");
+		DomNode_InsertAfter(textarea,div_next);
+
+		// 高さを取得
+		var bounding_size = ElementGetBoundingClientRect(textarea);
+		var height = bounding_size.bottom  - bounding_size.top;
+
+		// スタイルのサイズを取得
+		style.width  = "0px";
+		style.height = "0px";
+		bounding_size = ElementGetBoundingClientRect(textarea);
+		var style_w = bounding_size.right  - bounding_size.left;
+		var style_h = bounding_size.bottom  - bounding_size.top;
+
+		// 親の幅を取得
+		var width_max = ElementGetClientWidth(textarea.parentNode);
+
+		// エレメントのサイズ
+		width  -= style_w;
+
+		// 最大幅補正
+		var w = width_max - style_w;
+		if(w < width){
+			width = w;
+		}
+
+		// サイズをセット
+		style.width  = width  + "px";
+		style.height = (height - style_h) + "px";
+
+		// スクロール補正
+		revise_scroll.executeAttachElementAfter(textarea);
+
+		// 開放時に実行されるイベント
+		var event_handler = event_dispatcher.createEventHandler("release");
+		event_handler.setFunction(function (result){
+			if(analyze_div_prev){
+				analyze_div_prev.release();
+				analyze_div_prev = null;
+			}
+			if(analyze_div_next){
+				analyze_div_next.release();
+				analyze_div_next = null;
+			}
+			if(event_handler){
+				event_handler.release();
+				event_handler = null;
+			}
+		});
+
+		response();
+		return false;
+	}.toString() +
+"\n]";
+			});
+
+			// --------------------------------------------------------------------------------
+			// サウンド展開定義
+			// --------------------------------------------------------------------------------
+			// インライン表示
+			updatePreset(proj.expand_sound,"inline",function(obj){
+				obj.inline.script_insert = 
+"[\n\t" + 
+	function(info,response){
+
+		var anchor_element = info.anchor_element;
+		var audio = info.element;
+		var event_dispatcher = info.event_dispatcher;
+		var style = audio.style;
+		var width;
+		var height;
+
+		// スクロール補正
+		var revise_scroll = new DocumentReviseScroll();
+		revise_scroll.executeAttachElementBefore(audio);
+
+		// 改行用
+		var div_prev = DocumentCreateElement("div");
+		var analyze_div_prev = new ElementAnalyzeManager(div_prev,true);
+		ElementSetStyle(div_prev,"height:0px;");
+		DomNode_InsertAfter(anchor_element,div_prev);
+
+		// オーディオを挿入
+		DomNode_InsertAfter(div_prev,audio);
+
+		// 改行用
+		var div_next = DocumentCreateElement("div");
+		var analyze_div_next = new ElementAnalyzeManager(div_next,true);
+		ElementSetStyle(div_next,"height:0px;");
+		DomNode_InsertAfter(audio,div_next);
+
+		// サイズを取得
+		var bounding_size = ElementGetBoundingClientRect(audio);
+		var width  = bounding_size.right  - bounding_size.left;
+		var height = bounding_size.bottom  - bounding_size.top;
+
+		// スタイルのサイズを取得
+		style.width  = "0px";
+		style.height = "0px";
+		bounding_size = ElementGetBoundingClientRect(audio);
+		var style_w = bounding_size.right  - bounding_size.left;
+		var style_h = bounding_size.bottom - bounding_size.top;
+
+		// 親の幅を取得
+		var width_max = ElementGetClientWidth(audio.parentNode);
+
+		// エレメントのサイズ
+		width  -= style_w;
+		height -= style_h;
+
+		// 最大幅補正
+		var w = width_max - style_w;
+		if(w < width){
+			width = w;
+		}
+
+		// サイズをセット
+		style.width  = width  + "px";
+		style.height = height + "px";
+
+		// スクロール補正
+		revise_scroll.executeAttachElementAfter(audio);
+
+		// 開放時に実行されるイベント
+		var event_handler = event_dispatcher.createEventHandler("release");
+		event_handler.setFunction(function (result){
+			if(analyze_div_prev){
+				analyze_div_prev.release();
+				analyze_div_prev = null;
+			}
+			if(analyze_div_next){
+				analyze_div_next.release();
+				analyze_div_next = null;
+			}
+			if(event_handler){
+				event_handler.release();
+				event_handler = null;
+			}
+		});
+
+		response();
+		return false;
+	}.toString() +
+"\n]";
+			});
+
+			// --------------------------------------------------------------------------------
+			// ビデオ展開定義
+			// --------------------------------------------------------------------------------
+			// インライン表示
+			updatePreset(proj.expand_video,"inline",function(obj){
+				obj.inline.script_insert = 
+"[\n\t" + 
+	function(info,response){
+
+		var anchor_element = info.anchor_element;
+		var video = info.element;
+		var event_dispatcher = info.event_dispatcher;
+		var style = video.style;
+		var width;
+		var height;
+
+		// スクロール補正
+		var revise_scroll = new DocumentReviseScroll();
+		revise_scroll.executeAttachElementBefore(video);
+
+		// 改行用
+		var div_prev = DocumentCreateElement("div");
+		var analyze_div_prev = new ElementAnalyzeManager(div_prev,true);
+		ElementSetStyle(div_prev,"height:0px;");
+		DomNode_InsertAfter(anchor_element,div_prev);
+
+		// ビデオを挿入
+		DomNode_InsertAfter(div_prev,video);
+
+		// 改行用
+		var div_next = DocumentCreateElement("div");
+		var analyze_div_next = new ElementAnalyzeManager(div_next,true);
+		ElementSetStyle(div_next,"height:0px;");
+		DomNode_InsertAfter(video,div_next);
+
+		// サイズを取得
+		var bounding_size = ElementGetBoundingClientRect(video);
+		var width  = bounding_size.right  - bounding_size.left;
+		var height = bounding_size.bottom  - bounding_size.top;
+
+		// スタイルのサイズを取得
+		style.width  = "0px";
+		style.height = "0px";
+		bounding_size = ElementGetBoundingClientRect(video);
+		var style_w = bounding_size.right  - bounding_size.left;
+		var style_h = bounding_size.bottom - bounding_size.top;
+
+		// 親の幅を取得
+		var width_max = ElementGetClientWidth(video.parentNode);
+
+		// エレメントのサイズ
+		width  -= style_w;
+		height -= style_h;
+
+		// 最大幅補正
+		var w = width_max - style_w;
+		if(w < width){
+			height *= w / width;
+			width = w;
+		}
+
+		// サイズをセット
+		style.width  = width  + "px";
+		style.height = height + "px";
+
+		// スクロール補正
+		revise_scroll.executeAttachElementAfter(video);
+
+		// 開放時に実行されるイベント
+		var event_handler = event_dispatcher.createEventHandler("release");
+		event_handler.setFunction(function (result){
+			if(analyze_div_prev){
+				analyze_div_prev.release();
+				analyze_div_prev = null;
+			}
+			if(analyze_div_next){
+				analyze_div_next.release();
+				analyze_div_next = null;
+			}
+			if(event_handler){
+				event_handler.release();
+				event_handler = null;
+			}
+		});
+
+		response();
+		return false;
+	}.toString() +
+"\n]";
+			});
+
+			// --------------------------------------------------------------------------------
+			// インラインフレーム展開定義
+			// --------------------------------------------------------------------------------
+			// Flash のインライン表示
+			updatePreset(proj.expand_iframe,"expand_flash_inline",function(obj){
+				obj.inline.script_insert = 
+"[\n\t" + 
+	function(info,response){
+
+		var anchor_element = info.anchor_element;
+		var iframe = info.iframe_element;
+		var event_dispatcher = info.event_dispatcher;
+
+		// ピクセル値によるサイズ指定
+		var width  = 640;
+		var height = 480;
+
+		// スクロール補正
+		var revise_scroll = new DocumentReviseScroll();
+		revise_scroll.executeAttachElementBefore(iframe);
+
+		// div_dummy を作成
+		var div_dummy = DocumentCreateElement("div");
+		var analyze_div_dummy = new ElementAnalyzeManager(div_dummy,true);
+		ElementSetStyle(div_dummy,ElementGetStyle(iframe));
+		DomNode_InsertAfter(anchor_element,div_dummy);
+
+		// 改行を作成
+		var div_prev = DocumentCreateElement("div");
+		var analyze_div_prev = new ElementAnalyzeManager(div_prev,true);
+		ElementSetStyle(div_prev,"height:0px;");
+		DomNode_InsertAfter(anchor_element,div_prev);
+
+		// div を挿入
+		DomNode_InsertAfter(div_prev,div_dummy);
+
+		// 改行を作成
+		var div_next = DocumentCreateElement("div");
+		var analyze_div_next = new ElementAnalyzeManager(div_next,true);
+		ElementSetStyle(div_next,"height:0px");
+		DomNode_InsertAfter(div_dummy,div_next);
+
+		// スタイルのサイズを取得
+		div_dummy.style.width  = "0px";
+		div_dummy.style.height = "0px";
+		var bounding_size = ElementGetBoundingClientRect(div_dummy);
+		var style_w = bounding_size.right  - bounding_size.left;
+		var style_h = bounding_size.bottom - bounding_size.top;
+
+		// 親の幅を取得
+		var width_max = ElementGetClientWidth(div_dummy.parentNode);
+
+		// エレメントのサイズ
+		width  -= style_w;
+		height -= style_h;
+
+		// 最大幅補正
+		var w = width_max - style_w;
+		if(w < width){
+			height *= w / width;
+			width = w;
+		}
+
+		// サイズをセット
+		div_dummy.style.width  = width  + "px";
+		div_dummy.style.height = height + "px";
+		iframe.style.width  = width  + "px";
+		iframe.style.height = height + "px";
+
+		// スクロール補正
+		revise_scroll.executeAttachElementAfter(iframe);
+
+		// クリック時に実行されるイベント
+		function click_func(e){
+			// iframe を挿入
+			DomNode_InsertAfter(div_dummy,iframe);
+			// div_dummy を解放
+			if(analyze_div_dummy){
+				analyze_div_dummy.release();
+				analyze_div_dummy = null;
+			}
+		}
+		if(div_dummy.addEventListener){
+			div_dummy.addEventListener("click",click_func,true);
+		}else if(div_dummy.attachEvent){
+			div_dummy.attachEvent("onclick",click_func);
+		}
+
+		// 開放時に実行されるイベント
+		var event_handler = event_dispatcher.createEventHandler("release");
+		event_handler.setFunction(function (result){
+			if(analyze_div_dummy){
+				analyze_div_dummy.release();
+				analyze_div_dummy = null;
+			}
+			if(analyze_div_prev){
+				analyze_div_prev.release();
+				analyze_div_prev = null;
+			}
+			if(analyze_div_next){
+				analyze_div_next.release();
+				analyze_div_next = null;
+			}
+			if(event_handler){
+				event_handler.release();
+				event_handler = null;
+			}
+		});
+
+		response();
+		return false;
+	}.toString() +
+"\n]";
+			});
+
+			// PDF のインライン表示
+			updatePreset(proj.expand_iframe,"expand_pdf_inline",function(obj){
+				obj.inline.script_insert = 
+"[\n\t" + 
+	function(info,response){
+
+		var anchor_element = info.anchor_element;
+		var iframe = info.iframe_element;
+		var event_dispatcher = info.event_dispatcher;
+
+		// ピクセル値によるサイズ指定
+		var width  = 597;
+		var height = 844;
+
+		// スクロール補正
+		var revise_scroll = new DocumentReviseScroll();
+		revise_scroll.executeAttachElementBefore(iframe);
+
+		// 改行を作成
+		var div_prev = DocumentCreateElement("div");
+		var analyze_div_prev = new ElementAnalyzeManager(div_prev,true);
+		ElementSetStyle(div_prev,"height:0px;");
+		DomNode_InsertAfter(anchor_element,div_prev);
+
+		// iframe を挿入
+		DomNode_InsertAfter(div_prev,iframe);
+
+		// 改行を作成
+		var div_next = DocumentCreateElement("div");
+		var analyze_div_next = new ElementAnalyzeManager(div_next,true);
+		ElementSetStyle(div_next,"height:0px");
+		DomNode_InsertAfter(iframe,div_next);
+
+		// スタイルのサイズを取得
+		iframe.style.width  = "0px";
+		iframe.style.height = "0px";
+		var bounding_size = ElementGetBoundingClientRect(iframe);
+		var style_w = bounding_size.right  - bounding_size.left;
+		var style_h = bounding_size.bottom - bounding_size.top;
+
+		// 親の幅を取得
+		var width_max = ElementGetClientWidth(iframe.parentNode);
+
+		// エレメントのサイズ
+		width  -= style_w;
+		height -= style_h;
+
+		// 最大幅補正
+		var w = width_max - style_w;
+		if(w < width){
+			width = w;
+		}
+
+		// サイズをセット
+		iframe.style.width  = width  + "px";
+		iframe.style.height = height + "px";
+
+		// スクロール補正
+		revise_scroll.executeAttachElementAfter(iframe);
+
+		// 開放時に実行されるイベント
+		var event_handler = event_dispatcher.createEventHandler("release");
+		event_handler.setFunction(function (result){
+			if(analyze_div_prev){
+				analyze_div_prev.release();
+				analyze_div_prev = null;
+			}
+			if(analyze_div_next){
+				analyze_div_next.release();
+				analyze_div_next = null;
+			}
+			if(event_handler){
+				event_handler.release();
+				event_handler = null;
+			}
+		});
+
+		response();
+		return false;
+	}.toString() +
+"\n]";
+			});
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// ２ちゃんねる掲示板
+			var obj = addPreset(proj.expand_bbs,"2ch",null);
+			var preset = obj.preset;
+			preset.script_initialize = 
+"[\n\t" + 
+	function(info,response){
+		var work = info.work;
+
+		// --------------------------------------------------------------------------------
+		// 基本URL抽出
+		// --------------------------------------------------------------------------------
+		var url = document.URL;
+		var bbs_list = [
+			{url:"(http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch"},
+			{url:"(http://(|[^.]+\\.)machi\\.to/bbs/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"machi"},
+			{url:"(http://(|[^.]+\\.)machibbs\\.net/[^/]+/[^/]*[0-9]+)",replace:"$1",name:"machibbs"},
+			{url:"(http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"pink"},
+			{url:"(http://jbbs\\.shitaraba\\.net/bbs/read.cgi/[^/]+/[0-9]+/[0-9]+)",replace:"$1/",name:"shitaraba"},
+			{url:"(http://[^.]+\\.kakiko\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"kakiko"},
+			{url:"(http://[^.]+\\.60\\.kg/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$0/",name:"kakiko"}
+		];
+
+		var i;
+		var num = bbs_list.length;
+		for(i=0;i<num;i++){
+			var bbs = bbs_list[i];
+			var re = new RegExp(bbs.url,"i");
+			var m = url.match(re);
+			if(m){
+				work.base_url = m[1].replace(re,bbs.replace);
+				work.bbs_name = bbs.name;
+				break;
+			}
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function (info,response){
+		var work = info.work;
+		if(!(work.bbs_name)){
+			return false;
+		}
+
+		var first_id = 1;
+		var last_id = 1;
+		var dictionary_id = new Array();
+		var load_shadow_func = null;
+		var load_more_func = null;
+		var element_parent = null;
+		var read_more_button = null;
+		var element_form = null;
+		var base_url = work.base_url;
+		var resource_url_shadow;
+		var resource_url_more;
+
+		// --------------------------------------------------------------------------------
+		// 文字列からレスポンス番号を取得
+		// --------------------------------------------------------------------------------
+		work.createResponseAnchorNumbers = function (str){
+			var numbers = new ResponseAnchorNumbers();
+
+			var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
+			var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("^([0-9０-９]+)","i");
+
+			var m = str.match(re_search);
+			if(m){
+				var p = m[1].length;
+				while(true){
+					// 番号-番号
+					m = str.substr(p).match(re_range);
+					if(m){
+						var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+						var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+						if(id0 < 1) id0 = 1;
+						if(id1 < 1) id1 = 1;
+						if(id0 > 10000) id0 = 10000;
+						if(id1 > 10000) id1 = 10000;
+						p += m[0].length;
+						numbers.addNumbers(id0,id1);
+					}else{
+						// 番号
+						m = str.substr(p).match(re_number);
+						if(m){
+							p += m[0].length;
+							var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							if(id < 1) id = 1;
+							if(id > 0x7fffffff) id = 0x7fffffff;
+							numbers.addNumber(id);
+						}
+					}
+
+					if(m){
+						// カンマ
+						if(RegExp.rightContext.search(",") == 0){
+							p += 1;
+							continue;
+						}
+					}
+					break;
+				}
+			}
+			return numbers;
+		};
+
+		// --------------------------------------------------------------------------------
+		// レスアンカー拡張
+		// --------------------------------------------------------------------------------
+		work.extendResponseAnchor = function (target){
+			if(BbsControlResponseAnchorExist(target))	return;
+
+			var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
+			var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
+			var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("([0-9０-９]+)","i");
+
+			var i;
+			var nodes = ElementGetElementsByTagName(target,"a");
+			var num = nodes.length;
+			for(i=num-1;i>=0;i--){
+				var node = nodes[i];
+				var m = ElementGetTextContent(node).match(re_simple);
+				if(m){
+					var text_node = DocumentCreateText(m[0]);
+					DomNode_InsertBefore(node,text_node);
+					DomNodeRemove(node);
+				}
+			}
+
+			// テキストノードを統合
+			target.normalize();
+
+			var p;
+			var n;
+			var q;
+			var ignore_dictionary = {"A":1,"SCRIPT":1};
+			var queue = new Object();
+			q = {p:queue,n:queue,node:target};
+			queue.p = q;
+			queue.n = q;
+
+			while(queue.n != queue){
+				q = queue.n;
+				p = q.p;
+				n = q.n;
+				p.n = n;
+				n.p = p;
+				var node = q.node;
+				switch(node.nodeType){
+				case 1:
+					var i;
+					var nodes = node.childNodes;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						n = queue;
+						p = n.p;
+						q = {p:p,n:n,node:nodes[i]};
+						p.n = q;
+						n.p = q;
+					}
+					break;
+				case 3:
+					while(node){
+						var m = DomNodeGetNodeValue(node).match(re_detail);
+						if(!m)	break;
+
+						// 元のテキストノード
+						DomNodeSetNodeValue(node,RegExp.leftContext);
+
+						// BbsControlName を生成
+						var element = DocumentCreateElement("a");
+						ElementSetTextContent(element,m[0]);
+						DomNode_InsertAfter(node,element);
+
+						// 直後テキスト
+						node = DocumentCreateText(RegExp.rightContext);
+						DomNode_InsertAfter(element,node);
+
+						var query = "";
+						m = ElementGetTextContent(element).match(re_range);
+						if(m){
+							var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+							if(min < 1) min = 1;
+							if(max < 1) max = 1;
+							if(min > 10000) min = 10000;
+							if(max > 10000) max = 10000;
+							if(max < min){
+								var tmp = min;
+								min = max;
+								max = tmp;
+							}
+							query = min + "-" + max;
+						}else{
+							// 番号
+							m = ElementGetTextContent(element).match(re_number);
+							if(m){
+								query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
+								if(query < 1) query = 1;
+								if(query > 0x7fffffff) query = 0x7fffffff;
+							}
+
+						}
+						element.href = work.base_url + query;
+					}
+				}
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// HTML 文書をシャドウ読み込み
+		// --------------------------------------------------------------------------------
+		function loadShadowFromHTML(str){
+
+			var re_number;
+			var re_id = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
+			var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
+			switch(work.bbs_name){
+			case "2ch":
+			case "pink":
+			case "kakiko":
+			case "machi":
+			case "machibbs":
+					re_number = new RegExp("([0-9]+)","i");
+				break;
+			case "shitaraba":
+					re_number = new RegExp("<a href=\".*?\">([0-9]+)</a> ：","i");
+				break;
+			}
+
+			var p = 0;
+			var n = str.length;
+			function f(){
+				if(p >= n) return;
+				p = str.indexOf("<dt>",p);
+				if(p < 0) return;
+				var e = str.indexOf("\n",p);
+				var s = str.substring(p,e);
+				var m = s.match(re_number);
+				if(m){
+					var id = parseInt(m[1]);
+					if((first_id <= id) && (id <= last_id)){
+					}else if(dictionary_id[id]){
+					}else{
+						var nodes = StringHtmlCreateDomNodesSafe(s);
+						var dt = nodes[0];
+						var dd = nodes[1];
+
+						try{
+							if(dt.tagName != "DT")	return;
+							if(dd.tagName != "DD")	return;
+						}catch(e){
+							return;
+						}
+
+						// ナンバーからレスポンスオブジェクトを取得
+						var response = bbs_dictionary.getResponse(id);
+						if(!(response.getAnalyzed())){
+							var dt_text = ElementGetTextContent(dt);
+
+							// レスアンカー拡張
+							work.extendResponseAnchor(dd);
+
+							// IDの取得
+							if(dt_text.match(re_id)){
+								response.setId(RegExp.$1);
+							}
+
+							// 名前の取得
+							if(dt_text.match(re_name)){
+								response.setName(RegExp.$1);
+							}
+
+							// ホスト名の取得
+							(function(){
+								var p;
+								var n;
+								var q;
+								var ignore_dictionary = {"B":1,"SCRIPT":1};
+								var queue = new Object();
+								q = {p:queue,n:queue,node:dt};
+								queue.p = q;
+								queue.n = q;
+
+								while(queue.n != queue){
+									q = queue.n;
+									p = q.p;
+									n = q.n;
+									p.n = n;
+									n.p = p;
+									var node = q.node;
+									switch(node.nodeType){
+									case 1:
+										if(!(ignore_dictionary[node.tagName])){
+											var i;
+											var nodes = node.childNodes;
+											var num = nodes.length;
+											for(i=0;i<num;i++){
+												n = queue;
+												p = n.p;
+												q = {p:p,n:n,node:nodes[i]};
+												p.n = q;
+												n.p = q;
+											}
+										}
+										break;
+									case 3:
+										var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
+										if(m){
+											response.setHost(m[2]);
+											return;
+										}
+										var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})(|\\n) \\]","i"));
+										if(m){
+											response.setHost(m[2]);
+											return;
+										}
+										var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
+										if(m){
+											response.setHost(m[2]);
+											return;
+										}
+										break;
+									}
+								}
+							})();
+
+							// フォロー解析
+							var dictionary = new Object();
+							(function(){
+								var nodes = ElementGetElementsByTagName(dd,"a");
+								var i;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
+									numbers.getNumbers(function(n){
+										if(!dictionary[n]){
+											var following = bbs_dictionary.getResponse(n);
+											following.addFollower(response);
+											dictionary[n] = true;
+										}
+									});
+								}
+							})();
+
+							// オリジナルエレメントをセット
+							if(dt)	response.addOriginalElements("dt",dt);
+							if(dd)	response.addOriginalElements("dd",dd);
+
+							// 消去時に実行されるイベント
+							response.onerase = function(){};
+
+							response.setAnalyzed();
+						}
+					}
+				}
+
+				if(p < e){
+					p = e + 1;
+					execute_queue.attachFirst(f,null);
+				}
+			}
+			execute_queue.attachFirst(f,null);
+		}
+
+		// --------------------------------------------------------------------------------
+		// HTML 文書を継ぎ足し読み込み
+		// --------------------------------------------------------------------------------
+		function loadMoreFromHTML(str){
+			var re_number;
+			switch(work.bbs_name){
+			case "2ch":
+			case "pink":
+			case "kakiko":
+			case "machi":
+			case "machibbs":
+					re_number = new RegExp("([0-9]+)","i");
+				break;
+			case "shitaraba":
+					re_number = new RegExp("<a href=\".*?\">([0-9]+)</a> ：","i");
+				break;
+			}
+
+			var p = 0;
+			var n = str.length;
+			function f(){
+				try{
+					if(p >= n) throw 0;
+					p = str.indexOf("<dt>",p);
+					if(p < 0) throw 0;
+					var e = str.indexOf("\n",p);
+					var s = str.substring(p,e);
+					var m = s.match(re_number);
+					if(m){
+						var id = parseInt(m[1]);
+						if(last_id < id){
+							var response = bbs_dictionary.getResponse(id);
+							response.clearAnalyzed();
+							response.clearOriginalElements();
+							response.clearFollowing();
+
+							var nodes = StringHtmlCreateDomNodesSafe(s);
+							var j;
+							var node_num = nodes.length;
+							for(j=0;j<node_num;j++){
+								element_parent.appendChild(nodes[j]);
+							}
+							last_id = id;
+							resource_url_more = base_url + (last_id) + "-";
+						}
+					}
+
+					if(p < e){
+						p = e + 1;
+						execute_queue.attachFirst(f,null);
+						return;
+					}
+				}catch(e){
+				}
+				read_more_button.init();
+			}
+			execute_queue.attachFirst(f,null);
+		}
+
+		// --------------------------------------------------------------------------------
+		// DAT 文書をシャドウ読み込み
+		// --------------------------------------------------------------------------------
+		function loadShadowFromDAT(str){
+			var re_search = new RegExp("(.*?)<>(.*?)<>(.*?)<>(.*?)<>","i");
+			var re_number = new RegExp("([0-9]+)","i");
+			var re_id = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
+			var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
+			var re_icon = new RegExp("^ sssp://img.2ch.net/ico/(.*?)( <br> .*)$","i");
+
+			var p = 0;
+			var n = str.length;
+			var id = 1;
+			function f(){
+				if(p >= n) return;
+				var e = str.indexOf("\n",p);
+				if((first_id <= id) && (id <= last_id)){
+				}else if(dictionary_id[id]){
+				}else{
+					// ナンバーからレスポンスオブジェクトを取得
+					var response = bbs_dictionary.getResponse(id);
+					if(!(response.getAnalyzed())){
+						var m = str.substring(p,e).match(re_search);
+						if(m){
+							var html = "<dt>" + id + " ：";
+							if(m[2]){
+								html += "<a href=\"mailto:" + m[2] + "\"><b>" + m[1] + "</b></a>";
+							}else{
+								html += "<font color=green><b>" + m[1] + "</b></font>";
+							}
+							html += "：" + m[3] + "<dd>";
+							var msg = m[4];
+							if(msg.match(re_icon)){
+								msg = "<img src=\"http://img.2ch.net/ico/" + RegExp.$1 + "\">" + RegExp.$2;
+							}
+							html += msg + "<br><br>";
+
+							var nodes = StringHtmlCreateDomNodesSafe(html);
+							var dt = nodes[0];
+							var dd = nodes[1];
+
+							try{
+								if(dt.tagName != "DT")	return;
+								if(dd.tagName != "DD")	return;
+							}catch(e){
+								return;
+							}
+
+							var dt_text = ElementGetTextContent(dt);
+
+							// レスアンカー拡張
+							work.extendResponseAnchor(dd);
+
+							// IDの取得
+							if(dt_text.match(re_id)){
+								response.setId(RegExp.$1);
+							}
+
+							// 名前の取得
+							if(dt_text.match(re_name)){
+								response.setName(RegExp.$1);
+							}
+
+							// ホスト名の取得
+							(function(){
+								var p;
+								var n;
+								var q;
+								var ignore_dictionary = {"B":1,"SCRIPT":1};
+								var queue = new Object();
+								q = {p:queue,n:queue,node:dt};
+								queue.p = q;
+								queue.n = q;
+
+								while(queue.n != queue){
+									q = queue.n;
+									p = q.p;
+									n = q.n;
+									p.n = n;
+									n.p = p;
+									var node = q.node;
+									switch(node.nodeType){
+									case 1:
+										if(!(ignore_dictionary[node.tagName])){
+											var i;
+											var nodes = node.childNodes;
+											var num = nodes.length;
+											for(i=0;i<num;i++){
+												n = queue;
+												p = n.p;
+												q = {p:p,n:n,node:nodes[i]};
+												p.n = q;
+												n.p = q;
+											}
+										}
+										break;
+									case 3:
+										var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
+										if(m){
+											response.setHost(m[2]);
+											return;
+										}
+										var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})(|\\n) \\]","i"));
+										if(m){
+											response.setHost(m[2]);
+											return;
+										}
+										var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
+										if(m){
+											response.setHost(m[2]);
+											return;
+										}
+										break;
+									}
+								}
+							})();
+
+							// フォロー解析
+							var dictionary = new Object();
+							(function(){
+								var nodes = ElementGetElementsByTagName(dd,"a");
+								var i;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
+									numbers.getNumbers(function(n){
+										if(!dictionary[n]){
+											var following = bbs_dictionary.getResponse(n);
+											following.addFollower(response);
+											dictionary[n] = true;
+										}
+									});
+								}
+							})();
+
+							// オリジナルエレメントをセット
+							if(dt)	response.addOriginalElements("dt",dt);
+							if(dd)	response.addOriginalElements("dd",dd);
+
+							// 消去時に実行されるイベント
+							response.onerase = function(){};
+
+							response.setAnalyzed();
+						}
+					}
+				}
+
+				id += 1;
+				if(p < e){
+					p = e + 1;
+					execute_queue.attachFirst(f,null);
+				}
+			}
+			execute_queue.attachFirst(f,null);
+		}
+
+		// --------------------------------------------------------------------------------
+		// DAT 文書を継ぎ足し読み込み
+		// --------------------------------------------------------------------------------
+		function loadMoreFromDAT(str){
+
+			// 最後尾 ID
+			var nodes = ElementGetElementsByTagName(element_parent,"dt");
+			var node_num = nodes.length;
+			if(node_num){
+				if(ElementGetTextContent(nodes[node_num-1]).match(new RegExp("^([0-9]+)[ ]：","i"))){
+					last_id = parseInt(RegExp.$1);
+				}
+			}
+
+			var re_search = new RegExp("(.*?)<>(.*?)<>(.*?)<>(.*?)<>","i");
+			var re_icon = new RegExp("^ sssp://img.2ch.net/ico/(.*?)( <br> .*)$","i");
+
+			// レスポンス抽出
+			var p = 0;
+			var n = str.length;
+			var id = 1;
+			function f(){
+				try{
+					if(p >= n) throw 0;
+					var e = str.indexOf("\n",p);
+					if(last_id < id){
+						var m = str.substring(p,e).match(re_search);
+						if(m){
+							var response = bbs_dictionary.getResponse(id);
+							response.clearAnalyzed();
+							response.clearOriginalElements();
+							response.clearFollowing();
+
+							var html = "<dt>" + id + " ：";
+							if(m[2]){
+								html += "<a href=\"mailto:" + m[2] + "\"><b>" + m[1] + "</b></a>";
+							}else{
+								html += "<font color=green><b>" + m[1] + "</b></font>";
+							}
+							html += "：" + m[3] + "<dd>";
+							var msg = m[4];
+							if(msg.match(re_icon)){
+								msg = "<img src=\"http://img.2ch.net/ico/" + RegExp.$1 + "\">" + RegExp.$2;
+							}
+							html += msg + "<br><br>";
+
+							var nodes = StringHtmlCreateDomNodesSafe(html);
+							var j;
+							var node_num = nodes.length;
+							for(j=0;j<node_num;j++){
+								element_parent.appendChild(nodes[j]);
+							}
+							last_id = id;
+						}
+					}
+
+					id += 1;
+					if(p < e){
+						p = e + 1;
+						execute_queue.attachFirst(f,null);
+						return;
+					}
+				}catch(e){
+				}
+				read_more_button.init();
+			}
+			execute_queue.attachFirst(f,null);
+		}
+
+		// --------------------------------------------------------------------------------
+		// 継ぎ足し読み込み
+		// --------------------------------------------------------------------------------
+		function readMore(){
+
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
+
+			// 成功
+			loader.onload = function(str){
+				if(load_more_func){
+					load_more_func(str);
+				}
+			};
+
+			// 失敗
+			loader.onerror = function(){
+				read_more_button.init();
+			};
+
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url_more);
+			switch(work.bbs_name){
+			case "2ch":
+			case "machi":
+			case "machibbs":
+			case "pink":
+			case "kakiko":
+				loader.overrideMimeType("text/plain; charset=Shift_JIS");
+				break;
+			case "shitaraba":
+				loader.overrideMimeType("text/plain; charset=EUC-JP");
+				break;
+			}
+			loader.loadText();
+		}
+
+		// --------------------------------------------------------------------------------
+		// レスポンス親要素
+		// --------------------------------------------------------------------------------
+		var i;
+		var nodes = ElementGetElementsByTagName(document.body,"dl");
+		var num = nodes.length;
+		for(i=0;i<num;i++){
+			element_parent = nodes[i];
+			break;
+		}
+
+		if(!element_parent) return false;
+
+		// --------------------------------------------------------------------------------
+		// フォーム位置修正
+		// --------------------------------------------------------------------------------
+		switch(work.bbs_name){
+		case "machi":
+			var nodes = ElementGetElementsByTagName(element_parent,"dt");
+			if(nodes.length){
+				var dt = nodes[nodes.length - 1];
+				var node = dt.firstChild;
+				while(node){
+					var next = node.nextSibling;
+					DomNode_InsertAfter(element_parent,node);
+					node = next;
+				}
+				DomNodeRemove(dt);
+			}
+
+			var nodes = ElementGetElementsByTagName(element_parent,"dd");
+			if(nodes.length){
+				nodes = ElementGetElementsByTagName(nodes[nodes.length - 1],"br");
+				if(nodes.length){
+					var node = nodes[nodes.length - 1];
+					node = node.nextSibling;
+					while(node){
+						var next = node.nextSibling;
+						DomNode_InsertAfter(element_parent,node);
+						node = next;
+					}
+				}
+			}
+
+			break;
+		}
+
+		// --------------------------------------------------------------------------------
+		// 範囲取得
+		// --------------------------------------------------------------------------------
+		var nodes = ElementGetElementsByTagName(element_parent,"dt");
+		var node_num = nodes.length;
+		if(node_num){
+			var re_id = new RegExp("^([0-9]+)","i");
+
+			if(ElementGetTextContent(nodes[0]).match(re_id)){
+				first_id = parseInt(RegExp.$1);
+				dictionary_id[0] = true;
+			}
+
+			if((first_id == 1) && (node_num > 1)){
+				if(ElementGetTextContent(nodes[1]).match(re_id)){
+					first_id = parseInt(RegExp.$1);
+					dictionary_id[first_id] = true;
+					if(first_id <= 2) first_id = 1;
+				}
+			}
+
+			if(ElementGetTextContent(nodes[node_num-1]).match(re_id)){
+				last_id = parseInt(RegExp.$1);
+				dictionary_id[last_id] = true;
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// 読み込み方式
+		// --------------------------------------------------------------------------------
+		load_shadow_func = loadShadowFromHTML;
+		load_more_func = loadMoreFromHTML;
+
+		// JavaScript モード検出
+		if(work.bbs_name == "2ch"){
+			load_shadow_func = loadShadowFromDAT;
+
+			var nodes = ElementGetElementsByTagName(DocumentGetHeadElement(document),"meta");
+			var i;
+			var num = nodes.length;
+			for(i=0;i<num;i++){
+				var node = nodes[i];
+				var http_equiv = node.getAttribute("http-equiv");
+				if(!http_equiv)	http_equiv = node.httpEquiv;
+				if(!http_equiv)	continue;
+				if(http_equiv.toLowerCase() != "content-type")	continue;
+				var content = node.getAttribute("content");
+				if(!content)	content = node.content;
+				if(!content)	continue;
+				if(content.indexOf("application") == -1)	continue;
+
+				load_more_func = loadMoreFromDAT;
+				break;
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// アクセス先 URL
+		// --------------------------------------------------------------------------------
+		if(load_more_func == loadMoreFromHTML){
+			resource_url_more = base_url + last_id + "-";
+		}else{
+			if(base_url.match(new RegExp("http://([^.]+\\.2ch\\.net)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"))){
+				resource_url_more = "http://" + RegExp.$1 + "/" + RegExp.$2 + "/dat/" + RegExp.$3 + ".dat";
+			}
+		}
+		if(load_shadow_func == loadShadowFromHTML){
+			resource_url_shadow = base_url;
+		}else{
+			if(base_url.match(new RegExp("http://([^.]+\\.2ch\\.net)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"))){
+				resource_url_shadow = "http://" + RegExp.$1 + "/" + RegExp.$2 + "/dat/" + RegExp.$3 + ".dat";
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// BbsControlReadMoreButton 作成
+		// --------------------------------------------------------------------------------
+		read_more_button = new BbsControlReadMoreButton();
+		read_more_button.setWaitTime(2 * 1000);
+		read_more_button.onclick = readMore;
+		DomNode_InsertAfter(element_parent,read_more_button.getElement());
+
+
+		// --------------------------------------------------------------------------------
+		// 書き込みをポップアップ化
+		// --------------------------------------------------------------------------------
+		if(load_more_func == loadMoreFromHTML){
+			// フォーム
+			var nodes = ElementGetElementsByTagName(document.body,"form");
+			var element_form;
+			var input_submit;
+			var element_textarea;
+
+			// フォーム
+			var i;
+			switch(work.bbs_name){
+			case "2ch":
+			case "pink":
+				for(i=0;i<nodes.length;i++){
+					if(nodes[i].action.indexOf("/test/bbs.cgi") >= 0){
+						element_form = nodes[i];
+						break;
+					}
+				}
+				break;
+			case "shitaraba":
+				for(i=0;i<nodes.length;i++){
+					if(nodes[i].action.indexOf("/bbs/write.cgi/") >= 0){
+						element_form = nodes[i];
+						break;
+					}
+				}
+				break;
+			}
+
+			// サブミットボタン
+			if(element_form){
+				var nodes = ElementGetElementsByTagName(element_form,"input");
+				for(i=0;i<nodes.length;i++){
+					if(nodes[i].type.toLowerCase() == "submit"){
+						input_submit = nodes[i];
+						break;
+					}
+				}
+				var nodes = ElementGetElementsByTagName(element_form,"textarea");
+				if(nodes.length){
+					element_textarea = nodes[0];
+				}
+			}
+
+			(function(){
+				if(!input_submit) return;
+
+				function inputClick(e){
+
+					var w = 800;
+					var h = 600;
+					var cookie = document.cookie;
+					if(cookie){
+						if(cookie.indexOf("PREN=") != -1){
+							w = 600;
+							h = 450;
+						}
+					}
+
+					var screen_obj = window.screen;
+					if(w > screen_obj.availWidth)	w = screen_obj.availWidth;
+					if(h > screen_obj.availHeight)	h = screen_obj.availHeight;
+					var x = (screen_obj.availWidth  / 2) - (w / 2);
+					var y = (screen_obj.availHeight / 2) - (h / 2);
+
+					var window_name = "_pageexpand_" + Math.floor(Math.random() * 0x7FFFFFFF);
+					var window_obj = window.open("",window_name,"left=" + x + ",top=" + y + ",width=" + w + ",height=" + h);
+					element_form.target = window_name;
+
+					(function(){
+						var closed = false;
+						var timer = null;
+
+						// タスク生成
+						var task = task_container.createTask();
+						task.setExecuteFunc(function(){
+							try{
+								if(window_obj.closed){
+									closed = true;
+								}
+
+								// アドレスを監視
+								var href = "";
+								try{
+									href = window_obj.location.href;
+								}catch(e){}
+								if(href.indexOf("http://") == 0){
+
+									switch(work.bbs_name){
+									case "2ch":
+									case "pink":
+										if(href.indexOf("test/bbs.cgi?guid=") == -1){
+											closed = true;
+										}else if(!timer){
+											var body = window_obj.document.body;
+											if(body){
+												if(ElementGetTextContent(body).indexOf("書きこみが終わりました") != -1){
+													timer = (new Date()).getTime();
+												}
+											}
+										}
+										break;
+									case "shitaraba":
+										if(href.indexOf("/bbs/write.cgi/") == -1){
+											closed = true;
+										}else if(!timer){
+											var body = window_obj.document.body;
+											if(body){
+												if(ElementGetTextContent(body).indexOf("書きこみが終りました") != -1){
+													timer = (new Date()).getTime();
+												}
+											}
+										}
+										break;
+									}
+								}
+
+								if(timer){
+									if((new Date()).getTime() - timer > 1000 * 2){
+										closed = true;
+									}
+								}
+							}catch(e){
+								closed = true;
+							}
+
+							if(closed){
+								try{
+									window_obj.close();
+								}catch(e){
+									return;
+								}
+								window_obj = null;
+								task.release();
+								input_submit.disabled = false;
+								if(timer){
+									readMore();
+									element_textarea.value = "";
+								}
+							}
+						});
+					})();
+				}
+
+				function formSubmit(e){
+					input_submit.disabled = true;
+				}
+
+				if(window.addEventListener){
+					input_submit.addEventListener("click",inputClick);
+					element_form.addEventListener("submit",formSubmit);
+				}else if(window.attachEvent){
+					input_submit.attachEvent("onclick",inputClick);
+					element_form.attachEvent("onsubmit",formSubmit);
+				}
+
+			})();
+		}
+
+		// --------------------------------------------------------------------------------
+		// シャドウロード
+		// --------------------------------------------------------------------------------
+		(function(){
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
+
+			// 成功
+			loader.onload = function(str){
+				if(load_shadow_func){
+					load_shadow_func(str);
+				}
+			};
+
+			// 失敗
+			loader.onerror = function(){
+			};
+
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url_shadow);
+			switch(work.bbs_name){
+			case "2ch":
+			case "pink":
+				loader.overrideMimeType("text/plain; charset=Shift_JIS");
+				break;
+			case "shitaraba":
+				loader.overrideMimeType("text/plain; charset=EUC-JP");
+				break;
+			}
+			loader.loadText();
+		})();
+
+		response({result:true});
+		return true;
+	}.toString() +
+	",\n\n\t" +
+	function (info,response){
+		response({result:false});
+		return true;
+	}.toString() +
+"\n]";
+			preset.script_callback = 
+"[\n\t" + 
+	function(info,response){
+		var element = info.element;
+		var work = info.work;
+
+		// --------------------------------------------------------------------------------
+		// レスポンスダイアログを登録
+		// --------------------------------------------------------------------------------
+		function attachBbsResponseDialog(response,node,parent_dialog,type){
+
+			// --------------------------------------------------------------------------------
+			// レスアンカー
+			// --------------------------------------------------------------------------------
+			function forResponseAnchor(target){
+				if(BbsControlResponseAnchorExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlResponseAnchor を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var i;
+					var nodes = ElementGetElementsByTagName(target,"a");
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						var node = nodes[i];
+						var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(node));
+						if(numbers.getCount()){
+							var control_res_anchor = new BbsControlResponseAnchor(node,false);
+							control_res_anchor.setResponseAnchorNumbers(numbers);
+						}
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlResponseAnchor を検索
+				// --------------------------------------------------------------------------------
+				BbsControlResponseAnchorSearch(target,function(control_res_anchor){
+
+					var element_res_anchor = control_res_anchor.getElement();
+					var numbers = control_res_anchor.getResponseAnchorNumbers();
+
+					// ダイアログを作成
+					var response_dialog = new BbsResponseDialog();
+					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+					response_dialog.setElementParent(node.parent);
+					response_dialog.setElementHitArea(element_res_anchor);
+					response_dialog.oncreate = function(_window,callback){
+
+						var dl = DocumentCreateElement("dl");
+						dl.style.margin = "0px";
+						_window.appendChild(dl);
+
+						var created = false;
+						var i = 0;
+						var number_list = numbers.getNumberList();
+						var num = number_list.length;
+						if(!num) return false;
+
+						function f(){
+							var following = bbs_dictionary.getResponse(number_list[i]);
+							var clone = following.getCloneElements();
+
+							var j;
+							var clone_num = clone.length;
+							if(clone_num){
+								var param = new Object();
+								param.parent = node.parent;
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									param[obj.name] = obj.element;
+									dl.appendChild(obj.element);
+								}
+
+								// レスポンスダイアログを登録
+								attachBbsResponseDialog(following,param,response_dialog,"response");
+
+								created = true;
+							}
+
+							i += 1;
+							if(i < num){
+								execute_queue.attachFirst(f,null);
+							}else{
+								callback({result:created});
+							}
+						}
+						execute_queue.attachFirst(f,null);
+					};
+
+					return null;
+				});
+			}
+
+			// --------------------------------------------------------------------------------
+			// ID
+			// --------------------------------------------------------------------------------
+			function forId(target){
+				if(BbsControlIdExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlId を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var p;
+					var n;
+					var q;
+					var ignore_dictionary = {"A":1,"SCRIPT":1};
+					var queue = new Object();
+					q = {p:queue,n:queue,node:target};
+					queue.p = q;
+					queue.n = q;
+
+					while(queue.n != queue){
+						q = queue.n;
+						p = q.p;
+						n = q.n;
+						p.n = n;
+						n.p = p;
+						var node = q.node;
+						switch(node.nodeType){
+						case 1:
+							if(!(ignore_dictionary[node.tagName])){
+								var i;
+								var nodes = node.childNodes;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									n = queue;
+									p = n.p;
+									q = {p:p,n:n,node:nodes[i]};
+									p.n = q;
+									n.p = q;
+								}
+							}
+
+							break;
+						case 3:
+							while(node){
+
+								var m = DomNodeGetNodeValue(node).match(new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i"));
+								if(!m)	break;
+
+								// 元のテキストノード
+								DomNodeSetNodeValue(node,RegExp.leftContext);
+
+								// BbsControlId を生成
+								var control_id = new BbsControlId(null,false);
+								control_id.setId(m[1]);
+								var element_id = control_id.getElement();
+								ElementSetTextContent(element_id,m[0]);
+								DomNode_InsertAfter(node,element_id);
+
+								// 直後テキスト
+								node = DocumentCreateText(RegExp.rightContext);
+								DomNode_InsertAfter(element_id,node);
+							}
+							break;
+						}
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlId を検索
+				// --------------------------------------------------------------------------------
+				BbsControlIdSearch(target,function(control_id){
+
+					control_id.setResponse(response);
+
+					var id = control_id.getId();
+					var element_id = control_id.getElement();
+					var textnode_id = DocumentCreateText("");
+
+					element_id.appendChild(textnode_id);
+
+					// --------------------------------------------------------------------------------
+					// 変化があったときに実行されるイベント
+					// --------------------------------------------------------------------------------
+					control_id.onchange = function(count){
+						if(count > 1){
+							DomNodeSetNodeValue(textnode_id,"(" + count + ")");
+						}else{
+							DomNodeSetNodeValue(textnode_id,"");
+						}
+
+						var style = element_id.style;
+						if(count >= 5){
+							StyleDeclarationSetProperty(style,"color","#e80000");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else if(count >= 2){
+							StyleDeclarationRemoveProperty(style,"color");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else{
+							StyleDeclarationSetProperty(style,"color","#888");
+							StyleDeclarationSetProperty(style,"font-size","small");
+						}
+					};
+					control_id.update();
+
+					// --------------------------------------------------------------------------------
+					// ポップアップ化
+					// --------------------------------------------------------------------------------
+					if(type == "id"){
+						if(response.getId() == id)	return null;
+					}
+
+					// ダイアログを作成
+					var response_dialog = new BbsResponseDialog();
+					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+					response_dialog.setElementParent(node.parent);
+					response_dialog.setElementHitArea(element_id);
+					response_dialog.oncreate = function(_window,callback){
+
+						var dl = DocumentCreateElement("dl");
+						dl.style.margin = "0px";
+						_window.appendChild(dl);
+
+						var responses = bbs_dictionary.getResponsesFromId(id);
+						var i = 0;
+						var num = responses.length;
+						if(num <= 1) return false;
+
+						function f(){
+							var response_id = responses[i];
+							var clone = response_id.getCloneElements();
+
+							var j;
+							var clone_num = clone.length;
+							if(clone_num){
+
+								var param = new Object();
+								param.parent = node.parent;
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									param[obj.name] = obj.element;
+									dl.appendChild(obj.element);
+								}
+
+								// レスポンスダイアログを登録
+								attachBbsResponseDialog(response_id,param,response_dialog,"id");
+							}
+
+							i += 1;
+							if(i < num){
+								execute_queue.attachFirst(f,null);
+							}else{
+								callback({result:true});
+							}
+						}
+						execute_queue.attachFirst(f,null);
+					};
+
+					return null;
+				});
+			}
+
+			// --------------------------------------------------------------------------------
+			// トリップ
+			// --------------------------------------------------------------------------------
+			function forName(target){
+				if(BbsControlNameExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlName を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var p;
+					var n;
+					var q;
+					var ignore_dictionary = {"SCRIPT":1};
+					var queue = new Object();
+					q = {p:queue,n:queue,node:target};
+					queue.p = q;
+					queue.n = q;
+
+					while(queue.n != queue){
+						q = queue.n;
+						p = q.p;
+						n = q.n;
+						p.n = n;
+						n.p = p;
+						var node = q.node;
+						switch(node.nodeType){
+						case 1:
+							if(!(ignore_dictionary[node.tagName])){
+								var i;
+								var nodes = node.childNodes;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									n = queue;
+									p = n.p;
+									q = {p:p,n:n,node:nodes[i]};
+									p.n = q;
+									n.p = q;
+								}
+							}
+							break;
+						case 3:
+							while(node){
+
+								// 本文
+								var m = DomNodeGetNodeValue(node).match(new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i"));
+								if(!m)	break;
+
+								// 元のテキストノード
+								DomNodeSetNodeValue(node,RegExp.leftContext);
+
+								// BbsControlName を生成
+								var control_name = new BbsControlName(null,false);
+								control_name.setName(m[0]);
+								var element_name = control_name.getElement();
+								ElementSetTextContent(element_name,m[0]);
+								DomNode_InsertAfter(node,element_name);
+
+								// 直後テキスト
+								node = DocumentCreateText(RegExp.rightContext);
+								DomNode_InsertAfter(element_name,node);
+							}
+							break;
+						}
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlName を検索
+				// --------------------------------------------------------------------------------
+				BbsControlNameSearch(target,function(control_name){
+
+					control_name.setResponse(response);
+
+					var name = control_name.getName();
+					var element_name = control_name.getElement();
+					var textnode_name = DocumentCreateText("");
+
+
+					// --------------------------------------------------------------------------------
+					// 変化があったときに実行されるイベント
+					// --------------------------------------------------------------------------------
+					control_name.onchange = function(count){
+						if(count > 1){
+							DomNodeSetNodeValue(textnode_name,"(" + count + ")");
+						}else{
+							DomNodeSetNodeValue(textnode_name,"");
+						}
+
+						var style = element_name.style;
+						if(count >= 5){
+							StyleDeclarationSetProperty(style,"color","#e80000");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else if(count >= 2){
+							StyleDeclarationRemoveProperty(style,"color");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else{
+							StyleDeclarationSetProperty(style,"color","#888");
+							StyleDeclarationSetProperty(style,"font-size","small");
+						}
+					};
+					control_name.update();
+					element_name.appendChild(textnode_name);
+
+					// --------------------------------------------------------------------------------
+					// ポップアップ化
+					// --------------------------------------------------------------------------------
+					if(type == "name"){
+						if(response.getName() == name)	return null;
+					}
+
+					// ダイアログを作成
+					var response_dialog = new BbsResponseDialog();
+					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+					response_dialog.setElementParent(node.parent);
+					response_dialog.setElementHitArea(element_name);
+					response_dialog.oncreate = function(_window,callback){
+
+						var dl = DocumentCreateElement("dl");
+						dl.style.margin = "0px";
+						_window.appendChild(dl);
+
+						var responses = bbs_dictionary.getResponsesFromName(name);
+						var i = 0;
+						var num = responses.length;
+						if(num <= 1) return false;
+
+						function f(){
+							var response_name = responses[i];
+							var clone = response_name.getCloneElements();
+
+							var j;
+							var clone_num = clone.length;
+							if(clone_num){
+
+								var param = new Object();
+								param.parent = node.parent;
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									param[obj.name] = obj.element;
+									dl.appendChild(obj.element);
+								}
+
+								// レスポンスダイアログを登録
+								attachBbsResponseDialog(response_name,param,response_dialog,"name");
+							}
+
+							i += 1;
+							if(i < num){
+								execute_queue.attachFirst(f,null);
+							}else{
+								callback({result:true});
+							}
+						}
+						execute_queue.attachFirst(f,null);
+					};
+
+					return null;
+				});
+			}
+
+			// --------------------------------------------------------------------------------
+			// ホスト
+			// --------------------------------------------------------------------------------
+			function forHost(target){
+				if(BbsControlHostExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlHost を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var p;
+					var n;
+					var q;
+					var ignore_dictionary = {"B":1,"SCRIPT":1};
+					var queue = new Object();
+					q = {p:queue,n:queue,node:target};
+					queue.p = q;
+					queue.n = q;
+
+					while(queue.n != queue){
+						q = queue.n;
+						p = q.p;
+						n = q.n;
+						p.n = n;
+						n.p = p;
+						var node = q.node;
+						switch(node.nodeType){
+						case 1:
+							if(!(ignore_dictionary[node.tagName])){
+								var i;
+								var nodes = node.childNodes;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									n = queue;
+									p = n.p;
+									q = {p:p,n:n,node:nodes[i]};
+									p.n = q;
+									n.p = q;
+								}
+							}
+							break;
+						case 3:
+							while(node){
+								var text_value = DomNodeGetNodeValue(node);
+
+								var m = text_value.match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
+								if(m){
+									// 元のテキストノード
+									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
+
+									// BbsControlHost を生成
+									var control_host = new BbsControlHost(null,false);
+									control_host.setHost(m[2]);
+									var element_host = control_host.getElement();
+									ElementSetTextContent(element_host,m[2]);
+									DomNode_InsertAfter(node,element_host);
+
+									// 直後テキスト
+									node = DocumentCreateText(RegExp.rightContext);
+									DomNode_InsertAfter(element_host,node);
+									continue;
+								}
+
+								var m = text_value.match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})((|\\n) \\])","i"));
+								if(m){
+									// 元のテキストノード
+									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
+
+									// BbsControlHost を生成
+									var control_host = new BbsControlHost(null,false);
+									control_host.setHost(m[2]);
+									var element_host = control_host.getElement();
+									ElementSetTextContent(element_host,m[2]);
+									DomNode_InsertAfter(node,element_host);
+
+									// 直後テキスト
+									node = DocumentCreateText("\n ]" + RegExp.rightContext);
+									DomNode_InsertAfter(element_host,node);
+									continue;
+								}
+
+								var m = text_value.match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
+								if(m){
+									// 元のテキストノード
+									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
+
+									// BbsControlHost を生成
+									var control_host = new BbsControlHost(null,false);
+									control_host.setHost(m[2]);
+									var element_host = control_host.getElement();
+									ElementSetTextContent(element_host,m[2]);
+									DomNode_InsertAfter(node,element_host);
+
+									// 直後テキスト
+									node = DocumentCreateText(RegExp.rightContext);
+									DomNode_InsertAfter(element_host,node);
+									continue;
+								}
+
+								break;
+							}
+
+							break;
+						}
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlHost を検索
+				// --------------------------------------------------------------------------------
+				BbsControlHostSearch(target,function(control_host){
+
+					control_host.setResponse(response);
+
+					var host = control_host.getHost();
+					var element_host = control_host.getElement();
+					var textnode_host = DocumentCreateText("");
+
+
+					// --------------------------------------------------------------------------------
+					// 変化があったときに実行されるイベント
+					// --------------------------------------------------------------------------------
+					control_host.onchange = function(count){
+						if(count > 1){
+							DomNodeSetNodeValue(textnode_host,"(" + count + ")");
+						}else{
+							DomNodeSetNodeValue(textnode_host,"");
+						}
+
+						var style = element_host.style;
+						if(count >= 5){
+							StyleDeclarationSetProperty(style,"color","#e80000");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else if(count >= 2){
+							StyleDeclarationRemoveProperty(style,"color");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else{
+							StyleDeclarationSetProperty(style,"color","#888");
+							StyleDeclarationSetProperty(style,"font-size","80%");
+						}
+					};
+					control_host.update();
+					element_host.appendChild(textnode_host);
+
+					// --------------------------------------------------------------------------------
+					// ポップアップ化
+					// --------------------------------------------------------------------------------
+					if(type == "host"){
+						if(response.getHost() == host)	return null;
+					}
+
+					// ダイアログを作成
+					var response_dialog = new BbsResponseDialog();
+					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+					response_dialog.setElementParent(node.parent);
+					response_dialog.setElementHitArea(element_host);
+					response_dialog.oncreate = function(_window,callback){
+
+						var dl = DocumentCreateElement("dl");
+						dl.style.margin = "0px";
+						_window.appendChild(dl);
+
+						var responses = bbs_dictionary.getResponsesFromHost(host);
+						var i = 0;
+						var num = responses.length;
+						if(num <= 1) return false;
+
+						function f(){
+							var response_host = responses[i];
+							var clone = response_host.getCloneElements();
+
+							var j;
+							var clone_num = clone.length;
+							if(clone_num){
+
+								var param = new Object();
+								param.parent = node.parent;
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									param[obj.name] = obj.element;
+									dl.appendChild(obj.element);
+								}
+
+								// レスポンスダイアログを登録
+								attachBbsResponseDialog(response_host,param,response_dialog,"host");
+							}
+
+							i += 1;
+							if(i < num){
+								execute_queue.attachFirst(f,null);
+							}else{
+								callback({result:true});
+							}
+						}
+						execute_queue.attachFirst(f,null);
+					};
+
+					return null;
+				});
+			}
+
+			// --------------------------------------------------------------------------------
+			// フォロワー
+			// --------------------------------------------------------------------------------
+			function forFollower(target){
+				if(BbsControlFollowerExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlFollower を生成
+				// --------------------------------------------------------------------------------
+				var control_follower = new BbsControlFollower(null,true);
+				control_follower.setResponse(response);
+
+				var element_follower = control_follower.getElement();
+				var textnode_follower = DocumentCreateText("");
+
+				element_follower.appendChild(textnode_follower);
+
+				// --------------------------------------------------------------------------------
+				// 変化があったときに実行されるイベント
+				// --------------------------------------------------------------------------------
+				control_follower.onchange = function(count){
+					if(count){
+						textnode_follower.nodeValue = " follower(" + count + ")";
+					}else{
+						textnode_follower.nodeValue = "";
+					}
+
+					var style = element_follower.style;
+					if(count >= 3){
+						StyleDeclarationSetProperty(style,"color","#e80000");
+						StyleDeclarationRemoveProperty(style,"font-size");
+
+					}else{
+						StyleDeclarationSetProperty(style,"color","#888");
+						StyleDeclarationSetProperty(style,"font-size","small");
+					}
+					if(count){
+						StyleDeclarationSetProperty(style,"margin","0px 4px 0px 0px");
+					}else{
+						StyleDeclarationRemoveProperty(style,"margin");
+					}
+				};
+				control_follower.update();
+				var nodes = ElementGetElementsByTagName(target,"br");
+				if(nodes.length){
+					DomNode_InsertBefore(nodes[0],element_follower);
+				}else{
+					target.appendChild(element_follower);
+				}
+
+				// --------------------------------------------------------------------------------
+				// ポップアップ化
+				// --------------------------------------------------------------------------------
+				// ダイアログを作成
+				var response_dialog = new BbsResponseDialog();
+				if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+				response_dialog.setElementParent(node.parent);
+				response_dialog.setElementHitArea(element_follower);
+				response_dialog.oncreate = function(_window,callback){
+
+					var dl = DocumentCreateElement("dl");
+					dl.style.margin = "0px";
+					_window.appendChild(dl);
+
+					var ary = response.getFollower();
+					var i = 0;
+					var num = ary.length;
+					if(num <= 0) return false;
+
+					function f(){
+						var follower = bbs_dictionary.getResponse(ary[i].getNumber());
+						var clone = follower.getCloneElements();
+
+						var j;
+						var clone_num = clone.length;
+						if(clone_num){
+
+							var param = new Object();
+							param.parent = node.parent;
+							for(j=0;j<clone_num;j++){
+								var obj = clone[j];
+								param[obj.name] = obj.element;
+								dl.appendChild(obj.element);
+							}
+
+							// レスポンスダイアログを登録
+							attachBbsResponseDialog(follower,param,response_dialog,"response");
+						}
+
+						i += 1;
+						if(i < num){
+							execute_queue.attachFirst(f,null);
+						}else{
+							callback({result:true});
+						}
+					}
+					execute_queue.attachFirst(f,null);
+				};
+			}
+
+			if(node.dt){
+				forResponseAnchor(node.dt);
+				forId(node.dt);
+				forName(node.dt);
+				forHost(node.dt);
+				forFollower(node.dt);
+			}
+			if(node.dd){
+				forResponseAnchor(node.dd);
+				forId(node.dd);
+				forName(node.dd);
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// エレメントを解析
+		// --------------------------------------------------------------------------------
+		var useful = (function(){
+			var dt = element;
+			var dd;
+
+			try{
+				if(dt.tagName != "DT")	return false;
+			}catch(e){
+				return false;
+			}
+
+			dd = dt.nextSibling;
+			try{
+				if(dd.tagName != "DD")	return false;
+			}catch(e){
+				return false;
+			}
+
+			try{
+				var dl = dt.parentNode;
+				if(dl.tagName != "DL")	return false;
+
+				switch(work.bbs_name){
+				case "shitaraba":
+				case "machi":
+					if(dl.parentNode.parentNode != document.body)	return false;
+					break;
+				default:
+					if(dl.parentNode != document.body)	return false;
+					break;
+				}
+			}catch(e){
+				return false;
+			}
+
+			// document に未登録
+			if(!DomNodeGetAttachedDocument(dt))	return false;
+
+			// --------------------------------------------------------------------------------
+			// レスアンカー拡張
+			// --------------------------------------------------------------------------------
+			work.extendResponseAnchor(dd);
+
+			// --------------------------------------------------------------------------------
+			// クリーンアップ
+			// --------------------------------------------------------------------------------
+			(function(){
+				function cleanup(target){
+					BbsControlSearchTrash(target,function(element){
+						var node = element.firstChild;
+						if(!node)	return null;
+						if(node.nodeType != 3)	return null;
+
+						// ID
+						var m = node.nodeValue.match(new RegExp("^ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i"));
+						if(m){
+							// 直後テキスト
+							var node = DocumentCreateText(m[0]);
+							DomNode_InsertAfter(element,node);
+							DomNodeRemove(element);
+							return null;
+						}
+
+						// トリップ
+						var m = node.nodeValue.match(new RegExp("^(◆[a-zA-Z0-9+/.]{10,12})","i"));
+						if(m){
+							// 直後テキスト
+							var node = DocumentCreateText(m[0]);
+							DomNode_InsertAfter(element,node);
+							DomNodeRemove(element);
+							return null;
+						}
+
+						// ホスト名
+						var m = node.nodeValue.match(new RegExp("^([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
+						if(m){
+							// 直後テキスト
+							var node = DocumentCreateText(m[0]);
+							DomNode_InsertAfter(element,node);
+							DomNodeRemove(element);
+
+							// テキストノードを統合
+							node.parentNode.normalize();
+							return null;
+						}
+						var m = node.nodeValue.match(new RegExp("^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
+						if(m){
+							// 直後テキスト
+							var node = DocumentCreateText(m[0]);
+							DomNode_InsertAfter(element,node);
+							DomNodeRemove(element);
+
+							// テキストノードを統合
+							node.parentNode.normalize();
+							return null;
+						}
+
+						return null;
+					});
+				}
+
+				if(dt){
+					cleanup(dt);
+				}
+				if(dd){
+					cleanup(dd);
+				}
+			})();
+
+			// ナンバーを取得
+			var dt_text = ElementGetTextContent(dt);
+			if(!(dt_text.match(new RegExp("^([0-9]+)[ ]","i"))))	return false;
+
+			// ナンバーからレスポンスオブジェクトを取得
+			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
+
+			// レスポンス解析
+			if(!response.getAnalyzed()){
+
+				// IDの取得
+				if(dt_text.match(new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i"))){
+					response.setId(RegExp.$1);
+				}
+
+				// 名前の取得
+				if(dt_text.match(new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i"))){
+					response.setName(RegExp.$1);
+				}
+
+				// ホスト名の取得
+				(function(){
+					var p;
+					var n;
+					var q;
+					var ignore_dictionary = {"B":1,"SCRIPT":1};
+					var queue = new Object();
+					q = {p:queue,n:queue,node:dt};
+					queue.p = q;
+					queue.n = q;
+
+					while(queue.n != queue){
+						q = queue.n;
+						p = q.p;
+						n = q.n;
+						p.n = n;
+						n.p = p;
+						var node = q.node;
+						switch(node.nodeType){
+						case 1:
+							if(!(ignore_dictionary[node.tagName])){
+								var i;
+								var nodes = node.childNodes;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									n = queue;
+									p = n.p;
+									q = {p:p,n:n,node:nodes[i]};
+									p.n = q;
+									n.p = q;
+								}
+							}
+							break;
+						case 3:
+							var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
+							if(m){
+								response.setHost(m[2]);
+								return;
+							}
+							var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})(|\\n) \\]","i"));
+							if(m){
+								response.setHost(m[2]);
+								return;
+							}
+							var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
+							if(m){
+								response.setHost(m[2]);
+								return;
+							}
+							break;
+						}
+					}
+				})();
+
+				// フォロー解析
+				var dictionary = new Object();
+				(function(){
+					var nodes = ElementGetElementsByTagName(dd,"a");
+					var i;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
+						numbers.getNumbers(function(n){
+							if(!dictionary[n]){
+								var following = bbs_dictionary.getResponse(n);
+								following.addFollower(response);
+								dictionary[n] = true;
+							}
+						});
+					}
+				})();
+
+				// オリジナルエレメントをセット
+				if(dt)	response.addOriginalElements("dt",dt);
+				if(dd)	response.addOriginalElements("dd",dd);
+
+				// 消去時に実行されるイベント
+				response.onerase = function(){
+					var original = response.getOriginalElements();
+
+					// オリジナルエレメントを外す
+					var i;
+					var num = original.length;
+					for(i=0;i<num;i++){
+						var revise_scroll = new DocumentReviseScroll();
+						var node = original[i].element;
+						revise_scroll.executeRemoveElementBefore(node);
+						DomNodeRemove(node);
+						revise_scroll.executeRemoveElementAfter(node);
+					}
+				};
+
+				response.setAnalyzed();
+			}
+			
+			var dl = document.body;
+			var node = dt;
+			while(node){
+				if(node.tagName == "DL"){
+					dl = node;
+				}
+				node = node.parentNode;
+			}
+
+			// レスポンスダイアログを登録（ルート）
+			attachBbsResponseDialog(
+				response,
+				{
+					dt:dt,
+					dd:dd,
+					parent:dl
+				},
+				null,
+				null
+			);
+
+			return true;
+		})();
+
+		response({useful:useful});
+		return true;
+	}.toString() +
+"\n]";
+
+			// ログ速
+			var obj = addPreset(proj.expand_bbs,"logsoku",null);
+			var preset = obj.preset;
 			preset.script_initialize = 
 "[\n\t" + 
 	function(info,response){
@@ -11783,312 +15590,193 @@ function PageExpand(page_expand_arguments){
 	",\n\n\t" +
 	function (info,response){
 		var work = info.work;
+		if(!(work.bbs_name)){
+			return false;
+		}
 
-		if(work.bbs_name){
-			var first_id = 1;
-			var last_id = 1;
-			var dictionary_id = new Array();
-			var element_parent = null;
-			var read_more_button = null;
-			var element_form = null;
-			var base_url = work.base_url;
-			var resource_url_shadow = base_url;
-			var resource_url_more = base_url;
+		var first_id = 1;
+		var last_id = 1;
+		var dictionary_id = new Array();
+		var element_parent = null;
+		var read_more_button = null;
+		var element_form = null;
+		var base_url = work.base_url;
+		var resource_url_shadow = base_url;
+		var resource_url_more = base_url;
 
-			// --------------------------------------------------------------------------------
-			// 文字列からレスポンス番号を取得
-			// --------------------------------------------------------------------------------
-			work.createResponseAnchorNumbers = function (str){
-				var numbers = new ResponseAnchorNumbers();
+		// --------------------------------------------------------------------------------
+		// 文字列からレスポンス番号を取得
+		// --------------------------------------------------------------------------------
+		work.createResponseAnchorNumbers = function (str){
+			var numbers = new ResponseAnchorNumbers();
 
-				var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
-				var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
-				var re_number = new RegExp("^([0-9０-９]+)","i");
+			var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
+			var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("^([0-9０-９]+)","i");
 
-				var m = str.match(re_search);
-				if(m){
-					var p = m[1].length;
-					while(true){
-						// 番号-番号
-						m = str.substr(p).match(re_range);
-						if(m){
-							var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-							var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-							if(id0 < 1) id0 = 1;
-							if(id1 < 1) id1 = 1;
-							if(id0 > 10000) id0 = 10000;
-							if(id1 > 10000) id1 = 10000;
-							p += m[0].length;
-							numbers.addNumbers(id0,id1);
-						}else{
-							// 番号
-							m = str.substr(p).match(re_number);
-							if(m){
-								p += m[0].length;
-								var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-								if(id < 1) id = 1;
-								if(id > 0x7fffffff) id = 0x7fffffff;
-								numbers.addNumber(id);
-							}
-						}
-
-						if(m){
-							// カンマ
-							if(RegExp.rightContext.search(",") == 0){
-								p += 1;
-								continue;
-							}
-						}
-						break;
-					}
-				}
-				return numbers;
-			};
-
-			// --------------------------------------------------------------------------------
-			// レスアンカー拡張
-			// --------------------------------------------------------------------------------
-			work.extendResponseAnchor = function (target){
-				if(BbsControlResponseAnchorExist(target))	return;
-
-				var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
-				var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
-				var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
-				var re_number = new RegExp("([0-9０-９]+)","i");
-
-				var i;
-				var nodes = ElementGetElementsByTagName(target,"a");
-				var num = nodes.length;
-				for(i=num-1;i>=0;i--){
-					var node = nodes[i];
-					var m = ElementGetTextContent(node).match(re_simple);
+			var m = str.match(re_search);
+			if(m){
+				var p = m[1].length;
+				while(true){
+					// 番号-番号
+					m = str.substr(p).match(re_range);
 					if(m){
-						var text_node = DocumentCreateText(m[0]);
-						DomNode_InsertBefore(node,text_node);
-						DomNodeRemove(node);
-					}
-				}
-
-				// テキストノードを統合
-				target.normalize();
-
-				var p;
-				var n;
-				var q;
-				var ignore_dictionary = {"A":1,"SCRIPT":1};
-				var queue = new Object();
-				q = {p:queue,n:queue,node:target};
-				queue.p = q;
-				queue.n = q;
-
-				while(queue.n != queue){
-					q = queue.n;
-					p = q.p;
-					n = q.n;
-					p.n = n;
-					n.p = p;
-					var node = q.node;
-					switch(node.nodeType){
-					case 1:
-						var i;
-						var nodes = node.childNodes;
-						var num = nodes.length;
-						for(i=0;i<num;i++){
-							n = queue;
-							p = n.p;
-							q = {p:p,n:n,node:nodes[i]};
-							p.n = q;
-							n.p = q;
-						}
-						break;
-					case 3:
-						while(node){
-							var m = DomNodeGetNodeValue(node).match(re_detail);
-							if(!m)	break;
-
-							// 元のテキストノード
-							DomNodeSetNodeValue(node,RegExp.leftContext);
-
-							// BbsControlName を生成
-							var element = DocumentCreateElement("a");
-							ElementSetTextContent(element,m[0]);
-							DomNode_InsertAfter(node,element);
-
-							// 直後テキスト
-							node = DocumentCreateText(RegExp.rightContext);
-							DomNode_InsertAfter(element,node);
-
-							var query = "";
-							m = ElementGetTextContent(element).match(re_range);
-							if(m){
-								var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-								var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-								if(min < 1) min = 1;
-								if(max < 1) max = 1;
-								if(min > 10000) min = 10000;
-								if(max > 10000) max = 10000;
-								if(max < min){
-									var tmp = min;
-									min = max;
-									max = tmp;
-								}
-								query = min + "-" + max;
-							}else{
-								// 番号
-								m = ElementGetTextContent(element).match(re_number);
-								if(m){
-									query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
-									if(query < 1) query = 1;
-									if(query > 0x7fffffff) query = 0x7fffffff;
-								}
-
-							}
-							element.href = work.base_url + query;
+						var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+						var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+						if(id0 < 1) id0 = 1;
+						if(id1 < 1) id1 = 1;
+						if(id0 > 10000) id0 = 10000;
+						if(id1 > 10000) id1 = 10000;
+						p += m[0].length;
+						numbers.addNumbers(id0,id1);
+					}else{
+						// 番号
+						m = str.substr(p).match(re_number);
+						if(m){
+							p += m[0].length;
+							var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							if(id < 1) id = 1;
+							if(id > 0x7fffffff) id = 0x7fffffff;
+							numbers.addNumber(id);
 						}
 					}
-				}
-			};
 
-			// --------------------------------------------------------------------------------
-			// 継ぎ足し読み込み
-			// --------------------------------------------------------------------------------
-			function readMore(){
-
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
-
-				// 成功
-				loader.onload = function(str){
-					var re_number = new RegExp("<div id=\"([0-9]+)\">","i");
-
-					var p = 0;
-					var n = str.length;
-					function f(){
-						try{
-							if(p >= n) throw 0;
-							p = str.indexOf("<div id=",p);
-							if(p < 0) throw 0;
-							var e = str.indexOf("</div>",p);
-							if(e >= 0){
-								e = str.indexOf("</div>",e + 6);
-								if(e >= 0) e += 6;
-							}
-							var s = str.substring(p,e);
-							var m = s.match(re_number);
-							if(m){
-								var id = parseInt(m[1]);
-								if(last_id < id){
-									var response = bbs_dictionary.getResponse(id);
-									response.clearAnalyzed();
-									response.clearOriginalElements();
-									response.clearFollowing();
-
-									var nodes = StringHtmlCreateDomNodesSafe(s);
-									var j;
-									var node_num = nodes.length;
-									for(j=0;j<node_num;j++){
-										element_parent.appendChild(nodes[j]);
-									}
-									last_id = id;
-									resource_url_more = base_url + (last_id) + "-";
-								}
-							}
-
-							if(p < e){
-								p = e;
-								execute_queue.attachFirst(f,null);
-								return;
-							}
-						}catch(e){
+					if(m){
+						// カンマ
+						if(RegExp.rightContext.search(",") == 0){
+							p += 1;
+							continue;
 						}
-						read_more_button.init();
 					}
-
-					p = str.indexOf("<div id=\"comments\">",p);
-					if(p >= 0){
-						p += 19;
-						execute_queue.attachFirst(f,null);
-					}
-				};
-
-				// 失敗
-				loader.onerror = function(){
-					read_more_button.init();
-				};
-
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url_more);
-				loader.loadText();
-			}
-
-			// --------------------------------------------------------------------------------
-			// レスポンス親要素
-			// --------------------------------------------------------------------------------
-			element_parent = document.getElementById("comments");
-			if(!element_parent) return false;
-
-			// --------------------------------------------------------------------------------
-			// 範囲取得
-			// --------------------------------------------------------------------------------
-			var nodes = ElementGetElementsByTagName(element_parent,"div");
-			var i;
-			var node_num = nodes.length;
-			for(i=0;i<node_num;i++){
-				var node = nodes[i];
-				var m = node.id.match(new RegExp("^([0-9]+)$","i"));
-				if(m){
-					first_id = parseInt(m[1]);
-					dictionary_id[first_id] = true;
-					if(first_id != 1){
-						break;
-					}
-				}
-			}
-			for(i=node_num-1;i>=0;i--){
-				var node = nodes[i];
-				var m = node.id.match(new RegExp("^([0-9]+)$","i"));
-				if(m){
-					last_id = parseInt(m[1]);
-					dictionary_id[last_id] = true;
 					break;
 				}
 			}
+			return numbers;
+		};
 
-			// --------------------------------------------------------------------------------
-			// アクセス先 URL
-			// --------------------------------------------------------------------------------
-			resource_url_shadow = base_url;
-			resource_url_more = base_url + last_id + "-";
+		// --------------------------------------------------------------------------------
+		// レスアンカー拡張
+		// --------------------------------------------------------------------------------
+		work.extendResponseAnchor = function (target){
+			if(BbsControlResponseAnchorExist(target))	return;
 
-			// --------------------------------------------------------------------------------
-			// BbsControlReadMoreButton 作成
-			// --------------------------------------------------------------------------------
-			read_more_button = new BbsControlReadMoreButton();
-			read_more_button.setWaitTime(2 * 1000);
-			read_more_button.onclick = readMore;
-			DomNode_InsertAfter(element_parent,read_more_button.getElement());
+			var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
+			var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
+			var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("([0-9０-９]+)","i");
 
+			var i;
+			var nodes = ElementGetElementsByTagName(target,"a");
+			var num = nodes.length;
+			for(i=num-1;i>=0;i--){
+				var node = nodes[i];
+				var m = ElementGetTextContent(node).match(re_simple);
+				if(m){
+					var text_node = DocumentCreateText(m[0]);
+					DomNode_InsertBefore(node,text_node);
+					DomNodeRemove(node);
+				}
+			}
 
-			// --------------------------------------------------------------------------------
-			// シャドウロード
-			// --------------------------------------------------------------------------------
-			(function(){
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
+			// テキストノードを統合
+			target.normalize();
 
-				// 成功
-				loader.onload = function(str){
-					var re_number = new RegExp("<div id=\"([0-9]+)\">","i");
-					var re_id = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
-					var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
+			var p;
+			var n;
+			var q;
+			var ignore_dictionary = {"A":1,"SCRIPT":1};
+			var queue = new Object();
+			q = {p:queue,n:queue,node:target};
+			queue.p = q;
+			queue.n = q;
 
-					var p = 0;
-					var n = str.length;
-					function f(){
-						if(p >= n) return;
+			while(queue.n != queue){
+				q = queue.n;
+				p = q.p;
+				n = q.n;
+				p.n = n;
+				n.p = p;
+				var node = q.node;
+				switch(node.nodeType){
+				case 1:
+					var i;
+					var nodes = node.childNodes;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						n = queue;
+						p = n.p;
+						q = {p:p,n:n,node:nodes[i]};
+						p.n = q;
+						n.p = q;
+					}
+					break;
+				case 3:
+					while(node){
+						var m = DomNodeGetNodeValue(node).match(re_detail);
+						if(!m)	break;
+
+						// 元のテキストノード
+						DomNodeSetNodeValue(node,RegExp.leftContext);
+
+						// BbsControlName を生成
+						var element = DocumentCreateElement("a");
+						ElementSetTextContent(element,m[0]);
+						DomNode_InsertAfter(node,element);
+
+						// 直後テキスト
+						node = DocumentCreateText(RegExp.rightContext);
+						DomNode_InsertAfter(element,node);
+
+						var query = "";
+						m = ElementGetTextContent(element).match(re_range);
+						if(m){
+							var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+							if(min < 1) min = 1;
+							if(max < 1) max = 1;
+							if(min > 10000) min = 10000;
+							if(max > 10000) max = 10000;
+							if(max < min){
+								var tmp = min;
+								min = max;
+								max = tmp;
+							}
+							query = min + "-" + max;
+						}else{
+							// 番号
+							m = ElementGetTextContent(element).match(re_number);
+							if(m){
+								query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
+								if(query < 1) query = 1;
+								if(query > 0x7fffffff) query = 0x7fffffff;
+							}
+
+						}
+						element.href = work.base_url + query;
+					}
+				}
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// 継ぎ足し読み込み
+		// --------------------------------------------------------------------------------
+		function readMore(){
+
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
+
+			// 成功
+			loader.onload = function(str){
+				var re_number = new RegExp("<div id=\"([0-9]+)\">","i");
+
+				var p = 0;
+				var n = str.length;
+				function f(){
+					try{
+						if(p >= n) throw 0;
 						p = str.indexOf("<div id=",p);
-						if(p < 0) return;
+						if(p < 0) throw 0;
 						var e = str.indexOf("</div>",p);
 						if(e >= 0){
 							e = str.indexOf("</div>",e + 6);
@@ -12098,150 +15786,269 @@ function PageExpand(page_expand_arguments){
 						var m = s.match(re_number);
 						if(m){
 							var id = parseInt(m[1]);
-							if((first_id <= id) && (id <= last_id)){
-							}else if(dictionary_id[id]){
-							}else{
-								// ナンバーからレスポンスオブジェクトを取得
+							if(last_id < id){
 								var response = bbs_dictionary.getResponse(id);
-								if(!(response.getAnalyzed())){
-									var nodes = StringHtmlCreateDomNodesSafe(s);
-									var dt = nodes[0];
-									var dd = ElementGetElementsByTagName(dt,"DIV")[0];
+								response.clearAnalyzed();
+								response.clearOriginalElements();
+								response.clearFollowing();
 
-									try{
-										if(dt.tagName != "DIV")	return;
-										if(!dt.id.match(/^[0-9]+$/))	return;
-										if(dd.className != "comment")	return;
-									}catch(e){
-										return;
-									}
-
-									var dt_text = ElementGetTextContent(dt);
-
-									// レスアンカー拡張
-									work.extendResponseAnchor(dd);
-
-									// IDの取得
-									if(dt_text.match(re_id)){
-										response.setId(RegExp.$1);
-									}
-
-									// 名前の取得
-									if(dt_text.match(re_name)){
-										response.setName(RegExp.$1);
-									}
-
-									// ホスト名の取得
-									(function(){
-										var p;
-										var n;
-										var q;
-										var ignore_dictionary = {"B":1,"SCRIPT":1};
-										var queue = new Object();
-										q = {p:queue,n:queue,node:dt};
-										queue.p = q;
-										queue.n = q;
-
-										while(queue.n != queue){
-											q = queue.n;
-											p = q.p;
-											n = q.n;
-											p.n = n;
-											n.p = p;
-											var node = q.node;
-											switch(node.nodeType){
-											case 1:
-												if(!(ignore_dictionary[node.tagName])){
-													var i;
-													var nodes = node.childNodes;
-													var num = nodes.length;
-													for(i=0;i<num;i++){
-														n = queue;
-														p = n.p;
-														q = {p:p,n:n,node:nodes[i]};
-														p.n = q;
-														n.p = q;
-													}
-												}
-												break;
-											case 3:
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})\\n \\]","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												break;
-											}
-										}
-									})();
-
-									// フォロー解析
-									var dictionary = new Object();
-									(function(){
-										var nodes = ElementGetElementsByTagName(dd,"a");
-										var i;
-										var num = nodes.length;
-										for(i=0;i<num;i++){
-											var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-											numbers.getNumbers(function(n){
-												if(!dictionary[n]){
-													var following = bbs_dictionary.getResponse(n);
-													following.addFollower(response);
-													dictionary[n] = true;
-												}
-											});
-										}
-									})();
-
-									// オリジナルエレメントをセット
-									if(dt)	response.addOriginalElements("dt",dt);
-									if(dd)	response.addOriginalElements("dd",dd);
-
-									// 消去時に実行されるイベント
-									response.onerase = function(){};
-
-									response.setAnalyzed();
+								var nodes = StringHtmlCreateDomNodesSafe(s);
+								var j;
+								var node_num = nodes.length;
+								for(j=0;j<node_num;j++){
+									element_parent.appendChild(nodes[j]);
 								}
+								last_id = id;
+								resource_url_more = base_url + (last_id) + "-";
 							}
 						}
+
 						if(p < e){
 							p = e;
 							execute_queue.attachFirst(f,null);
+							return;
 						}
+					}catch(e){
 					}
+					read_more_button.init();
+				}
 
-					p = str.indexOf("<div id=\"comments\">",p);
-					if(p >= 0){
-						p += 19;
-						execute_queue.attachFirst(f,null);
-					}
-				};
+				p = str.indexOf("<div id=\"comments\">",p);
+				if(p >= 0){
+					p += 19;
+					execute_queue.attachFirst(f,null);
+				}
+			};
 
-				// 失敗
-				loader.onerror = function(){
-				};
+			// 失敗
+			loader.onerror = function(){
+				read_more_button.init();
+			};
 
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url_shadow);
-				loader.loadText();
-			})();
-
-			response({result:true});
-			return true;
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url_more);
+			loader.loadText();
 		}
 
-		return false;
+		// --------------------------------------------------------------------------------
+		// レスポンス親要素
+		// --------------------------------------------------------------------------------
+		element_parent = document.getElementById("comments");
+		if(!element_parent) return false;
+
+		// --------------------------------------------------------------------------------
+		// 範囲取得
+		// --------------------------------------------------------------------------------
+		var nodes = ElementGetElementsByTagName(element_parent,"div");
+		var i;
+		var node_num = nodes.length;
+		for(i=0;i<node_num;i++){
+			var node = nodes[i];
+			var m = node.id.match(new RegExp("^([0-9]+)$","i"));
+			if(m){
+				first_id = parseInt(m[1]);
+				dictionary_id[first_id] = true;
+				if(first_id != 1){
+					break;
+				}
+			}
+		}
+		for(i=node_num-1;i>=0;i--){
+			var node = nodes[i];
+			var m = node.id.match(new RegExp("^([0-9]+)$","i"));
+			if(m){
+				last_id = parseInt(m[1]);
+				dictionary_id[last_id] = true;
+				break;
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// アクセス先 URL
+		// --------------------------------------------------------------------------------
+		resource_url_shadow = base_url;
+		resource_url_more = base_url + last_id + "-";
+
+		// --------------------------------------------------------------------------------
+		// BbsControlReadMoreButton 作成
+		// --------------------------------------------------------------------------------
+		read_more_button = new BbsControlReadMoreButton();
+		read_more_button.setWaitTime(2 * 1000);
+		read_more_button.onclick = readMore;
+		DomNode_InsertAfter(element_parent,read_more_button.getElement());
+
+
+		// --------------------------------------------------------------------------------
+		// シャドウロード
+		// --------------------------------------------------------------------------------
+		(function(){
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
+
+			// 成功
+			loader.onload = function(str){
+				var re_number = new RegExp("<div id=\"([0-9]+)\">","i");
+				var re_id = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
+				var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
+
+				var p = 0;
+				var n = str.length;
+				function f(){
+					if(p >= n) return;
+					p = str.indexOf("<div id=",p);
+					if(p < 0) return;
+					var e = str.indexOf("</div>",p);
+					if(e >= 0){
+						e = str.indexOf("</div>",e + 6);
+						if(e >= 0) e += 6;
+					}
+					var s = str.substring(p,e);
+					var m = s.match(re_number);
+					if(m){
+						var id = parseInt(m[1]);
+						if((first_id <= id) && (id <= last_id)){
+						}else if(dictionary_id[id]){
+						}else{
+							// ナンバーからレスポンスオブジェクトを取得
+							var response = bbs_dictionary.getResponse(id);
+							if(!(response.getAnalyzed())){
+								var nodes = StringHtmlCreateDomNodesSafe(s);
+								var dt = nodes[0];
+								var dd = ElementGetElementsByTagName(dt,"DIV")[0];
+
+								try{
+									if(dt.tagName != "DIV")	return;
+									if(!dt.id.match(/^[0-9]+$/))	return;
+									if(dd.className != "comment")	return;
+								}catch(e){
+									return;
+								}
+
+								var dt_text = ElementGetTextContent(dt);
+
+								// レスアンカー拡張
+								work.extendResponseAnchor(dd);
+
+								// IDの取得
+								if(dt_text.match(re_id)){
+									response.setId(RegExp.$1);
+								}
+
+								// 名前の取得
+								if(dt_text.match(re_name)){
+									response.setName(RegExp.$1);
+								}
+
+								// ホスト名の取得
+								(function(){
+									var p;
+									var n;
+									var q;
+									var ignore_dictionary = {"B":1,"SCRIPT":1};
+									var queue = new Object();
+									q = {p:queue,n:queue,node:dt};
+									queue.p = q;
+									queue.n = q;
+
+									while(queue.n != queue){
+										q = queue.n;
+										p = q.p;
+										n = q.n;
+										p.n = n;
+										n.p = p;
+										var node = q.node;
+										switch(node.nodeType){
+										case 1:
+											if(!(ignore_dictionary[node.tagName])){
+												var i;
+												var nodes = node.childNodes;
+												var num = nodes.length;
+												for(i=0;i<num;i++){
+													n = queue;
+													p = n.p;
+													q = {p:p,n:n,node:nodes[i]};
+													p.n = q;
+													n.p = q;
+												}
+											}
+											break;
+										case 3:
+											var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
+											if(m){
+												response.setHost(m[2]);
+												return;
+											}
+											var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})\\n \\]","i"));
+											if(m){
+												response.setHost(m[2]);
+												return;
+											}
+											var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
+											if(m){
+												response.setHost(m[2]);
+												return;
+											}
+											break;
+										}
+									}
+								})();
+
+								// フォロー解析
+								var dictionary = new Object();
+								(function(){
+									var nodes = ElementGetElementsByTagName(dd,"a");
+									var i;
+									var num = nodes.length;
+									for(i=0;i<num;i++){
+										var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
+										numbers.getNumbers(function(n){
+											if(!dictionary[n]){
+												var following = bbs_dictionary.getResponse(n);
+												following.addFollower(response);
+												dictionary[n] = true;
+											}
+										});
+									}
+								})();
+
+								// オリジナルエレメントをセット
+								if(dt)	response.addOriginalElements("dt",dt);
+								if(dd)	response.addOriginalElements("dd",dd);
+
+								// 消去時に実行されるイベント
+								response.onerase = function(){};
+
+								response.setAnalyzed();
+							}
+						}
+					}
+					if(p < e){
+						p = e;
+						execute_queue.attachFirst(f,null);
+					}
+				}
+
+				p = str.indexOf("<div id=\"comments\">",p);
+				if(p >= 0){
+					p += 19;
+					execute_queue.attachFirst(f,null);
+				}
+			};
+
+			// 失敗
+			loader.onerror = function(){
+			};
+
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url_shadow);
+			loader.loadText();
+		})();
+
+		response({result:true});
+		return true;
+
 	}.toString() +
 	",\n\n\t" +
 	function (info,response){
@@ -12250,7 +16057,7 @@ function PageExpand(page_expand_arguments){
 	}.toString() +
 "\n]";
 
-				preset.script_callback = 
+			preset.script_callback = 
 "[\n\t" + 
 	function(info,response){
 		var element = info.element;
@@ -13319,15 +17126,6 @@ function PageExpand(page_expand_arguments){
 			// みみずん検索
 			var obj = addPreset(proj.expand_bbs,"mimizun",null);
 			var preset = obj.preset;
-			preset.filter = [
-				{
-					pattern:"^http://mimizun\\.com/log/2ch/[^/]+/[0-9]+",
-					flags:{i:true,g:false}
-				},{
-					pattern:"^http://mimizun\\.com/log/machi/[^/]+/[0-9]+",
-					flags:{i:true,g:false}
-				}
-			];
 			preset.script_initialize = 
 "[\n\t" + 
 	function(info,response){
@@ -13360,454 +17158,453 @@ function PageExpand(page_expand_arguments){
 	",\n\n\t" +
 	function (info,response){
 		var work = info.work;
+		if(!(work.bbs_name)){
+			return false;
+		}
 
-		if(work.bbs_name){
-			var first_id = 1;
-			var last_id = 1;
-			var dictionary_id = new Array();
-			var element_parent = null;
-			var read_more_button = null;
-			var element_form = null;
-			var base_url = work.base_url;
-			var resource_url_shadow = base_url;
-			var resource_url_more = base_url;
+		var first_id = 1;
+		var last_id = 1;
+		var dictionary_id = new Array();
+		var element_parent = null;
+		var read_more_button = null;
+		var element_form = null;
+		var base_url = work.base_url;
+		var resource_url_shadow = base_url;
+		var resource_url_more = base_url;
 
-			// --------------------------------------------------------------------------------
-			// 文字列からレスポンス番号を取得
-			// --------------------------------------------------------------------------------
-			work.createResponseAnchorNumbers = function (str){
-				var numbers = new ResponseAnchorNumbers();
+		// --------------------------------------------------------------------------------
+		// 文字列からレスポンス番号を取得
+		// --------------------------------------------------------------------------------
+		work.createResponseAnchorNumbers = function (str){
+			var numbers = new ResponseAnchorNumbers();
 
-				var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
-				var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
-				var re_number = new RegExp("^([0-9０-９]+)","i");
+			var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
+			var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("^([0-9０-９]+)","i");
 
-				var m = str.match(re_search);
-				if(m){
-					var p = m[1].length;
-					while(true){
-						// 番号-番号
-						m = str.substr(p).match(re_range);
+			var m = str.match(re_search);
+			if(m){
+				var p = m[1].length;
+				while(true){
+					// 番号-番号
+					m = str.substr(p).match(re_range);
+					if(m){
+						var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+						var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+						if(id0 < 1) id0 = 1;
+						if(id1 < 1) id1 = 1;
+						if(id0 > 10000) id0 = 10000;
+						if(id1 > 10000) id1 = 10000;
+						p += m[0].length;
+						numbers.addNumbers(id0,id1);
+					}else{
+						// 番号
+						m = str.substr(p).match(re_number);
 						if(m){
-							var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-							var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-							if(id0 < 1) id0 = 1;
-							if(id1 < 1) id1 = 1;
-							if(id0 > 10000) id0 = 10000;
-							if(id1 > 10000) id1 = 10000;
 							p += m[0].length;
-							numbers.addNumbers(id0,id1);
+							var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							if(id < 1) id = 1;
+							if(id > 0x7fffffff) id = 0x7fffffff;
+							numbers.addNumber(id);
+						}
+					}
+
+					if(m){
+						// カンマ
+						if(RegExp.rightContext.search(",") == 0){
+							p += 1;
+							continue;
+						}
+					}
+					break;
+				}
+			}
+			return numbers;
+		};
+
+		// --------------------------------------------------------------------------------
+		// レスアンカー拡張
+		// --------------------------------------------------------------------------------
+		work.extendResponseAnchor = function (target){
+			if(BbsControlResponseAnchorExist(target))	return;
+
+			var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
+			var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
+			var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("([0-9０-９]+)","i");
+
+			var i;
+			var nodes = ElementGetElementsByTagName(target,"a");
+			var num = nodes.length;
+			for(i=num-1;i>=0;i--){
+				var node = nodes[i];
+				var m = ElementGetTextContent(node).match(re_simple);
+				if(m){
+					var text_node = DocumentCreateText(m[0]);
+					DomNode_InsertBefore(node,text_node);
+					DomNodeRemove(node);
+				}
+			}
+
+			// テキストノードを統合
+			target.normalize();
+
+			var p;
+			var n;
+			var q;
+			var ignore_dictionary = {"A":1,"SCRIPT":1};
+			var queue = new Object();
+			q = {p:queue,n:queue,node:target};
+			queue.p = q;
+			queue.n = q;
+
+			while(queue.n != queue){
+				q = queue.n;
+				p = q.p;
+				n = q.n;
+				p.n = n;
+				n.p = p;
+				var node = q.node;
+				switch(node.nodeType){
+				case 1:
+					var i;
+					var nodes = node.childNodes;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						n = queue;
+						p = n.p;
+						q = {p:p,n:n,node:nodes[i]};
+						p.n = q;
+						n.p = q;
+					}
+					break;
+				case 3:
+					while(node){
+						var m = DomNodeGetNodeValue(node).match(re_detail);
+						if(!m)	break;
+
+						// 元のテキストノード
+						DomNodeSetNodeValue(node,RegExp.leftContext);
+
+						// BbsControlName を生成
+						var element = DocumentCreateElement("a");
+						ElementSetTextContent(element,m[0]);
+						DomNode_InsertAfter(node,element);
+
+						// 直後テキスト
+						node = DocumentCreateText(RegExp.rightContext);
+						DomNode_InsertAfter(element,node);
+
+						var query = "";
+						m = ElementGetTextContent(element).match(re_range);
+						if(m){
+							var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+							if(min < 1) min = 1;
+							if(max < 1) max = 1;
+							if(min > 10000) min = 10000;
+							if(max > 10000) max = 10000;
+							if(max < min){
+								var tmp = min;
+								min = max;
+								max = tmp;
+							}
+							query = min + "-" + max;
 						}else{
 							// 番号
-							m = str.substr(p).match(re_number);
+							m = ElementGetTextContent(element).match(re_number);
 							if(m){
-								p += m[0].length;
-								var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-								if(id < 1) id = 1;
-								if(id > 0x7fffffff) id = 0x7fffffff;
-								numbers.addNumber(id);
-							}
-						}
-
-						if(m){
-							// カンマ
-							if(RegExp.rightContext.search(",") == 0){
-								p += 1;
-								continue;
-							}
-						}
-						break;
-					}
-				}
-				return numbers;
-			};
-
-			// --------------------------------------------------------------------------------
-			// レスアンカー拡張
-			// --------------------------------------------------------------------------------
-			work.extendResponseAnchor = function (target){
-				if(BbsControlResponseAnchorExist(target))	return;
-
-				var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
-				var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
-				var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
-				var re_number = new RegExp("([0-9０-９]+)","i");
-
-				var i;
-				var nodes = ElementGetElementsByTagName(target,"a");
-				var num = nodes.length;
-				for(i=num-1;i>=0;i--){
-					var node = nodes[i];
-					var m = ElementGetTextContent(node).match(re_simple);
-					if(m){
-						var text_node = DocumentCreateText(m[0]);
-						DomNode_InsertBefore(node,text_node);
-						DomNodeRemove(node);
-					}
-				}
-
-				// テキストノードを統合
-				target.normalize();
-
-				var p;
-				var n;
-				var q;
-				var ignore_dictionary = {"A":1,"SCRIPT":1};
-				var queue = new Object();
-				q = {p:queue,n:queue,node:target};
-				queue.p = q;
-				queue.n = q;
-
-				while(queue.n != queue){
-					q = queue.n;
-					p = q.p;
-					n = q.n;
-					p.n = n;
-					n.p = p;
-					var node = q.node;
-					switch(node.nodeType){
-					case 1:
-						var i;
-						var nodes = node.childNodes;
-						var num = nodes.length;
-						for(i=0;i<num;i++){
-							n = queue;
-							p = n.p;
-							q = {p:p,n:n,node:nodes[i]};
-							p.n = q;
-							n.p = q;
-						}
-						break;
-					case 3:
-						while(node){
-							var m = DomNodeGetNodeValue(node).match(re_detail);
-							if(!m)	break;
-
-							// 元のテキストノード
-							DomNodeSetNodeValue(node,RegExp.leftContext);
-
-							// BbsControlName を生成
-							var element = DocumentCreateElement("a");
-							ElementSetTextContent(element,m[0]);
-							DomNode_InsertAfter(node,element);
-
-							// 直後テキスト
-							node = DocumentCreateText(RegExp.rightContext);
-							DomNode_InsertAfter(element,node);
-
-							var query = "";
-							m = ElementGetTextContent(element).match(re_range);
-							if(m){
-								var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-								var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-								if(min < 1) min = 1;
-								if(max < 1) max = 1;
-								if(min > 10000) min = 10000;
-								if(max > 10000) max = 10000;
-								if(max < min){
-									var tmp = min;
-									min = max;
-									max = tmp;
-								}
-								query = min + "-" + max;
-							}else{
-								// 番号
-								m = ElementGetTextContent(element).match(re_number);
-								if(m){
-									query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
-									if(query < 1) query = 1;
-									if(query > 0x7fffffff) query = 0x7fffffff;
-								}
-
-							}
-							element.href = work.base_url + query;
-						}
-					}
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// 継ぎ足し読み込み
-			// --------------------------------------------------------------------------------
-			function readMore(){
-
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
-
-				// 成功
-				loader.onload = function(str){
-					var re_number = new RegExp("<a name=\"([0-9]+)\">","i");
-
-					var p = 0;
-					var n = str.length;
-					function f(){
-						try{
-							if(p >= n) throw 0;
-							p = str.indexOf("<div class=\"contributor\">",p);
-							if(p < 0) throw 0;
-							var e = str.indexOf("\n",p);
-							var s = str.substring(p,e);
-							var m = s.match(re_number);
-							if(m){
-								var id = parseInt(m[1]);
-								if(last_id < id){
-									var response = bbs_dictionary.getResponse(id);
-									response.clearAnalyzed();
-									response.clearOriginalElements();
-									response.clearFollowing();
-
-									var nodes = StringHtmlCreateDomNodesSafe(s);
-									var j;
-									var node_num = nodes.length;
-									for(j=0;j<node_num;j++){
-										element_parent.appendChild(nodes[j]);
-									}
-									last_id = id;
-									resource_url_more = base_url + (last_id) + "-";
-								}
+								query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
+								if(query < 1) query = 1;
+								if(query > 0x7fffffff) query = 0x7fffffff;
 							}
 
-							if(p < e){
-								p = e + 1;
-								execute_queue.attachFirst(f,null);
-								return;
-							}
-						}catch(e){
 						}
-						read_more_button.init();
-					}
-					execute_queue.attachFirst(f,null);
-				};
-
-				// 失敗
-				loader.onerror = function(){
-					read_more_button.init();
-				};
-
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url_more);
-				loader.overrideMimeType("text/plain; charset=Shift_JIS");
-				loader.loadText();
-			}
-
-			// --------------------------------------------------------------------------------
-			// レスポンス親要素
-			// --------------------------------------------------------------------------------
-			if(!element_parent) element_parent = document.getElementById("thread");
-			if(!element_parent) element_parent = document.getElementById("thread2");
-			if(!element_parent) return false;
-
-			// --------------------------------------------------------------------------------
-			// 範囲取得
-			// --------------------------------------------------------------------------------
-			var nodes = ElementGetElementsByTagName(element_parent,"div");
-			var i;
-			var node_num = nodes.length;
-			for(i=0;i<node_num;i++){
-				var node = nodes[i];
-				if(node.className == "contributor"){
-					var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)","i"));
-					if(m){
-						first_id = parseInt(m[1]);
-						dictionary_id[first_id] = true;
-						if(first_id != 1){
-							break;
-						}
+						element.href = work.base_url + query;
 					}
 				}
 			}
-			for(i=node_num-1;i>=0;i--){
-				var node = nodes[i];
-				if(node.className == "contributor"){
-					var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)","i"));
-					if(m){
-						last_id = parseInt(m[1]);
-						dictionary_id[last_id] = true;
-						break;
-					}
-				}
-			}
+		};
 
-			// --------------------------------------------------------------------------------
-			// アクセス先 URL
-			// --------------------------------------------------------------------------------
-			resource_url_shadow = base_url;
-			resource_url_more = base_url + last_id + "-";
+		// --------------------------------------------------------------------------------
+		// 継ぎ足し読み込み
+		// --------------------------------------------------------------------------------
+		function readMore(){
 
-			// --------------------------------------------------------------------------------
-			// BbsControlReadMoreButton 作成
-			// --------------------------------------------------------------------------------
-			read_more_button = new BbsControlReadMoreButton();
-			read_more_button.setWaitTime(2 * 1000);
-			read_more_button.onclick = readMore;
-			DomNode_InsertAfter(element_parent,read_more_button.getElement());
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
 
-			// --------------------------------------------------------------------------------
-			// シャドウロード
-			// --------------------------------------------------------------------------------
-			(function(){
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
+			// 成功
+			loader.onload = function(str){
+				var re_number = new RegExp("<a name=\"([0-9]+)\">","i");
 
-				// 成功
-				loader.onload = function(str){
-					var re_number = new RegExp("<a name=\"([0-9]+)\">","i");
-					var re_id = new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i");
-					var re_name = new RegExp("(◆(|[ ])[a-zA-Z0-9+/.]{10,12})","i");
-
-					var p = 0;
-					var n = str.length;
-					function f(){
-						if(p >= n) return;
+				var p = 0;
+				var n = str.length;
+				function f(){
+					try{
+						if(p >= n) throw 0;
 						p = str.indexOf("<div class=\"contributor\">",p);
-						if(p < 0) return;
+						if(p < 0) throw 0;
 						var e = str.indexOf("\n",p);
 						var s = str.substring(p,e);
 						var m = s.match(re_number);
 						if(m){
 							var id = parseInt(m[1]);
-							if((first_id <= id) && (id <= last_id)){
-							}else if(dictionary_id[id]){
-							}else{
-								// ナンバーからレスポンスオブジェクトを取得
+							if(last_id < id){
 								var response = bbs_dictionary.getResponse(id);
-								if(!(response.getAnalyzed())){
-									var nodes = StringHtmlCreateDomNodesSafe(s);
-									var dt = nodes[0];
-									var dd = nodes[1];
+								response.clearAnalyzed();
+								response.clearOriginalElements();
+								response.clearFollowing();
 
-									try{
-										if(dt.tagName != "DIV")	return;
-										if(dt.className != "contributor")	return;
-										if(dd.tagName != "DIV")	return;
-										if(dd.className != "res")	return;
-									}catch(e){
-										return;
-									}
-
-									var dt_text = ElementGetTextContent(dt);
-
-									// レスアンカー拡張
-									work.extendResponseAnchor(dd);
-
-									// IDの取得
-									if(dt_text.match(re_id)){
-										response.setId(RegExp.$1);
-									}
-
-									// 名前の取得
-									if(dt_text.match(re_name)){
-										response.setName(RegExp.$1);
-									}
-
-									// ホスト名の取得
-									(function(){
-										var p;
-										var n;
-										var q;
-										var ignore_dictionary = {"B":1,"SCRIPT":1};
-										var queue = new Object();
-										q = {p:queue,n:queue,node:dt};
-										queue.p = q;
-										queue.n = q;
-
-										while(queue.n != queue){
-											q = queue.n;
-											p = q.p;
-											n = q.n;
-											p.n = n;
-											n.p = p;
-											var node = q.node;
-											switch(node.nodeType){
-											case 1:
-												if(!(ignore_dictionary[node.tagName])){
-													var i;
-													var nodes = node.childNodes;
-													var num = nodes.length;
-													for(i=0;i<num;i++){
-														n = queue;
-														p = n.p;
-														q = {p:p,n:n,node:nodes[i]};
-														p.n = q;
-														n.p = q;
-													}
-												}
-												break;
-											case 3:
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,}) \\]","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												break;
-											}
-										}
-									})();
-
-									// フォロー解析
-									var dictionary = new Object();
-									(function(){
-										var nodes = ElementGetElementsByTagName(dd,"a");
-										var i;
-										var num = nodes.length;
-										for(i=0;i<num;i++){
-											var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-											numbers.getNumbers(function(n){
-												if(!dictionary[n]){
-													var following = bbs_dictionary.getResponse(n);
-													following.addFollower(response);
-													dictionary[n] = true;
-												}
-											});
-										}
-									})();
-
-									// オリジナルエレメントをセット
-									if(dt)	response.addOriginalElements("dt",dt);
-									if(dd)	response.addOriginalElements("dd",dd);
-
-									// 消去時に実行されるイベント
-									response.onerase = function(){};
-
-									response.setAnalyzed();
+								var nodes = StringHtmlCreateDomNodesSafe(s);
+								var j;
+								var node_num = nodes.length;
+								for(j=0;j<node_num;j++){
+									element_parent.appendChild(nodes[j]);
 								}
+								last_id = id;
+								resource_url_more = base_url + (last_id) + "-";
 							}
 						}
 
 						if(p < e){
 							p = e + 1;
 							execute_queue.attachFirst(f,null);
+							return;
 						}
+					}catch(e){
 					}
-					execute_queue.attachFirst(f,null);
-				};
+					read_more_button.init();
+				}
+				execute_queue.attachFirst(f,null);
+			};
 
-				// 失敗
-				loader.onerror = function(){
-				};
+			// 失敗
+			loader.onerror = function(){
+				read_more_button.init();
+			};
 
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url_shadow);
-				loader.loadText();
-			})();
-
-			response({result:true});
-			return true;
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url_more);
+			loader.overrideMimeType("text/plain; charset=Shift_JIS");
+			loader.loadText();
 		}
 
-		return false;
+		// --------------------------------------------------------------------------------
+		// レスポンス親要素
+		// --------------------------------------------------------------------------------
+		if(!element_parent) element_parent = document.getElementById("thread");
+		if(!element_parent) element_parent = document.getElementById("thread2");
+		if(!element_parent) return false;
+
+		// --------------------------------------------------------------------------------
+		// 範囲取得
+		// --------------------------------------------------------------------------------
+		var nodes = ElementGetElementsByTagName(element_parent,"div");
+		var i;
+		var node_num = nodes.length;
+		for(i=0;i<node_num;i++){
+			var node = nodes[i];
+			if(node.className == "contributor"){
+				var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)","i"));
+				if(m){
+					first_id = parseInt(m[1]);
+					dictionary_id[first_id] = true;
+					if(first_id != 1){
+						break;
+					}
+				}
+			}
+		}
+		for(i=node_num-1;i>=0;i--){
+			var node = nodes[i];
+			if(node.className == "contributor"){
+				var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)","i"));
+				if(m){
+					last_id = parseInt(m[1]);
+					dictionary_id[last_id] = true;
+					break;
+				}
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// アクセス先 URL
+		// --------------------------------------------------------------------------------
+		resource_url_shadow = base_url;
+		resource_url_more = base_url + last_id + "-";
+
+		// --------------------------------------------------------------------------------
+		// BbsControlReadMoreButton 作成
+		// --------------------------------------------------------------------------------
+		read_more_button = new BbsControlReadMoreButton();
+		read_more_button.setWaitTime(2 * 1000);
+		read_more_button.onclick = readMore;
+		DomNode_InsertAfter(element_parent,read_more_button.getElement());
+
+		// --------------------------------------------------------------------------------
+		// シャドウロード
+		// --------------------------------------------------------------------------------
+		(function(){
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
+
+			// 成功
+			loader.onload = function(str){
+				var re_number = new RegExp("<a name=\"([0-9]+)\">","i");
+				var re_id = new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i");
+				var re_name = new RegExp("(◆(|[ ])[a-zA-Z0-9+/.]{10,12})","i");
+
+				var p = 0;
+				var n = str.length;
+				function f(){
+					if(p >= n) return;
+					p = str.indexOf("<div class=\"contributor\">",p);
+					if(p < 0) return;
+					var e = str.indexOf("\n",p);
+					var s = str.substring(p,e);
+					var m = s.match(re_number);
+					if(m){
+						var id = parseInt(m[1]);
+						if((first_id <= id) && (id <= last_id)){
+						}else if(dictionary_id[id]){
+						}else{
+							// ナンバーからレスポンスオブジェクトを取得
+							var response = bbs_dictionary.getResponse(id);
+							if(!(response.getAnalyzed())){
+								var nodes = StringHtmlCreateDomNodesSafe(s);
+								var dt = nodes[0];
+								var dd = nodes[1];
+
+								try{
+									if(dt.tagName != "DIV")	return;
+									if(dt.className != "contributor")	return;
+									if(dd.tagName != "DIV")	return;
+									if(dd.className != "res")	return;
+								}catch(e){
+									return;
+								}
+
+								var dt_text = ElementGetTextContent(dt);
+
+								// レスアンカー拡張
+								work.extendResponseAnchor(dd);
+
+								// IDの取得
+								if(dt_text.match(re_id)){
+									response.setId(RegExp.$1);
+								}
+
+								// 名前の取得
+								if(dt_text.match(re_name)){
+									response.setName(RegExp.$1);
+								}
+
+								// ホスト名の取得
+								(function(){
+									var p;
+									var n;
+									var q;
+									var ignore_dictionary = {"B":1,"SCRIPT":1};
+									var queue = new Object();
+									q = {p:queue,n:queue,node:dt};
+									queue.p = q;
+									queue.n = q;
+
+									while(queue.n != queue){
+										q = queue.n;
+										p = q.p;
+										n = q.n;
+										p.n = n;
+										n.p = p;
+										var node = q.node;
+										switch(node.nodeType){
+										case 1:
+											if(!(ignore_dictionary[node.tagName])){
+												var i;
+												var nodes = node.childNodes;
+												var num = nodes.length;
+												for(i=0;i<num;i++){
+													n = queue;
+													p = n.p;
+													q = {p:p,n:n,node:nodes[i]};
+													p.n = q;
+													n.p = q;
+												}
+											}
+											break;
+										case 3:
+											var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
+											if(m){
+												response.setHost(m[2]);
+												return;
+											}
+											var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,}) \\]","i"));
+											if(m){
+												response.setHost(m[2]);
+												return;
+											}
+											var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
+											if(m){
+												response.setHost(m[2]);
+												return;
+											}
+											break;
+										}
+									}
+								})();
+
+								// フォロー解析
+								var dictionary = new Object();
+								(function(){
+									var nodes = ElementGetElementsByTagName(dd,"a");
+									var i;
+									var num = nodes.length;
+									for(i=0;i<num;i++){
+										var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
+										numbers.getNumbers(function(n){
+											if(!dictionary[n]){
+												var following = bbs_dictionary.getResponse(n);
+												following.addFollower(response);
+												dictionary[n] = true;
+											}
+										});
+									}
+								})();
+
+								// オリジナルエレメントをセット
+								if(dt)	response.addOriginalElements("dt",dt);
+								if(dd)	response.addOriginalElements("dd",dd);
+
+								// 消去時に実行されるイベント
+								response.onerase = function(){};
+
+								response.setAnalyzed();
+							}
+						}
+					}
+
+					if(p < e){
+						p = e + 1;
+						execute_queue.attachFirst(f,null);
+					}
+				}
+				execute_queue.attachFirst(f,null);
+			};
+
+			// 失敗
+			loader.onerror = function(){
+			};
+
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url_shadow);
+			loader.loadText();
+		})();
+
+		response({result:true});
+		return true;
 	}.toString() +
 	",\n\n\t" +
 	function (info,response){
@@ -13816,7 +17613,7 @@ function PageExpand(page_expand_arguments){
 	}.toString() +
 "\n]";
 
-				preset.script_callback = 
+			preset.script_callback = 
 "[\n\t" + 
 	function(info,response){
 		var element = info.element;
@@ -14810,12 +18607,6 @@ function PageExpand(page_expand_arguments){
 			// unkar.org
 			var obj = addPreset(proj.expand_bbs,"unkar",null);
 			var preset = obj.preset;
-			preset.filter = [
-				{
-					pattern:"^http://unkar\\.org/r/[^/]+/[0-9]+",
-					flags:{i:true,g:false}
-				}
-			];
 			preset.script_initialize = 
 "[\n\t" + 
 	function(info,response){
@@ -14847,449 +18638,448 @@ function PageExpand(page_expand_arguments){
 	",\n\n\t" +
 	function (info,response){
 		var work = info.work;
+		if(!(work.bbs_name)){
+			return false;
+		}
 
-		if(work.bbs_name){
-			var first_id = 1;
-			var last_id = 1;
-			var dictionary_id = new Array();
-			var element_parent = null;
-			var read_more_button = null;
-			var element_form = null;
-			var base_url = work.base_url;
-			var resource_url_shadow = base_url;
-			var resource_url_more = base_url;
+		var first_id = 1;
+		var last_id = 1;
+		var dictionary_id = new Array();
+		var element_parent = null;
+		var read_more_button = null;
+		var element_form = null;
+		var base_url = work.base_url;
+		var resource_url_shadow = base_url;
+		var resource_url_more = base_url;
 
-			// --------------------------------------------------------------------------------
-			// 文字列からレスポンス番号を取得
-			// --------------------------------------------------------------------------------
-			work.createResponseAnchorNumbers = function (str){
-				var numbers = new ResponseAnchorNumbers();
+		// --------------------------------------------------------------------------------
+		// 文字列からレスポンス番号を取得
+		// --------------------------------------------------------------------------------
+		work.createResponseAnchorNumbers = function (str){
+			var numbers = new ResponseAnchorNumbers();
 
-				var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
-				var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
-				var re_number = new RegExp("^([0-9０-９]+)","i");
+			var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
+			var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("^([0-9０-９]+)","i");
 
-				var m = str.match(re_search);
-				if(m){
-					var p = m[1].length;
-					while(true){
-						// 番号-番号
-						m = str.substr(p).match(re_range);
-						if(m){
-							var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-							var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-							if(id0 < 1) id0 = 1;
-							if(id1 < 1) id1 = 1;
-							if(id0 > 10000) id0 = 10000;
-							if(id1 > 10000) id1 = 10000;
-							p += m[0].length;
-							numbers.addNumbers(id0,id1);
-						}else{
-							// 番号
-							m = str.substr(p).match(re_number);
-							if(m){
-								p += m[0].length;
-								var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-								if(id < 1) id = 1;
-								if(id > 0x7fffffff) id = 0x7fffffff;
-								numbers.addNumber(id);
-							}
-						}
-
-						if(m){
-							// カンマ
-							if(RegExp.rightContext.search(",") == 0){
-								p += 1;
-								continue;
-							}
-						}
-						break;
-					}
-				}
-				return numbers;
-			};
-
-			// --------------------------------------------------------------------------------
-			// レスアンカー拡張
-			// --------------------------------------------------------------------------------
-			work.extendResponseAnchor = function (target){
-				if(BbsControlResponseAnchorExist(target))	return;
-
-				var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
-				var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
-				var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
-				var re_number = new RegExp("([0-9０-９]+)","i");
-
-				var i;
-				var nodes = ElementGetElementsByTagName(target,"a");
-				var num = nodes.length;
-				for(i=num-1;i>=0;i--){
-					var node = nodes[i];
-					var m = ElementGetTextContent(node).match(re_simple);
+			var m = str.match(re_search);
+			if(m){
+				var p = m[1].length;
+				while(true){
+					// 番号-番号
+					m = str.substr(p).match(re_range);
 					if(m){
-						var text_node = DocumentCreateText(m[0]);
-						DomNode_InsertBefore(node,text_node);
-						DomNodeRemove(node);
-					}
-				}
-
-				// テキストノードを統合
-				target.normalize();
-
-				var p;
-				var n;
-				var q;
-				var ignore_dictionary = {"A":1,"SCRIPT":1};
-				var queue = new Object();
-				q = {p:queue,n:queue,node:target};
-				queue.p = q;
-				queue.n = q;
-
-				while(queue.n != queue){
-					q = queue.n;
-					p = q.p;
-					n = q.n;
-					p.n = n;
-					n.p = p;
-					var node = q.node;
-					switch(node.nodeType){
-					case 1:
-						var i;
-						var nodes = node.childNodes;
-						var num = nodes.length;
-						for(i=0;i<num;i++){
-							n = queue;
-							p = n.p;
-							q = {p:p,n:n,node:nodes[i]};
-							p.n = q;
-							n.p = q;
-						}
-						break;
-					case 3:
-						while(node){
-							var m = DomNodeGetNodeValue(node).match(re_detail);
-							if(!m)	break;
-
-							// 元のテキストノード
-							DomNodeSetNodeValue(node,RegExp.leftContext);
-
-							// BbsControlName を生成
-							var element = DocumentCreateElement("a");
-							var span = DocumentCreateElement("font");
-							element.appendChild(span);
-							ElementSetTextContent(span,m[0]);
-							DomNode_InsertAfter(node,element);
-
-							// 直後テキスト
-							node = DocumentCreateText(RegExp.rightContext);
-							DomNode_InsertAfter(element,node);
-
-							var query = "";
-							m = ElementGetTextContent(element).match(re_range);
-							if(m){
-								var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-								var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-								if(min < 1) min = 1;
-								if(max < 1) max = 1;
-								if(min > 10000) min = 10000;
-								if(max > 10000) max = 10000;
-								if(max < min){
-									var tmp = min;
-									min = max;
-									max = tmp;
-								}
-								query = min + "-" + max;
-							}else{
-								// 番号
-								m = ElementGetTextContent(element).match(re_number);
-								if(m){
-									query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
-									if(query < 1) query = 1;
-									if(query > 0x7fffffff) query = 0x7fffffff;
-								}
-
-							}
-							element.href = work.base_url + query;
+						var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+						var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+						if(id0 < 1) id0 = 1;
+						if(id1 < 1) id1 = 1;
+						if(id0 > 10000) id0 = 10000;
+						if(id1 > 10000) id1 = 10000;
+						p += m[0].length;
+						numbers.addNumbers(id0,id1);
+					}else{
+						// 番号
+						m = str.substr(p).match(re_number);
+						if(m){
+							p += m[0].length;
+							var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							if(id < 1) id = 1;
+							if(id > 0x7fffffff) id = 0x7fffffff;
+							numbers.addNumber(id);
 						}
 					}
-				}
-			};
 
-			// --------------------------------------------------------------------------------
-			// 継ぎ足し読み込み
-			// --------------------------------------------------------------------------------
-			function readMore(){
-
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
-
-				// 成功
-				loader.onload = function(str){
-					var re_number = new RegExp("<dt id=\"l([0-9]+)\">","i");
-
-					var p = 0;
-					var n = str.length;
-					function f(){
-						try{
-							if(p >= n) throw 0;
-							p = str.indexOf("<dt id=",p);
-							if(p < 0) throw 0;
-							var e = str.indexOf("\n",p);
-							var s = str.substring(p,e);
-							var m = s.match(re_number);
-							if(m){
-								var id = parseInt(m[1]);
-								if(last_id < id){
-									var response = bbs_dictionary.getResponse(id);
-									response.clearAnalyzed();
-									response.clearOriginalElements();
-									response.clearFollowing();
-
-									var nodes = StringHtmlCreateDomNodesSafe(s);
-									var j;
-									var node_num = nodes.length;
-									for(j=0;j<node_num;j++){
-										element_parent.appendChild(nodes[j]);
-									}
-									last_id = id;
-									resource_url_more = base_url + (last_id) + "-";
-								}
-							}
-
-							if(p < e){
-								p = e + 1;
-								execute_queue.attachFirst(f,null);
-								return;
-							}
-						}catch(e){
+					if(m){
+						// カンマ
+						if(RegExp.rightContext.search(",") == 0){
+							p += 1;
+							continue;
 						}
-						read_more_button.init();
 					}
-					execute_queue.attachFirst(f,null);
-				};
-
-				// 失敗
-				loader.onerror = function(){
-					read_more_button.init();
-				};
-
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url_more);
-				loader.loadText();
-			}
-
-			// --------------------------------------------------------------------------------
-			// レスポンス親要素
-			// --------------------------------------------------------------------------------
-			element_parent = document.getElementById("content");
-			if(!element_parent) return false;
-
-			// --------------------------------------------------------------------------------
-			// 範囲取得
-			// --------------------------------------------------------------------------------
-			var nodes = ElementGetElementsByTagName(element_parent,"dt");
-			var i;
-			var node_num = nodes.length;
-			for(i=0;i<node_num;i++){
-				var node = nodes[i];
-				var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)","i"));
-				if(m){
-					first_id = parseInt(m[1]);
-					dictionary_id[first_id] = true;
-					if(first_id != 1){
-						break;
-					}
-				}
-			}
-			for(i=node_num-1;i>=0;i--){
-				var node = nodes[i];
-				var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)","i"));
-				if(m){
-					last_id = parseInt(m[1]);
-					dictionary_id[last_id] = true;
 					break;
 				}
 			}
+			return numbers;
+		};
 
-			// --------------------------------------------------------------------------------
-			// アクセス先 URL
-			// --------------------------------------------------------------------------------
-			resource_url_shadow = base_url;
-			resource_url_more = base_url + last_id + "-";
+		// --------------------------------------------------------------------------------
+		// レスアンカー拡張
+		// --------------------------------------------------------------------------------
+		work.extendResponseAnchor = function (target){
+			if(BbsControlResponseAnchorExist(target))	return;
 
-			// --------------------------------------------------------------------------------
-			// BbsControlReadMoreButton 作成
-			// --------------------------------------------------------------------------------
-			read_more_button = new BbsControlReadMoreButton();
-			read_more_button.setWaitTime(2 * 1000);
-			read_more_button.onclick = readMore;
-			DomNode_InsertAfter(element_parent,read_more_button.getElement());
+			var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
+			var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
+			var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("([0-9０-９]+)","i");
 
+			var i;
+			var nodes = ElementGetElementsByTagName(target,"a");
+			var num = nodes.length;
+			for(i=num-1;i>=0;i--){
+				var node = nodes[i];
+				var m = ElementGetTextContent(node).match(re_simple);
+				if(m){
+					var text_node = DocumentCreateText(m[0]);
+					DomNode_InsertBefore(node,text_node);
+					DomNodeRemove(node);
+				}
+			}
 
-			// --------------------------------------------------------------------------------
-			// シャドウロード
-			// --------------------------------------------------------------------------------
-			(function(){
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
+			// テキストノードを統合
+			target.normalize();
 
-				// 成功
-				loader.onload = function(str){
-					var re_number = new RegExp("<dt id=\"l([0-9]+)\">","i");
-					var re_id = new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i");
-					var re_name = new RegExp("(◆(|[ ])[a-zA-Z0-9+/.]{10,12})","i");
+			var p;
+			var n;
+			var q;
+			var ignore_dictionary = {"A":1,"SCRIPT":1};
+			var queue = new Object();
+			q = {p:queue,n:queue,node:target};
+			queue.p = q;
+			queue.n = q;
 
-					var p = 0;
-					var n = str.length;
-					function f(){
-						if(p >= n) return;
+			while(queue.n != queue){
+				q = queue.n;
+				p = q.p;
+				n = q.n;
+				p.n = n;
+				n.p = p;
+				var node = q.node;
+				switch(node.nodeType){
+				case 1:
+					var i;
+					var nodes = node.childNodes;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						n = queue;
+						p = n.p;
+						q = {p:p,n:n,node:nodes[i]};
+						p.n = q;
+						n.p = q;
+					}
+					break;
+				case 3:
+					while(node){
+						var m = DomNodeGetNodeValue(node).match(re_detail);
+						if(!m)	break;
+
+						// 元のテキストノード
+						DomNodeSetNodeValue(node,RegExp.leftContext);
+
+						// BbsControlName を生成
+						var element = DocumentCreateElement("a");
+						var span = DocumentCreateElement("font");
+						element.appendChild(span);
+						ElementSetTextContent(span,m[0]);
+						DomNode_InsertAfter(node,element);
+
+						// 直後テキスト
+						node = DocumentCreateText(RegExp.rightContext);
+						DomNode_InsertAfter(element,node);
+
+						var query = "";
+						m = ElementGetTextContent(element).match(re_range);
+						if(m){
+							var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+							if(min < 1) min = 1;
+							if(max < 1) max = 1;
+							if(min > 10000) min = 10000;
+							if(max > 10000) max = 10000;
+							if(max < min){
+								var tmp = min;
+								min = max;
+								max = tmp;
+							}
+							query = min + "-" + max;
+						}else{
+							// 番号
+							m = ElementGetTextContent(element).match(re_number);
+							if(m){
+								query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
+								if(query < 1) query = 1;
+								if(query > 0x7fffffff) query = 0x7fffffff;
+							}
+
+						}
+						element.href = work.base_url + query;
+					}
+				}
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// 継ぎ足し読み込み
+		// --------------------------------------------------------------------------------
+		function readMore(){
+
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
+
+			// 成功
+			loader.onload = function(str){
+				var re_number = new RegExp("<dt id=\"l([0-9]+)\">","i");
+
+				var p = 0;
+				var n = str.length;
+				function f(){
+					try{
+						if(p >= n) throw 0;
 						p = str.indexOf("<dt id=",p);
-						if(p < 0) return;
+						if(p < 0) throw 0;
 						var e = str.indexOf("\n",p);
 						var s = str.substring(p,e);
 						var m = s.match(re_number);
 						if(m){
 							var id = parseInt(m[1]);
-							if((first_id <= id) && (id <= last_id)){
-							}else if(dictionary_id[id]){
-							}else{
-								// ナンバーからレスポンスオブジェクトを取得
+							if(last_id < id){
 								var response = bbs_dictionary.getResponse(id);
-								if(!(response.getAnalyzed())){
-									var nodes = StringHtmlCreateDomNodesSafe(s);
-									var dt = nodes[0];
-									var dd = nodes[1];
+								response.clearAnalyzed();
+								response.clearOriginalElements();
+								response.clearFollowing();
 
-									try{
-										if(dt.tagName != "DT")	return;
-										if(dd.tagName != "DD")	return;
-									}catch(e){
-										return;
-									}
-
-									var dt_text = ElementGetTextContent(dt);
-
-									// レスアンカー拡張
-									work.extendResponseAnchor(dd);
-
-									// IDの取得
-									if(dt_text.match(re_id)){
-										response.setId(RegExp.$1);
-									}
-
-									// 名前の取得
-									if(dt_text.match(re_name)){
-										response.setName(RegExp.$1);
-									}
-
-									// ホスト名の取得
-									(function(){
-										var p;
-										var n;
-										var q;
-										var ignore_dictionary = {"B":1,"SCRIPT":1};
-										var queue = new Object();
-										q = {p:queue,n:queue,node:dt};
-										queue.p = q;
-										queue.n = q;
-
-										while(queue.n != queue){
-											q = queue.n;
-											p = q.p;
-											n = q.n;
-											p.n = n;
-											n.p = p;
-											var node = q.node;
-											switch(node.nodeType){
-											case 1:
-												if(!(ignore_dictionary[node.tagName])){
-													var i;
-													var nodes = node.childNodes;
-													var num = nodes.length;
-													for(i=0;i<num;i++){
-														n = queue;
-														p = n.p;
-														q = {p:p,n:n,node:nodes[i]};
-														p.n = q;
-														n.p = q;
-													}
-												}
-												break;
-											case 3:
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})\\n \\]","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												break;
-											}
-										}
-									})();
-
-									// フォロー解析
-									var dictionary = new Object();
-									(function(){
-										var nodes = ElementGetElementsByTagName(dd,"a");
-										var i;
-										var num = nodes.length;
-										for(i=0;i<num;i++){
-											var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-											numbers.getNumbers(function(n){
-												if(!dictionary[n]){
-													var following = bbs_dictionary.getResponse(n);
-													following.addFollower(response);
-													dictionary[n] = true;
-												}
-											});
-										}
-									})();
-
-									// オリジナルエレメントをセット
-									if(dt)	response.addOriginalElements("dt",dt);
-									if(dd)	response.addOriginalElements("dd",dd);
-
-									// 消去時に実行されるイベント
-									response.onerase = function(){};
-
-									response.setAnalyzed();
+								var nodes = StringHtmlCreateDomNodesSafe(s);
+								var j;
+								var node_num = nodes.length;
+								for(j=0;j<node_num;j++){
+									element_parent.appendChild(nodes[j]);
 								}
+								last_id = id;
+								resource_url_more = base_url + (last_id) + "-";
 							}
 						}
 
 						if(p < e){
 							p = e + 1;
 							execute_queue.attachFirst(f,null);
+							return;
 						}
+					}catch(e){
 					}
-					execute_queue.attachFirst(f,null);
-				};
+					read_more_button.init();
+				}
+				execute_queue.attachFirst(f,null);
+			};
 
-				// 失敗
-				loader.onerror = function(){
-				};
+			// 失敗
+			loader.onerror = function(){
+				read_more_button.init();
+			};
 
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url_shadow);
-				loader.loadText();
-			})();
-
-			response({result:true});
-			return true;
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url_more);
+			loader.loadText();
 		}
 
-		return false;
+		// --------------------------------------------------------------------------------
+		// レスポンス親要素
+		// --------------------------------------------------------------------------------
+		element_parent = document.getElementById("content");
+		if(!element_parent) return false;
+
+		// --------------------------------------------------------------------------------
+		// 範囲取得
+		// --------------------------------------------------------------------------------
+		var nodes = ElementGetElementsByTagName(element_parent,"dt");
+		var i;
+		var node_num = nodes.length;
+		for(i=0;i<node_num;i++){
+			var node = nodes[i];
+			var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)","i"));
+			if(m){
+				first_id = parseInt(m[1]);
+				dictionary_id[first_id] = true;
+				if(first_id != 1){
+					break;
+				}
+			}
+		}
+		for(i=node_num-1;i>=0;i--){
+			var node = nodes[i];
+			var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)","i"));
+			if(m){
+				last_id = parseInt(m[1]);
+				dictionary_id[last_id] = true;
+				break;
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// アクセス先 URL
+		// --------------------------------------------------------------------------------
+		resource_url_shadow = base_url;
+		resource_url_more = base_url + last_id + "-";
+
+		// --------------------------------------------------------------------------------
+		// BbsControlReadMoreButton 作成
+		// --------------------------------------------------------------------------------
+		read_more_button = new BbsControlReadMoreButton();
+		read_more_button.setWaitTime(2 * 1000);
+		read_more_button.onclick = readMore;
+		DomNode_InsertAfter(element_parent,read_more_button.getElement());
+
+
+		// --------------------------------------------------------------------------------
+		// シャドウロード
+		// --------------------------------------------------------------------------------
+		(function(){
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
+
+			// 成功
+			loader.onload = function(str){
+				var re_number = new RegExp("<dt id=\"l([0-9]+)\">","i");
+				var re_id = new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i");
+				var re_name = new RegExp("(◆(|[ ])[a-zA-Z0-9+/.]{10,12})","i");
+
+				var p = 0;
+				var n = str.length;
+				function f(){
+					if(p >= n) return;
+					p = str.indexOf("<dt id=",p);
+					if(p < 0) return;
+					var e = str.indexOf("\n",p);
+					var s = str.substring(p,e);
+					var m = s.match(re_number);
+					if(m){
+						var id = parseInt(m[1]);
+						if((first_id <= id) && (id <= last_id)){
+						}else if(dictionary_id[id]){
+						}else{
+							// ナンバーからレスポンスオブジェクトを取得
+							var response = bbs_dictionary.getResponse(id);
+							if(!(response.getAnalyzed())){
+								var nodes = StringHtmlCreateDomNodesSafe(s);
+								var dt = nodes[0];
+								var dd = nodes[1];
+
+								try{
+									if(dt.tagName != "DT")	return;
+									if(dd.tagName != "DD")	return;
+								}catch(e){
+									return;
+								}
+
+								var dt_text = ElementGetTextContent(dt);
+
+								// レスアンカー拡張
+								work.extendResponseAnchor(dd);
+
+								// IDの取得
+								if(dt_text.match(re_id)){
+									response.setId(RegExp.$1);
+								}
+
+								// 名前の取得
+								if(dt_text.match(re_name)){
+									response.setName(RegExp.$1);
+								}
+
+								// ホスト名の取得
+								(function(){
+									var p;
+									var n;
+									var q;
+									var ignore_dictionary = {"B":1,"SCRIPT":1};
+									var queue = new Object();
+									q = {p:queue,n:queue,node:dt};
+									queue.p = q;
+									queue.n = q;
+
+									while(queue.n != queue){
+										q = queue.n;
+										p = q.p;
+										n = q.n;
+										p.n = n;
+										n.p = p;
+										var node = q.node;
+										switch(node.nodeType){
+										case 1:
+											if(!(ignore_dictionary[node.tagName])){
+												var i;
+												var nodes = node.childNodes;
+												var num = nodes.length;
+												for(i=0;i<num;i++){
+													n = queue;
+													p = n.p;
+													q = {p:p,n:n,node:nodes[i]};
+													p.n = q;
+													n.p = q;
+												}
+											}
+											break;
+										case 3:
+											var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
+											if(m){
+												response.setHost(m[2]);
+												return;
+											}
+											var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})\\n \\]","i"));
+											if(m){
+												response.setHost(m[2]);
+												return;
+											}
+											var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
+											if(m){
+												response.setHost(m[2]);
+												return;
+											}
+											break;
+										}
+									}
+								})();
+
+								// フォロー解析
+								var dictionary = new Object();
+								(function(){
+									var nodes = ElementGetElementsByTagName(dd,"a");
+									var i;
+									var num = nodes.length;
+									for(i=0;i<num;i++){
+										var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
+										numbers.getNumbers(function(n){
+											if(!dictionary[n]){
+												var following = bbs_dictionary.getResponse(n);
+												following.addFollower(response);
+												dictionary[n] = true;
+											}
+										});
+									}
+								})();
+
+								// オリジナルエレメントをセット
+								if(dt)	response.addOriginalElements("dt",dt);
+								if(dd)	response.addOriginalElements("dd",dd);
+
+								// 消去時に実行されるイベント
+								response.onerase = function(){};
+
+								response.setAnalyzed();
+							}
+						}
+					}
+
+					if(p < e){
+						p = e + 1;
+						execute_queue.attachFirst(f,null);
+					}
+				}
+				execute_queue.attachFirst(f,null);
+			};
+
+			// 失敗
+			loader.onerror = function(){
+			};
+
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url_shadow);
+			loader.loadText();
+		})();
+
+		response({result:true});
+		return true;
 	}.toString() +
 	",\n\n\t" +
 	function (info,response){
@@ -16378,12 +20168,6 @@ function PageExpand(page_expand_arguments){
 			// あっとちゃんねるず
 			var obj = addPreset(proj.expand_bbs,"atchs",null);
 			var preset = obj.preset;
-			preset.filter = [
-				{
-					pattern:"^http://[^.]+\\.atchs\\.jp/test/read\\.cgi/[^/]+/[0-9]+",
-					flags:{i:true,g:false}
-				}
-			];
 			preset.script_initialize = 
 "[\n\t" + 
 	function(info,response){
@@ -16415,585 +20199,585 @@ function PageExpand(page_expand_arguments){
 	",\n\n\t" +
 	function (info,response){
 		var work = info.work;
+		if(!(work.bbs_name)){
+			return false;
+		}
 
-		if(work.bbs_name){
-			var first_id = 1;
-			var last_id = 1;
-			var dictionary_id = new Array();
-			var element_parent = null;
-			var read_more_button = null;
-			var element_form = null;
-			var base_url = work.base_url;
-			var resource_url_shadow = base_url;
-			var resource_url_more = base_url;
+		var first_id = 1;
+		var last_id = 1;
+		var dictionary_id = new Array();
+		var element_parent = null;
+		var read_more_button = null;
+		var element_form = null;
+		var base_url = work.base_url;
+		var resource_url_shadow = base_url;
+		var resource_url_more = base_url;
 
-			// --------------------------------------------------------------------------------
-			// 文字列からレスポンス番号を取得
-			// --------------------------------------------------------------------------------
-			work.createResponseAnchorNumbers = function (str){
-				var numbers = new ResponseAnchorNumbers();
+		// --------------------------------------------------------------------------------
+		// 文字列からレスポンス番号を取得
+		// --------------------------------------------------------------------------------
+		work.createResponseAnchorNumbers = function (str){
+			var numbers = new ResponseAnchorNumbers();
 
-				var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
-				var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
-				var re_number = new RegExp("^([0-9０-９]+)","i");
+			var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
+			var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("^([0-9０-９]+)","i");
 
-				var m = str.match(re_search);
-				if(m){
-					var p = m[1].length;
-					while(true){
-						// 番号-番号
-						m = str.substr(p).match(re_range);
+			var m = str.match(re_search);
+			if(m){
+				var p = m[1].length;
+				while(true){
+					// 番号-番号
+					m = str.substr(p).match(re_range);
+					if(m){
+						var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+						var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+						if(id0 < 1) id0 = 1;
+						if(id1 < 1) id1 = 1;
+						if(id0 > 10000) id0 = 10000;
+						if(id1 > 10000) id1 = 10000;
+						p += m[0].length;
+						numbers.addNumbers(id0,id1);
+					}else{
+						// 番号
+						m = str.substr(p).match(re_number);
 						if(m){
-							var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-							var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-							if(id0 < 1) id0 = 1;
-							if(id1 < 1) id1 = 1;
-							if(id0 > 10000) id0 = 10000;
-							if(id1 > 10000) id1 = 10000;
 							p += m[0].length;
-							numbers.addNumbers(id0,id1);
-						}else{
-							// 番号
-							m = str.substr(p).match(re_number);
-							if(m){
-								p += m[0].length;
-								var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-								if(id < 1) id = 1;
-								if(id > 0x7fffffff) id = 0x7fffffff;
-								numbers.addNumber(id);
-							}
+							var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							if(id < 1) id = 1;
+							if(id > 0x7fffffff) id = 0x7fffffff;
+							numbers.addNumber(id);
 						}
-
-						if(m){
-							// カンマ
-							if(RegExp.rightContext.search(",") == 0){
-								p += 1;
-								continue;
-							}
-						}
-						break;
 					}
-				}
-				return numbers;
-			};
 
-			// --------------------------------------------------------------------------------
-			// レスアンカー拡張
-			// --------------------------------------------------------------------------------
-			work.extendResponseAnchor = function (target){
-				if(BbsControlResponseAnchorExist(target))	return;
-
-				var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
-				var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
-				var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
-				var re_number = new RegExp("([0-9０-９]+)","i");
-
-				var i;
-				var nodes = ElementGetElementsByTagName(target,"a");
-				var num = nodes.length;
-				for(i=num-1;i>=0;i--){
-					var node = nodes[i];
-					var m = ElementGetTextContent(node).match(re_simple);
 					if(m){
-						var text_node = DocumentCreateText(m[0]);
-						DomNode_InsertBefore(node,text_node);
-						DomNodeRemove(node);
-					}
-				}
-
-				// テキストノードを統合
-				target.normalize();
-
-				var p;
-				var n;
-				var q;
-				var ignore_dictionary = {"A":1,"SCRIPT":1};
-				var queue = new Object();
-				q = {p:queue,n:queue,node:target};
-				queue.p = q;
-				queue.n = q;
-
-				while(queue.n != queue){
-					q = queue.n;
-					p = q.p;
-					n = q.n;
-					p.n = n;
-					n.p = p;
-					var node = q.node;
-					switch(node.nodeType){
-					case 1:
-						var i;
-						var nodes = node.childNodes;
-						var num = nodes.length;
-						for(i=0;i<num;i++){
-							n = queue;
-							p = n.p;
-							q = {p:p,n:n,node:nodes[i]};
-							p.n = q;
-							n.p = q;
-						}
-						break;
-					case 3:
-						while(node){
-							var m = DomNodeGetNodeValue(node).match(re_detail);
-							if(!m)	break;
-
-							// 元のテキストノード
-							DomNodeSetNodeValue(node,RegExp.leftContext);
-
-							// BbsControlName を生成
-							var element = DocumentCreateElement("a");
-							ElementSetTextContent(element,m[0]);
-							DomNode_InsertAfter(node,element);
-
-							// 直後テキスト
-							node = DocumentCreateText(RegExp.rightContext);
-							DomNode_InsertAfter(element,node);
-
-							var query = "";
-							m = ElementGetTextContent(element).match(re_range);
-							if(m){
-								var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-								var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-								if(min < 1) min = 1;
-								if(max < 1) max = 1;
-								if(min > 10000) min = 10000;
-								if(max > 10000) max = 10000;
-								if(max < min){
-									var tmp = min;
-									min = max;
-									max = tmp;
-								}
-								query = min + "-" + max;
-							}else{
-								// 番号
-								m = ElementGetTextContent(element).match(re_number);
-								if(m){
-									query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
-									if(query < 1) query = 1;
-									if(query > 0x7fffffff) query = 0x7fffffff;
-								}
-
-							}
-							element.href = work.base_url + query;
+						// カンマ
+						if(RegExp.rightContext.search(",") == 0){
+							p += 1;
+							continue;
 						}
 					}
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// 継ぎ足し読み込み
-			// --------------------------------------------------------------------------------
-			function readMore(){
-
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
-
-				// 成功
-				loader.onload = function(str){
-					var re_number = new RegExp("<a href=\".*?\">([0-9]+)</a>","i");
-
-					var p = 0;
-					var n = str.length;
-					function f(){
-						try{
-							if(p >= n) throw 0;
-							p = str.indexOf("<div class=\"res\">",p);
-							if(p < 0) throw 0;
-							var e = str.indexOf("</div>",p);
-							if(e >= 0) e += 6;
-							var s = str.substring(p,e);
-							var m = s.match(re_number);
-							if(m){
-								var id = parseInt(m[1]);
-								if(last_id < id){
-									var response = bbs_dictionary.getResponse(id);
-									response.clearAnalyzed();
-									response.clearOriginalElements();
-									response.clearFollowing();
-
-									var nodes = StringHtmlCreateDomNodesSafe(s);
-									var j;
-									var node_num = nodes.length;
-									for(j=0;j<node_num;j++){
-										element_parent.appendChild(nodes[j]);
-									}
-									last_id = id;
-									resource_url_more = base_url + (last_id) + "-";
-								}
-							}
-
-							if(p < e){
-								p = e;
-								execute_queue.attachFirst(f,null);
-								return;
-							}
-						}catch(e){
-						}
-						read_more_button.init();
-					}
-					execute_queue.attachFirst(f,null);
-				};
-
-				// 失敗
-				loader.onerror = function(){
-					read_more_button.init();
-				};
-
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url_more);
-				loader.loadText();
-			}
-
-			// --------------------------------------------------------------------------------
-			// レスポンス親要素
-			// --------------------------------------------------------------------------------
-			element_parent = document.getElementById("article");
-			if(!element_parent) return false;
-
-
-			// --------------------------------------------------------------------------------
-			// 範囲取得
-			// --------------------------------------------------------------------------------
-			var nodes = ElementGetElementsByTagName(element_parent,"div");
-			var i;
-			var node_num = nodes.length;
-			for(i=0;i<node_num;i++){
-				var node = nodes[i];
-				if(node.className == "res"){
-					var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)","i"));
-					if(m){
-						first_id = parseInt(m[1]);
-						dictionary_id[first_id] = true;
-						if(first_id != 1){
-							break;
-						}
-					}
-				}
-			}
-			for(i=node_num-1;i>=0;i--){
-				var node = nodes[i];
-				if(node.className == "res"){
-					var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)","i"));
-					if(m){
-						last_id = parseInt(m[1]);
-						dictionary_id[last_id] = true;
-						if(last_id <= 1000){
-							break;
-						}
-					}
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// アクセス先 URL
-			// --------------------------------------------------------------------------------
-			resource_url_shadow = base_url;
-			resource_url_more = base_url + last_id + "-";
-
-			// --------------------------------------------------------------------------------
-			// BbsControlReadMoreButton 作成
-			// --------------------------------------------------------------------------------
-			read_more_button = new BbsControlReadMoreButton();
-			read_more_button.setWaitTime(2 * 1000);
-			read_more_button.onclick = readMore;
-			var read_more_button_prev = document.getElementById("wrap");
-			if(read_more_button_prev){
-				DomNode_InsertAfter(read_more_button_prev,read_more_button.getElement());
-			}
-
-			// --------------------------------------------------------------------------------
-			// 書き込みをポップアップ化
-			// --------------------------------------------------------------------------------
-			// フォーム
-			var nodes = ElementGetElementsByTagName(document.body,"form");
-			var element_form;
-			var input_submit;
-			var element_textarea;
-
-			// フォーム
-			var i;
-			for(i=0;i<nodes.length;i++){
-				if(nodes[i].action.indexOf("/test/bbs.cgi/") >= 0){
-					element_form = nodes[i];
 					break;
 				}
 			}
+			return numbers;
+		};
 
-			// サブミットボタン
-			if(element_form){
-				var nodes = ElementGetElementsByTagName(element_form,"input");
-				for(i=0;i<nodes.length;i++){
-					if(nodes[i].type.toLowerCase() == "submit"){
-						input_submit = nodes[i];
-						break;
+		// --------------------------------------------------------------------------------
+		// レスアンカー拡張
+		// --------------------------------------------------------------------------------
+		work.extendResponseAnchor = function (target){
+			if(BbsControlResponseAnchorExist(target))	return;
+
+			var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
+			var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
+			var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("([0-9０-９]+)","i");
+
+			var i;
+			var nodes = ElementGetElementsByTagName(target,"a");
+			var num = nodes.length;
+			for(i=num-1;i>=0;i--){
+				var node = nodes[i];
+				var m = ElementGetTextContent(node).match(re_simple);
+				if(m){
+					var text_node = DocumentCreateText(m[0]);
+					DomNode_InsertBefore(node,text_node);
+					DomNodeRemove(node);
+				}
+			}
+
+			// テキストノードを統合
+			target.normalize();
+
+			var p;
+			var n;
+			var q;
+			var ignore_dictionary = {"A":1,"SCRIPT":1};
+			var queue = new Object();
+			q = {p:queue,n:queue,node:target};
+			queue.p = q;
+			queue.n = q;
+
+			while(queue.n != queue){
+				q = queue.n;
+				p = q.p;
+				n = q.n;
+				p.n = n;
+				n.p = p;
+				var node = q.node;
+				switch(node.nodeType){
+				case 1:
+					var i;
+					var nodes = node.childNodes;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						n = queue;
+						p = n.p;
+						q = {p:p,n:n,node:nodes[i]};
+						p.n = q;
+						n.p = q;
+					}
+					break;
+				case 3:
+					while(node){
+						var m = DomNodeGetNodeValue(node).match(re_detail);
+						if(!m)	break;
+
+						// 元のテキストノード
+						DomNodeSetNodeValue(node,RegExp.leftContext);
+
+						// BbsControlName を生成
+						var element = DocumentCreateElement("a");
+						ElementSetTextContent(element,m[0]);
+						DomNode_InsertAfter(node,element);
+
+						// 直後テキスト
+						node = DocumentCreateText(RegExp.rightContext);
+						DomNode_InsertAfter(element,node);
+
+						var query = "";
+						m = ElementGetTextContent(element).match(re_range);
+						if(m){
+							var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+							if(min < 1) min = 1;
+							if(max < 1) max = 1;
+							if(min > 10000) min = 10000;
+							if(max > 10000) max = 10000;
+							if(max < min){
+								var tmp = min;
+								min = max;
+								max = tmp;
+							}
+							query = min + "-" + max;
+						}else{
+							// 番号
+							m = ElementGetTextContent(element).match(re_number);
+							if(m){
+								query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
+								if(query < 1) query = 1;
+								if(query > 0x7fffffff) query = 0x7fffffff;
+							}
+
+						}
+						element.href = work.base_url + query;
 					}
 				}
-				var nodes = ElementGetElementsByTagName(element_form,"textarea");
-				if(nodes.length){
-					element_textarea = nodes[0];
-				}
 			}
+		};
 
-			if(input_submit){
+		// --------------------------------------------------------------------------------
+		// 継ぎ足し読み込み
+		// --------------------------------------------------------------------------------
+		function readMore(){
 
-				function inputClick(e){
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
 
-					var w = 800;
-					var h = 600;
-					var screen_obj = window.screen;
-					if(w > screen_obj.availWidth)	w = screen_obj.availWidth;
-					if(h > screen_obj.availHeight)	h = screen_obj.availHeight;
-					var x = (screen_obj.availWidth  / 2) - (w / 2);
-					var y = (screen_obj.availHeight / 2) - (h / 2);
+			// 成功
+			loader.onload = function(str){
+				var re_number = new RegExp("<a href=\".*?\">([0-9]+)</a>","i");
 
-					var window_name = "_pageexpand_" + Math.floor(Math.random() * 0x7FFFFFFF);
-					var window_obj = window.open("",window_name,"left=" + x + ",top=" + y + ",width=" + w + ",height=" + h);
-					element_form.target = window_name;
-
-					(function(){
-						var closed = false;
-						var timer = null;
-
-						// タスク生成
-						var task = task_container.createTask();
-						task.setExecuteFunc(function(){
-							try{
-								if(window_obj.closed){
-									closed = true;
-								}
-
-								// アドレスを監視
-								var href = "";
-								try{
-									href = window_obj.location.href;
-								}catch(e){}
-								if(href.indexOf("http://") == 0){
-									if(href.indexOf("/test/read.cgi/") != -1){
-										if(!timer){
-											timer = (new Date()).getTime();
-										}
-									}else if(href.indexOf("/test/bbs.cgi/") == -1){
-										closed = true;
-									}else{
-										var document_obj = window_obj.document;
-										if(document_obj.readyState == "complete"){
-											if(document_obj.title === ""){
-												if(!timer){
-													timer = (new Date()).getTime();
-												}
-											}
-										}
-									}
-								}
-
-								if(timer){
-									if((new Date()).getTime() - timer > 1000 * 0){
-										closed = true;
-									}
-								}
-							}catch(e){
-								closed = true;
-							}
-
-							if(closed){
-								try{
-									window_obj.close();
-								}catch(e){
-									return;
-								}
-								window_obj = null;
-								task.release();
-								input_submit.disabled = false;
-								if(timer){
-									readMore();
-									element_textarea.value = "";
-								}
-							}
-						});
-					})();
-				}
-
-				function formSubmit(e){
-					input_submit.disabled = true;
-				}
-
-				if(window.addEventListener){
-					input_submit.addEventListener("click",inputClick);
-					element_form.addEventListener("submit",formSubmit);
-				}else if(window.attachEvent){
-					input_submit.attachEvent("onclick",inputClick);
-					element_form.attachEvent("onsubmit",formSubmit);
-				}
-			}
-
-
-			// --------------------------------------------------------------------------------
-			// シャドウロード
-			// --------------------------------------------------------------------------------
-			(function(){
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
-
-				// 成功
-				loader.onload = function(str){
-					var re_number = new RegExp("<a href=\".*?\">([0-9]+)</a>","i");
-					var re_id = new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i");
-					var re_name = new RegExp("(◆(|[ ])[a-zA-Z0-9+/.]{10,12})","i");
-
-					var p = 0;
-					var n = str.length;
-					function f(){
-						if(p >= n) return;
+				var p = 0;
+				var n = str.length;
+				function f(){
+					try{
+						if(p >= n) throw 0;
 						p = str.indexOf("<div class=\"res\">",p);
-						if(p < 0) return;
+						if(p < 0) throw 0;
 						var e = str.indexOf("</div>",p);
 						if(e >= 0) e += 6;
 						var s = str.substring(p,e);
 						var m = s.match(re_number);
 						if(m){
 							var id = parseInt(m[1]);
-							if((first_id <= id) && (id <= last_id)){
-							}else if(dictionary_id[id]){
-							}else{
-								// ナンバーからレスポンスオブジェクトを取得
+							if(last_id < id){
 								var response = bbs_dictionary.getResponse(id);
-								if(!(response.getAnalyzed())){
-									var nodes = StringHtmlCreateDomNodesSafe(s);
-									var dt = nodes[0];
-									var dd = ElementGetElementsByTagName(dt,"p")[0];
+								response.clearAnalyzed();
+								response.clearOriginalElements();
+								response.clearFollowing();
 
-									try{
-										if(dt.tagName != "DIV")	return false;
-										if(dt.className != "res")	return false;
-										if(dd.className != "res_body")	return false;
-									}catch(e){
-										return false;
-									}
-
-									var dt_text = ElementGetTextContent(dt);
-
-									// レスアンカー拡張
-									work.extendResponseAnchor(dd);
-
-									// IDの取得
-									if(dt_text.match(re_id)){
-										response.setId(RegExp.$1);
-									}
-
-									// 名前の取得
-									if(dt_text.match(re_name)){
-										response.setName(RegExp.$1);
-									}
-
-									// ホスト名の取得
-									(function(){
-										var p;
-										var n;
-										var q;
-										var ignore_dictionary = {"B":1,"SCRIPT":1};
-										var queue = new Object();
-										q = {p:queue,n:queue,node:dt};
-										queue.p = q;
-										queue.n = q;
-
-										while(queue.n != queue){
-											q = queue.n;
-											p = q.p;
-											n = q.n;
-											p.n = n;
-											n.p = p;
-											var node = q.node;
-											switch(node.nodeType){
-											case 1:
-												if(!(ignore_dictionary[node.tagName])){
-													var i;
-													var nodes = node.childNodes;
-													var num = nodes.length;
-													for(i=0;i<num;i++){
-														n = queue;
-														p = n.p;
-														q = {p:p,n:n,node:nodes[i]};
-														p.n = q;
-														n.p = q;
-													}
-												}
-												break;
-											case 3:
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})\\n \\]","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												break;
-											}
-										}
-									})();
-
-									// フォロー解析
-									var dictionary = new Object();
-									(function(){
-										var nodes = ElementGetElementsByTagName(dd,"a");
-										var i;
-										var num = nodes.length;
-										for(i=0;i<num;i++){
-											var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-											numbers.getNumbers(function(n){
-												if(!dictionary[n]){
-													var following = bbs_dictionary.getResponse(n);
-													following.addFollower(response);
-													dictionary[n] = true;
-												}
-											});
-										}
-									})();
-
-									// オリジナルエレメントをセット
-									if(dt)	response.addOriginalElements("dt",dt);
-									if(dd)	response.addOriginalElements("dd",dd);
-
-									// 消去時に実行されるイベント
-									response.onerase = function(){};
-
-									response.setAnalyzed();
+								var nodes = StringHtmlCreateDomNodesSafe(s);
+								var j;
+								var node_num = nodes.length;
+								for(j=0;j<node_num;j++){
+									element_parent.appendChild(nodes[j]);
 								}
+								last_id = id;
+								resource_url_more = base_url + (last_id) + "-";
 							}
 						}
 
 						if(p < e){
 							p = e;
 							execute_queue.attachFirst(f,null);
+							return;
 						}
+					}catch(e){
 					}
-					execute_queue.attachFirst(f,null);
-				};
+					read_more_button.init();
+				}
+				execute_queue.attachFirst(f,null);
+			};
 
-				// 失敗
-				loader.onerror = function(){
-				};
+			// 失敗
+			loader.onerror = function(){
+				read_more_button.init();
+			};
 
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url_shadow);
-				loader.loadText();
-			})();
-
-			response({result:true});
-			return true;
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url_more);
+			loader.loadText();
 		}
 
-		return false;
+		// --------------------------------------------------------------------------------
+		// レスポンス親要素
+		// --------------------------------------------------------------------------------
+		element_parent = document.getElementById("article");
+		if(!element_parent) return false;
+
+
+		// --------------------------------------------------------------------------------
+		// 範囲取得
+		// --------------------------------------------------------------------------------
+		var nodes = ElementGetElementsByTagName(element_parent,"div");
+		var i;
+		var node_num = nodes.length;
+		for(i=0;i<node_num;i++){
+			var node = nodes[i];
+			if(node.className == "res"){
+				var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)","i"));
+				if(m){
+					first_id = parseInt(m[1]);
+					dictionary_id[first_id] = true;
+					if(first_id != 1){
+						break;
+					}
+				}
+			}
+		}
+		for(i=node_num-1;i>=0;i--){
+			var node = nodes[i];
+			if(node.className == "res"){
+				var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)","i"));
+				if(m){
+					last_id = parseInt(m[1]);
+					dictionary_id[last_id] = true;
+					if(last_id <= 1000){
+						break;
+					}
+				}
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// アクセス先 URL
+		// --------------------------------------------------------------------------------
+		resource_url_shadow = base_url;
+		resource_url_more = base_url + last_id + "-";
+
+		// --------------------------------------------------------------------------------
+		// BbsControlReadMoreButton 作成
+		// --------------------------------------------------------------------------------
+		read_more_button = new BbsControlReadMoreButton();
+		read_more_button.setWaitTime(2 * 1000);
+		read_more_button.onclick = readMore;
+		var read_more_button_prev = document.getElementById("wrap");
+		if(read_more_button_prev){
+			DomNode_InsertAfter(read_more_button_prev,read_more_button.getElement());
+		}
+
+		// --------------------------------------------------------------------------------
+		// 書き込みをポップアップ化
+		// --------------------------------------------------------------------------------
+		// フォーム
+		var nodes = ElementGetElementsByTagName(document.body,"form");
+		var element_form;
+		var input_submit;
+		var element_textarea;
+
+		// フォーム
+		var i;
+		for(i=0;i<nodes.length;i++){
+			if(nodes[i].action.indexOf("/test/bbs.cgi/") >= 0){
+				element_form = nodes[i];
+				break;
+			}
+		}
+
+		// サブミットボタン
+		if(element_form){
+			var nodes = ElementGetElementsByTagName(element_form,"input");
+			for(i=0;i<nodes.length;i++){
+				if(nodes[i].type.toLowerCase() == "submit"){
+					input_submit = nodes[i];
+					break;
+				}
+			}
+			var nodes = ElementGetElementsByTagName(element_form,"textarea");
+			if(nodes.length){
+				element_textarea = nodes[0];
+			}
+		}
+
+		(function(){
+			if(!input_submit) return;
+
+			function inputClick(e){
+
+				var w = 800;
+				var h = 600;
+				var screen_obj = window.screen;
+				if(w > screen_obj.availWidth)	w = screen_obj.availWidth;
+				if(h > screen_obj.availHeight)	h = screen_obj.availHeight;
+				var x = (screen_obj.availWidth  / 2) - (w / 2);
+				var y = (screen_obj.availHeight / 2) - (h / 2);
+
+				var window_name = "_pageexpand_" + Math.floor(Math.random() * 0x7FFFFFFF);
+				var window_obj = window.open("",window_name,"left=" + x + ",top=" + y + ",width=" + w + ",height=" + h);
+				element_form.target = window_name;
+
+				(function(){
+					var closed = false;
+					var timer = null;
+
+					// タスク生成
+					var task = task_container.createTask();
+					task.setExecuteFunc(function(){
+						try{
+							if(window_obj.closed){
+								closed = true;
+							}
+
+							// アドレスを監視
+							var href = "";
+							try{
+								href = window_obj.location.href;
+							}catch(e){}
+							if(href.indexOf("http://") == 0){
+								if(href.indexOf("/test/read.cgi/") != -1){
+									if(!timer){
+										timer = (new Date()).getTime();
+									}
+								}else if(href.indexOf("/test/bbs.cgi/") == -1){
+									closed = true;
+								}else{
+									var document_obj = window_obj.document;
+									if(document_obj.readyState == "complete"){
+										if(document_obj.title === ""){
+											if(!timer){
+												timer = (new Date()).getTime();
+											}
+										}
+									}
+								}
+							}
+
+							if(timer){
+								if((new Date()).getTime() - timer > 1000 * 0){
+									closed = true;
+								}
+							}
+						}catch(e){
+							closed = true;
+						}
+
+						if(closed){
+							try{
+								window_obj.close();
+							}catch(e){
+								return;
+							}
+							window_obj = null;
+							task.release();
+							input_submit.disabled = false;
+							if(timer){
+								readMore();
+								element_textarea.value = "";
+							}
+						}
+					});
+				})();
+			}
+
+			function formSubmit(e){
+				input_submit.disabled = true;
+			}
+
+			if(window.addEventListener){
+				input_submit.addEventListener("click",inputClick);
+				element_form.addEventListener("submit",formSubmit);
+			}else if(window.attachEvent){
+				input_submit.attachEvent("onclick",inputClick);
+				element_form.attachEvent("onsubmit",formSubmit);
+			}
+		})();
+
+
+		// --------------------------------------------------------------------------------
+		// シャドウロード
+		// --------------------------------------------------------------------------------
+		(function(){
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
+
+			// 成功
+			loader.onload = function(str){
+				var re_number = new RegExp("<a href=\".*?\">([0-9]+)</a>","i");
+				var re_id = new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i");
+				var re_name = new RegExp("(◆(|[ ])[a-zA-Z0-9+/.]{10,12})","i");
+
+				var p = 0;
+				var n = str.length;
+				function f(){
+					if(p >= n) return;
+					p = str.indexOf("<div class=\"res\">",p);
+					if(p < 0) return;
+					var e = str.indexOf("</div>",p);
+					if(e >= 0) e += 6;
+					var s = str.substring(p,e);
+					var m = s.match(re_number);
+					if(m){
+						var id = parseInt(m[1]);
+						if((first_id <= id) && (id <= last_id)){
+						}else if(dictionary_id[id]){
+						}else{
+							// ナンバーからレスポンスオブジェクトを取得
+							var response = bbs_dictionary.getResponse(id);
+							if(!(response.getAnalyzed())){
+								var nodes = StringHtmlCreateDomNodesSafe(s);
+								var dt = nodes[0];
+								var dd = ElementGetElementsByTagName(dt,"p")[0];
+
+								try{
+									if(dt.tagName != "DIV")	return false;
+									if(dt.className != "res")	return false;
+									if(dd.className != "res_body")	return false;
+								}catch(e){
+									return false;
+								}
+
+								var dt_text = ElementGetTextContent(dt);
+
+								// レスアンカー拡張
+								work.extendResponseAnchor(dd);
+
+								// IDの取得
+								if(dt_text.match(re_id)){
+									response.setId(RegExp.$1);
+								}
+
+								// 名前の取得
+								if(dt_text.match(re_name)){
+									response.setName(RegExp.$1);
+								}
+
+								// ホスト名の取得
+								(function(){
+									var p;
+									var n;
+									var q;
+									var ignore_dictionary = {"B":1,"SCRIPT":1};
+									var queue = new Object();
+									q = {p:queue,n:queue,node:dt};
+									queue.p = q;
+									queue.n = q;
+
+									while(queue.n != queue){
+										q = queue.n;
+										p = q.p;
+										n = q.n;
+										p.n = n;
+										n.p = p;
+										var node = q.node;
+										switch(node.nodeType){
+										case 1:
+											if(!(ignore_dictionary[node.tagName])){
+												var i;
+												var nodes = node.childNodes;
+												var num = nodes.length;
+												for(i=0;i<num;i++){
+													n = queue;
+													p = n.p;
+													q = {p:p,n:n,node:nodes[i]};
+													p.n = q;
+													n.p = q;
+												}
+											}
+											break;
+										case 3:
+											var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
+											if(m){
+												response.setHost(m[2]);
+												return;
+											}
+											var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})\\n \\]","i"));
+											if(m){
+												response.setHost(m[2]);
+												return;
+											}
+											var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
+											if(m){
+												response.setHost(m[2]);
+												return;
+											}
+											break;
+										}
+									}
+								})();
+
+								// フォロー解析
+								var dictionary = new Object();
+								(function(){
+									var nodes = ElementGetElementsByTagName(dd,"a");
+									var i;
+									var num = nodes.length;
+									for(i=0;i<num;i++){
+										var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
+										numbers.getNumbers(function(n){
+											if(!dictionary[n]){
+												var following = bbs_dictionary.getResponse(n);
+												following.addFollower(response);
+												dictionary[n] = true;
+											}
+										});
+									}
+								})();
+
+								// オリジナルエレメントをセット
+								if(dt)	response.addOriginalElements("dt",dt);
+								if(dd)	response.addOriginalElements("dd",dd);
+
+								// 消去時に実行されるイベント
+								response.onerase = function(){};
+
+								response.setAnalyzed();
+							}
+						}
+					}
+
+					if(p < e){
+						p = e;
+						execute_queue.attachFirst(f,null);
+					}
+				}
+				execute_queue.attachFirst(f,null);
+			};
+
+			// 失敗
+			loader.onerror = function(){
+			};
+
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url_shadow);
+			loader.loadText();
+		})();
+
+		response({result:true});
+		return true;
 	}.toString() +
 	",\n\n\t" +
 	function (info,response){
@@ -17991,1245 +21775,9 @@ function PageExpand(page_expand_arguments){
 	}.toString() +
 "\n]";
 
-			// 4chan.org
-			var obj = addPreset(proj.expand_bbs,"4chan",null);
-			var preset = obj.preset;
-			preset.script_callback = 
-"[\n\t" + 
-	function(info,response){
-		var element = info.element;
-
-		// --------------------------------------------------------------------------------
-		// レスポンスダイアログを登録
-		// --------------------------------------------------------------------------------
-		function attachBbsResponseDialog(response,node,parent_dialog,type){
-
-			// --------------------------------------------------------------------------------
-			// レスアンカー
-			// --------------------------------------------------------------------------------
-			function forResponseAnchor(target){
-				if(BbsControlResponseAnchorExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlResponseAnchor を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var i;
-					var nodes = ElementGetElementsByTagName(target,"a");
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						var node = nodes[i];
-						var numbers = StringCreateResponseAnchorNumbers(ElementGetTextContent(node));
-						if(numbers.getCount()){
-							var control_res_anchor = new BbsControlResponseAnchor(node,false);
-							control_res_anchor.setResponseAnchorNumbers(numbers);
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlResponseAnchor を検索
-				// --------------------------------------------------------------------------------
-				BbsControlResponseAnchorSearch(target,function(control_res_anchor){
-
-					var element_res_anchor = control_res_anchor.getElement();
-					var numbers = control_res_anchor.getResponseAnchorNumbers();
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_res_anchor);
-					response_dialog.oncreate = function(_window,callback){
-
-						_window.className = "reply";
-
-						var created = false;
-						var i = 0;
-						var number_list = numbers.getNumberList();
-						var num = number_list.length;
-						if(!num) return false;
-
-						function f(){
-							var following = bbs_dictionary.getResponse(number_list[i]);
-							var clone = following.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-								var container = DocumentCreateElement("table");
-								container.style.margin = "0px 0px 10px";
-								_window.appendChild(container);
-
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									container.appendChild(obj.element);
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(following,param,response_dialog,"response");
-
-								created = true;
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:created});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// ID
-			// --------------------------------------------------------------------------------
-			function forId(target){
-				if(BbsControlIdExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlId を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var p;
-					var n;
-					var q;
-					var ignore_dictionary = {"A":1,"SCRIPT":1};
-					var queue = new Object();
-					q = {p:queue,n:queue,node:target};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-							if(!(ignore_dictionary[node.tagName])){
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-
-							// 名前欄
-							if(node.tagName == "SPAN"){
-								if(node.className == "hand"){
-									var m = ElementGetTextContent(node).match(new RegExp("^([a-zA-Z0-9+/.]{8})$","i"));
-									if(m){
-										// BbsControlId を生成
-										var control_id = new BbsControlId(null,true);
-										control_id.setId(m[1]);
-										var element_id = control_id.getElement();
-										DomNode_InsertAfter(node,element_id);
-									}
-								}
-							}
-
-							break;
-						case 3:
-							while(node){
-
-								// 本文
-								var m = DomNodeGetNodeValue(node).match(new RegExp("ID:(|[ ])([a-zA-Z0-9+/.]{8})","i"));
-								if(!m)	break;
-
-								// 元のテキストノード
-								DomNodeSetNodeValue(node,RegExp.leftContext);
-
-								// BbsControlId を生成
-								var control_id = new BbsControlId(null,false);
-								control_id.setId(m[2]);
-								var element_id = control_id.getElement();
-								ElementSetTextContent(element_id,m[0]);
-								DomNode_InsertAfter(node,element_id);
-
-								// 直後テキスト
-								node = DocumentCreateText(RegExp.rightContext);
-								DomNode_InsertAfter(element_id,node);
-							}
-							break;
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlId を検索
-				// --------------------------------------------------------------------------------
-				BbsControlIdSearch(target,function(control_id){
-
-					control_id.setResponse(response);
-
-					var id = control_id.getId();
-					var element_id = control_id.getElement();
-					var textnode_id = DocumentCreateText("");
-
-					element_id.appendChild(textnode_id);
-
-					// --------------------------------------------------------------------------------
-					// 変化があったときに実行されるイベント
-					// --------------------------------------------------------------------------------
-					control_id.onchange = function(count){
-						if(count > 1){
-							DomNodeSetNodeValue(textnode_id,"[" + count + "]");
-						}else{
-							DomNodeSetNodeValue(textnode_id,"");
-						}
-
-						var style = element_id.style;
-						if(count >= 5){
-							StyleDeclarationSetProperty(style,"color","#e80000");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else if(count >= 2){
-							StyleDeclarationRemoveProperty(style,"color");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else{
-							StyleDeclarationSetProperty(style,"color","#707070");
-							StyleDeclarationSetProperty(style,"font-size","small");
-						}
-						if(count > 1){
-							StyleDeclarationSetProperty(style,"margin","0px 4px 0px 4px");
-						}else{
-							StyleDeclarationRemoveProperty(style,"margin");
-						}
-					};
-					control_id.update();
-
-					// --------------------------------------------------------------------------------
-					// ポップアップ化
-					// --------------------------------------------------------------------------------
-					if(type == "id"){
-						if(response.getId() == id)	return null;
-					}
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_id);
-					response_dialog.oncreate = function(_window,callback){
-
-						_window.className = "reply";
-
-						var responses = bbs_dictionary.getResponsesFromId(id);
-						var i = 0;
-						var num = responses.length;
-						if(num <= 1) return false;
-
-						function f(){
-							var response_id = responses[i];
-							var clone = response_id.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-								var container = DocumentCreateElement("table");
-								container.style.margin = "0px 0px 10px";
-								_window.appendChild(container);
-
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									container.appendChild(obj.element);
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(response_id,param,response_dialog,"id");
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:true});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// トリップ
-			// --------------------------------------------------------------------------------
-			function forName(target){
-				if(BbsControlNameExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlName を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var p;
-					var n;
-					var q;
-					var ignore_dictionary = {"SCRIPT":1};
-					var queue = new Object();
-					q = {p:queue,n:queue,node:target};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-							if(!(ignore_dictionary[node.tagName])){
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-							break;
-						case 3:
-							while(node){
-
-								// 本文
-								var m = DomNodeGetNodeValue(node).match(new RegExp("(!|!!)([a-zA-Z0-9+/.]{10})","i"));
-								if(!m)	break;
-
-								// 元のテキストノード
-								DomNodeSetNodeValue(node,RegExp.leftContext);
-
-								// BbsControlName を生成
-								var control_name = new BbsControlName(null,false);
-								control_name.setName(m[0]);
-								var element_name = control_name.getElement();
-								ElementSetTextContent(element_name,m[0]);
-								DomNode_InsertAfter(node,element_name);
-
-								// 直後テキスト
-								node = DocumentCreateText(RegExp.rightContext);
-								DomNode_InsertAfter(element_name,node);
-							}
-							break;
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlName を検索
-				// --------------------------------------------------------------------------------
-				BbsControlNameSearch(target,function(control_name){
-
-					control_name.setResponse(response);
-
-					var name = control_name.getName();
-					var element_name = control_name.getElement();
-					var textnode_name = DocumentCreateText("");
-
-
-					// --------------------------------------------------------------------------------
-					// 変化があったときに実行されるイベント
-					// --------------------------------------------------------------------------------
-					control_name.onchange = function(count){
-						if(count > 1){
-							DomNodeSetNodeValue(textnode_name,"(" + count + ")");
-						}else{
-							DomNodeSetNodeValue(textnode_name,"");
-						}
-
-						var style = element_name.style;
-						if(count >= 5){
-							StyleDeclarationSetProperty(style,"color","#e80000");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else if(count >= 2){
-							StyleDeclarationRemoveProperty(style,"color");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else{
-							StyleDeclarationSetProperty(style,"color","#707070");
-							StyleDeclarationSetProperty(style,"font-size","small");
-						}
-					};
-					control_name.update();
-					element_name.appendChild(textnode_name);
-
-					// --------------------------------------------------------------------------------
-					// ポップアップ化
-					// --------------------------------------------------------------------------------
-					if(type == "name"){
-						if(response.getName() == name)	return null;
-					}
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_name);
-					response_dialog.oncreate = function(_window,callback){
-
-						_window.className = "reply";
-
-						var responses = bbs_dictionary.getResponsesFromName(name);
-						var i = 0;
-						var num = responses.length;
-						if(num <= 1) return false;
-
-						function f(){
-							var response_name = responses[i];
-							var clone = response_name.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-								var container = DocumentCreateElement("table");
-								container.style.margin = "0px 0px 10px";
-								_window.appendChild(container);
-
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									container.appendChild(obj.element);
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(response_name,param,response_dialog,"name");
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:true});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// フォロワー
-			// --------------------------------------------------------------------------------
-			function forFollower(target){
-				if(BbsControlFollowerExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlFollower を生成
-				// --------------------------------------------------------------------------------
-				var control_follower = new BbsControlFollower(null,true);
-				control_follower.setResponse(response);
-
-				var element_follower = control_follower.getElement();
-				var textnode_follower = DocumentCreateText("");
-
-				element_follower.appendChild(textnode_follower);
-
-				// --------------------------------------------------------------------------------
-				// 変化があったときに実行されるイベント
-				// --------------------------------------------------------------------------------
-				control_follower.onchange = function(count){
-					if(count){
-						textnode_follower.nodeValue = " follower(" + count + ")";
-					}else{
-						textnode_follower.nodeValue = "";
-					}
-
-					var style = element_follower.style;
-					if(count >= 3){
-						StyleDeclarationSetProperty(style,"color","#e80000");
-						StyleDeclarationRemoveProperty(style,"font-size");
-
-					}else{
-						StyleDeclarationSetProperty(style,"color","#707070");
-						StyleDeclarationSetProperty(style,"font-size","small");
-					}
-					if(count){
-						StyleDeclarationSetProperty(style,"margin","0px 4px 0px 0px");
-					}else{
-						StyleDeclarationRemoveProperty(style,"margin");
-					}
-				};
-				control_follower.update();
-				target.appendChild(element_follower);
-
-
-				// --------------------------------------------------------------------------------
-				// ポップアップ化
-				// --------------------------------------------------------------------------------
-				// ダイアログを作成
-				var response_dialog = new BbsResponseDialog();
-				if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-				response_dialog.setElementParent(node.parent);
-				response_dialog.setElementHitArea(element_follower);
-				response_dialog.oncreate = function(_window,callback){
-
-					_window.className = "reply";
-
-					var ary = response.getFollower();
-					var i = 0;
-					var num = ary.length;
-					if(num <= 0) return false;
-
-					function f(){
-						var follower = bbs_dictionary.getResponse(ary[i].getNumber());
-						var clone = follower.getCloneElements();
-
-						var j;
-						var clone_num = clone.length;
-						if(clone_num){
-							var container = DocumentCreateElement("table");
-							container.style.margin = "0px 0px 10px";
-							_window.appendChild(container);
-
-							var param = new Object();
-							param.parent = node.parent;
-							for(j=0;j<clone_num;j++){
-								var obj = clone[j];
-								param[obj.name] = obj.element;
-								container.appendChild(obj.element);
-							}
-
-							// レスポンスダイアログを登録
-							attachBbsResponseDialog(follower,param,response_dialog,"response");
-						}
-
-						i += 1;
-						if(i < num){
-							execute_queue.attachFirst(f,null);
-						}else{
-							callback({result:true});
-						}
-					}
-					execute_queue.attachFirst(f,null);
-				};
-			}
-
-			if(node.post_info){
-				forResponseAnchor(node.post_info);
-				forId(node.post_info);
-				forName(node.post_info);
-				forFollower(node.post_info);
-			}
-			if(node.post_message){
-				forResponseAnchor(node.post_message);
-				forId(node.post_message);
-				forName(node.post_message);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// 文字列からレスポンス番号を取得
-		// --------------------------------------------------------------------------------
-		function StringCreateResponseAnchorNumbers(str){
-			var numbers = new ResponseAnchorNumbers();
-
-			var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞)([0-9０-９]+)","i");
-			var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
-			var re_number = new RegExp("^([0-9０-９]+)","i");
-
-			var m = str.match(re_search);
-			if(m){
-				var p = m[1].length;
-				while(true){
-					// 番号-番号
-					m = str.substr(p).match(re_range);
-					if(m){
-						var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-						var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-						if(min < 1) min = 1;
-						if(max < 1) max = 1;
-						if(min > 0x7fffffff) min = 0x7fffffff;
-						if(max > 0x7fffffff) max = 0x7fffffff;
-						if(max < min){
-							var tmp = min;
-							min = max;
-							max = tmp;
-						}
-						if(max - min > 10000) max = min + 10000;
-						p += m[0].length;
-						numbers.addNumbers(min,max);
-					}else{
-						// 番号
-						m = str.substr(p).match(re_number);
-						if(m){
-							p += m[0].length;
-							var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-							if(id < 1) id = 1;
-							if(id > 0x7fffffff) id = 0x7fffffff;
-							numbers.addNumber(id);
-						}
-					}
-
-					if(m){
-						// カンマ
-						if(RegExp.rightContext.search(",") == 0){
-							p += 1;
-							continue;
-						}
-					}
-					break;
-				}
-			}
-			return numbers;
-		}
-
-		// --------------------------------------------------------------------------------
-		// エレメントを解析
-		// --------------------------------------------------------------------------------
-		var useful = (function(){
-			var post_info = element;
-			var post_file;
-			var post_message;
-
-			try{
-				if(post_info.tagName != "DIV")	return false;
-				if(!(post_info.className.match(new RegExp("^postInfo","i"))))	return false;
-			}catch(e){
-				return false;
-			}
-
-			try{
-				post_message = post_info.nextSibling;
-				if(post_message.tagName == "DIV"){
-					if(post_message.className == "file"){
-						post_file = post_message;
-						post_message = post_file.nextSibling;
-					}
-				}
-			}catch(e){
-			}
-
-			try{
-				if(post_message.tagName != "BLOCKQUOTE")	return false;
-				if(post_message.className != "postMessage")	return false;
-			}catch(e){
-				return false;
-			}
-
-			if(!post_file){
-				try{
-					var node = post_info.previousSibling;
-					if(node.tagName == "DIV"){
-						if(node.className == "file"){
-							post_file = node;
-						}
-					}
-				}catch(e){
-				}
-			}
-
-			// document に未登録
-			if(!DomNodeGetAttachedDocument(post_info))	return false;
-
-			// ポップアップを除外
-			var board = false;
-			var node = post_info;
-			while(node){
-				if(node.className == "board"){
-					board = true;
-					break;
-				}
-				node = node.parentNode;
-			}
-			if(!board)	return false;
-
-			// --------------------------------------------------------------------------------
-			// クリーンアップ
-			// --------------------------------------------------------------------------------
-			(function(){
-				function cleanupInfo(target){
-					var nodes = ElementGetElementsByTagName(post_info,"span");
-					var i;
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						var node = nodes[i];
-						if(node.className == "postertrip"){
-							// トリップ
-							var m = ElementGetTextContent(element).match(new RegExp("(!|!!)([a-zA-Z0-9+/.]{10})","i"));
-							if(m){
-								ElementSetTextContent(node,m[0]);
-							}
-							break;
-						}
-					}
-				}
-
-				function cleanupMessage(target){
-					BbsControlSearchTrash(target,function(element){
-						var node = element.firstChild;
-						if(!node)	return null;
-						if(node.nodeType != 3)	return null;
-
-						// ID
-						var m = node.nodeValue.match(new RegExp("^ID:(|[ ])([a-zA-Z0-9+/.]{8})","i"));
-						if(m){
-							// 直後テキスト
-							var node = DocumentCreateText(m[0]);
-							DomNode_InsertAfter(element,node);
-							DomNodeRemove(element);
-							return null;
-						}
-
-						// トリップ
-						var m = node.nodeValue.match(new RegExp("^(!|!!)([a-zA-Z0-9+/.]{10})","i"));
-						if(m){
-							// 直後テキスト
-							var node = DocumentCreateText(m[0]);
-							DomNode_InsertAfter(element,node);
-							DomNodeRemove(element);
-							return null;
-						}
-
-						return null;
-					});
-				}
-
-				if(post_info){
-					cleanupInfo(post_info);
-				}
-				if(post_message){
-					cleanupMessage(post_message);
-				}
-			})();
-
-			// ナンバーを取得
-			var info_text = ElementGetTextContent(post_info);
-			if(!(info_text.match(new RegExp("No\\.([0-9]+)","i"))))	return false;
-
-			// ナンバーからレスポンスオブジェクトを取得
-			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
-
-			// レスポンス解析
-			if(!response.getAnalyzed()){
-
-				// IDの取得
-				if(info_text.match(new RegExp("\\(ID:[ ]([a-zA-Z0-9+/.]+)\\)","i"))){
-					response.setId(RegExp.$1);
-				}
-
-				// 名前の取得
-				(function(){
-					var nodes = ElementGetElementsByTagName(post_info,"span");
-					var i;
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						var node = nodes[i];
-						if(node.className == "postertrip"){
-							response.setName(ElementGetTextContent(node));
-							break;
-						}
-					}
-				})();
-
-				// フォロー解析
-				var dictionary = new Object();
-				(function(){
-					var nodes = ElementGetElementsByTagName(post_message,"a");
-					var i;
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						var numbers = StringCreateResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-						numbers.getNumbers(function(n){
-							if(!dictionary[n]){
-								var following = bbs_dictionary.getResponse(n);
-								following.addFollower(response);
-								dictionary[n] = true;
-							}
-						});
-					}
-				})();
-
-				// オリジナルエレメントをセット
-				if(post_info)		response.addOriginalElements("post_info",post_info);
-				if(post_file)		response.addOriginalElements("post_file",post_file);
-				if(post_message)	response.addOriginalElements("post_message",post_message);
-
-				// 消去時に実行されるイベント
-				response.onerase = function(){
-					var original = response.getOriginalElements();
-					if(original.length){
-						var node = original[0].element;
-						while(node){
-							if(node.className.match(new RegExp("^postContainer","i"))){
-								var revise_scroll = new DocumentReviseScroll();
-								revise_scroll.executeRemoveElementBefore(node);
-								DomNodeRemove(node);
-								revise_scroll.executeRemoveElementAfter(node);
-								break;
-							}
-							node = node.parentNode;
-						}
-					}
-				};
-
-				response.setAnalyzed();
-			}
-
-			// レスポンスダイアログを登録（ルート）
-			attachBbsResponseDialog(
-				response,
-				{
-					post_info:post_info,
-					post_file:post_file,
-					post_message:post_message,
-					parent:document.body
-				},
-				null,
-				null
-			);
-
-			return true;
-		})();
-
-		response({useful:useful});
-		return true;
-	}.toString() +
-"\n]";
-
-
-			// --------------------------------------------------------------------------------
-			// URLマッピング設定
-			// --------------------------------------------------------------------------------
-			// chaika
-			var obj = addPreset(proj.urlmap,"chaika","image_bbs");
-			obj.preset = {
-				name:{
-					standard:"chaika",
-					locales:{
-						ja:"chaika",
-						en:"chaika"
-					}
-				},
-				enable:true,
-				filter:[
-					"http://127.0.0.1:*/thread/http://2ch.net/*",
-					"http://127.0.0.1:*/thread/http://*.2ch.net/*",
-					"http://127.0.0.1:*/thread/http://*.bbspink.com/*",
-					"http://127.0.0.1:*/thread/http://jbbs.livedoor.jp/*"
-				],
-				enable_unsecure:false,
-				enable_mixed_content:false,
-				access_block:{enable:false,id:[]},
-				replacement_to_element:{enable:false,id:[]},
-				replacement_to_text:{enable:false,id:[]},
-				replacement_to_anchor:{enable:true,id:["direct_link_bbs","no_referrer"]},
-				replacement_to_link:{enable:true,id:["direct_link_generic"]},
-				replacement_to_referer:{enable:true,id:["replacement_link_url"]},
-				replacement_to_useragent:{enable:false,id:""},
-				make_link_to_text:{enable:true,id:"detail"},
-				expand_short_url:{enable:true,id:"detail"},
-				expand_text:{enable:false,id:""},
-				expand_image:{enable:true,id:"thumbnail_not_include_image"},
-				expand_sound:{enable:true,id:"inline"},
-				expand_video:{enable:true,id:"inline"},
-				expand_iframe:{enable:false,id:""},
-				style_sheet:{enable:true,id:"default"},
-				experimental:{enable:false,id:""}
-			};
-
-		}
-		if(exit())	return proj;
-
-		// --------------------------------------------------------------------------------
-		// プロジェクト ver.14
-		// --------------------------------------------------------------------------------
-		if(proj.version < 14){
-			// バージョン値
-			proj.version = 14;
-
-			var wildcard_name = {
-				standard:"Wild Card",
-				locales:{
-					ja:"ワイルドカード",
-					en:"Wild Card"
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// アクセスブロック定義
-			// --------------------------------------------------------------------------------
-			removePreset("access_block","firefox_extension");
-			removePreset("access_block","opera_extension");
-
-			// ワイルドカード
-			var obj = addPreset(proj.access_block,"wildcard",null);
-			obj.preset = {
-				name:wildcard_name,
-				filter:[]
-			};
-
-			// --------------------------------------------------------------------------------
-			// リファラ置換定義
-			// --------------------------------------------------------------------------------
-			removePreset("replacement_to_referer","firefox_extension");
-
-			// ワイルドカード
-			var obj = addPreset(proj.replacement_to_referer,"wildcard",null);
-			obj.preset = {
-				name:wildcard_name,
-				filter:[]
-			};
-
-			// --------------------------------------------------------------------------------
-			// ユーザーエージェント置換定義
-			// --------------------------------------------------------------------------------
-			removePreset("replacement_to_useragent","firefox_extension");
-
-			// ワイルドカード
-			var obj = addPreset(proj.replacement_to_useragent,"wildcard",null);
-			obj.preset = {
-				name:wildcard_name,
-				filter:[]
-			};
-
-			// --------------------------------------------------------------------------------
-			// エレメント置換定義
-			// --------------------------------------------------------------------------------
-			// 展開アシスト（アンカー内画像用）
-			var obj = addPreset(proj.replacement_to_element,"assist_image_in_anchor","assist_image_search");
-			obj.preset = {
-				name:{
-					standard:"Assist Expand (image in anchor)",
-					locales:{
-						ja:"展開アシスト（アンカー内画像用）",
-						en:"Assist Expand (image in anchor)"
-					}
-				},
-				script:
-"[\n\t" + 
-	function(info,response){
-		var element = info.element;
-		var result = (function(){
-
-			// イメージ要素
-			if(element.tagName == "IMG"){
-				return true;
-			}
-
-			// バックグラウンドイメージを含む
-			var style = ElementGetComputedStyle(element,null);
-			if(style){
-				if(style.backgroundImage.indexOf("url(") == 0){
-					return true;
-				}
-			}
-
-			return false;
-		})();
-
-		if(result){
-			while(element){
-				if(element.tagName == "A"){
-					response({url:element.href});
-					return true;
-				}
-				element = element.parentNode;
-			}
-		}
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function(info,response){
-		response({});
-		return true;
-	}.toString() +
-"\n]"
-			};
-
-			// --------------------------------------------------------------------------------
-			// アンカー置換定義
-			// --------------------------------------------------------------------------------
-			// 2ch.net 用
-			updatePreset(proj.replacement_to_anchor,"direct_link_bbs",function(obj){
-				obj.script = 
-"[\n\t" + 
-	function(info,response){
-		var anchor_element = info.anchor_element;
-		var r;
-
-		// リンク先を取得
-		var url = anchor_element.href;
-
-		var list = [
-			// 2ちゃんねる
-			{search:"^http://ime\\.nu/",replace:"http://"},
-			// まちBBS
-			{search:"^http://machi\\.to/bbs/link\\.cgi[?]URL=",replace:""},
-			// PINKちゃんねる
-			{search:"^http://pinktower\\.com/",replace:"http://"},
-			// したらば掲示板
-			{search:"^http://jbbs\\.shitaraba\\.net/bbs/link\\.cgi[?]url=",replace:""},
-			// ログ速
-			{search:"^http://l\\.moapi\\.net/",replace:""},
-			// かきこ
-			{search:"^http://fast\\.io/",replace:"http://"},
-			// あっとちゃんねるず
-			{search:"^http://z4c\\.in/",replace:"http://"},
-			{search:"^http://www[0-9]+\\.atchs\\.jp/j/",replace:"http://"}
-		];
-
-		var i;
-		var num = list.length;
-		for(i=0;i<num;i++){
-			r = new RegExp(list[i].search,"i");
-			if(url.match(r)){
-				anchor_element.href = url.replace(r,list[i].replace);
-				return false;
-			}
-		}
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function(info,response){
-		response({});
-		return true;
-	}.toString() +
-"\n]";
-			});
-
-			// --------------------------------------------------------------------------------
-			// イメージ展開定義
-			// --------------------------------------------------------------------------------
-			// 追加
-			update(proj.expand_image,"*",function(obj){
-				if((obj.thumbnail.enable_thumbnail) === undefined)		obj.thumbnail.enable_thumbnail = true;
-				if((obj.popup.enable_popup_mouseover) === undefined)	obj.popup.enable_popup_mouseover = true;
-				if((obj.load.src_type) === undefined)					obj.load.src_type = "mixed_content";
-			});
-
-			// ポップアップ表示（すべてのリンク）
-			var preset_popup_all = getPreset(proj.expand_image,"popup_all");
-			// ポップアップ表示（画像を含むリンク）
-			var preset_popup_include_image = getPreset(proj.expand_image,"popup_include_image");
-			// サムネイル表示（すべて）
-			var preset_thumbnail_all = getPreset(proj.expand_image,"thumbnail_all");
-			// サムネイル表示（画像を含まないリンク）
-			var preset_thumbnail_not_include_image = getPreset(proj.expand_image,"thumbnail_not_include_image");
-
-			preset_popup_all.thumbnail.enable_thumbnail = false;
-			preset_popup_include_image.thumbnail.enable_thumbnail = false;
-			preset_thumbnail_all.popup.enable_popup_mouseover = false;
-			preset_thumbnail_not_include_image.popup.enable_popup_mouseover = false;
-
-			preset_popup_all.thumbnail.script_allow = preset_thumbnail_all.thumbnail.script_allow;
-			preset_thumbnail_all.popup.script_allow = preset_popup_all.popup.script_allow;
-			preset_popup_include_image.thumbnail.script_allow = preset_thumbnail_not_include_image.thumbnail.script_allow;
-			preset_thumbnail_not_include_image.popup.script_allow = preset_popup_include_image.popup.script_allow;
-
-			// ポップアップ表示（アシスト要素のみ）
-			var obj = addPreset(proj.expand_image,"popup_image_in_anchor","thumbnail_all");
-			obj.preset = {
-				name:{
-					standard:"Popup (assist only)",
-					locales:{
-						ja:"ポップアップ表示（アシスト要素のみ）",
-						en:"Popup (assist only)"
-					}
-				},
-				thumbnail:{
-					enable_thumbnail:false,
-					enable_popup_mouseover:true,
-					disable_same_image:false,
-					load_type:"preload",
-					script_allow:"[]",
-					script_insert:preset_thumbnail_not_include_image.thumbnail.script_insert
-				},
-				popup:{
-					enable_popup_mouseover:true,
-					origin_type:"center",
-					position_type:"absolute",
-					time_wait_open:0,
-					time_wait_close:0,
-					enable_animation_scale:true,
-					enable_animation_alpha:true,
-					load_type:"preload",
-					scale_percent:100,
-					script_allow:"[]"
-				},
-				reduced_image:{
-					enable_popup:true,
-					popup_allow_slcale_less_then:70
-				},
-				load:{
-					enable_notify:true,
-					enable_unload:false,
-					src_type:"mixed_content",
-					unload_allow_size_more_then:256
-				}
-			};
-
-			obj.preset.thumbnail.script_allow = 
-"[\n\t" + 
-	function(info,response){
-		var current_element = info.current_element;
-		if(current_element.tagName == "A"){
-			response({result:false});
-			return true;
-		}
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function(info,response){
-		var current_element = info.current_element;
-		var parent = current_element.parentNode;
-		if(parent){
-			var width = ElementGetClientWidth(parent);
-
-			// 親の幅が小さすぎる場合サムネイル化しない
-			if(width < 50){
-				response({result:false});
-				return true;
-			}
-		}
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function(info,response){
-		var current_element = info.current_element;
-		var url = info.url;
-
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png"
-		];
-
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が画像の拡張子である場合、サムネイル表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
-				return true;
-			}
-		}
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function(info,response){
-		var current_element = info.current_element;
-		var content_type = info.content_type;
-
-		// コンテンツタイプに "image" が含まれる
-		if(content_type.join(",").match(/image/i)){
-			response({result:true});
-			return true;
-		}
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function(info,response){
-		// サムネイル表示しない
-		response({result:false});
-		return true;
-	}.toString() +
-"\n]";
-
-			obj.preset.popup.script_allow = 
-"[\n\t" + 
-	function(info,response){
-		var current_element = info.current_element;
-		if(current_element.tagName == "A"){
-			response({result:false});
-			return true;
-		}
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function(info,response){
-		var current_element = info.current_element;
-		var url = info.url;
-
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png"
-		];
-
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が画像の拡張子である場合、ポップアップ表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
-				return true;
-			}
-		}
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function(info,response){
-		var current_element = info.current_element;
-		var content_type = info.content_type;
-
-		// コンテンツタイプに "image" が含まれる
-		if(content_type.join(",").match(/image/i)){
-			response({result:true});
-			return true;
-		}
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function(info,response){
-		// ポップアップ表示しない
-		response({result:false});
-		return true;
-	}.toString() +
-"\n]";
-
-			// --------------------------------------------------------------------------------
-			// 掲示板設定
-			// --------------------------------------------------------------------------------
 			// ふたば☆ちゃんねる
 			var obj = addPreset(proj.expand_bbs,"2chan",null);
 			var preset = obj.preset;
-			preset.filter = [
-				{
-					pattern:"^http://[^.]+\\.2chan\\.net/[^/]+/res/[0-9]+.htm",
-					flags:{i:true,g:false}
-				}
-			];
 			preset.script_initialize = 
 "[\n\t" + 
 	function(info,response){
@@ -19259,566 +21807,579 @@ function PageExpand(page_expand_arguments){
 	",\n\n\t" +
 	function (info,response){
 		var work = info.work;
+		if(!(work.bbs_name)){
+			return false;
+		}
 
-		if(work.bbs_name){
-			var last_id = 1;
-			var element_parent = null;
-			var read_more_button = null;
-			var element_form = null;
-			var base_url = work.base_url;
-			var resource_url = base_url;
+		var last_id = 1;
+		var element_parent = null;
+		var read_more_button = null;
+		var element_form = null;
+		var base_url = work.base_url;
+		var resource_url = base_url;
+
+		// --------------------------------------------------------------------------------
+		// 双葉辞書
+		// --------------------------------------------------------------------------------
+		function FutabaDictionary(){
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
-			// 双葉辞書
+			// レスポンス生成
 			// --------------------------------------------------------------------------------
-			function FutabaDictionary(){
-				var _container = new Object();
+			function createResponse(number){
+				var _response = new Object();
 
 				// --------------------------------------------------------------------------------
-				// レスポンス生成
+				// 開放
 				// --------------------------------------------------------------------------------
-				function createResponse(number){
-					var _response = new Object();
+				_response.release = function(obj){
+					var _prev = _response._prev;
+					var _next = _response._next;
+					_prev._next = _next;
+					_next._prev = _prev;
+					_response._prev = _response;
+					_response._next = _response;
+					delete _number_dictionary[_image_id];
+					delete _image_id_dictionary[_image_id];
+					_response._text_dictionary = new Object();
+				};
 
-					// --------------------------------------------------------------------------------
-					// 開放
-					// --------------------------------------------------------------------------------
-					_response.release = function(obj){
-						var _prev = _response._prev;
-						var _next = _response._next;
-						_prev._next = _next;
-						_next._prev = _prev;
-						_response._prev = _response;
-						_response._next = _response;
-						delete _number_dictionary[_image_id];
-						delete _image_id_dictionary[_image_id];
-						_response._text_dictionary = new Object();
-					};
+				// --------------------------------------------------------------------------------
+				// 番号を取得
+				// --------------------------------------------------------------------------------
+				_response.getNumber = function(){
+					return number;
+				};
 
-					// --------------------------------------------------------------------------------
-					// 番号を取得
-					// --------------------------------------------------------------------------------
-					_response.getNumber = function(){
-						return number;
-					};
+				// --------------------------------------------------------------------------------
+				// テキストを登録
+				// --------------------------------------------------------------------------------
+				_response.attachText = function(str){
+					m = str.match(new RegExp("([ 　]*)(.+?)([ 　]*)$"));
+					if(!m) return;
+					if(!m[2]) return;
+					_response._text_dictionary[m[2]] = true;
+				};
 
-					// --------------------------------------------------------------------------------
-					// テキストを登録
-					// --------------------------------------------------------------------------------
-					_response.attachText = function(str){
-						m = str.match(new RegExp("([ 　]*)(.+?)([ 　]*)$"));
-						if(!m) return;
-						if(!m[2]) return;
-						_response._text_dictionary[m[2]] = true;
-					};
+				// --------------------------------------------------------------------------------
+				// テキストからレスポンスを取得
+				// --------------------------------------------------------------------------------
+				_response.getResponsesFromText = function(str){
+					var ary = new Array();
+					var str_num = str.length;
+					if(str_num < 2) return ary;
 
-					// --------------------------------------------------------------------------------
-					// テキストからレスポンスを取得
-					// --------------------------------------------------------------------------------
-					_response.getResponsesFromText = function(str){
-						var ary = new Array();
-						var str_num = str.length;
-						if(str_num < 2) return ary;
+					// 完全一致
+					var list = _response._prev;
+					while(_response_list != list){
+						if(list._text_dictionary[str]){
+							ary.push(list);
+						}
+						list = list._prev;
+					}
+					if(ary.length) return ary;
+					if(str_num < 3) return ary;
 
-						// 完全一致
-						var list = _response._prev;
-						while(_response_list != list){
-							if(list._text_dictionary[str]){
+					// 部分一致
+					var list = _response._prev;
+					while(_response_list != list){
+						var k;
+						var d = list._text_dictionary;
+						for(k in d){
+							if(k.indexOf(str) >= 0){
 								ary.push(list);
-							}
-							list = list._prev;
-						}
-						if(ary.length) return ary;
-						if(str_num < 3) return ary;
-
-						// 部分一致
-						var list = _response._prev;
-						while(_response_list != list){
-							var k;
-							var d = list._text_dictionary;
-							for(k in d){
-								if(k.indexOf(str) >= 0){
-									ary.push(list);
-									break;
-								}
-							}
-							list = list._prev;
-						}
-						return ary;
-					};
-
-					// --------------------------------------------------------------------------------
-					// イメージ ID を登録
-					// --------------------------------------------------------------------------------
-					_response.setImageId = function(id){
-						_image_id = id;
-						_image_id_dictionary[_image_id] = _response;
-					};
-
-					// --------------------------------------------------------------------------------
-					// プライベート変数
-					// --------------------------------------------------------------------------------
-					var _image_id;
-
-					// --------------------------------------------------------------------------------
-					// 初期化
-					// --------------------------------------------------------------------------------
-					(function(){
-						_response._prev = _response;
-						_response._next = _response;
-						_response._text_dictionary = new Object();
-						var list = _response_list._prev;
-						while(_response_list != list){
-							if(list.getNumber() >= number){
 								break;
 							}
-							list = list._prev;
 						}
-						var _next = list;
-						var _prev = _next._prev;
-						_prev._next = _response;
-						_next._prev = _response;
-						_response._prev = _prev;
-						_response._next = _next;
-						_number_dictionary[number] = _response;
-					})();
-
-					return _response;
-				}
-
-				// --------------------------------------------------------------------------------
-				// 番号からレスポンスを生成
-				// --------------------------------------------------------------------------------
-				_container.createResponse = function(number){
-					var response = _number_dictionary[number];
-					if(!response){
-						response = createResponse(number);
-						_number_dictionary[number] = response;
+						list = list._prev;
 					}
-					return response;
+					return ary;
 				};
 
 				// --------------------------------------------------------------------------------
-				// 番号からレスポンスを取得
+				// イメージ ID を登録
 				// --------------------------------------------------------------------------------
-				_container.getResponse = function(number){
-					return _number_dictionary[number];
-				};
-
-				// --------------------------------------------------------------------------------
-				// 画像 ID からレスポンスを取得
-				// --------------------------------------------------------------------------------
-				_container.getResponseFromImageId = function(id){
-					return _image_id_dictionary[id];
+				_response.setImageId = function(id){
+					_image_id = id;
+					_image_id_dictionary[_image_id] = _response;
 				};
 
 				// --------------------------------------------------------------------------------
 				// プライベート変数
 				// --------------------------------------------------------------------------------
-				var _number_dictionary;
-				var _image_id_dictionary;
-				var _response_list;
+				var _image_id;
 
 				// --------------------------------------------------------------------------------
 				// 初期化
 				// --------------------------------------------------------------------------------
 				(function(){
-					_number_dictionary = new Object();
-					_image_id_dictionary = new Object();
-					_response_list = new Object();
-					_response_list._prev = _response_list;
-					_response_list._next = _response_list;
+					_response._prev = _response;
+					_response._next = _response;
+					_response._text_dictionary = new Object();
+					var list = _response_list._prev;
+					while(_response_list != list){
+						if(list.getNumber() >= number){
+							break;
+						}
+						list = list._prev;
+					}
+					var _next = list;
+					var _prev = _next._prev;
+					_prev._next = _response;
+					_next._prev = _response;
+					_response._prev = _prev;
+					_response._next = _next;
+					_number_dictionary[number] = _response;
 				})();
 
-				return _container;
+				return _response;
 			}
 
 			// --------------------------------------------------------------------------------
-			// テーブル解析
+			// 番号からレスポンスを生成
 			// --------------------------------------------------------------------------------
-			work.analyzeTable = function(table){
-				var re_number = new RegExp("No\\.([0-9]+)","i");
-				var re_image = new RegExp(".*/([0-9]+)\\.(bmp|gif|jpeg|jpe|jpg|png)","i");
-
-				// ナンバーを取得
-				var info_text = ElementGetTextContent(table);
-				var m = info_text.match(re_number);
-				if(m){
-					var id = parseInt(m[1]);
-					if(work.futaba_dictionary.getResponse(id)) return;
-					var response = work.futaba_dictionary.createResponse(id);
-
-					try{
-						var blockquote = ElementGetElementsByTagName(table,"BLOCKQUOTE")[0];
-
-						// 画像 ID
-						var anchor = blockquote.previousSibling;
-						while(anchor){
-							if(anchor.tagName == "A"){
-								if(anchor.href.match(re_image)){
-									response.setImageId(RegExp.$1);
-									break;
-								}
-							}
-							anchor = anchor.previousSibling;
-						}
-
-						// 本文
-						var nodes = blockquote.childNodes;
-						var node_num = nodes.length;
-						var i;
-						var s = "";
-						for(i=0;i<node_num;i++){
-							var node = nodes[i];
-							switch(node.nodeType){
-							case 1:
-								if(node.tagName == "BR"){
-									if(s){
-										response.attachText(s);
-									}
-									s = "";
-								}else{
-									s += ElementGetTextContent(node);
-								}
-								break;
-							case 3:
-								s += node.nodeValue;
-								break;
-							}
-						}
-						if(s){
-							response.attachText(s);
-						}
-					}catch(e){
-					}
+			_this.createResponse = function(number){
+				var response = _number_dictionary[number];
+				if(!response){
+					response = createResponse(number);
+					_number_dictionary[number] = response;
 				}
+				return response;
 			};
 
 			// --------------------------------------------------------------------------------
-			// フォーム位置補正
+			// 番号からレスポンスを取得
 			// --------------------------------------------------------------------------------
-			function revisePositionForm(){
-				try{
-					var ftbl = document.getElementById("ftbl");
-					var ufm = document.getElementById("ufm");
-					if(ftbl.style.position == "absolute"){
-						var p = DocumentGetScrollPos();
-						var r = ufm.getBoundingClientRect();
-						ftbl.style.top = (p.y + r.top) + "px";
-					}
-				}catch(e){}
-			}
+			_this.getResponse = function(number){
+				return _number_dictionary[number];
+			};
 
 			// --------------------------------------------------------------------------------
-			// 継ぎ足し読み込み
+			// 画像 ID からレスポンスを取得
 			// --------------------------------------------------------------------------------
-			function readMore(){
-
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
-
-				// 成功
-				loader.onload = function(str){
-					var re_number = new RegExp("Name[ ].*?No\\.([0-9]+)","i");
-					var element_last;
-
-					var p = 0;
-					var n = str.length;
-					function f(){
-						try{
-							if(p >= n) throw 0;
-							p = str.indexOf("<table border=0>",p);
-							if(p < 0) throw 0;
-							var e = str.indexOf("</td>",p);
-							if(e >= 0){
-								e = str.indexOf("</tr>",e + 5);
-								if(e >= 0){
-									e = str.indexOf("</table>",e + 5);
-									if(e >= 0) e += 8;
-								}
-							}
-							var s = str.substring(p,e);
-							var m = s.match(re_number);
-							if(m){
-								var id = parseInt(m[1]);
-								if(last_id < id){
-									var response = bbs_dictionary.getResponse(id);
-									response.clearAnalyzed();
-									response.clearOriginalElements();
-									response.clearFollowing();
-
-									var nodes = StringHtmlCreateDomNodesSafe(s);
-									var j;
-									var node_num = nodes.length;
-									for(j=0;j<node_num;j++){
-										DomNode_InsertAfter(element_last,nodes[j]);
-										element_last = nodes[j];
-									}
-
-									// フォーム位置補正
-									revisePositionForm();
-
-									last_id = id;
-								}
-							}
-
-							if(p < e){
-								p = e;
-								execute_queue.attachFirst(f,null);
-								return;
-							}
-						}catch(e){
-						}
-
-						// フォーム位置補正
-						revisePositionForm();
-
-						read_more_button.init();
-					}
-
-					var nodes = ElementGetElementsByTagName(element_parent,"table");
-					if(nodes.length){
-						element_last = nodes[nodes.length-1];
-					}
-
-					execute_queue.attachFirst(f,null);
-				};
-
-				// 失敗
-				loader.onerror = function(){
-					read_more_button.init();
-				};
-
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url);
-				loader.overrideMimeType("text/plain; charset=Shift_JIS");
-				loader.loadText();
-			}
+			_this.getResponseFromImageId = function(id){
+				return _image_id_dictionary[id];
+			};
 
 			// --------------------------------------------------------------------------------
-			// レスポンス親要素
+			// プライベート変数
 			// --------------------------------------------------------------------------------
-			var i;
-			var nodes = ElementGetElementsByTagName(document.body,"form");
-			var num = nodes.length;
-			for(i=0;i<num;i++){
-				var node = nodes[i];
-				if(node.action.indexOf("futaba.php") != -1){
-					if(ElementGetElementsByTagName(node,"blockquote").length){
-						element_parent = node;
-						break;
-					}
-				}
-			}
-
-			if(!element_parent) return false;
+			var _number_dictionary;
+			var _image_id_dictionary;
+			var _response_list;
 
 			// --------------------------------------------------------------------------------
-			// 最後尾 ID
-			// --------------------------------------------------------------------------------
-			var nodes = ElementGetElementsByTagName(element_parent,"table");
-			var i;
-			var node_num = nodes.length;
-			for(i=node_num-1;i>=0;i--){
-				var node = nodes[i];
-				var m = ElementGetTextContent(node).match(new RegExp("No\\.([0-9]+)","i"));
-				if(m){
-					last_id = parseInt(m[1]);
-					break;
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// アクセス先 URL
-			// --------------------------------------------------------------------------------
-			resource_url = base_url;
-
-			// --------------------------------------------------------------------------------
-			// BbsControlReadMoreButton 作成
-			// --------------------------------------------------------------------------------
-			read_more_button = new BbsControlReadMoreButton();
-			read_more_button.setWaitTime(2 * 1000);
-			read_more_button.onclick = readMore;
-			var nodes = ElementGetElementsByTagName(element_parent,"hr");
-			if(nodes.length){
-				DomNode_InsertBefore(nodes[nodes.length-1],read_more_button.getElement());
-			}
-
-
-			// --------------------------------------------------------------------------------
-			// 書き込みをポップアップ化
-			// --------------------------------------------------------------------------------
-			// フォーム
-			var nodes = ElementGetElementsByTagName(document.body,"form");
-			var element_form;
-			var input_submit;
-			var element_textarea;
-
-			// フォーム
-			var node = document.getElementById("ftbl");
-			while(node){
-				if(node.tagName == "FORM"){
-					element_form = node;
-					break;
-				}
-				node = node.parentNode;
-			}
-
-			// サブミットボタン
-			if(element_form){
-				var nodes = ElementGetElementsByTagName(element_form,"input");
-				for(i=0;i<nodes.length;i++){
-					if(nodes[i].type.toLowerCase() == "submit"){
-						input_submit = nodes[i];
-						break;
-					}
-				}
-				var nodes = ElementGetElementsByTagName(element_form,"textarea");
-				if(nodes.length){
-					element_textarea = nodes[0];
-				}
-			}
-
-			if(input_submit){
-
-				function inputClick(e){
-
-					var w = 600;
-					var h = 600;
-					var cookie = document.cookie;
-					if(cookie){
-						if(cookie.indexOf("PREN=") != -1){
-							w = 600;
-							h = 450;
-						}
-					}
-
-					var screen_obj = window.screen;
-					if(w > screen_obj.availWidth)	w = screen_obj.availWidth;
-					if(h > screen_obj.availHeight)	h = screen_obj.availHeight;
-					var x = (screen_obj.availWidth  / 2) - (w / 2);
-					var y = (screen_obj.availHeight / 2) - (h / 2);
-
-					var window_name = "_pageexpand_" + Math.floor(Math.random() * 0x7FFFFFFF);
-					var window_obj = window.open("",window_name,"left=" + x + ",top=" + y + ",width=" + w + ",height=" + h);
-					element_form.target = window_name;
-
-					(function(){
-						var closed = false;
-						var timer = null;
-
-						// タスク生成
-						var task = task_container.createTask();
-						task.setExecuteFunc(function(){
-							try{
-								if(window_obj.closed){
-									closed = true;
-								}
-
-								// アドレスを監視
-								var href = "";
-								try{
-									href = window_obj.location.href;
-								}catch(e){}
-								if(href.indexOf("http://") == 0){
-									if(href.indexOf("/res/") != -1){
-										if(!timer){
-											timer = (new Date()).getTime();
-										}
-									}else if(href.indexOf("/futaba.php") == -1){
-										closed = true;
-									}
-								}
-
-								if(timer){
-									if((new Date()).getTime() - timer > 1000 * 0){
-										closed = true;
-									}
-								}
-							}catch(e){
-								closed = true;
-							}
-
-							if(closed){
-								try{
-									window_obj.close();
-								}catch(e){
-									return;
-								}
-								window_obj = null;
-								task.release();
-								input_submit.disabled = false;
-								if(timer){
-									readMore();
-									element_textarea.value = "";
-								}
-							}
-						});
-					})();
-				}
-
-				function formSubmit(e){
-					input_submit.disabled = true;
-				}
-
-				if(window.addEventListener){
-					input_submit.addEventListener("click",inputClick);
-					element_form.addEventListener("submit",formSubmit);
-				}else if(window.attachEvent){
-					input_submit.attachEvent("onclick",inputClick);
-					element_form.attachEvent("onsubmit",formSubmit);
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// 完了後フォーム位置補正
-			// --------------------------------------------------------------------------------
-			execute_queue.attachLast(function(){
-				revisePositionForm();
-			},null);
-
-			// --------------------------------------------------------------------------------
-			// 双葉辞書を生成
+			// 初期化
 			// --------------------------------------------------------------------------------
 			(function(){
-				work.futaba_dictionary = new FutabaDictionary();
-				var nodes = ElementGetElementsByTagName(element_parent,"table");
-				var node_num = nodes.length;
-				var p = 0;
-
-				(function(){
-					var post_message = ElementGetElementsByTagName(document.body,"blockquote")[0];
-					var post_container = post_message.parentNode;
-					if(post_container.tagName == "FORM"){
-						work.analyzeTable(post_container);
-					}
-				})();
-
-				function f(){
-					try{
-						var node = nodes[p];
-						if(!node) throw 0;
-
-						work.analyzeTable(node);
-					}catch(e){
-					}
-
-					if(p < node_num){
-						p += 1;
-						execute_queue.attachFirst(f,null);
-						return;
-					}
-
-					response({result:true});
-				}
-
-				execute_queue.attachFirst(f,null);
-				return true;
+				_number_dictionary = new Object();
+				_image_id_dictionary = new Object();
+				_response_list = new Object();
+				_response_list._prev = _response_list;
+				_response_list._next = _response_list;
 			})();
 		}
 
-		return false;
+		// --------------------------------------------------------------------------------
+		// テーブル解析
+		// --------------------------------------------------------------------------------
+		work.analyzeTable = function(table){
+			var re_number = new RegExp("No\\.([0-9]+)","i");
+			var re_image = new RegExp(".*/([0-9]+)\\.(bmp|gif|jpeg|jpe|jpg|png)","i");
+
+			// ナンバーを取得
+			var info_text = ElementGetTextContent(table);
+			var m = info_text.match(re_number);
+			if(m){
+				var id = parseInt(m[1]);
+				if(work.futaba_dictionary.getResponse(id)) return;
+				var response = work.futaba_dictionary.createResponse(id);
+
+				try{
+					var blockquote = ElementGetElementsByTagName(table,"BLOCKQUOTE")[0];
+
+					// 画像 ID
+					var anchor = blockquote.previousSibling;
+					while(anchor){
+						if(anchor.tagName == "A"){
+							if(anchor.href.match(re_image)){
+								response.setImageId(RegExp.$1);
+								break;
+							}
+						}
+						anchor = anchor.previousSibling;
+					}
+
+					// 本文
+					var nodes = blockquote.childNodes;
+					var node_num = nodes.length;
+					var i;
+					var s = "";
+					for(i=0;i<node_num;i++){
+						var node = nodes[i];
+						switch(node.nodeType){
+						case 1:
+							if(node.tagName == "BR"){
+								if(s){
+									response.attachText(s);
+								}
+								s = "";
+							}else{
+								s += ElementGetTextContent(node);
+							}
+							break;
+						case 3:
+							s += node.nodeValue;
+							break;
+						}
+					}
+					if(s){
+						response.attachText(s);
+					}
+				}catch(e){
+				}
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// フォーム位置補正
+		// --------------------------------------------------------------------------------
+		function revisePositionForm(){
+			try{
+				var ftbl = document.getElementById("ftbl");
+				var ufm = document.getElementById("ufm");
+				if(ftbl.style.position == "absolute"){
+					var p = DocumentGetScrollPos();
+					var r = ufm.getBoundingClientRect();
+					ftbl.style.top = (p.y + r.top) + "px";
+				}
+			}catch(e){}
+		}
+
+		// --------------------------------------------------------------------------------
+		// 継ぎ足し読み込み
+		// --------------------------------------------------------------------------------
+		function readMore(){
+			var element_result = document.getElementById("contdisp");
+
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
+
+			// 成功
+			loader.onload = function(str){
+				var re_number = new RegExp("Name[ ].*?No\\.([0-9]+)","i");
+				var re_result = new RegExp("<span id=\"contdisp\">(.*?)<\\\\/span>","i");
+				var element_last;
+
+				var p = 0;
+				var n = str.length;
+				function f(){
+					try{
+						if(p >= n) throw 0;
+						p = str.indexOf("<table border=0>",p);
+						if(p < 0) throw 0;
+						var e = str.indexOf("</td>",p);
+						if(e >= 0){
+							e = str.indexOf("</tr>",e + 5);
+							if(e >= 0){
+								e = str.indexOf("</table>",e + 5);
+								if(e >= 0) e += 8;
+							}
+						}
+						var s = str.substring(p,e);
+						var m = s.match(re_number);
+						if(m){
+							var id = parseInt(m[1]);
+							if(last_id < id){
+								var response = bbs_dictionary.getResponse(id);
+								response.clearAnalyzed();
+								response.clearOriginalElements();
+								response.clearFollowing();
+
+								var nodes = StringHtmlCreateDomNodesSafe(s);
+								var j;
+								var node_num = nodes.length;
+								for(j=0;j<node_num;j++){
+									DomNode_InsertAfter(element_last,nodes[j]);
+									element_last = nodes[j];
+								}
+
+								// フォーム位置補正
+								revisePositionForm();
+
+								last_id = id;
+							}
+						}
+
+						if(p < e){
+							p = e;
+							execute_queue.attachFirst(f,null);
+							return;
+						}
+					}catch(e){
+					}
+
+					if(element_result){
+						var m = str.match(re_result);
+						if(m){
+							ElementSetTextContent(element_result,m[1]);
+						}else{
+							ElementSetTextContent(element_result,"not found!");
+						}
+					}
+
+					// フォーム位置補正
+					revisePositionForm();
+
+					read_more_button.init();
+				}
+
+				var nodes = ElementGetElementsByTagName(element_parent,"table");
+				if(nodes.length){
+					element_last = nodes[nodes.length-1];
+				}
+
+				execute_queue.attachFirst(f,null);
+			};
+
+			// 失敗
+			loader.onerror = function(){
+				if(element_result){
+					ElementSetTextContent(element_result,"not found!");
+				}
+				read_more_button.init();
+			};
+
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url);
+			loader.overrideMimeType("text/plain; charset=Shift_JIS");
+			loader.loadText();
+		}
+
+		// --------------------------------------------------------------------------------
+		// レスポンス親要素
+		// --------------------------------------------------------------------------------
+		var i;
+		var nodes = ElementGetElementsByTagName(document.body,"form");
+		var num = nodes.length;
+		for(i=0;i<num;i++){
+			var node = nodes[i];
+			if(node.action.indexOf("futaba.php") != -1){
+				if(ElementGetElementsByTagName(node,"blockquote").length){
+					element_parent = node;
+					break;
+				}
+			}
+		}
+
+		if(!element_parent) return false;
+
+		// --------------------------------------------------------------------------------
+		// 最後尾 ID
+		// --------------------------------------------------------------------------------
+		var nodes = ElementGetElementsByTagName(element_parent,"table");
+		var i;
+		var node_num = nodes.length;
+		for(i=node_num-1;i>=0;i--){
+			var node = nodes[i];
+			var m = ElementGetTextContent(node).match(new RegExp("No\\.([0-9]+)","i"));
+			if(m){
+				last_id = parseInt(m[1]);
+				break;
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// アクセス先 URL
+		// --------------------------------------------------------------------------------
+		resource_url = base_url;
+
+		// --------------------------------------------------------------------------------
+		// BbsControlReadMoreButton 作成
+		// --------------------------------------------------------------------------------
+		read_more_button = new BbsControlReadMoreButton();
+		read_more_button.setWaitTime(2 * 1000);
+		read_more_button.onclick = readMore;
+		var nodes = ElementGetElementsByTagName(element_parent,"hr");
+		if(nodes.length){
+			DomNode_InsertBefore(nodes[nodes.length-1],read_more_button.getElement());
+		}
+
+
+		// --------------------------------------------------------------------------------
+		// 書き込みをポップアップ化
+		// --------------------------------------------------------------------------------
+		// フォーム
+		var nodes = ElementGetElementsByTagName(document.body,"form");
+		var element_form;
+		var input_submit;
+		var element_textarea;
+
+		// フォーム
+		var node = document.getElementById("ftbl");
+		while(node){
+			if(node.tagName == "FORM"){
+				element_form = node;
+				break;
+			}
+			node = node.parentNode;
+		}
+
+		// サブミットボタン
+		if(element_form){
+			var nodes = ElementGetElementsByTagName(element_form,"input");
+			for(i=0;i<nodes.length;i++){
+				if(nodes[i].type.toLowerCase() == "submit"){
+					input_submit = nodes[i];
+					break;
+				}
+			}
+			var nodes = ElementGetElementsByTagName(element_form,"textarea");
+			if(nodes.length){
+				element_textarea = nodes[0];
+			}
+		}
+
+		(function(){
+			if(!input_submit) return;
+
+			function inputClick(e){
+
+				var w = 600;
+				var h = 600;
+				var cookie = document.cookie;
+				if(cookie){
+					if(cookie.indexOf("PREN=") != -1){
+						w = 600;
+						h = 450;
+					}
+				}
+
+				var screen_obj = window.screen;
+				if(w > screen_obj.availWidth)	w = screen_obj.availWidth;
+				if(h > screen_obj.availHeight)	h = screen_obj.availHeight;
+				var x = (screen_obj.availWidth  / 2) - (w / 2);
+				var y = (screen_obj.availHeight / 2) - (h / 2);
+
+				var window_name = "_pageexpand_" + Math.floor(Math.random() * 0x7FFFFFFF);
+				var window_obj = window.open("",window_name,"left=" + x + ",top=" + y + ",width=" + w + ",height=" + h);
+				element_form.target = window_name;
+
+				(function(){
+					var closed = false;
+					var timer = null;
+
+					// タスク生成
+					var task = task_container.createTask();
+					task.setExecuteFunc(function(){
+						try{
+							if(window_obj.closed){
+								closed = true;
+							}
+
+							// アドレスを監視
+							var href = "";
+							try{
+								href = window_obj.location.href;
+							}catch(e){}
+							if(href.indexOf("http://") == 0){
+								if(href.indexOf("/res/") != -1){
+									if(!timer){
+										timer = (new Date()).getTime();
+									}
+								}else if(href.indexOf("/futaba.php") == -1){
+									closed = true;
+								}
+							}
+
+							if(timer){
+								if((new Date()).getTime() - timer > 1000 * 0){
+									closed = true;
+								}
+							}
+						}catch(e){
+							closed = true;
+						}
+
+						if(closed){
+							try{
+								window_obj.close();
+							}catch(e){
+								return;
+							}
+							window_obj = null;
+							task.release();
+							input_submit.disabled = false;
+							if(timer){
+								readMore();
+								element_textarea.value = "";
+							}
+						}
+					});
+				})();
+			}
+
+			function formSubmit(e){
+				input_submit.disabled = true;
+			}
+
+			if(window.addEventListener){
+				input_submit.addEventListener("click",inputClick);
+				element_form.addEventListener("submit",formSubmit);
+			}else if(window.attachEvent){
+				input_submit.attachEvent("onclick",inputClick);
+				element_form.attachEvent("onsubmit",formSubmit);
+			}
+
+		})();
+
+		// --------------------------------------------------------------------------------
+		// 完了後フォーム位置補正
+		// --------------------------------------------------------------------------------
+		execute_queue.attachLast(function(){
+			revisePositionForm();
+		},null);
+
+		// --------------------------------------------------------------------------------
+		// 双葉辞書を生成
+		// --------------------------------------------------------------------------------
+		(function(){
+			work.futaba_dictionary = new FutabaDictionary();
+			var nodes = ElementGetElementsByTagName(element_parent,"table");
+			var node_num = nodes.length;
+			var p = 0;
+
+			(function(){
+				var post_message = ElementGetElementsByTagName(document.body,"blockquote")[0];
+				var post_container = post_message.parentNode;
+				if(post_container.tagName == "FORM"){
+					work.analyzeTable(post_container);
+				}
+			})();
+
+			function f(){
+				try{
+					var node = nodes[p];
+					if(!node) throw 0;
+
+					work.analyzeTable(node);
+				}catch(e){
+				}
+
+				if(p < node_num){
+					p += 1;
+					execute_queue.attachFirst(f,null);
+					return;
+				}
+
+				response({result:true});
+			}
+
+			execute_queue.attachFirst(f,null);
+			return true;
+		})();
 	}.toString() +
 	",\n\n\t" +
 	function (info,response){
@@ -20887,7 +23448,7 @@ function PageExpand(page_expand_arguments){
 				}
 			}else if(post_container.tagName == "FORM"){
 				try{
-					function nodeTest(node){
+					var nodeTest = function (node){
 						while(node){
 							if(node.tagName == "TABLE"){
 								return false;
@@ -21233,28 +23794,8 @@ function PageExpand(page_expand_arguments){
 
 			// chaika
 			var obj = addPreset(proj.expand_bbs,"chaika","atchs");
-			obj.preset = {
-				name:{
-					standard:"chaika",
-					locales:{
-						ja:"chaika",
-						en:"chaika"
-					}
-				},
-				enable:true,
-				filter:[
-					{
-						pattern:"^http://127\\.0\\.0\\.1:[0-9]+/thread/http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^http://127\\.0\\.0\\.1:[0-9]+/thread/http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^http://127\\.0\\.0\\.1:[0-9]+/thread/http://jbbs\\.shitaraba\\.net/bbs/read.cgi/[^/]+/[0-9]+/[0-9]+",
-						flags:{i:true,g:false}
-					}
-				],
-				script_initialize:
+			var preset = obj.preset;
+			preset.script_initialize = 
 "[\n\t" + 
 	function(info,response){
 		var work = info.work;
@@ -21287,523 +23828,252 @@ function PageExpand(page_expand_arguments){
 	",\n\n\t" +
 	function (info,response){
 		var work = info.work;
+		if(!(work.bbs_name)){
+			return false;
+		}
 
-		if(work.bbs_name){
-			var first_id = 1;
-			var last_id = 1;
-			var dictionary_id = new Array();
-			var load_shadow_func = null;
-			var load_more_func = null;
-			var element_parent = null;
-			var element_last = null;
-			var element_footer = null;
-			var read_more_button = null;
-			var element_form = null;
-			var base_url = work.base_url;
-			var resource_url_shadow;
-			var resource_url_more;
-			var generate_html_func = null;
+		var first_id = 1;
+		var last_id = 1;
+		var dictionary_id = new Array();
+		var load_shadow_func = null;
+		var load_more_func = null;
+		var element_parent = null;
+		var element_last = null;
+		var element_footer = null;
+		var read_more_button = null;
+		var element_form = null;
+		var base_url = work.base_url;
+		var resource_url_shadow;
+		var resource_url_more;
+		var generate_html_func = null;
 
-			// --------------------------------------------------------------------------------
-			// 文字列からレスポンス番号を取得
-			// --------------------------------------------------------------------------------
-			work.createResponseAnchorNumbers = function (str){
-				var numbers = new ResponseAnchorNumbers();
+		// --------------------------------------------------------------------------------
+		// 文字列からレスポンス番号を取得
+		// --------------------------------------------------------------------------------
+		work.createResponseAnchorNumbers = function (str){
+			var numbers = new ResponseAnchorNumbers();
 
-				var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
-				var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
-				var re_number = new RegExp("^([0-9０-９]+)","i");
+			var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
+			var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("^([0-9０-９]+)","i");
 
-				var m = str.match(re_search);
-				if(m){
-					var p = m[1].length;
-					while(true){
-						// 番号-番号
-						m = str.substr(p).match(re_range);
+			var m = str.match(re_search);
+			if(m){
+				var p = m[1].length;
+				while(true){
+					// 番号-番号
+					m = str.substr(p).match(re_range);
+					if(m){
+						var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+						var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+						if(id0 < 1) id0 = 1;
+						if(id1 < 1) id1 = 1;
+						if(id0 > 10000) id0 = 10000;
+						if(id1 > 10000) id1 = 10000;
+						p += m[0].length;
+						numbers.addNumbers(id0,id1);
+					}else{
+						// 番号
+						m = str.substr(p).match(re_number);
 						if(m){
-							var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-							var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-							if(id0 < 1) id0 = 1;
-							if(id1 < 1) id1 = 1;
-							if(id0 > 10000) id0 = 10000;
-							if(id1 > 10000) id1 = 10000;
 							p += m[0].length;
-							numbers.addNumbers(id0,id1);
+							var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							if(id < 1) id = 1;
+							if(id > 0x7fffffff) id = 0x7fffffff;
+							numbers.addNumber(id);
+						}
+					}
+
+					if(m){
+						// カンマ
+						if(RegExp.rightContext.search(",") == 0){
+							p += 1;
+							continue;
+						}
+					}
+					break;
+				}
+			}
+			return numbers;
+		};
+
+		// --------------------------------------------------------------------------------
+		// レスアンカー拡張
+		// --------------------------------------------------------------------------------
+		work.extendResponseAnchor = function (target){
+			if(BbsControlResponseAnchorExist(target))	return;
+
+			var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
+			var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
+			var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("([0-9０-９]+)","i");
+
+			var i;
+			var nodes = ElementGetElementsByTagName(target,"a");
+			var num = nodes.length;
+			for(i=num-1;i>=0;i--){
+				var node = nodes[i];
+				var m = ElementGetTextContent(node).match(re_simple);
+				if(m){
+					var text_node = DocumentCreateText(m[0]);
+					DomNode_InsertBefore(node,text_node);
+					DomNodeRemove(node);
+				}
+			}
+
+			// テキストノードを統合
+			target.normalize();
+
+			var p;
+			var n;
+			var q;
+			var ignore_dictionary = {"A":1,"SCRIPT":1};
+			var queue = new Object();
+			q = {p:queue,n:queue,node:target};
+			queue.p = q;
+			queue.n = q;
+
+			while(queue.n != queue){
+				q = queue.n;
+				p = q.p;
+				n = q.n;
+				p.n = n;
+				n.p = p;
+				var node = q.node;
+				switch(node.nodeType){
+				case 1:
+					var i;
+					var nodes = node.childNodes;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						n = queue;
+						p = n.p;
+						q = {p:p,n:n,node:nodes[i]};
+						p.n = q;
+						n.p = q;
+					}
+					break;
+				case 3:
+					while(node){
+						var m = DomNodeGetNodeValue(node).match(re_detail);
+						if(!m)	break;
+
+						// 元のテキストノード
+						DomNodeSetNodeValue(node,RegExp.leftContext);
+
+						// BbsControlName を生成
+						var element = DocumentCreateElement("a");
+						ElementSetTextContent(element,m[0]);
+						DomNode_InsertAfter(node,element);
+
+						// 直後テキスト
+						node = DocumentCreateText(RegExp.rightContext);
+						DomNode_InsertAfter(element,node);
+
+						var query = "";
+						m = ElementGetTextContent(element).match(re_range);
+						if(m){
+							var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+							if(min < 1) min = 1;
+							if(max < 1) max = 1;
+							if(min > 10000) min = 10000;
+							if(max > 10000) max = 10000;
+							if(max < min){
+								var tmp = min;
+								min = max;
+								max = tmp;
+							}
+							query = min + "-" + max;
 						}else{
 							// 番号
-							m = str.substr(p).match(re_number);
+							m = ElementGetTextContent(element).match(re_number);
 							if(m){
-								p += m[0].length;
-								var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-								if(id < 1) id = 1;
-								if(id > 0x7fffffff) id = 0x7fffffff;
-								numbers.addNumber(id);
-							}
-						}
-
-						if(m){
-							// カンマ
-							if(RegExp.rightContext.search(",") == 0){
-								p += 1;
-								continue;
-							}
-						}
-						break;
-					}
-				}
-				return numbers;
-			};
-
-			// --------------------------------------------------------------------------------
-			// レスアンカー拡張
-			// --------------------------------------------------------------------------------
-			work.extendResponseAnchor = function (target){
-				if(BbsControlResponseAnchorExist(target))	return;
-
-				var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
-				var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
-				var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
-				var re_number = new RegExp("([0-9０-９]+)","i");
-
-				var i;
-				var nodes = ElementGetElementsByTagName(target,"a");
-				var num = nodes.length;
-				for(i=num-1;i>=0;i--){
-					var node = nodes[i];
-					var m = ElementGetTextContent(node).match(re_simple);
-					if(m){
-						var text_node = DocumentCreateText(m[0]);
-						DomNode_InsertBefore(node,text_node);
-						DomNodeRemove(node);
-					}
-				}
-
-				// テキストノードを統合
-				target.normalize();
-
-				var p;
-				var n;
-				var q;
-				var ignore_dictionary = {"A":1,"SCRIPT":1};
-				var queue = new Object();
-				q = {p:queue,n:queue,node:target};
-				queue.p = q;
-				queue.n = q;
-
-				while(queue.n != queue){
-					q = queue.n;
-					p = q.p;
-					n = q.n;
-					p.n = n;
-					n.p = p;
-					var node = q.node;
-					switch(node.nodeType){
-					case 1:
-						var i;
-						var nodes = node.childNodes;
-						var num = nodes.length;
-						for(i=0;i<num;i++){
-							n = queue;
-							p = n.p;
-							q = {p:p,n:n,node:nodes[i]};
-							p.n = q;
-							n.p = q;
-						}
-						break;
-					case 3:
-						while(node){
-							var m = DomNodeGetNodeValue(node).match(re_detail);
-							if(!m)	break;
-
-							// 元のテキストノード
-							DomNodeSetNodeValue(node,RegExp.leftContext);
-
-							// BbsControlName を生成
-							var element = DocumentCreateElement("a");
-							ElementSetTextContent(element,m[0]);
-							DomNode_InsertAfter(node,element);
-
-							// 直後テキスト
-							node = DocumentCreateText(RegExp.rightContext);
-							DomNode_InsertAfter(element,node);
-
-							var query = "";
-							m = ElementGetTextContent(element).match(re_range);
-							if(m){
-								var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-								var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-								if(min < 1) min = 1;
-								if(max < 1) max = 1;
-								if(min > 10000) min = 10000;
-								if(max > 10000) max = 10000;
-								if(max < min){
-									var tmp = min;
-									min = max;
-									max = tmp;
-								}
-								query = min + "-" + max;
-							}else{
-								// 番号
-								m = ElementGetTextContent(element).match(re_number);
-								if(m){
-									query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
-									if(query < 1) query = 1;
-									if(query > 0x7fffffff) query = 0x7fffffff;
-								}
-
-							}
-							element.href = work.base_url + query;
-						}
-					}
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// HTML 文書をシャドウ読み込み
-			// --------------------------------------------------------------------------------
-			function loadShadowFromHTML(str){
-				var re_search;
-				var re_number;
-				var re_name = new RegExp("<b>(.*?)</b>","i");
-				var re_mail = new RegExp("<a href=\"mailto:(.*)\">","i");
-				var re_date;
-				var re_id;
-				var re_be;
-				var re_gen_id = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
-				var re_gen_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
-				switch(work.bbs_name){
-				case "2ch":
-				case "pink":
-					re_search = new RegExp("([0-9]+) ：(.*?)<dd> (.*)","i");
-					re_number = new RegExp("([0-9]+)","i");
-					re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:|<)","i");
-					re_id = new RegExp("(ID):([^ ]+)","i");
-					re_be = new RegExp("<a href=\"javascript:be\\(([0-9]+)\\);\">[?](.*?)</a>","i");
-					break;
-				case "shitaraba":
-					re_search = new RegExp("<a href=\".*?\">([0-9]+)</a> ：(.*?)<dd> (.*)","i");
-					re_number = new RegExp("<a href=\".*?\">([0-9]+)</a> ：","i");
-					re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:| HOST:|<)","i");
-					re_id = new RegExp("(ID|HOST):([^ ]+)","i");
-					break;
-				}
-
-				var p = 0;
-				var n = str.length;
-				function f(){
-					if(p >= n) return;
-					p = str.indexOf("<dt>",p);
-					if(p < 0) return;
-					var e = str.indexOf("\n",p);
-					var s = str.substring(p,e);
-					var m = s.match(re_number);
-					if(m){
-						var id = parseInt(m[1]);
-						if((first_id <= id) && (id <= last_id)){
-						}else if(dictionary_id[id]){
-						}else{
-							// ナンバーからレスポンスオブジェクトを取得
-							var response = bbs_dictionary.getResponse(id);
-							if(!(response.getAnalyzed())){
-								var m = s.match(re_search);
-								if(m){
-									var obj = new Object();
-									obj.number = id;
-									obj.name = "";
-									obj.mail = "";
-									obj.date = "";
-									obj.id = "";
-									obj.be = "";
-									obj.message = m[3];
-									if(m[2].match(re_date)){
-										obj.date = RegExp.$1;
-									}
-									if(m[2].match(re_name)){
-										obj.name = RegExp.$1;
-									}
-									if(m[2].match(re_id)){
-										obj.id = RegExp.$2;
-									}
-									if(m[2].match(re_mail)){
-										obj.mail = RegExp.$1;
-									}
-									if(re_be){
-										if(m[2].match(re_be)){
-											obj.be = RegExp.$1 + "-" + RegExp.$2;
-										}
-									}
-
-									var nodes = StringHtmlCreateDomNodesSafe(generate_html_func(obj));
-									var dt = ElementGetElementsByTagName(nodes[0],"dt")[0];
-									var dd = ElementGetElementsByTagName(nodes[0],"dd")[0];
-
-									try{
-										if(dt.tagName != "DT")	return;
-										if(dd.tagName != "DD")	return;
-									}catch(e){
-										return;
-									}
-
-									var dt_text = ElementGetTextContent(dt);
-
-									// レスアンカー拡張
-									work.extendResponseAnchor(dd);
-
-									// IDの取得
-									if(dt_text.match(re_gen_id)){
-										response.setId(RegExp.$1);
-									}
-
-									// 名前の取得
-									if(dt_text.match(re_gen_name)){
-										response.setName(RegExp.$1);
-									}
-
-									// ホスト名の取得
-									(function(){
-										var p;
-										var n;
-										var q;
-										var ignore_dictionary = {"B":1,"SCRIPT":1};
-										var queue = new Object();
-										q = {p:queue,n:queue,node:dt};
-										queue.p = q;
-										queue.n = q;
-
-										while(queue.n != queue){
-											q = queue.n;
-											p = q.p;
-											n = q.n;
-											p.n = n;
-											n.p = p;
-											var node = q.node;
-											switch(node.nodeType){
-											case 1:
-												if(!(ignore_dictionary[node.tagName])){
-													var i;
-													var nodes = node.childNodes;
-													var num = nodes.length;
-													for(i=0;i<num;i++){
-														n = queue;
-														p = n.p;
-														q = {p:p,n:n,node:nodes[i]};
-														p.n = q;
-														n.p = q;
-													}
-												}
-												break;
-											case 3:
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})(|\\n) \\]","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-												if(m){
-													response.setHost(m[2]);
-													return;
-												}
-												break;
-											}
-										}
-									})();
-
-									// フォロー解析
-									var dictionary = new Object();
-									(function(){
-										var nodes = ElementGetElementsByTagName(dd,"a");
-										var i;
-										var num = nodes.length;
-										for(i=0;i<num;i++){
-											var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-											numbers.getNumbers(function(n){
-												if(!dictionary[n]){
-													var following = bbs_dictionary.getResponse(n);
-													following.addFollower(response);
-													dictionary[n] = true;
-												}
-											});
-										}
-									})();
-
-									// オリジナルエレメントをセット
-									if(dt)	response.addOriginalElements("dt",dt);
-									if(dd)	response.addOriginalElements("dd",dd);
-
-									// 消去時に実行されるイベント
-									response.onerase = function(){};
-
-									response.setAnalyzed();
-								}
+								query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
+								if(query < 1) query = 1;
+								if(query > 0x7fffffff) query = 0x7fffffff;
 							}
 
 						}
-					}
-
-					if(p < e){
-						p = e + 1;
-						execute_queue.attachFirst(f,null);
+						element.href = work.base_url + query;
 					}
 				}
-				execute_queue.attachFirst(f,null);
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// HTML 文書をシャドウ読み込み
+		// --------------------------------------------------------------------------------
+		function loadShadowFromHTML(str){
+			var re_search;
+			var re_number;
+			var re_name = new RegExp("<b>(.*?)</b>","i");
+			var re_mail = new RegExp("<a href=\"mailto:(.*)\">","i");
+			var re_date;
+			var re_id;
+			var re_be;
+			var re_gen_id = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
+			var re_gen_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
+			switch(work.bbs_name){
+			case "2ch":
+			case "pink":
+				re_search = new RegExp("([0-9]+) ：(.*?)<dd> (.*)","i");
+				re_number = new RegExp("([0-9]+)","i");
+				re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:|<)","i");
+				re_id = new RegExp("(ID):([^ ]+)","i");
+				re_be = new RegExp("<a href=\"javascript:be\\(([0-9]+)\\);\">[?](.*?)</a>","i");
+				break;
+			case "shitaraba":
+				re_search = new RegExp("<a href=\".*?\">([0-9]+)</a> ：(.*?)<dd> (.*)","i");
+				re_number = new RegExp("<a href=\".*?\">([0-9]+)</a> ：","i");
+				re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:| HOST:|<)","i");
+				re_id = new RegExp("(ID|HOST):([^ ]+)","i");
+				break;
 			}
 
-			// --------------------------------------------------------------------------------
-			// HTML 文書を継ぎ足し読み込み
-			// --------------------------------------------------------------------------------
-			function loadMoreFromHTML(str){
-				var re_search;
-				var re_number;
-				var re_name = new RegExp("<b>(.*?)</b>","i");
-				var re_mail = new RegExp("<a href=\"mailto:(.*)\">","i");
-				var re_date;
-				var re_id;
-				var re_be;
-				switch(work.bbs_name){
-				case "2ch":
-				case "pink":
-					re_search = new RegExp("([0-9]+) ：(.*?)<dd> (.*)","i");
-					re_number = new RegExp("([0-9]+)","i");
-					re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:|<)","i");
-					re_id = new RegExp("(ID):([^ ]+)","i");
-					re_be = new RegExp("<a href=\"javascript:be\\(([0-9]+)\\);\">[?](.*?)</a>","i");
-					break;
-				case "shitaraba":
-					re_search = new RegExp("<a href=\".*?\">([0-9]+)</a> ：(.*?)<dd> (.*)","i");
-					re_number = new RegExp("<a href=\".*?\">([0-9]+)</a> ：","i");
-					re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:| HOST:|<)","i");
-					re_id = new RegExp("(ID|HOST):([^ ]+)","i");
-					break;
-				}
-
-				var p = 0;
-				var n = str.length;
-				function f(){
-					try{
-						if(p >= n) throw 0;
-						p = str.indexOf("<dt>",p);
-						if(p < 0) throw 0;
-						var e = str.indexOf("\n",p);
-						var s = str.substring(p,e);
-						var m = s.match(re_number);
-						if(m){
-							var id = parseInt(m[1]);
-							if(last_id < id){
-								var m = s.match(re_search);
-								if(m){
-									var obj = new Object();
-									obj.number = id;
-									obj.name = "";
-									obj.mail = "";
-									obj.date = "";
-									obj.id = "";
-									obj.be = "";
-									obj.message = m[3];
-									if(m[2].match(re_date)){
-										obj.date = RegExp.$1;
-									}
-									if(m[2].match(re_name)){
-										obj.name = RegExp.$1;
-									}
-									if(m[2].match(re_id)){
-										obj.id = RegExp.$2;
-									}
-									if(m[2].match(re_mail)){
-										obj.mail = RegExp.$1;
-									}
-									if(re_be){
-										if(m[2].match(re_be)){
-											obj.be = RegExp.$1 + "-" + RegExp.$2;
-										}
-									}
-
-									var response = bbs_dictionary.getResponse(id);
-									response.clearAnalyzed();
-									response.clearOriginalElements();
-									response.clearFollowing();
-
-									var nodes = StringHtmlCreateDomNodesSafe(generate_html_func(obj));
-									var j;
-									var node_num = nodes.length;
-									if(element_last){
-										for(j=0;j<node_num;j++){
-											DomNode_InsertAfter(element_last,nodes[j]);
-											element_last = nodes[j];
-										}
-									}
-									if(element_parent){
-										for(j=0;j<node_num;j++){
-											element_parent.appendChild(nodes[j]);
-										}
-									}
-									last_id = id;
-									resource_url_more = base_url + (last_id) + "-";
-								}
-							}
-						}
-
-						if(p < e){
-							p = e + 1;
-							execute_queue.attachFirst(f,null);
-							return;
-						}
-					}catch(e){
-					}
-					read_more_button.init();
-				}
-				execute_queue.attachFirst(f,null);
-			}
-
-			// --------------------------------------------------------------------------------
-			// DAT 文書をシャドウ読み込み
-			// --------------------------------------------------------------------------------
-			function loadShadowFromDAT(str){
-				var re_search = new RegExp("(.*?)<>(.*?)<>(.*?)<> (.*?) <>","i");
-				var re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:| BE:)","i");
-				var re_id = new RegExp("ID:([^ ]+)","i");
-				var re_be = new RegExp("BE:([^ ]+)","i");
-				var re_icon = new RegExp("^sssp://img.2ch.net/ico/(.*?)( <br> .*)$","i");
-				var re_gen_id = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
-				var re_gen_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
-
-				var p = 0;
-				var n = str.length;
-				var id = 1;
-				function f(){
-					if(p >= n) return;
-					var e = str.indexOf("\n",p);
+			var p = 0;
+			var n = str.length;
+			function f(){
+				if(p >= n) return;
+				p = str.indexOf("<dt>",p);
+				if(p < 0) return;
+				var e = str.indexOf("\n",p);
+				var s = str.substring(p,e);
+				var m = s.match(re_number);
+				if(m){
+					var id = parseInt(m[1]);
 					if((first_id <= id) && (id <= last_id)){
 					}else if(dictionary_id[id]){
 					}else{
 						// ナンバーからレスポンスオブジェクトを取得
 						var response = bbs_dictionary.getResponse(id);
 						if(!(response.getAnalyzed())){
-							var m = str.substring(p,e).match(re_search);
+							var m = s.match(re_search);
 							if(m){
 								var obj = new Object();
 								obj.number = id;
-								obj.name = m[1];
-								obj.mail = m[2];
+								obj.name = "";
+								obj.mail = "";
 								obj.date = "";
 								obj.id = "";
 								obj.be = "";
-								obj.message = m[4];
-								if(m[3].match(re_date)){
+								obj.message = m[3];
+								if(m[2].match(re_date)){
 									obj.date = RegExp.$1;
 								}
-								if(m[3].match(re_id)){
-									obj.id = RegExp.$1;
+								if(m[2].match(re_name)){
+									obj.name = RegExp.$1;
 								}
-								if(m[3].match(re_be)){
-									obj.be = RegExp.$1;
+								if(m[2].match(re_id)){
+									obj.id = RegExp.$2;
 								}
-								if(obj.message.match(re_icon)){
-									obj.message = "<img src=\"http://img.2ch.net/ico/" + RegExp.$1 + "\">" + RegExp.$2;
+								if(m[2].match(re_mail)){
+									obj.mail = RegExp.$1;
+								}
+								if(re_be){
+									if(m[2].match(re_be)){
+										obj.be = RegExp.$1 + "-" + RegExp.$2;
+									}
 								}
 
 								var nodes = StringHtmlCreateDomNodesSafe(generate_html_func(obj));
@@ -21914,62 +24184,91 @@ function PageExpand(page_expand_arguments){
 								response.setAnalyzed();
 							}
 						}
-					}
 
-					id += 1;
-					if(p < e){
-						p = e + 1;
-						execute_queue.attachFirst(f,null);
 					}
 				}
-				execute_queue.attachFirst(f,null);
+
+				if(p < e){
+					p = e + 1;
+					execute_queue.attachFirst(f,null);
+				}
+			}
+			execute_queue.attachFirst(f,null);
+		}
+
+		// --------------------------------------------------------------------------------
+		// HTML 文書を継ぎ足し読み込み
+		// --------------------------------------------------------------------------------
+		function loadMoreFromHTML(str){
+			var re_search;
+			var re_number;
+			var re_name = new RegExp("<b>(.*?)</b>","i");
+			var re_mail = new RegExp("<a href=\"mailto:(.*)\">","i");
+			var re_date;
+			var re_id;
+			var re_be;
+			switch(work.bbs_name){
+			case "2ch":
+			case "pink":
+				re_search = new RegExp("([0-9]+) ：(.*?)<dd> (.*)","i");
+				re_number = new RegExp("([0-9]+)","i");
+				re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:|<)","i");
+				re_id = new RegExp("(ID):([^ ]+)","i");
+				re_be = new RegExp("<a href=\"javascript:be\\(([0-9]+)\\);\">[?](.*?)</a>","i");
+				break;
+			case "shitaraba":
+				re_search = new RegExp("<a href=\".*?\">([0-9]+)</a> ：(.*?)<dd> (.*)","i");
+				re_number = new RegExp("<a href=\".*?\">([0-9]+)</a> ：","i");
+				re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:| HOST:|<)","i");
+				re_id = new RegExp("(ID|HOST):([^ ]+)","i");
+				break;
 			}
 
-			// --------------------------------------------------------------------------------
-			// DAT 文書を継ぎ足し読み込み
-			// --------------------------------------------------------------------------------
-			function loadMoreFromDAT(str){
-				var re_search = new RegExp("(.*?)<>(.*?)<>(.*?)<> (.*?) <>","i");
-				var re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:| BE:)","i");
-				var re_id = new RegExp("ID:([^ ]+)","i");
-				var re_be = new RegExp("BE:([^ ]+)","i");
-				var re_icon = new RegExp("^sssp://img.2ch.net/ico/(.*?)( <br> .*)$","i");
-
-				var p = 0;
-				var n = str.length;
-				var id = 1;
-				function f(){
-					try{
-						if(p >= n) throw 0;
-						var e = str.indexOf("\n",p);
+			var p = 0;
+			var n = str.length;
+			function f(){
+				try{
+					if(p >= n) throw 0;
+					p = str.indexOf("<dt>",p);
+					if(p < 0) throw 0;
+					var e = str.indexOf("\n",p);
+					var s = str.substring(p,e);
+					var m = s.match(re_number);
+					if(m){
+						var id = parseInt(m[1]);
 						if(last_id < id){
-							var m = str.substring(p,e).match(re_search);
+							var m = s.match(re_search);
 							if(m){
+								var obj = new Object();
+								obj.number = id;
+								obj.name = "";
+								obj.mail = "";
+								obj.date = "";
+								obj.id = "";
+								obj.be = "";
+								obj.message = m[3];
+								if(m[2].match(re_date)){
+									obj.date = RegExp.$1;
+								}
+								if(m[2].match(re_name)){
+									obj.name = RegExp.$1;
+								}
+								if(m[2].match(re_id)){
+									obj.id = RegExp.$2;
+								}
+								if(m[2].match(re_mail)){
+									obj.mail = RegExp.$1;
+								}
+								if(re_be){
+									if(m[2].match(re_be)){
+										obj.be = RegExp.$1 + "-" + RegExp.$2;
+									}
+								}
+
 								var response = bbs_dictionary.getResponse(id);
 								response.clearAnalyzed();
 								response.clearOriginalElements();
 								response.clearFollowing();
-
-								var obj = new Object();
-								obj.number = id;
-								obj.name = m[1];
-								obj.mail = m[2];
-								obj.date = "";
-								obj.id = "";
-								obj.be = "";
-								obj.message = m[4];
-								if(m[3].match(re_date)){
-									obj.date = RegExp.$1;
-								}
-								if(m[3].match(re_id)){
-									obj.id = RegExp.$1;
-								}
-								if(m[3].match(re_be)){
-									obj.be = RegExp.$1;
-								}
-								if(obj.message.match(re_icon)){
-									obj.message = "<img src=\"http://img.2ch.net/ico/" + RegExp.$1 + "\">" + RegExp.$2;
-								}
 
 								var nodes = StringHtmlCreateDomNodesSafe(generate_html_func(obj));
 								var j;
@@ -21986,208 +24285,450 @@ function PageExpand(page_expand_arguments){
 									}
 								}
 								last_id = id;
+								resource_url_more = base_url + (last_id) + "-";
 							}
 						}
+					}
 
-						id += 1;
-						if(p < e){
-							p = e + 1;
-							execute_queue.attachFirst(f,null);
-							return;
+					if(p < e){
+						p = e + 1;
+						execute_queue.attachFirst(f,null);
+						return;
+					}
+				}catch(e){
+				}
+				read_more_button.init();
+			}
+			execute_queue.attachFirst(f,null);
+		}
+
+		// --------------------------------------------------------------------------------
+		// DAT 文書をシャドウ読み込み
+		// --------------------------------------------------------------------------------
+		function loadShadowFromDAT(str){
+			var re_search = new RegExp("(.*?)<>(.*?)<>(.*?)<> (.*?) <>","i");
+			var re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:| BE:)","i");
+			var re_id = new RegExp("ID:([^ ]+)","i");
+			var re_be = new RegExp("BE:([^ ]+)","i");
+			var re_icon = new RegExp("^sssp://img.2ch.net/ico/(.*?)( <br> .*)$","i");
+			var re_gen_id = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
+			var re_gen_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
+
+			var p = 0;
+			var n = str.length;
+			var id = 1;
+			function f(){
+				if(p >= n) return;
+				var e = str.indexOf("\n",p);
+				if((first_id <= id) && (id <= last_id)){
+				}else if(dictionary_id[id]){
+				}else{
+					// ナンバーからレスポンスオブジェクトを取得
+					var response = bbs_dictionary.getResponse(id);
+					if(!(response.getAnalyzed())){
+						var m = str.substring(p,e).match(re_search);
+						if(m){
+							var obj = new Object();
+							obj.number = id;
+							obj.name = m[1];
+							obj.mail = m[2];
+							obj.date = "";
+							obj.id = "";
+							obj.be = "";
+							obj.message = m[4];
+							if(m[3].match(re_date)){
+								obj.date = RegExp.$1;
+							}
+							if(m[3].match(re_id)){
+								obj.id = RegExp.$1;
+							}
+							if(m[3].match(re_be)){
+								obj.be = RegExp.$1;
+							}
+							if(obj.message.match(re_icon)){
+								obj.message = "<img src=\"http://img.2ch.net/ico/" + RegExp.$1 + "\">" + RegExp.$2;
+							}
+
+							var nodes = StringHtmlCreateDomNodesSafe(generate_html_func(obj));
+							var dt = ElementGetElementsByTagName(nodes[0],"dt")[0];
+							var dd = ElementGetElementsByTagName(nodes[0],"dd")[0];
+
+							try{
+								if(dt.tagName != "DT")	return;
+								if(dd.tagName != "DD")	return;
+							}catch(e){
+								return;
+							}
+
+							var dt_text = ElementGetTextContent(dt);
+
+							// レスアンカー拡張
+							work.extendResponseAnchor(dd);
+
+							// IDの取得
+							if(dt_text.match(re_gen_id)){
+								response.setId(RegExp.$1);
+							}
+
+							// 名前の取得
+							if(dt_text.match(re_gen_name)){
+								response.setName(RegExp.$1);
+							}
+
+							// ホスト名の取得
+							(function(){
+								var p;
+								var n;
+								var q;
+								var ignore_dictionary = {"B":1,"SCRIPT":1};
+								var queue = new Object();
+								q = {p:queue,n:queue,node:dt};
+								queue.p = q;
+								queue.n = q;
+
+								while(queue.n != queue){
+									q = queue.n;
+									p = q.p;
+									n = q.n;
+									p.n = n;
+									n.p = p;
+									var node = q.node;
+									switch(node.nodeType){
+									case 1:
+										if(!(ignore_dictionary[node.tagName])){
+											var i;
+											var nodes = node.childNodes;
+											var num = nodes.length;
+											for(i=0;i<num;i++){
+												n = queue;
+												p = n.p;
+												q = {p:p,n:n,node:nodes[i]};
+												p.n = q;
+												n.p = q;
+											}
+										}
+										break;
+									case 3:
+										var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
+										if(m){
+											response.setHost(m[2]);
+											return;
+										}
+										var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})(|\\n) \\]","i"));
+										if(m){
+											response.setHost(m[2]);
+											return;
+										}
+										var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
+										if(m){
+											response.setHost(m[2]);
+											return;
+										}
+										break;
+									}
+								}
+							})();
+
+							// フォロー解析
+							var dictionary = new Object();
+							(function(){
+								var nodes = ElementGetElementsByTagName(dd,"a");
+								var i;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
+									numbers.getNumbers(function(n){
+										if(!dictionary[n]){
+											var following = bbs_dictionary.getResponse(n);
+											following.addFollower(response);
+											dictionary[n] = true;
+										}
+									});
+								}
+							})();
+
+							// オリジナルエレメントをセット
+							if(dt)	response.addOriginalElements("dt",dt);
+							if(dd)	response.addOriginalElements("dd",dd);
+
+							// 消去時に実行されるイベント
+							response.onerase = function(){};
+
+							response.setAnalyzed();
 						}
-					}catch(e){
 					}
-					read_more_button.init();
 				}
-				execute_queue.attachFirst(f,null);
-			}
 
-			// --------------------------------------------------------------------------------
-			// 継ぎ足し読み込み
-			// --------------------------------------------------------------------------------
-			function readMore(){
-
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
-
-				// 成功
-				loader.onload = function(str){
-					if(load_more_func){
-						load_more_func(str);
-					}
-				};
-
-				// 失敗
-				loader.onerror = function(){
-					read_more_button.init();
-				};
-
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url_more);
-				switch(work.bbs_name){
-				case "2ch":
-				case "pink":
-					loader.overrideMimeType("text/plain; charset=Shift_JIS");
-					break;
-				case "shitaraba":
-					loader.overrideMimeType("text/plain; charset=EUC-JP");
-					break;
+				id += 1;
+				if(p < e){
+					p = e + 1;
+					execute_queue.attachFirst(f,null);
 				}
-				loader.loadText();
 			}
+			execute_queue.attachFirst(f,null);
+		}
 
-			// --------------------------------------------------------------------------------
-			// フッダ要素
-			// --------------------------------------------------------------------------------
-			element_footer = document.getElementById("footer");
+		// --------------------------------------------------------------------------------
+		// DAT 文書を継ぎ足し読み込み
+		// --------------------------------------------------------------------------------
+		function loadMoreFromDAT(str){
+			var re_search = new RegExp("(.*?)<>(.*?)<>(.*?)<> (.*?) <>","i");
+			var re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:| BE:)","i");
+			var re_id = new RegExp("ID:([^ ]+)","i");
+			var re_be = new RegExp("BE:([^ ]+)","i");
+			var re_icon = new RegExp("^sssp://img.2ch.net/ico/(.*?)( <br> .*)$","i");
 
-			// --------------------------------------------------------------------------------
-			// Default スタイル
-			// --------------------------------------------------------------------------------
-			if(!generate_html_func){
-				(function(){
-					var nodes = ElementGetElementsByTagName(document.body,"dl");
-					var node_num = nodes.length;
-					var i;
-					if(node_num){
-						if(nodes[0].parentNode != document.body) return;
+			var p = 0;
+			var n = str.length;
+			var id = 1;
+			function f(){
+				try{
+					if(p >= n) throw 0;
+					var e = str.indexOf("\n",p);
+					if(last_id < id){
+						var m = str.substring(p,e).match(re_search);
+						if(m){
+							var response = bbs_dictionary.getResponse(id);
+							response.clearAnalyzed();
+							response.clearOriginalElements();
+							response.clearFollowing();
+
+							var obj = new Object();
+							obj.number = id;
+							obj.name = m[1];
+							obj.mail = m[2];
+							obj.date = "";
+							obj.id = "";
+							obj.be = "";
+							obj.message = m[4];
+							if(m[3].match(re_date)){
+								obj.date = RegExp.$1;
+							}
+							if(m[3].match(re_id)){
+								obj.id = RegExp.$1;
+							}
+							if(m[3].match(re_be)){
+								obj.be = RegExp.$1;
+							}
+							if(obj.message.match(re_icon)){
+								obj.message = "<img src=\"http://img.2ch.net/ico/" + RegExp.$1 + "\">" + RegExp.$2;
+							}
+
+							var nodes = StringHtmlCreateDomNodesSafe(generate_html_func(obj));
+							var j;
+							var node_num = nodes.length;
+							if(element_last){
+								for(j=0;j<node_num;j++){
+									DomNode_InsertAfter(element_last,nodes[j]);
+									element_last = nodes[j];
+								}
+							}
+							if(element_parent){
+								for(j=0;j<node_num;j++){
+									element_parent.appendChild(nodes[j]);
+								}
+							}
+							last_id = id;
+						}
 					}
 
-					// --------------------------------------------------------------------------------
-					// 範囲取得
-					// --------------------------------------------------------------------------------
-					var re_number = new RegExp("^([0-9]+)","i");
-					for(i=node_num-1;i>=0;i--){
-						var node = nodes[i];
-						if(ElementGetTextContent(node).match(re_number)){
-							last_id = parseInt(RegExp.$1);
-							dictionary_id[last_id] = true;
-							element_last = node;
+					id += 1;
+					if(p < e){
+						p = e + 1;
+						execute_queue.attachFirst(f,null);
+						return;
+					}
+				}catch(e){
+				}
+				read_more_button.init();
+			}
+			execute_queue.attachFirst(f,null);
+		}
+
+		// --------------------------------------------------------------------------------
+		// 継ぎ足し読み込み
+		// --------------------------------------------------------------------------------
+		function readMore(){
+
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
+
+			// 成功
+			loader.onload = function(str){
+				if(load_more_func){
+					load_more_func(str);
+				}
+			};
+
+			// 失敗
+			loader.onerror = function(){
+				read_more_button.init();
+			};
+
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url_more);
+			switch(work.bbs_name){
+			case "2ch":
+			case "pink":
+				loader.overrideMimeType("text/plain; charset=Shift_JIS");
+				break;
+			case "shitaraba":
+				loader.overrideMimeType("text/plain; charset=EUC-JP");
+				break;
+			}
+			loader.loadText();
+		}
+
+		// --------------------------------------------------------------------------------
+		// フッダ要素
+		// --------------------------------------------------------------------------------
+		element_footer = document.getElementById("footer");
+
+		// --------------------------------------------------------------------------------
+		// Default スタイル
+		// --------------------------------------------------------------------------------
+		if(!generate_html_func){
+			(function(){
+				var nodes = ElementGetElementsByTagName(document.body,"dl");
+				var node_num = nodes.length;
+				var i;
+				if(node_num){
+					if(nodes[0].parentNode != document.body) return;
+				}
+
+				// --------------------------------------------------------------------------------
+				// 範囲取得
+				// --------------------------------------------------------------------------------
+				var re_number = new RegExp("^([0-9]+)","i");
+				for(i=node_num-1;i>=0;i--){
+					var node = nodes[i];
+					if(ElementGetTextContent(node).match(re_number)){
+						last_id = parseInt(RegExp.$1);
+						dictionary_id[last_id] = true;
+						element_last = node;
+						break;
+					}
+				}
+				if(!element_last) return;
+				for(i=0;i<node_num;i++){
+					var node = nodes[i];
+					if(ElementGetTextContent(node).match(re_number)){
+						first_id = parseInt(RegExp.$1);
+						dictionary_id[first_id] = true;
+						if(first_id != 1){
 							break;
 						}
 					}
-					if(!element_last) return;
-					for(i=0;i<node_num;i++){
-						var node = nodes[i];
-						if(ElementGetTextContent(node).match(re_number)){
-							first_id = parseInt(RegExp.$1);
-							dictionary_id[first_id] = true;
-							if(first_id != 1){
-								break;
-							}
-						}
-					}
-
-					// --------------------------------------------------------------------------------
-					// コード生成コールバック
-					// --------------------------------------------------------------------------------
-					generate_html_func = function(param){
-						return '<dl id="res' + param.number + '" class="resContainer" resid="' + param.id + '" collapsed="false" isabone="false">' +
-							'<dt class="resHeader">' +
-								'<span class="resNumber">' + param.number + ' </span>' +
-								'<span class="resHeaderContent">' +
-									'<span class="resName"><span class="resSystem">' + param.name + '</span></span> ' +
-									'[<span class="resMail">' + param.mail + '</span>] ' +
-									'<span class="resDate">' + param.date + ' </span> ' +
-									((param.id) ? ('ID:' + param.id + ' ') : ('')) +
-									((param.be) ? ('Be:<span class="resBeID">' + param.be + '</span>') : ('')) +
-								'</span>' +
-								'<span class="resHeaderAboneContent"></span>' +
-								'<span style="color: rgb(136, 136, 136); font-size: small;"></span>' +
-							'</dt>' +
-							'<dd class="resBody"> ' + param.message + ' </dd>' +
-						'</dl>';
-					}
-
-					work.skin_type = "default";
-				})();
-			}
-
-			if(!generate_html_func) return false;
-
-			// --------------------------------------------------------------------------------
-			// 読み込み方式
-			// --------------------------------------------------------------------------------
-			load_shadow_func = loadShadowFromHTML;
-			load_more_func = loadMoreFromHTML;
-
-			if(work.bbs_name == "2ch"){
-				// DAT ファイル
-				load_shadow_func = loadShadowFromDAT;
-				load_more_func = loadMoreFromDAT;
-			}
-
-			// --------------------------------------------------------------------------------
-			// アクセス先 URL
-			// --------------------------------------------------------------------------------
-			if(load_more_func == loadMoreFromHTML){
-				resource_url_shadow = base_url;
-				resource_url_more = base_url + last_id + "-";
-			}else{
-				if(base_url.match(new RegExp("http://([^.]+\\.2ch\\.net)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"))){
-					resource_url_shadow = resource_url_more = "http://" + RegExp.$1 + "/" + RegExp.$2 + "/dat/" + RegExp.$3 + ".dat";
 				}
-			}
 
-			// --------------------------------------------------------------------------------
-			// BbsControlReadMoreButton 作成
-			// --------------------------------------------------------------------------------
-			read_more_button = new BbsControlReadMoreButton();
-			read_more_button.setWaitTime(2 * 1000);
-			read_more_button.onclick = readMore;
-			if(element_footer){
-				DomNode_InsertBefore(element_footer,read_more_button.getElement());
-			}else{
-				document.body.appendChild(read_more_button.getElement());
-			}
-
-			// --------------------------------------------------------------------------------
-			// シャドウロード
-			// --------------------------------------------------------------------------------
-			(function(){
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
-
-				// 成功
-				loader.onload = function(str){
-					if(load_shadow_func){
-						load_shadow_func(str);
-					}
-				};
-
-				// 失敗
-				loader.onerror = function(){
-				};
-
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url_shadow);
-				switch(work.bbs_name){
-				case "2ch":
-				case "pink":
-					loader.overrideMimeType("text/plain; charset=Shift_JIS");
-					break;
-				case "shitaraba":
-					loader.overrideMimeType("text/plain; charset=EUC-JP");
-					break;
+				// --------------------------------------------------------------------------------
+				// コード生成コールバック
+				// --------------------------------------------------------------------------------
+				generate_html_func = function(param){
+					return '<dl id="res' + param.number + '" class="resContainer" resid="' + param.id + '" collapsed="false" isabone="false">' +
+						'<dt class="resHeader">' +
+							'<span class="resNumber">' + param.number + ' </span>' +
+							'<span class="resHeaderContent">' +
+								'<span class="resName"><span class="resSystem">' + param.name + '</span></span> ' +
+								'[<span class="resMail">' + param.mail + '</span>] ' +
+								'<span class="resDate">' + param.date + ' </span> ' +
+								((param.id) ? ('ID:' + param.id + ' ') : ('')) +
+								((param.be) ? ('Be:<span class="resBeID">' + param.be + '</span>') : ('')) +
+							'</span>' +
+							'<span class="resHeaderAboneContent"></span>' +
+							'<span style="color: rgb(136, 136, 136); font-size: small;"></span>' +
+						'</dt>' +
+						'<dd class="resBody"> ' + param.message + ' </dd>' +
+					'</dl>';
 				}
-				loader.loadText();
+
+				work.skin_type = "default";
 			})();
-
-			response({result:true});
-			return true;
 		}
 
-		return false;
+		if(!generate_html_func) return false;
+
+		// --------------------------------------------------------------------------------
+		// 読み込み方式
+		// --------------------------------------------------------------------------------
+		load_shadow_func = loadShadowFromHTML;
+		load_more_func = loadMoreFromHTML;
+
+		if(work.bbs_name == "2ch"){
+			// DAT ファイル
+			load_shadow_func = loadShadowFromDAT;
+			load_more_func = loadMoreFromDAT;
+		}
+
+		// --------------------------------------------------------------------------------
+		// アクセス先 URL
+		// --------------------------------------------------------------------------------
+		if(load_more_func == loadMoreFromHTML){
+			resource_url_shadow = base_url;
+			resource_url_more = base_url + last_id + "-";
+		}else{
+			if(base_url.match(new RegExp("http://([^.]+\\.2ch\\.net)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"))){
+				resource_url_shadow = resource_url_more = "http://" + RegExp.$1 + "/" + RegExp.$2 + "/dat/" + RegExp.$3 + ".dat";
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// BbsControlReadMoreButton 作成
+		// --------------------------------------------------------------------------------
+		read_more_button = new BbsControlReadMoreButton();
+		read_more_button.setWaitTime(2 * 1000);
+		read_more_button.onclick = readMore;
+		if(element_footer){
+			DomNode_InsertBefore(element_footer,read_more_button.getElement());
+		}else{
+			document.body.appendChild(read_more_button.getElement());
+		}
+
+		// --------------------------------------------------------------------------------
+		// シャドウロード
+		// --------------------------------------------------------------------------------
+		(function(){
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
+
+			// 成功
+			loader.onload = function(str){
+				if(load_shadow_func){
+					load_shadow_func(str);
+				}
+			};
+
+			// 失敗
+			loader.onerror = function(){
+			};
+
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url_shadow);
+			switch(work.bbs_name){
+			case "2ch":
+			case "pink":
+				loader.overrideMimeType("text/plain; charset=Shift_JIS");
+				break;
+			case "shitaraba":
+				loader.overrideMimeType("text/plain; charset=EUC-JP");
+				break;
+			}
+			loader.loadText();
+		})();
+
+		response({result:true});
+		return true;
 	}.toString() +
 	",\n\n\t" +
 	function (info,response){
 		response({result:false});
 		return true;
 	}.toString() +
-"\n]",
-				script_callback:
+"\n]";
+
+			preset.script_callback = 
 "[\n\t" + 
 	function(info,response){
 		var element = info.element;
@@ -23228,123 +25769,11 @@ function PageExpand(page_expand_arguments){
 		response({useful:useful});
 		return true;
 	}.toString() +
-"\n]",
-				popup:{
-					origin_type:"adsorb_top_bottom",
-					position_type:"absolute",
-					enable_animation:true,
-					percent:{x:75,y:90},
-					time_wait_open:0,
-					time_wait_close:250,
-					style_sheet:"padding:20px 10px; border:1px solid #000; background:#FFF; overflow-y:auto; word-wrap:break-word; word-break:break-all;"
-				}
-			};
+"\n]";
 
-			// --------------------------------------------------------------------------------
-			// URLマッピング設定
-			// --------------------------------------------------------------------------------
-			// スレッド掲示板
-			updatePreset(proj.urlmap,"bbs",function(obj){
-				obj.filter[6] = "*://jbbs.shitaraba.net/*";
-			});
-
-			// chaika
-			updatePreset(proj.urlmap,"chaika",function(obj){
-				obj.filter[3] = "http://127.0.0.1:*/thread/http://jbbs.shitaraba.net/*";
-			});
-
-			// ピクシブ
-			updatePreset(proj.urlmap,"pixiv",function(obj){
-				obj.replacement_to_element.id.unshift("assist_image_in_anchor");
-				obj.expand_image.id = "popup_image_in_anchor";
-			});
-
-			// --------------------------------------------------------------------------------
-			// 基本設定
-			// --------------------------------------------------------------------------------
-			proj.standard.enable_startup = proj.standard.enable_enable_startup;
-			delete proj.standard.enable_enable_startup;
-			proj.standard.enable_input_touch = true;
-			proj.standard.enable_double_touch_assist = false;
-
-		}
-		if(exit())	return proj;
-
-		// --------------------------------------------------------------------------------
-		// プロジェクト ver.15
-		// --------------------------------------------------------------------------------
-		if(proj.version < 15){
-			// バージョン値
-			proj.version = 15;
-
-			// --------------------------------------------------------------------------------
-			// URLフィルタ形式を更新
-			// --------------------------------------------------------------------------------
-			var updateForAsteriskFilter = function(filter){
-				return {
-					type:"asterisk",
-					asterisk:{
-						filter:filter
-					},
-					regexp:{
-						filter:[]
-					}
-				};
-			};
-			var updateForRegExpFilter = function(filter){
-				return {
-					type:"regexp",
-					asterisk:{
-						filter:[]
-					},
-					regexp:{
-						filter:filter
-					}
-				};
-			};
-
-			// --------------------------------------------------------------------------------
-			// 掲示板設定
-			// --------------------------------------------------------------------------------
-			update(proj.expand_bbs,"*",function(obj){
-				obj.filter = updateForRegExpFilter(obj.filter);
-			});
-
-			// ２ちゃんねる掲示板
-			var obj = addPreset(proj.expand_bbs,"2ch",null);
+			// ニコニコ大百科
+			var obj = addPreset(proj.expand_bbs,"nicovideo_dictionary",null);
 			var preset = obj.preset;
-			preset.filter = {
-				type:"regexp",
-				asterisk:{
-					filter:[]
-				},
-				regexp:{
-					filter:[
-						{
-							pattern:"^http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						},{
-							pattern:"^http://(|[^.]+\\.)machi\\.to/bbs/read\\.cgi/[^/]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						},{
-							pattern:"^http://(|[^.]+\\.)machibbs\\.net/[^/]+/[^/]*[0-9]+.*$",
-							flags:{i:true,g:false}
-						},{
-							pattern:"^http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						},{
-							pattern:"^http://jbbs\\.shitaraba\\.net/bbs/read.cgi/[^/]+/[0-9]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						},{
-							pattern:"^http://[^.]+\\.kakiko\\.com/test/read\\.cgi/[^/]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						},{
-							pattern:"^http://[^.]+\\.60\\.kg/test/read\\.cgi/[^/]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						}
-					]
-				}
-			};
 			preset.script_initialize = 
 "[\n\t" + 
 	function(info,response){
@@ -23355,13 +25784,8 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"(http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch"},
-			{url:"(http://(|[^.]+\\.)machi\\.to/bbs/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"machi"},
-			{url:"(http://(|[^.]+\\.)machibbs\\.net/[^/]+/[^/]*[0-9]+)",replace:"$1",name:"machibbs"},
-			{url:"(http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"pink"},
-			{url:"(http://jbbs\\.shitaraba\\.net/bbs/read.cgi/[^/]+/[0-9]+/[0-9]+)",replace:"$1/",name:"shitaraba"},
-			{url:"(http://[^.]+\\.kakiko\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"kakiko"},
-			{url:"(http://[^.]+\\.60\\.kg/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$0/",name:"kakiko"}
+			{url:"(http://dic\\.nicovideo\\.jp/b/(a|c|i|l|u|v)/[^/#?]+)",replace:"$1/",name:"nicopedia"},
+			{url:"(http://dic\\.nicovideo\\.jp)/(a|c|i|l|u|v)/([^/#?]+)",replace:"$1/b/$2/$3/",name:"nicopedia"}
 		];
 
 		var i;
@@ -23371,7 +25795,7 @@ function PageExpand(page_expand_arguments){
 			var re = new RegExp(bbs.url,"i");
 			var m = url.match(re);
 			if(m){
-				work.base_url = m[1].replace(re,bbs.replace);
+				work.base_url = m[0].replace(re,bbs.replace);
 				work.bbs_name = bbs.name;
 				break;
 			}
@@ -23382,356 +25806,206 @@ function PageExpand(page_expand_arguments){
 	",\n\n\t" +
 	function (info,response){
 		var work = info.work;
+		if(!(work.bbs_name)){
+			return false;
+		}
 
-		if(work.bbs_name){
-			var first_id = 1;
-			var last_id = 1;
-			var dictionary_id = new Array();
-			var load_shadow_func = null;
-			var load_more_func = null;
-			var element_parent = null;
-			var read_more_button = null;
-			var element_form = null;
-			var base_url = work.base_url;
-			var resource_url_shadow;
-			var resource_url_more;
+		var load_separate = 1000;
+		var load_dose = 30;
+		var load_offset = 1;
+		var first_id = 1;
+		var last_id = 1;
+		var load_shadow_id = 1;
+		var load_more_id = 1;
+		var dictionary_id = new Array();
+		var element_parent = null;
+		var read_more_button = null;
+		var element_form = null;
+		var base_url = work.base_url;
+		var resource_url_shadow = base_url;
+		var resource_url_more = base_url;
 
-			// --------------------------------------------------------------------------------
-			// 文字列からレスポンス番号を取得
-			// --------------------------------------------------------------------------------
-			work.createResponseAnchorNumbers = function (str){
-				var numbers = new ResponseAnchorNumbers();
+		// --------------------------------------------------------------------------------
+		// 文字列からレスポンス番号を取得
+		// --------------------------------------------------------------------------------
+		work.createResponseAnchorNumbers = function (str){
+			var numbers = new ResponseAnchorNumbers();
 
-				var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
-				var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
-				var re_number = new RegExp("^([0-9０-９]+)","i");
+			var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
+			var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("^([0-9０-９]+)","i");
 
-				var m = str.match(re_search);
-				if(m){
-					var p = m[1].length;
-					while(true){
-						// 番号-番号
-						m = str.substr(p).match(re_range);
+			var m = str.match(re_search);
+			if(m){
+				var p = m[1].length;
+				while(true){
+					// 番号-番号
+					m = str.substr(p).match(re_range);
+					if(m){
+						var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+						var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+						if(min < 1) min = 1;
+						if(max < 1) max = 1;
+						if(min > 0x7fffffff) min = 0x7fffffff;
+						if(max > 0x7fffffff) max = 0x7fffffff;
+						if(max < min){
+							var tmp = min;
+							min = max;
+							max = tmp;
+						}
+						if(max - min > 10000) max = min + 10000;
+						p += m[0].length;
+						numbers.addNumbers(min,max);
+					}else{
+						// 番号
+						m = str.substr(p).match(re_number);
 						if(m){
-							var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-							var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-							if(id0 < 1) id0 = 1;
-							if(id1 < 1) id1 = 1;
-							if(id0 > 10000) id0 = 10000;
-							if(id1 > 10000) id1 = 10000;
 							p += m[0].length;
-							numbers.addNumbers(id0,id1);
-						}else{
-							// 番号
-							m = str.substr(p).match(re_number);
-							if(m){
-								p += m[0].length;
-								var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-								if(id < 1) id = 1;
-								if(id > 0x7fffffff) id = 0x7fffffff;
-								numbers.addNumber(id);
-							}
+							var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							if(id < 1) id = 1;
+							if(id > 0x7fffffff) id = 0x7fffffff;
+							numbers.addNumber(id);
 						}
-
-						if(m){
-							// カンマ
-							if(RegExp.rightContext.search(",") == 0){
-								p += 1;
-								continue;
-							}
-						}
-						break;
 					}
-				}
-				return numbers;
-			};
 
-			// --------------------------------------------------------------------------------
-			// レスアンカー拡張
-			// --------------------------------------------------------------------------------
-			work.extendResponseAnchor = function (target){
-				if(BbsControlResponseAnchorExist(target))	return;
-
-				var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
-				var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
-				var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
-				var re_number = new RegExp("([0-9０-９]+)","i");
-
-				var i;
-				var nodes = ElementGetElementsByTagName(target,"a");
-				var num = nodes.length;
-				for(i=num-1;i>=0;i--){
-					var node = nodes[i];
-					var m = ElementGetTextContent(node).match(re_simple);
 					if(m){
-						var text_node = DocumentCreateText(m[0]);
-						DomNode_InsertBefore(node,text_node);
-						DomNodeRemove(node);
-					}
-				}
-
-				// テキストノードを統合
-				target.normalize();
-
-				var p;
-				var n;
-				var q;
-				var ignore_dictionary = {"A":1,"SCRIPT":1};
-				var queue = new Object();
-				q = {p:queue,n:queue,node:target};
-				queue.p = q;
-				queue.n = q;
-
-				while(queue.n != queue){
-					q = queue.n;
-					p = q.p;
-					n = q.n;
-					p.n = n;
-					n.p = p;
-					var node = q.node;
-					switch(node.nodeType){
-					case 1:
-						var i;
-						var nodes = node.childNodes;
-						var num = nodes.length;
-						for(i=0;i<num;i++){
-							n = queue;
-							p = n.p;
-							q = {p:p,n:n,node:nodes[i]};
-							p.n = q;
-							n.p = q;
-						}
-						break;
-					case 3:
-						while(node){
-							var m = DomNodeGetNodeValue(node).match(re_detail);
-							if(!m)	break;
-
-							// 元のテキストノード
-							DomNodeSetNodeValue(node,RegExp.leftContext);
-
-							// BbsControlName を生成
-							var element = DocumentCreateElement("a");
-							ElementSetTextContent(element,m[0]);
-							DomNode_InsertAfter(node,element);
-
-							// 直後テキスト
-							node = DocumentCreateText(RegExp.rightContext);
-							DomNode_InsertAfter(element,node);
-
-							var query = "";
-							m = ElementGetTextContent(element).match(re_range);
-							if(m){
-								var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-								var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-								if(min < 1) min = 1;
-								if(max < 1) max = 1;
-								if(min > 10000) min = 10000;
-								if(max > 10000) max = 10000;
-								if(max < min){
-									var tmp = min;
-									min = max;
-									max = tmp;
-								}
-								query = min + "-" + max;
-							}else{
-								// 番号
-								m = ElementGetTextContent(element).match(re_number);
-								if(m){
-									query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
-									if(query < 1) query = 1;
-									if(query > 0x7fffffff) query = 0x7fffffff;
-								}
-
-							}
-							element.href = work.base_url + query;
+						// カンマ
+						if(RegExp.rightContext.search(",") == 0){
+							p += 1;
+							continue;
 						}
 					}
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// HTML 文書をシャドウ読み込み
-			// --------------------------------------------------------------------------------
-			function loadShadowFromHTML(str){
-
-				var re_number;
-				var re_id = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
-				var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
-				switch(work.bbs_name){
-				case "2ch":
-				case "pink":
-				case "kakiko":
-				case "machi":
-				case "machibbs":
-						re_number = new RegExp("([0-9]+)","i");
-					break;
-				case "shitaraba":
-						re_number = new RegExp("<a href=\".*?\">([0-9]+)</a> ：","i");
 					break;
 				}
+			}
+			return numbers;
+		};
 
-				var p = 0;
-				var n = str.length;
-				function f(){
-					if(p >= n) return;
-					p = str.indexOf("<dt>",p);
-					if(p < 0) return;
-					var e = str.indexOf("\n",p);
-					var s = str.substring(p,e);
-					var m = s.match(re_number);
-					if(m){
-						var id = parseInt(m[1]);
-						if((first_id <= id) && (id <= last_id)){
-						}else if(dictionary_id[id]){
-						}else{
-							var nodes = StringHtmlCreateDomNodesSafe(s);
-							var dt = nodes[0];
-							var dd = nodes[1];
+		// --------------------------------------------------------------------------------
+		// レスアンカー拡張
+		// --------------------------------------------------------------------------------
+		work.extendResponseAnchor = function (target){
+			if(BbsControlResponseAnchorExist(target))	return;
 
-							try{
-								if(dt.tagName != "DT")	return;
-								if(dd.tagName != "DD")	return;
-							}catch(e){
-								return;
-							}
+			var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
+			var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
+			var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("([0-9０-９]+)","i");
 
-							// ナンバーからレスポンスオブジェクトを取得
-							var response = bbs_dictionary.getResponse(id);
-							if(!(response.getAnalyzed())){
-								var dt_text = ElementGetTextContent(dt);
-
-								// レスアンカー拡張
-								work.extendResponseAnchor(dd);
-
-								// IDの取得
-								if(dt_text.match(re_id)){
-									response.setId(RegExp.$1);
-								}
-
-								// 名前の取得
-								if(dt_text.match(re_name)){
-									response.setName(RegExp.$1);
-								}
-
-								// ホスト名の取得
-								(function(){
-									var p;
-									var n;
-									var q;
-									var ignore_dictionary = {"B":1,"SCRIPT":1};
-									var queue = new Object();
-									q = {p:queue,n:queue,node:dt};
-									queue.p = q;
-									queue.n = q;
-
-									while(queue.n != queue){
-										q = queue.n;
-										p = q.p;
-										n = q.n;
-										p.n = n;
-										n.p = p;
-										var node = q.node;
-										switch(node.nodeType){
-										case 1:
-											if(!(ignore_dictionary[node.tagName])){
-												var i;
-												var nodes = node.childNodes;
-												var num = nodes.length;
-												for(i=0;i<num;i++){
-													n = queue;
-													p = n.p;
-													q = {p:p,n:n,node:nodes[i]};
-													p.n = q;
-													n.p = q;
-												}
-											}
-											break;
-										case 3:
-											var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-											if(m){
-												response.setHost(m[2]);
-												return;
-											}
-											var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})(|\\n) \\]","i"));
-											if(m){
-												response.setHost(m[2]);
-												return;
-											}
-											var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-											if(m){
-												response.setHost(m[2]);
-												return;
-											}
-											break;
-										}
-									}
-								})();
-
-								// フォロー解析
-								var dictionary = new Object();
-								(function(){
-									var nodes = ElementGetElementsByTagName(dd,"a");
-									var i;
-									var num = nodes.length;
-									for(i=0;i<num;i++){
-										var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-										numbers.getNumbers(function(n){
-											if(!dictionary[n]){
-												var following = bbs_dictionary.getResponse(n);
-												following.addFollower(response);
-												dictionary[n] = true;
-											}
-										});
-									}
-								})();
-
-								// オリジナルエレメントをセット
-								if(dt)	response.addOriginalElements("dt",dt);
-								if(dd)	response.addOriginalElements("dd",dd);
-
-								// 消去時に実行されるイベント
-								response.onerase = function(){};
-
-								response.setAnalyzed();
-							}
-						}
-					}
-
-					if(p < e){
-						p = e + 1;
-						execute_queue.attachFirst(f,null);
-					}
+			var i;
+			var nodes = ElementGetElementsByTagName(target,"a");
+			var num = nodes.length;
+			for(i=num-1;i>=0;i--){
+				var node = nodes[i];
+				var m = ElementGetTextContent(node).match(re_simple);
+				if(m){
+					var text_node = DocumentCreateText(m[0]);
+					DomNode_InsertBefore(node,text_node);
+					DomNodeRemove(node);
 				}
-				execute_queue.attachFirst(f,null);
 			}
 
-			// --------------------------------------------------------------------------------
-			// HTML 文書を継ぎ足し読み込み
-			// --------------------------------------------------------------------------------
-			function loadMoreFromHTML(str){
-				var re_number;
-				switch(work.bbs_name){
-				case "2ch":
-				case "pink":
-				case "kakiko":
-				case "machi":
-				case "machibbs":
-						re_number = new RegExp("([0-9]+)","i");
+			// テキストノードを統合
+			target.normalize();
+
+			var p;
+			var n;
+			var q;
+			var ignore_dictionary = {"A":1,"SCRIPT":1};
+			var queue = new Object();
+			q = {p:queue,n:queue,node:target};
+			queue.p = q;
+			queue.n = q;
+
+			while(queue.n != queue){
+				q = queue.n;
+				p = q.p;
+				n = q.n;
+				p.n = n;
+				n.p = p;
+				var node = q.node;
+				switch(node.nodeType){
+				case 1:
+					var i;
+					var nodes = node.childNodes;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						n = queue;
+						p = n.p;
+						q = {p:p,n:n,node:nodes[i]};
+						p.n = q;
+						n.p = q;
+					}
 					break;
-				case "shitaraba":
-						re_number = new RegExp("<a href=\".*?\">([0-9]+)</a> ：","i");
-					break;
+				case 3:
+					while(node){
+						var m = DomNodeGetNodeValue(node).match(re_detail);
+						if(!m)	break;
+
+						// 元のテキストノード
+						DomNodeSetNodeValue(node,RegExp.leftContext);
+
+						// BbsControlName を生成
+						var element = DocumentCreateElement("a");
+						ElementSetTextContent(element,m[0]);
+						DomNode_InsertAfter(node,element);
+
+						// 直後テキスト
+						node = DocumentCreateText(RegExp.rightContext);
+						DomNode_InsertAfter(element,node);
+
+						var query = "";
+						m = ElementGetTextContent(element).match(re_range);
+						if(m){
+							var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+							if(min < 1) min = 1;
+							if(max < 1) max = 1;
+							if(min > 0x7fffffff) min = 0x7fffffff;
+							if(max > 0x7fffffff) max = 0x7fffffff;
+							if(max < min){
+								var tmp = min;
+								min = max;
+								max = tmp;
+							}
+							query = min;
+						}else{
+							// 番号
+							m = ElementGetTextContent(element).match(re_number);
+							if(m){
+								query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
+								if(query < 1) query = 1;
+								if(query > 0x7fffffff) query = 0x7fffffff;
+							}
+
+						}
+						element.href = work.base_url + (Math.floor(query / 30) * 30 + 1) + "-#" + query;
+					}
 				}
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// 継ぎ足し読み込み
+		// --------------------------------------------------------------------------------
+		function readMore(){
+
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
+
+			// 成功
+			loader.onload = function(str){
+				var re_number = new RegExp("<a name=\"([0-9]+)\"","i");
 
 				var p = 0;
 				var n = str.length;
 				function f(){
 					try{
 						if(p >= n) throw 0;
-						p = str.indexOf("<dt>",p);
+						p = str.indexOf("<dt class=\"reshead\">",p);
 						if(p < 0) throw 0;
-						var e = str.indexOf("\n",p);
+						var e = str.indexOf("</dd>",p);
+						if(e >= 0) e += 5;
 						var s = str.substring(p,e);
 						var m = s.match(re_number);
 						if(m){
@@ -23754,608 +26028,255 @@ function PageExpand(page_expand_arguments){
 						}
 
 						if(p < e){
-							p = e + 1;
+							p = e;
 							execute_queue.attachFirst(f,null);
 							return;
 						}
 					}catch(e){
 					}
-					read_more_button.init();
-				}
-				execute_queue.attachFirst(f,null);
-			}
 
-			// --------------------------------------------------------------------------------
-			// DAT 文書をシャドウ読み込み
-			// --------------------------------------------------------------------------------
-			function loadShadowFromDAT(str){
-				var re_search = new RegExp("(.*?)<>(.*?)<>(.*?)<>(.*?)<>","i");
-				var re_number = new RegExp("([0-9]+)","i");
-				var re_id = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
-				var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
-				var re_icon = new RegExp("^ sssp://img.2ch.net/ico/(.*?)( <br> .*)$","i");
-
-				var p = 0;
-				var n = str.length;
-				var id = 1;
-				function f(){
-					if(p >= n) return;
-					var e = str.indexOf("\n",p);
-					if((first_id <= id) && (id <= last_id)){
-					}else if(dictionary_id[id]){
-					}else{
-						// ナンバーからレスポンスオブジェクトを取得
-						var response = bbs_dictionary.getResponse(id);
-						if(!(response.getAnalyzed())){
-							var m = str.substring(p,e).match(re_search);
-							if(m){
-								var html = "<dt>" + id + " ：";
-								if(m[2]){
-									html += "<a href=\"mailto:" + m[2] + "\"><b>" + m[1] + "</b></a>";
-								}else{
-									html += "<font color=green><b>" + m[1] + "</b></font>";
-								}
-								html += "：" + m[3] + "<dd>";
-								var msg = m[4];
-								if(msg.match(re_icon)){
-									msg = "<img src=\"http://img.2ch.net/ico/" + m[1] + "\">" + m[2];
-								}
-								html += msg + "<br><br>";
-
-								var nodes = StringHtmlCreateDomNodesSafe(html);
-								var dt = nodes[0];
-								var dd = nodes[1];
-
-								try{
-									if(dt.tagName != "DT")	return;
-									if(dd.tagName != "DD")	return;
-								}catch(e){
-									return;
-								}
-
-								var dt_text = ElementGetTextContent(dt);
-
-								// レスアンカー拡張
-								work.extendResponseAnchor(dd);
-
-								// IDの取得
-								if(dt_text.match(re_id)){
-									response.setId(RegExp.$1);
-								}
-
-								// 名前の取得
-								if(dt_text.match(re_name)){
-									response.setName(RegExp.$1);
-								}
-
-								// ホスト名の取得
-								(function(){
-									var p;
-									var n;
-									var q;
-									var ignore_dictionary = {"B":1,"SCRIPT":1};
-									var queue = new Object();
-									q = {p:queue,n:queue,node:dt};
-									queue.p = q;
-									queue.n = q;
-
-									while(queue.n != queue){
-										q = queue.n;
-										p = q.p;
-										n = q.n;
-										p.n = n;
-										n.p = p;
-										var node = q.node;
-										switch(node.nodeType){
-										case 1:
-											if(!(ignore_dictionary[node.tagName])){
-												var i;
-												var nodes = node.childNodes;
-												var num = nodes.length;
-												for(i=0;i<num;i++){
-													n = queue;
-													p = n.p;
-													q = {p:p,n:n,node:nodes[i]};
-													p.n = q;
-													n.p = q;
-												}
-											}
-											break;
-										case 3:
-											var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-											if(m){
-												response.setHost(m[2]);
-												return;
-											}
-											var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})(|\\n) \\]","i"));
-											if(m){
-												response.setHost(m[2]);
-												return;
-											}
-											var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-											if(m){
-												response.setHost(m[2]);
-												return;
-											}
-											break;
-										}
-									}
-								})();
-
-								// フォロー解析
-								var dictionary = new Object();
-								(function(){
-									var nodes = ElementGetElementsByTagName(dd,"a");
-									var i;
-									var num = nodes.length;
-									for(i=0;i<num;i++){
-										var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-										numbers.getNumbers(function(n){
-											if(!dictionary[n]){
-												var following = bbs_dictionary.getResponse(n);
-												following.addFollower(response);
-												dictionary[n] = true;
-											}
-										});
-									}
-								})();
-
-								// オリジナルエレメントをセット
-								if(dt)	response.addOriginalElements("dt",dt);
-								if(dd)	response.addOriginalElements("dd",dd);
-
-								// 消去時に実行されるイベント
-								response.onerase = function(){};
-
-								response.setAnalyzed();
-							}
+					var reload = false;
+					(function(){
+						if(((last_id + 1) % load_dose) != load_offset){
+							return;
 						}
-					}
+						var p = Math.floor(load_more_id / load_dose);
+						var n = Math.floor(last_id / load_dose);
+						if(p >= n){
+							return;
+						}
+						var p = Math.floor(load_more_id / load_separate);
+						var n = Math.floor(last_id / load_separate);
+						if(p < n){
+							return;
+						}
 
-					id += 1;
-					if(p < e){
-						p = e + 1;
-						execute_queue.attachFirst(f,null);
+						reload = true;
+					})();
+
+					var next_id = Math.floor(last_id / load_dose) * load_dose + load_offset;
+					resource_url_more = base_url + next_id + "-";
+
+					if(reload){
+						readMore();
+					}else{
+						read_more_button.init();
 					}
 				}
+
+				load_more_id = last_id;
 				execute_queue.attachFirst(f,null);
-			}
+			};
 
-			// --------------------------------------------------------------------------------
-			// DAT 文書を継ぎ足し読み込み
-			// --------------------------------------------------------------------------------
-			function loadMoreFromDAT(str){
+			// 失敗
+			loader.onerror = function(){
+				read_more_button.init();
+			};
 
-				// 最後尾 ID
-				var nodes = ElementGetElementsByTagName(element_parent,"dt");
-				var node_num = nodes.length;
-				if(node_num){
-					if(ElementGetTextContent(nodes[node_num-1]).match(new RegExp("^([0-9]+)[ ]：","i"))){
-						last_id = parseInt(RegExp.$1);
-					}
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url_more);
+			loader.loadText();
+		}
+
+		// --------------------------------------------------------------------------------
+		// レスポンス親要素
+		// --------------------------------------------------------------------------------
+		(function(){
+			var element_bbs = document.getElementById("bbs");
+			if(element_bbs){
+				var i;
+				var nodes = ElementGetElementsByTagName(element_bbs,"dl");
+				var num = nodes.length;
+				for(i=0;i<num;i++){
+					element_parent = nodes[i];
+					break;
 				}
+			}
+		})();
+		if(!element_parent) return false;
 
-				var re_search = new RegExp("(.*?)<>(.*?)<>(.*?)<>(.*?)<>","i");
-				var re_icon = new RegExp("^ sssp://img.2ch.net/ico/(.*?)( <br> .*)$","i");
+		// --------------------------------------------------------------------------------
+		// 最後尾 ID
+		// --------------------------------------------------------------------------------
+		var nodes = ElementGetElementsByTagName(element_parent,"dt");
+		var i;
+		var node_num = nodes.length;
+		for(i=0;i<node_num;i++){
+			var node = nodes[i];
+			var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)[ ]","i"));
+			if(m){
+				first_id = parseInt(m[1]);
+				dictionary_id[first_id] = true;
+				if(first_id != 1){
+					break;
+				}
+			}
+		}
+		for(i=node_num-1;i>=0;i--){
+			var node = nodes[i];
+			var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)[ ]","i"));
+			if(m){
+				last_id = parseInt(m[1]);
+				dictionary_id[last_id] = true;
+				break;
+			}
+		}
 
-				// レスポンス抽出
+		// --------------------------------------------------------------------------------
+		// アクセス先 URL
+		// --------------------------------------------------------------------------------
+		var next_id = Math.floor(last_id / load_dose) * load_dose + load_offset;
+		resource_url_shadow = base_url + "1-";
+		resource_url_more = base_url + next_id + "-";
+
+		// --------------------------------------------------------------------------------
+		// BbsControlReadMoreButton 作成
+		// --------------------------------------------------------------------------------
+		read_more_button = new BbsControlReadMoreButton();
+		read_more_button.setWaitTime(2 * 1000);
+		read_more_button.onclick = readMore;
+		DomNode_InsertAfter(element_parent,read_more_button.getElement());
+
+		// --------------------------------------------------------------------------------
+		// シャドウロード
+		// --------------------------------------------------------------------------------
+		function loadShadow(){
+			var load_shadow_last_id = load_shadow_id;
+			
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
+
+			// 成功
+			loader.onload = function(str){
+				var re_number = new RegExp("<a name=\"([0-9]+)\"","i");
+				var re_id = new RegExp("ID:[ ]([a-zA-Z0-9+/.]{8,10})","i");
+				var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
+
 				var p = 0;
 				var n = str.length;
-				var id = 1;
 				function f(){
 					try{
 						if(p >= n) throw 0;
-						var e = str.indexOf("\n",p);
-						if(last_id < id){
-							var m = str.substring(p,e).match(re_search);
-							if(m){
+						p = str.indexOf("<dt class=\"reshead\">",p);
+						if(p < 0) throw 0;
+						var e = str.indexOf("</dd>",p);
+						if(e >= 0) e += 5;
+						var s = str.substring(p,e);
+						var m = s.match(re_number);
+						if(m){
+							var id = load_shadow_last_id = parseInt(m[1]);
+							if((first_id <= id) && (id <= last_id)){
+							}else if(dictionary_id[id]){
+							}else{
+								// ナンバーからレスポンスオブジェクトを取得
 								var response = bbs_dictionary.getResponse(id);
-								response.clearAnalyzed();
-								response.clearOriginalElements();
-								response.clearFollowing();
+								if(!(response.getAnalyzed())){
+									var nodes = StringHtmlCreateDomNodesSafe(s);
+									var dt = nodes[0];
+									var dd = nodes[2];
 
-								var html = "<dt>" + id + " ：";
-								if(m[2]){
-									html += "<a href=\"mailto:" + m[2] + "\"><b>" + m[1] + "</b></a>";
-								}else{
-									html += "<font color=green><b>" + m[1] + "</b></font>";
-								}
-								html += "：" + m[3] + "<dd>";
-								var msg = m[4];
-								if(msg.match(re_icon)){
-									msg = "<img src=\"http://img.2ch.net/ico/" + m[1] + "\">" + m[2];
-								}
-								html += msg + "<br><br>";
+									try{
+										if(dt.tagName != "DT")	throw 0;
+										if(dd.tagName != "DD")	throw 0;
+									}catch(e){
+										throw 0;
+									}
 
-								var nodes = StringHtmlCreateDomNodesSafe(html);
-								var j;
-								var node_num = nodes.length;
-								for(j=0;j<node_num;j++){
-									element_parent.appendChild(nodes[j]);
+									var dt_text = ElementGetTextContent(dt);
+
+									// レスアンカー拡張
+									work.extendResponseAnchor(dd);
+
+									// IDの取得
+									if(dt_text.match(re_id)){
+										response.setId(RegExp.$1);
+									}
+
+									// 名前の取得
+									if(dt_text.match(re_name)){
+										response.setName(RegExp.$1);
+									}
+
+									// フォロー解析
+									var dictionary = new Object();
+									(function(){
+										var nodes = ElementGetElementsByTagName(dd,"a");
+										var i;
+										var num = nodes.length;
+										for(i=0;i<num;i++){
+											var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
+											numbers.getNumbers(function(n){
+												if(!dictionary[n]){
+													var following = bbs_dictionary.getResponse(n);
+													following.addFollower(response);
+													dictionary[n] = true;
+												}
+											});
+										}
+									})();
+
+									// オリジナルエレメントをセット
+									if(dt)	response.addOriginalElements("dt",dt);
+									if(dd)	response.addOriginalElements("dd",dd);
+
+									// 消去時に実行されるイベント
+									response.onerase = function(){};
+
+									response.setAnalyzed();
 								}
-								last_id = id;
 							}
 						}
 
-						id += 1;
 						if(p < e){
-							p = e + 1;
+							p = e;
 							execute_queue.attachFirst(f,null);
 							return;
 						}
 					}catch(e){
 					}
-					read_more_button.init();
+
+					var reload = false;
+					(function(){
+						if(((load_shadow_last_id + 1) % load_dose) != load_offset){
+							return;
+						}
+						var p = Math.floor(load_shadow_id / load_dose);
+						var n = Math.floor(load_shadow_last_id / load_dose);
+						if(p >= n){
+							return;
+						}
+						if(load_shadow_last_id > first_id){
+							return;
+						}
+
+						reload = true;
+					})();
+
+					var next_id = Math.floor(load_shadow_last_id / load_dose) * load_dose + load_offset;
+					resource_url_shadow = base_url + next_id + "-";
+
+					if(reload){
+						load_shadow_id = load_shadow_last_id;
+						loadShadow();
+					}
 				}
 				execute_queue.attachFirst(f,null);
-			}
+			};
 
-			// --------------------------------------------------------------------------------
-			// 継ぎ足し読み込み
-			// --------------------------------------------------------------------------------
-			function readMore(){
+			// 失敗
+			loader.onerror = function(){
+			};
 
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
-
-				// 成功
-				loader.onload = function(str){
-					if(load_more_func){
-						load_more_func(str);
-					}
-				};
-
-				// 失敗
-				loader.onerror = function(){
-					read_more_button.init();
-				};
-
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url_more);
-				switch(work.bbs_name){
-				case "2ch":
-				case "machi":
-				case "machibbs":
-				case "pink":
-				case "kakiko":
-					loader.overrideMimeType("text/plain; charset=Shift_JIS");
-					break;
-				case "shitaraba":
-					loader.overrideMimeType("text/plain; charset=EUC-JP");
-					break;
-				}
-				loader.loadText();
-			}
-
-			// --------------------------------------------------------------------------------
-			// レスポンス親要素
-			// --------------------------------------------------------------------------------
-			var i;
-			var nodes = ElementGetElementsByTagName(document.body,"dl");
-			var num = nodes.length;
-			for(i=0;i<num;i++){
-				element_parent = nodes[i];
-				break;
-			}
-
-			if(!element_parent) return false;
-
-			// --------------------------------------------------------------------------------
-			// フォーム位置修正
-			// --------------------------------------------------------------------------------
-			switch(work.bbs_name){
-			case "machi":
-				var nodes = ElementGetElementsByTagName(element_parent,"dt");
-				if(nodes.length){
-					var dt = nodes[nodes.length - 1];
-					var node = dt.firstChild;
-					while(node){
-						var next = node.nextSibling;
-						DomNode_InsertAfter(element_parent,node);
-						node = next;
-					}
-					DomNodeRemove(dt);
-				}
-
-				var nodes = ElementGetElementsByTagName(element_parent,"dd");
-				if(nodes.length){
-					nodes = ElementGetElementsByTagName(nodes[nodes.length - 1],"br");
-					if(nodes.length){
-						var node = nodes[nodes.length - 1];
-						node = node.nextSibling;
-						while(node){
-							var next = node.nextSibling;
-							DomNode_InsertAfter(element_parent,node);
-							node = next;
-						}
-					}
-				}
-
-				break;
-			}
-
-			// --------------------------------------------------------------------------------
-			// 範囲取得
-			// --------------------------------------------------------------------------------
-			var nodes = ElementGetElementsByTagName(element_parent,"dt");
-			var node_num = nodes.length;
-			if(node_num){
-				var re_id = new RegExp("^([0-9]+)","i");
-
-				if(ElementGetTextContent(nodes[0]).match(re_id)){
-					first_id = parseInt(RegExp.$1);
-					dictionary_id[0] = true;
-				}
-
-				if((first_id == 1) && (node_num > 1)){
-					if(ElementGetTextContent(nodes[1]).match(re_id)){
-						first_id = parseInt(RegExp.$1);
-						dictionary_id[first_id] = true;
-						if(first_id <= 2) first_id = 1;
-					}
-				}
-
-				if(ElementGetTextContent(nodes[node_num-1]).match(re_id)){
-					last_id = parseInt(RegExp.$1);
-					dictionary_id[last_id] = true;
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// 読み込み方式
-			// --------------------------------------------------------------------------------
-			load_shadow_func = loadShadowFromHTML;
-			load_more_func = loadMoreFromHTML;
-
-			// JavaScript モード検出
-			if(work.bbs_name == "2ch"){
-				load_shadow_func = loadShadowFromDAT;
-
-				var nodes = ElementGetElementsByTagName(DocumentGetHeadElement(document),"meta");
-				var i;
-				var num = nodes.length;
-				for(i=0;i<num;i++){
-					var node = nodes[i];
-					var http_equiv = node.getAttribute("http-equiv");
-					if(!http_equiv)	http_equiv = node.httpEquiv;
-					if(!http_equiv)	continue;
-					if(http_equiv.toLowerCase() != "content-type")	continue;
-					var content = node.getAttribute("content");
-					if(!content)	content = node.content;
-					if(!content)	continue;
-					if(content.indexOf("application") == -1)	continue;
-
-					load_more_func = loadMoreFromDAT;
-					break;
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// アクセス先 URL
-			// --------------------------------------------------------------------------------
-			if(load_more_func == loadMoreFromHTML){
-				resource_url_more = base_url + last_id + "-";
-			}else{
-				if(base_url.match(new RegExp("http://([^.]+\\.2ch\\.net)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"))){
-					resource_url_more = "http://" + RegExp.$1 + "/" + RegExp.$2 + "/dat/" + RegExp.$3 + ".dat";
-				}
-			}
-			if(load_shadow_func == loadShadowFromHTML){
-				resource_url_shadow = base_url;
-			}else{
-				if(base_url.match(new RegExp("http://([^.]+\\.2ch\\.net)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"))){
-					resource_url_shadow = "http://" + RegExp.$1 + "/" + RegExp.$2 + "/dat/" + RegExp.$3 + ".dat";
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// BbsControlReadMoreButton 作成
-			// --------------------------------------------------------------------------------
-			read_more_button = new BbsControlReadMoreButton();
-			read_more_button.setWaitTime(2 * 1000);
-			read_more_button.onclick = readMore;
-			DomNode_InsertAfter(element_parent,read_more_button.getElement());
-
-
-			// --------------------------------------------------------------------------------
-			// 書き込みをポップアップ化
-			// --------------------------------------------------------------------------------
-			if(load_more_func == loadMoreFromHTML){
-				// フォーム
-				var nodes = ElementGetElementsByTagName(document.body,"form");
-				var element_form;
-				var input_submit;
-				var element_textarea;
-
-				// フォーム
-				var i;
-				switch(work.bbs_name){
-				case "2ch":
-				case "pink":
-					for(i=0;i<nodes.length;i++){
-						if(nodes[i].action.indexOf("/test/bbs.cgi") >= 0){
-							element_form = nodes[i];
-							break;
-						}
-					}
-					break;
-				case "shitaraba":
-					for(i=0;i<nodes.length;i++){
-						if(nodes[i].action.indexOf("/bbs/write.cgi/") >= 0){
-							element_form = nodes[i];
-							break;
-						}
-					}
-					break;
-				}
-
-				// サブミットボタン
-				if(element_form){
-					var nodes = ElementGetElementsByTagName(element_form,"input");
-					for(i=0;i<nodes.length;i++){
-						if(nodes[i].type.toLowerCase() == "submit"){
-							input_submit = nodes[i];
-							break;
-						}
-					}
-					var nodes = ElementGetElementsByTagName(element_form,"textarea");
-					if(nodes.length){
-						element_textarea = nodes[0];
-					}
-				}
-
-				if(input_submit){
-
-					function inputClick(e){
-
-						var w = 800;
-						var h = 600;
-						var cookie = document.cookie;
-						if(cookie){
-							if(cookie.indexOf("PREN=") != -1){
-								w = 600;
-								h = 450;
-							}
-						}
-
-						var screen_obj = window.screen;
-						if(w > screen_obj.availWidth)	w = screen_obj.availWidth;
-						if(h > screen_obj.availHeight)	h = screen_obj.availHeight;
-						var x = (screen_obj.availWidth  / 2) - (w / 2);
-						var y = (screen_obj.availHeight / 2) - (h / 2);
-
-						var window_name = "_pageexpand_" + Math.floor(Math.random() * 0x7FFFFFFF);
-						var window_obj = window.open("",window_name,"left=" + x + ",top=" + y + ",width=" + w + ",height=" + h);
-						element_form.target = window_name;
-
-						(function(){
-							var closed = false;
-							var timer = null;
-
-							// タスク生成
-							var task = task_container.createTask();
-							task.setExecuteFunc(function(){
-								try{
-									if(window_obj.closed){
-										closed = true;
-									}
-
-									// アドレスを監視
-									var href = "";
-									try{
-										href = window_obj.location.href;
-									}catch(e){}
-									if(href.indexOf("http://") == 0){
-
-										switch(work.bbs_name){
-										case "2ch":
-										case "pink":
-											if(href.indexOf("test/bbs.cgi?guid=") == -1){
-												closed = true;
-											}else if(!timer){
-												var body = window_obj.document.body;
-												if(body){
-													if(ElementGetTextContent(body).indexOf("書きこみが終わりました") != -1){
-														timer = (new Date()).getTime();
-													}
-												}
-											}
-											break;
-										case "shitaraba":
-											if(href.indexOf("/bbs/write.cgi/") == -1){
-												closed = true;
-											}else if(!timer){
-												var body = window_obj.document.body;
-												if(body){
-													if(ElementGetTextContent(body).indexOf("書きこみが終りました") != -1){
-														timer = (new Date()).getTime();
-													}
-												}
-											}
-											break;
-										}
-									}
-
-									if(timer){
-										if((new Date()).getTime() - timer > 1000 * 2){
-											closed = true;
-										}
-									}
-								}catch(e){
-									closed = true;
-								}
-
-								if(closed){
-									try{
-										window_obj.close();
-									}catch(e){
-										return;
-									}
-									window_obj = null;
-									task.release();
-									input_submit.disabled = false;
-									if(timer){
-										readMore();
-										element_textarea.value = "";
-									}
-								}
-							});
-						})();
-					}
-
-					function formSubmit(e){
-						input_submit.disabled = true;
-					}
-
-					if(window.addEventListener){
-						input_submit.addEventListener("click",inputClick);
-						element_form.addEventListener("submit",formSubmit);
-					}else if(window.attachEvent){
-						input_submit.attachEvent("onclick",inputClick);
-						element_form.attachEvent("onsubmit",formSubmit);
-					}
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// シャドウロード
-			// --------------------------------------------------------------------------------
-			(function(){
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
-
-				// 成功
-				loader.onload = function(str){
-					if(load_shadow_func){
-						load_shadow_func(str);
-					}
-				};
-
-				// 失敗
-				loader.onerror = function(){
-				};
-
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url_shadow);
-				switch(work.bbs_name){
-				case "2ch":
-				case "pink":
-					loader.overrideMimeType("text/plain; charset=Shift_JIS");
-					break;
-				case "shitaraba":
-					loader.overrideMimeType("text/plain; charset=EUC-JP");
-					break;
-				}
-				loader.loadText();
-			})();
-
-			response({result:true});
-			return true;
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(resource_url_shadow);
+			loader.loadText();
 		}
+		loadShadow();
 
-		return false;
+		response({result:true});
+		return true;
 	}.toString() +
 	",\n\n\t" +
 	function (info,response){
@@ -24363,1632 +26284,8 @@ function PageExpand(page_expand_arguments){
 		return true;
 	}.toString() +
 "\n]";
+
 			preset.script_callback = 
-"[\n\t" + 
-	function(info,response){
-		var element = info.element;
-		var work = info.work;
-
-		// --------------------------------------------------------------------------------
-		// レスポンスダイアログを登録
-		// --------------------------------------------------------------------------------
-		function attachBbsResponseDialog(response,node,parent_dialog,type){
-
-			// --------------------------------------------------------------------------------
-			// レスアンカー
-			// --------------------------------------------------------------------------------
-			function forResponseAnchor(target){
-				if(BbsControlResponseAnchorExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlResponseAnchor を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var i;
-					var nodes = ElementGetElementsByTagName(target,"a");
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						var node = nodes[i];
-						var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(node));
-						if(numbers.getCount()){
-							var control_res_anchor = new BbsControlResponseAnchor(node,false);
-							control_res_anchor.setResponseAnchorNumbers(numbers);
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlResponseAnchor を検索
-				// --------------------------------------------------------------------------------
-				BbsControlResponseAnchorSearch(target,function(control_res_anchor){
-
-					var element_res_anchor = control_res_anchor.getElement();
-					var numbers = control_res_anchor.getResponseAnchorNumbers();
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_res_anchor);
-					response_dialog.oncreate = function(_window,callback){
-
-						var dl = DocumentCreateElement("dl");
-						dl.style.margin = "0px";
-						_window.appendChild(dl);
-
-						var created = false;
-						var i = 0;
-						var number_list = numbers.getNumberList();
-						var num = number_list.length;
-						if(!num) return false;
-
-						function f(){
-							var following = bbs_dictionary.getResponse(number_list[i]);
-							var clone = following.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									dl.appendChild(obj.element);
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(following,param,response_dialog,"response");
-
-								created = true;
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:created});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// ID
-			// --------------------------------------------------------------------------------
-			function forId(target){
-				if(BbsControlIdExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlId を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var p;
-					var n;
-					var q;
-					var ignore_dictionary = {"A":1,"SCRIPT":1};
-					var queue = new Object();
-					q = {p:queue,n:queue,node:target};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-							if(!(ignore_dictionary[node.tagName])){
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-
-							break;
-						case 3:
-							while(node){
-
-								var m = DomNodeGetNodeValue(node).match(new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i"));
-								if(!m)	break;
-
-								// 元のテキストノード
-								DomNodeSetNodeValue(node,RegExp.leftContext);
-
-								// BbsControlId を生成
-								var control_id = new BbsControlId(null,false);
-								control_id.setId(m[1]);
-								var element_id = control_id.getElement();
-								ElementSetTextContent(element_id,m[0]);
-								DomNode_InsertAfter(node,element_id);
-
-								// 直後テキスト
-								node = DocumentCreateText(RegExp.rightContext);
-								DomNode_InsertAfter(element_id,node);
-							}
-							break;
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlId を検索
-				// --------------------------------------------------------------------------------
-				BbsControlIdSearch(target,function(control_id){
-
-					control_id.setResponse(response);
-
-					var id = control_id.getId();
-					var element_id = control_id.getElement();
-					var textnode_id = DocumentCreateText("");
-
-					element_id.appendChild(textnode_id);
-
-					// --------------------------------------------------------------------------------
-					// 変化があったときに実行されるイベント
-					// --------------------------------------------------------------------------------
-					control_id.onchange = function(count){
-						if(count > 1){
-							DomNodeSetNodeValue(textnode_id,"(" + count + ")");
-						}else{
-							DomNodeSetNodeValue(textnode_id,"");
-						}
-
-						var style = element_id.style;
-						if(count >= 5){
-							StyleDeclarationSetProperty(style,"color","#e80000");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else if(count >= 2){
-							StyleDeclarationRemoveProperty(style,"color");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else{
-							StyleDeclarationSetProperty(style,"color","#888");
-							StyleDeclarationSetProperty(style,"font-size","small");
-						}
-					};
-					control_id.update();
-
-					// --------------------------------------------------------------------------------
-					// ポップアップ化
-					// --------------------------------------------------------------------------------
-					if(type == "id"){
-						if(response.getId() == id)	return null;
-					}
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_id);
-					response_dialog.oncreate = function(_window,callback){
-
-						var dl = DocumentCreateElement("dl");
-						dl.style.margin = "0px";
-						_window.appendChild(dl);
-
-						var responses = bbs_dictionary.getResponsesFromId(id);
-						var i = 0;
-						var num = responses.length;
-						if(num <= 1) return false;
-
-						function f(){
-							var response_id = responses[i];
-							var clone = response_id.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									dl.appendChild(obj.element);
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(response_id,param,response_dialog,"id");
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:true});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// トリップ
-			// --------------------------------------------------------------------------------
-			function forName(target){
-				if(BbsControlNameExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlName を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var p;
-					var n;
-					var q;
-					var ignore_dictionary = {"SCRIPT":1};
-					var queue = new Object();
-					q = {p:queue,n:queue,node:target};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-							if(!(ignore_dictionary[node.tagName])){
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-							break;
-						case 3:
-							while(node){
-
-								// 本文
-								var m = DomNodeGetNodeValue(node).match(new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i"));
-								if(!m)	break;
-
-								// 元のテキストノード
-								DomNodeSetNodeValue(node,RegExp.leftContext);
-
-								// BbsControlName を生成
-								var control_name = new BbsControlName(null,false);
-								control_name.setName(m[0]);
-								var element_name = control_name.getElement();
-								ElementSetTextContent(element_name,m[0]);
-								DomNode_InsertAfter(node,element_name);
-
-								// 直後テキスト
-								node = DocumentCreateText(RegExp.rightContext);
-								DomNode_InsertAfter(element_name,node);
-							}
-							break;
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlName を検索
-				// --------------------------------------------------------------------------------
-				BbsControlNameSearch(target,function(control_name){
-
-					control_name.setResponse(response);
-
-					var name = control_name.getName();
-					var element_name = control_name.getElement();
-					var textnode_name = DocumentCreateText("");
-
-
-					// --------------------------------------------------------------------------------
-					// 変化があったときに実行されるイベント
-					// --------------------------------------------------------------------------------
-					control_name.onchange = function(count){
-						if(count > 1){
-							DomNodeSetNodeValue(textnode_name,"(" + count + ")");
-						}else{
-							DomNodeSetNodeValue(textnode_name,"");
-						}
-
-						var style = element_name.style;
-						if(count >= 5){
-							StyleDeclarationSetProperty(style,"color","#e80000");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else if(count >= 2){
-							StyleDeclarationRemoveProperty(style,"color");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else{
-							StyleDeclarationSetProperty(style,"color","#888");
-							StyleDeclarationSetProperty(style,"font-size","small");
-						}
-					};
-					control_name.update();
-					element_name.appendChild(textnode_name);
-
-					// --------------------------------------------------------------------------------
-					// ポップアップ化
-					// --------------------------------------------------------------------------------
-					if(type == "name"){
-						if(response.getName() == name)	return null;
-					}
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_name);
-					response_dialog.oncreate = function(_window,callback){
-
-						var dl = DocumentCreateElement("dl");
-						dl.style.margin = "0px";
-						_window.appendChild(dl);
-
-						var responses = bbs_dictionary.getResponsesFromName(name);
-						var i = 0;
-						var num = responses.length;
-						if(num <= 1) return false;
-
-						function f(){
-							var response_name = responses[i];
-							var clone = response_name.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									dl.appendChild(obj.element);
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(response_name,param,response_dialog,"name");
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:true});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// ホスト
-			// --------------------------------------------------------------------------------
-			function forHost(target){
-				if(BbsControlHostExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlHost を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var p;
-					var n;
-					var q;
-					var ignore_dictionary = {"B":1,"SCRIPT":1};
-					var queue = new Object();
-					q = {p:queue,n:queue,node:target};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-							if(!(ignore_dictionary[node.tagName])){
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-							break;
-						case 3:
-							while(node){
-								var text_value = DomNodeGetNodeValue(node);
-
-								var m = text_value.match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-								if(m){
-									// 元のテキストノード
-									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
-
-									// BbsControlHost を生成
-									var control_host = new BbsControlHost(null,false);
-									control_host.setHost(m[2]);
-									var element_host = control_host.getElement();
-									ElementSetTextContent(element_host,m[2]);
-									DomNode_InsertAfter(node,element_host);
-
-									// 直後テキスト
-									node = DocumentCreateText(RegExp.rightContext);
-									DomNode_InsertAfter(element_host,node);
-									continue;
-								}
-
-								var m = text_value.match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})((|\\n) \\])","i"));
-								if(m){
-									// 元のテキストノード
-									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
-
-									// BbsControlHost を生成
-									var control_host = new BbsControlHost(null,false);
-									control_host.setHost(m[2]);
-									var element_host = control_host.getElement();
-									ElementSetTextContent(element_host,m[2]);
-									DomNode_InsertAfter(node,element_host);
-
-									// 直後テキスト
-									node = DocumentCreateText("\n ]" + RegExp.rightContext);
-									DomNode_InsertAfter(element_host,node);
-									continue;
-								}
-
-								var m = text_value.match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-								if(m){
-									// 元のテキストノード
-									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
-
-									// BbsControlHost を生成
-									var control_host = new BbsControlHost(null,false);
-									control_host.setHost(m[2]);
-									var element_host = control_host.getElement();
-									ElementSetTextContent(element_host,m[2]);
-									DomNode_InsertAfter(node,element_host);
-
-									// 直後テキスト
-									node = DocumentCreateText(RegExp.rightContext);
-									DomNode_InsertAfter(element_host,node);
-									continue;
-								}
-
-								break;
-							}
-
-							break;
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlHost を検索
-				// --------------------------------------------------------------------------------
-				BbsControlHostSearch(target,function(control_host){
-
-					control_host.setResponse(response);
-
-					var host = control_host.getHost();
-					var element_host = control_host.getElement();
-					var textnode_host = DocumentCreateText("");
-
-
-					// --------------------------------------------------------------------------------
-					// 変化があったときに実行されるイベント
-					// --------------------------------------------------------------------------------
-					control_host.onchange = function(count){
-						if(count > 1){
-							DomNodeSetNodeValue(textnode_host,"(" + count + ")");
-						}else{
-							DomNodeSetNodeValue(textnode_host,"");
-						}
-
-						var style = element_host.style;
-						if(count >= 5){
-							StyleDeclarationSetProperty(style,"color","#e80000");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else if(count >= 2){
-							StyleDeclarationRemoveProperty(style,"color");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else{
-							StyleDeclarationSetProperty(style,"color","#888");
-							StyleDeclarationSetProperty(style,"font-size","80%");
-						}
-					};
-					control_host.update();
-					element_host.appendChild(textnode_host);
-
-					// --------------------------------------------------------------------------------
-					// ポップアップ化
-					// --------------------------------------------------------------------------------
-					if(type == "host"){
-						if(response.getHost() == host)	return null;
-					}
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_host);
-					response_dialog.oncreate = function(_window,callback){
-
-						var dl = DocumentCreateElement("dl");
-						dl.style.margin = "0px";
-						_window.appendChild(dl);
-
-						var responses = bbs_dictionary.getResponsesFromHost(host);
-						var i = 0;
-						var num = responses.length;
-						if(num <= 1) return false;
-
-						function f(){
-							var response_host = responses[i];
-							var clone = response_host.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									dl.appendChild(obj.element);
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(response_host,param,response_dialog,"host");
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:true});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// フォロワー
-			// --------------------------------------------------------------------------------
-			function forFollower(target){
-				if(BbsControlFollowerExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlFollower を生成
-				// --------------------------------------------------------------------------------
-				var control_follower = new BbsControlFollower(null,true);
-				control_follower.setResponse(response);
-
-				var element_follower = control_follower.getElement();
-				var textnode_follower = DocumentCreateText("");
-
-				element_follower.appendChild(textnode_follower);
-
-				// --------------------------------------------------------------------------------
-				// 変化があったときに実行されるイベント
-				// --------------------------------------------------------------------------------
-				control_follower.onchange = function(count){
-					if(count){
-						textnode_follower.nodeValue = " follower(" + count + ")";
-					}else{
-						textnode_follower.nodeValue = "";
-					}
-
-					var style = element_follower.style;
-					if(count >= 3){
-						StyleDeclarationSetProperty(style,"color","#e80000");
-						StyleDeclarationRemoveProperty(style,"font-size");
-
-					}else{
-						StyleDeclarationSetProperty(style,"color","#888");
-						StyleDeclarationSetProperty(style,"font-size","small");
-					}
-					if(count){
-						StyleDeclarationSetProperty(style,"margin","0px 4px 0px 0px");
-					}else{
-						StyleDeclarationRemoveProperty(style,"margin");
-					}
-				};
-				control_follower.update();
-				var nodes = ElementGetElementsByTagName(target,"br");
-				if(nodes.length){
-					DomNode_InsertBefore(nodes[0],element_follower);
-				}else{
-					target.appendChild(element_follower);
-				}
-
-				// --------------------------------------------------------------------------------
-				// ポップアップ化
-				// --------------------------------------------------------------------------------
-				// ダイアログを作成
-				var response_dialog = new BbsResponseDialog();
-				if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-				response_dialog.setElementParent(node.parent);
-				response_dialog.setElementHitArea(element_follower);
-				response_dialog.oncreate = function(_window,callback){
-
-					var dl = DocumentCreateElement("dl");
-					dl.style.margin = "0px";
-					_window.appendChild(dl);
-
-					var ary = response.getFollower();
-					var i = 0;
-					var num = ary.length;
-					if(num <= 0) return false;
-
-					function f(){
-						var follower = bbs_dictionary.getResponse(ary[i].getNumber());
-						var clone = follower.getCloneElements();
-
-						var j;
-						var clone_num = clone.length;
-						if(clone_num){
-
-							var param = new Object();
-							param.parent = node.parent;
-							for(j=0;j<clone_num;j++){
-								var obj = clone[j];
-								param[obj.name] = obj.element;
-								dl.appendChild(obj.element);
-							}
-
-							// レスポンスダイアログを登録
-							attachBbsResponseDialog(follower,param,response_dialog,"response");
-						}
-
-						i += 1;
-						if(i < num){
-							execute_queue.attachFirst(f,null);
-						}else{
-							callback({result:true});
-						}
-					}
-					execute_queue.attachFirst(f,null);
-				};
-			}
-
-			if(node.dt){
-				forResponseAnchor(node.dt);
-				forId(node.dt);
-				forName(node.dt);
-				forHost(node.dt);
-				forFollower(node.dt);
-			}
-			if(node.dd){
-				forResponseAnchor(node.dd);
-				forId(node.dd);
-				forName(node.dd);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// エレメントを解析
-		// --------------------------------------------------------------------------------
-		var useful = (function(){
-			var dt = element;
-			var dd;
-
-			try{
-				if(dt.tagName != "DT")	return false;
-			}catch(e){
-				return false;
-			}
-
-			dd = dt.nextSibling;
-			try{
-				if(dd.tagName != "DD")	return false;
-			}catch(e){
-				return false;
-			}
-
-			try{
-				var dl = dt.parentNode;
-				if(dl.tagName != "DL")	return false;
-
-				switch(work.bbs_name){
-				case "shitaraba":
-				case "machi":
-					if(dl.parentNode.parentNode != document.body)	return false;
-					break;
-				default:
-					if(dl.parentNode != document.body)	return false;
-					break;
-				}
-			}catch(e){
-				return false;
-			}
-
-			// document に未登録
-			if(!DomNodeGetAttachedDocument(dt))	return false;
-
-			// --------------------------------------------------------------------------------
-			// レスアンカー拡張
-			// --------------------------------------------------------------------------------
-			work.extendResponseAnchor(dd);
-
-			// --------------------------------------------------------------------------------
-			// クリーンアップ
-			// --------------------------------------------------------------------------------
-			(function(){
-				function cleanup(target){
-					BbsControlSearchTrash(target,function(element){
-						var node = element.firstChild;
-						if(!node)	return null;
-						if(node.nodeType != 3)	return null;
-
-						// ID
-						var m = node.nodeValue.match(new RegExp("^ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i"));
-						if(m){
-							// 直後テキスト
-							var node = DocumentCreateText(m[0]);
-							DomNode_InsertAfter(element,node);
-							DomNodeRemove(element);
-							return null;
-						}
-
-						// トリップ
-						var m = node.nodeValue.match(new RegExp("^(◆[a-zA-Z0-9+/.]{10,12})","i"));
-						if(m){
-							// 直後テキスト
-							var node = DocumentCreateText(m[0]);
-							DomNode_InsertAfter(element,node);
-							DomNodeRemove(element);
-							return null;
-						}
-
-						// ホスト名
-						var m = node.nodeValue.match(new RegExp("^([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-						if(m){
-							// 直後テキスト
-							var node = DocumentCreateText(m[0]);
-							DomNode_InsertAfter(element,node);
-							DomNodeRemove(element);
-
-							// テキストノードを統合
-							node.parentNode.normalize();
-							return null;
-						}
-						var m = node.nodeValue.match(new RegExp("^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-						if(m){
-							// 直後テキスト
-							var node = DocumentCreateText(m[0]);
-							DomNode_InsertAfter(element,node);
-							DomNodeRemove(element);
-
-							// テキストノードを統合
-							node.parentNode.normalize();
-							return null;
-						}
-
-						return null;
-					});
-				}
-
-				if(dt){
-					cleanup(dt);
-				}
-				if(dd){
-					cleanup(dd);
-				}
-			})();
-
-			// ナンバーを取得
-			var dt_text = ElementGetTextContent(dt);
-			if(!(dt_text.match(new RegExp("^([0-9]+)[ ]","i"))))	return false;
-
-			// ナンバーからレスポンスオブジェクトを取得
-			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
-
-			// レスポンス解析
-			if(!response.getAnalyzed()){
-
-				// IDの取得
-				if(dt_text.match(new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i"))){
-					response.setId(RegExp.$1);
-				}
-
-				// 名前の取得
-				if(dt_text.match(new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i"))){
-					response.setName(RegExp.$1);
-				}
-
-				// ホスト名の取得
-				(function(){
-					var p;
-					var n;
-					var q;
-					var ignore_dictionary = {"B":1,"SCRIPT":1};
-					var queue = new Object();
-					q = {p:queue,n:queue,node:dt};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-							if(!(ignore_dictionary[node.tagName])){
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-							break;
-						case 3:
-							var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-							if(m){
-								response.setHost(m[2]);
-								return;
-							}
-							var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})(|\\n) \\]","i"));
-							if(m){
-								response.setHost(m[2]);
-								return;
-							}
-							var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-							if(m){
-								response.setHost(m[2]);
-								return;
-							}
-							break;
-						}
-					}
-				})();
-
-				// フォロー解析
-				var dictionary = new Object();
-				(function(){
-					var nodes = ElementGetElementsByTagName(dd,"a");
-					var i;
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-						numbers.getNumbers(function(n){
-							if(!dictionary[n]){
-								var following = bbs_dictionary.getResponse(n);
-								following.addFollower(response);
-								dictionary[n] = true;
-							}
-						});
-					}
-				})();
-
-				// オリジナルエレメントをセット
-				if(dt)	response.addOriginalElements("dt",dt);
-				if(dd)	response.addOriginalElements("dd",dd);
-
-				// 消去時に実行されるイベント
-				response.onerase = function(){
-					var original = response.getOriginalElements();
-
-					// オリジナルエレメントを外す
-					var i;
-					var num = original.length;
-					for(i=0;i<num;i++){
-						var revise_scroll = new DocumentReviseScroll();
-						var node = original[i].element;
-						revise_scroll.executeRemoveElementBefore(node);
-						DomNodeRemove(node);
-						revise_scroll.executeRemoveElementAfter(node);
-					}
-				};
-
-				response.setAnalyzed();
-			}
-			
-			var dl = document.body;
-			var node = dt;
-			while(node){
-				if(node.tagName == "DL"){
-					dl = node;
-				}
-				node = node.parentNode;
-			}
-
-			// レスポンスダイアログを登録（ルート）
-			attachBbsResponseDialog(
-				response,
-				{
-					dt:dt,
-					dd:dd,
-					parent:dl
-				},
-				null,
-				null
-			);
-
-			return true;
-		})();
-
-		response({useful:useful});
-		return true;
-	}.toString() +
-"\n]";
-
-			// ログ速
-			var obj = addPreset(proj.expand_bbs,"logsoku",null);
-			var preset = obj.preset;
-			preset.filter = {
-				type:"regexp",
-				asterisk:{
-					filter:[]
-				},
-				regexp:{
-					filter:[
-						{
-							pattern:"^http://logsoku\\.com/thread/.*\\.2ch\\.net/[^/]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						},{
-							pattern:"^http://[^.]+\\.logsoku\\.com/r/[^/]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						},{
-							pattern:"^http://logsoku\\.com/r/[^/]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						}
-					]
-				}
-			};
-
-			// みみずん検索
-			var obj = addPreset(proj.expand_bbs,"mimizun",null);
-			var preset = obj.preset;
-			preset.filter = {
-				type:"regexp",
-				asterisk:{
-					filter:[]
-				},
-				regexp:{
-					filter:[
-						{
-							pattern:"^http://mimizun\\.com/log/2ch/[^/]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						},{
-							pattern:"^http://mimizun\\.com/log/machi/[^/]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						}
-					]
-				}
-			};
-
-			// unkar.org
-			var obj = addPreset(proj.expand_bbs,"unkar",null);
-			var preset = obj.preset;
-			preset.filter = {
-				type:"regexp",
-				asterisk:{
-					filter:[]
-				},
-				regexp:{
-					filter:[
-						{
-							pattern:"^http://unkar\\.org/r/[^/]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						}
-					]
-				}
-			};
-
-			// あっとちゃんねるず
-			var obj = addPreset(proj.expand_bbs,"atchs",null);
-			var preset = obj.preset;
-			preset.filter = {
-				type:"regexp",
-				asterisk:{
-					filter:[]
-				},
-				regexp:{
-					filter:[
-						{
-							pattern:"^http://[^.]+\\.atchs\\.jp/test/read\\.cgi/[^/]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						}
-					]
-				}
-			};
-
-			// chaika
-			var obj = addPreset(proj.expand_bbs,"chaika",null);
-			var preset = obj.preset;
-			preset.filter = {
-				type:"regexp",
-				asterisk:{
-					filter:[]
-				},
-				regexp:{
-					filter:[
-						{
-							pattern:"^http://127\\.0\\.0\\.1:[0-9]+/thread/http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						},{
-							pattern:"^http://127\\.0\\.0\\.1:[0-9]+/thread/http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						},{
-							pattern:"^http://127\\.0\\.0\\.1:[0-9]+/thread/http://jbbs\\.shitaraba\\.net/bbs/read.cgi/[^/]+/[0-9]+/[0-9]+.*$",
-							flags:{i:true,g:false}
-						}
-					]
-				}
-			};
-
-			// 4chan.org
-			var obj = addPreset(proj.expand_bbs,"4chan",null);
-			var preset = obj.preset;
-			preset.filter = {
-				type:"regexp",
-				asterisk:{
-					filter:[]
-				},
-				regexp:{
-					filter:[
-						{
-							pattern:"^(http|https)://boards\\.4chan\\.org/[^/]+/.*$",
-							flags:{i:true,g:false}
-						}
-					]
-				}
-			};
-
-			// ニコニコ大百科
-			var obj = addPreset(proj.expand_bbs,"nicovideo_dictionary",null);
-			var preset = obj.preset;
-			preset.script_initialize = 
-"[\n\t" + 
-	function(info,response){
-		var work = info.work;
-
-		// --------------------------------------------------------------------------------
-		// 基本URL抽出
-		// --------------------------------------------------------------------------------
-		var url = document.URL;
-		var bbs_list = [
-			{url:"(http://dic\\.nicovideo\\.jp/b/(a|c|i|l|u|v)/[^/#?]+)",replace:"$1/",name:"nicopedia"},
-			{url:"(http://dic\\.nicovideo\\.jp)/(a|c|i|l|u|v)/([^/#?]+)",replace:"$1/b/$2/$3/",name:"nicopedia"}
-
-		];
-
-		var i;
-		var num = bbs_list.length;
-		for(i=0;i<num;i++){
-			var bbs = bbs_list[i];
-			var re = new RegExp(bbs.url,"i");
-			var m = url.match(re);
-			if(m){
-				work.base_url = m[0].replace(re,bbs.replace);
-				work.bbs_name = bbs.name;
-				break;
-			}
-		}
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function (info,response){
-		var work = info.work;
-
-		if(work.bbs_name){
-			var load_separate = 1000;
-			var load_dose = 30;
-			var load_offset = 1;
-			var first_id = 1;
-			var last_id = 1;
-			var load_shadow_id = 1;
-			var load_more_id = 1;
-			var dictionary_id = new Array();
-			var element_parent = null;
-			var read_more_button = null;
-			var element_form = null;
-			var base_url = work.base_url;
-			var resource_url_shadow = base_url;
-			var resource_url_more = base_url;
-
-			// --------------------------------------------------------------------------------
-			// 文字列からレスポンス番号を取得
-			// --------------------------------------------------------------------------------
-			work.createResponseAnchorNumbers = function (str){
-				var numbers = new ResponseAnchorNumbers();
-
-				var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
-				var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
-				var re_number = new RegExp("^([0-9０-９]+)","i");
-
-				var m = str.match(re_search);
-				if(m){
-					var p = m[1].length;
-					while(true){
-						// 番号-番号
-						m = str.substr(p).match(re_range);
-						if(m){
-							var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-							var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-							if(min < 1) min = 1;
-							if(max < 1) max = 1;
-							if(min > 0x7fffffff) min = 0x7fffffff;
-							if(max > 0x7fffffff) max = 0x7fffffff;
-							if(max < min){
-								var tmp = min;
-								min = max;
-								max = tmp;
-							}
-							if(max - min > 10000) max = min + 10000;
-							p += m[0].length;
-							numbers.addNumbers(min,max);
-						}else{
-							// 番号
-							m = str.substr(p).match(re_number);
-							if(m){
-								p += m[0].length;
-								var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-								if(id < 1) id = 1;
-								if(id > 0x7fffffff) id = 0x7fffffff;
-								numbers.addNumber(id);
-							}
-						}
-
-						if(m){
-							// カンマ
-							if(RegExp.rightContext.search(",") == 0){
-								p += 1;
-								continue;
-							}
-						}
-						break;
-					}
-				}
-				return numbers;
-			};
-
-			// --------------------------------------------------------------------------------
-			// レスアンカー拡張
-			// --------------------------------------------------------------------------------
-			work.extendResponseAnchor = function (target){
-				if(BbsControlResponseAnchorExist(target))	return;
-
-				var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
-				var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
-				var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
-				var re_number = new RegExp("([0-9０-９]+)","i");
-
-				var i;
-				var nodes = ElementGetElementsByTagName(target,"a");
-				var num = nodes.length;
-				for(i=num-1;i>=0;i--){
-					var node = nodes[i];
-					var m = ElementGetTextContent(node).match(re_simple);
-					if(m){
-						var text_node = DocumentCreateText(m[0]);
-						DomNode_InsertBefore(node,text_node);
-						DomNodeRemove(node);
-					}
-				}
-
-				// テキストノードを統合
-				target.normalize();
-
-				var p;
-				var n;
-				var q;
-				var ignore_dictionary = {"A":1,"SCRIPT":1};
-				var queue = new Object();
-				q = {p:queue,n:queue,node:target};
-				queue.p = q;
-				queue.n = q;
-
-				while(queue.n != queue){
-					q = queue.n;
-					p = q.p;
-					n = q.n;
-					p.n = n;
-					n.p = p;
-					var node = q.node;
-					switch(node.nodeType){
-					case 1:
-						var i;
-						var nodes = node.childNodes;
-						var num = nodes.length;
-						for(i=0;i<num;i++){
-							n = queue;
-							p = n.p;
-							q = {p:p,n:n,node:nodes[i]};
-							p.n = q;
-							n.p = q;
-						}
-						break;
-					case 3:
-						while(node){
-							var m = DomNodeGetNodeValue(node).match(re_detail);
-							if(!m)	break;
-
-							// 元のテキストノード
-							DomNodeSetNodeValue(node,RegExp.leftContext);
-
-							// BbsControlName を生成
-							var element = DocumentCreateElement("a");
-							ElementSetTextContent(element,m[0]);
-							DomNode_InsertAfter(node,element);
-
-							// 直後テキスト
-							node = DocumentCreateText(RegExp.rightContext);
-							DomNode_InsertAfter(element,node);
-
-							var query = "";
-							m = ElementGetTextContent(element).match(re_range);
-							if(m){
-								var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-								var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-								if(min < 1) min = 1;
-								if(max < 1) max = 1;
-								if(min > 0x7fffffff) min = 0x7fffffff;
-								if(max > 0x7fffffff) max = 0x7fffffff;
-								if(max < min){
-									var tmp = min;
-									min = max;
-									max = tmp;
-								}
-								query = min;
-							}else{
-								// 番号
-								m = ElementGetTextContent(element).match(re_number);
-								if(m){
-									query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
-									if(query < 1) query = 1;
-									if(query > 0x7fffffff) query = 0x7fffffff;
-								}
-
-							}
-							element.href = work.base_url + (Math.floor(query / 30) * 30 + 1) + "-#" + query;
-						}
-					}
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// 継ぎ足し読み込み
-			// --------------------------------------------------------------------------------
-			function readMore(){
-
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
-
-				// 成功
-				loader.onload = function(str){
-					var re_number = new RegExp("<a name=\"([0-9]+)\"","i");
-
-					var p = 0;
-					var n = str.length;
-					function f(){
-						try{
-							if(p >= n) throw 0;
-							p = str.indexOf("<dt class=\"reshead\">",p);
-							if(p < 0) throw 0;
-							var e = str.indexOf("</dd>",p);
-							if(e >= 0) e += 5;
-							var s = str.substring(p,e);
-							var m = s.match(re_number);
-							if(m){
-								var id = parseInt(m[1]);
-								if(last_id < id){
-									var response = bbs_dictionary.getResponse(id);
-									response.clearAnalyzed();
-									response.clearOriginalElements();
-									response.clearFollowing();
-
-									var nodes = StringHtmlCreateDomNodesSafe(s);
-									var j;
-									var node_num = nodes.length;
-									for(j=0;j<node_num;j++){
-										element_parent.appendChild(nodes[j]);
-									}
-									last_id = id;
-									resource_url_more = base_url + (last_id) + "-";
-								}
-							}
-
-							if(p < e){
-								p = e;
-								execute_queue.attachFirst(f,null);
-								return;
-							}
-						}catch(e){
-						}
-
-						var reload = false;
-						(function(){
-							if(((last_id + 1) % load_dose) != load_offset){
-								return;
-							}
-							var p = Math.floor(load_more_id / load_dose);
-							var n = Math.floor(last_id / load_dose);
-							if(p >= n){
-								return;
-							}
-							var p = Math.floor(load_more_id / load_separate);
-							var n = Math.floor(last_id / load_separate);
-							if(p < n){
-								return;
-							}
-
-							reload = true;
-						})();
-
-						var next_id = Math.floor(last_id / load_dose) * load_dose + load_offset;
-						resource_url_more = base_url + next_id + "-";
-
-						if(reload){
-							readMore();
-						}else{
-							read_more_button.init();
-						}
-					}
-
-					load_more_id = last_id;
-					execute_queue.attachFirst(f,null);
-				};
-
-				// 失敗
-				loader.onerror = function(){
-					read_more_button.init();
-				};
-
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url_more);
-				loader.loadText();
-			}
-
-			// --------------------------------------------------------------------------------
-			// レスポンス親要素
-			// --------------------------------------------------------------------------------
-			(function(){
-				var element_bbs = document.getElementById("bbs");
-				if(element_bbs){
-					var i;
-					var nodes = ElementGetElementsByTagName(element_bbs,"dl");
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						element_parent = nodes[i];
-						break;
-					}
-				}
-			})();
-			if(!element_parent) return false;
-
-			// --------------------------------------------------------------------------------
-			// 最後尾 ID
-			// --------------------------------------------------------------------------------
-			var nodes = ElementGetElementsByTagName(element_parent,"dt");
-			var i;
-			var node_num = nodes.length;
-			for(i=0;i<node_num;i++){
-				var node = nodes[i];
-				var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)[ ]","i"));
-				if(m){
-					first_id = parseInt(m[1]);
-					dictionary_id[first_id] = true;
-					if(first_id != 1){
-						break;
-					}
-				}
-			}
-			for(i=node_num-1;i>=0;i--){
-				var node = nodes[i];
-				var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)[ ]","i"));
-				if(m){
-					last_id = parseInt(m[1]);
-					dictionary_id[last_id] = true;
-					break;
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// アクセス先 URL
-			// --------------------------------------------------------------------------------
-			var next_id = Math.floor(last_id / load_dose) * load_dose + load_offset;
-			resource_url_shadow = base_url + "1-";
-			resource_url_more = base_url + next_id + "-";
-
-			// --------------------------------------------------------------------------------
-			// BbsControlReadMoreButton 作成
-			// --------------------------------------------------------------------------------
-			read_more_button = new BbsControlReadMoreButton();
-			read_more_button.setWaitTime(2 * 1000);
-			read_more_button.onclick = readMore;
-			DomNode_InsertAfter(element_parent,read_more_button.getElement());
-
-			// --------------------------------------------------------------------------------
-			// シャドウロード
-			// --------------------------------------------------------------------------------
-			function loadShadow(){
-				var load_shadow_last_id = load_shadow_id;
-				
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
-
-				// 成功
-				loader.onload = function(str){
-					var re_number = new RegExp("<a name=\"([0-9]+)\"","i");
-					var re_id = new RegExp("ID:[ ]([a-zA-Z0-9+/.]{8,10})","i");
-					var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
-
-					var p = 0;
-					var n = str.length;
-					function f(){
-						try{
-							if(p >= n) throw 0;
-							p = str.indexOf("<dt class=\"reshead\">",p);
-							if(p < 0) throw 0;
-							var e = str.indexOf("</dd>",p);
-							if(e >= 0) e += 5;
-							var s = str.substring(p,e);
-							var m = s.match(re_number);
-							if(m){
-								var id = load_shadow_last_id = parseInt(m[1]);
-								if((first_id <= id) && (id <= last_id)){
-								}else if(dictionary_id[id]){
-								}else{
-									// ナンバーからレスポンスオブジェクトを取得
-									var response = bbs_dictionary.getResponse(id);
-									if(!(response.getAnalyzed())){
-										var nodes = StringHtmlCreateDomNodesSafe(s);
-										var dt = nodes[0];
-										var dd = nodes[2];
-
-										try{
-											if(dt.tagName != "DT")	throw 0;
-											if(dd.tagName != "DD")	throw 0;
-										}catch(e){
-											throw 0;
-										}
-
-										var dt_text = ElementGetTextContent(dt);
-
-										// レスアンカー拡張
-										work.extendResponseAnchor(dd);
-
-										// IDの取得
-										if(dt_text.match(re_id)){
-											response.setId(RegExp.$1);
-										}
-
-										// 名前の取得
-										if(dt_text.match(re_name)){
-											response.setName(RegExp.$1);
-										}
-
-										// フォロー解析
-										var dictionary = new Object();
-										(function(){
-											var nodes = ElementGetElementsByTagName(dd,"a");
-											var i;
-											var num = nodes.length;
-											for(i=0;i<num;i++){
-												var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-												numbers.getNumbers(function(n){
-													if(!dictionary[n]){
-														var following = bbs_dictionary.getResponse(n);
-														following.addFollower(response);
-														dictionary[n] = true;
-													}
-												});
-											}
-										})();
-
-										// オリジナルエレメントをセット
-										if(dt)	response.addOriginalElements("dt",dt);
-										if(dd)	response.addOriginalElements("dd",dd);
-
-										// 消去時に実行されるイベント
-										response.onerase = function(){};
-
-										response.setAnalyzed();
-									}
-								}
-							}
-
-							if(p < e){
-								p = e;
-								execute_queue.attachFirst(f,null);
-								return;
-							}
-						}catch(e){
-						}
-
-						var reload = false;
-						(function(){
-							if(((load_shadow_last_id + 1) % load_dose) != load_offset){
-								return;
-							}
-							var p = Math.floor(load_shadow_id / load_dose);
-							var n = Math.floor(load_shadow_last_id / load_dose);
-							if(p >= n){
-								return;
-							}
-							if(load_shadow_last_id > first_id){
-								return;
-							}
-
-							reload = true;
-						})();
-
-						var next_id = Math.floor(load_shadow_last_id / load_dose) * load_dose + load_offset;
-						resource_url_shadow = base_url + next_id + "-";
-
-						if(reload){
-							load_shadow_id = load_shadow_last_id;
-							loadShadow();
-						}
-					}
-					execute_queue.attachFirst(f,null);
-				};
-
-				// 失敗
-				loader.onerror = function(){
-				};
-
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(resource_url_shadow);
-				loader.loadText();
-			}
-			loadShadow();
-
-			response({result:true});
-			return true;
-		}
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function (info,response){
-		response({result:false});
-		return true;
-	}.toString() +
-"\n]";
-
-				preset.script_callback = 
 "[\n\t" + 
 	function(info,response){
 		var element = info.element;
@@ -26680,162 +26977,6 @@ function PageExpand(page_expand_arguments){
 	}.toString() +
 "\n]";
 
-			// --------------------------------------------------------------------------------
-			// アクセスブロック定義
-			// --------------------------------------------------------------------------------
-			update(proj.access_block,"*",function(obj){
-				obj.filter = updateForAsteriskFilter(obj.filter);
-			});
-
-			// --------------------------------------------------------------------------------
-			// リファラ置換定義
-			// --------------------------------------------------------------------------------
-			update(proj.replacement_to_referer,"*",function(obj){
-				var filter = obj.filter;
-				var i;
-				var num = filter.length;
-				for(i=0;i<num;i++){
-					filter[i].filter = updateForAsteriskFilter(filter[i].filter);
-				}
-			});
-
-			// --------------------------------------------------------------------------------
-			// ユーザーエージェント置換定義
-			// --------------------------------------------------------------------------------
-			update(proj.replacement_to_useragent,"*",function(obj){
-				var filter = obj.filter;
-				var i;
-				var num = filter.length;
-				for(i=0;i<num;i++){
-					filter[i].filter = updateForAsteriskFilter(filter[i].filter);
-				}
-			});
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義
-			// --------------------------------------------------------------------------------
-			update(proj.replacement_to_link,"*",function(obj){
-				var filter = obj.filter;
-				var i;
-				var num = filter.length;
-				for(i=0;i<num;i++){
-					filter[i].filter = updateForAsteriskFilter(filter[i].filter);
-				}
-			});
-
-			// ウィキペディア用
-			var preset = getPreset(proj.replacement_to_link,"direct_link_wikipedia");
-			preset.filter[0].filter = {
-				type:"regexp",
-				asterisk:{
-					filter:[]
-				},
-				regexp:{
-					filter:[{
-						pattern:"^[^:]+://[^.]+\\.(|m\\.)(wikipedia|wikimedia|wiktionary|wikinews|wikiquote|wikibooks|wikisource|wikiversity|wikivoyage|mediawiki)\\.org/(wiki|w).*:.*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://en\\.uncyclopedia\\.co/(wiki|w).*:.*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://ansaikuropedia\\.org/(wiki|w).*:.*",
-						flags:{i:true,g:false}
-					}]
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// 短縮 URL 展開
-			// --------------------------------------------------------------------------------
-			update(proj.expand_short_url,"*",function(obj){
-				obj.filter = updateForAsteriskFilter(obj.filter);
-			});
-
-			// --------------------------------------------------------------------------------
-			// URLマッピング設定
-			// --------------------------------------------------------------------------------
-			update(proj.urlmap,"*",function(obj){
-				obj.filter = updateForAsteriskFilter(obj.filter);
-			});
-
-			// 画像検索サイト
-			var preset = getPreset(proj.urlmap,"image_search");
-			preset.filter = {
-				type:"regexp",
-				asterisk:{
-					filter:[]
-				},
-				regexp:{
-					filter:[{
-						pattern:"^[^:]+://[^.]+\\.google\\.(at|be|ca|ch|de|es|fr|it|nl|no|pl|ru|se|co\\.(id|in|jp|th|uk|za)|com|com\\.(ar|au|br|mx|sa|tr|tw))/(search[?].*tbm=isch|images[?]).*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://images\\.search\\.yahoo\\.com/search/images.*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://[^.]+\\.images\\.search\\.yahoo\\.com/search/images.*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://[^.]+\\.image\\.search\\.yahoo\\.com/search/images.*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://image\\.search\\.yahoo\\.co\\.jp/search[?].*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://image\\.yahoo\\.cn/s[?].*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://www\\.bing\\.com/images/search[?].*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://[^.]+\\.ask\\.com/pictures[?].*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://search\\.aol\\.(com|jp)/aol/image[?].*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://images\\.yandex\\.(ru|com)/.*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://bsearch\\.goo\\.ne\\.jp/(image|scrimg|similarity)\\.php[?].*MT=.*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://image\\.baidu\\.com/.*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://image\\.search\\.naver\\.com/.*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://[^.]*search\\.naver\\.jp/image[?].*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://image\\.search\\.biglobe\\.ne\\.jp/search[?].*",
-						flags:{i:true,g:false}
-					}]
-				}
-			};
-
-			// ウィキペディア
-			var preset = getPreset(proj.urlmap,"wikipedia");
-			preset.filter = {
-				type:"regexp",
-				asterisk:{
-					filter:[]
-				},
-				regexp:{
-					filter:[{
-						pattern:"^[^:]+://[^.]+\\.(|m\\.)(wikipedia|wikimedia|wiktionary|wikinews|wikiquote|wikibooks|wikisource|wikiversity|wikivoyage|mediawiki)\\.org/.*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://en\\.uncyclopedia\\.co/.*",
-						flags:{i:true,g:false}
-					},{
-						pattern:"^[^:]+://ansaikuropedia\\.org/.*",
-						flags:{i:true,g:false}
-					}]
-				}
-			};
-
 		}
 		if(exit())	return proj;
 
@@ -26847,8 +26988,7 @@ function PageExpand(page_expand_arguments){
 	// PageExpand デバッグ
 	// --------------------------------------------------------------------------------
 	function PageExpandDebug(){
-
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 解放
@@ -27103,7 +27243,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 表示をセット
 		// --------------------------------------------------------------------------------
-		_container.setVisible = function (type){
+		_this.setVisible = function (type){
 			_visible = type;
 			if(_visible){
 				// フレーム内では動作させない
@@ -27120,12 +27260,12 @@ function PageExpand(page_expand_arguments){
 		// テキスト（内部用）
 		// --------------------------------------------------------------------------------
 		function UI_Text(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// テキストをセット
 			// --------------------------------------------------------------------------------
-			_container.setText = function(value){
+			_this.setText = function(value){
 				if(_text != value){
 					_text = value;
 					DomNodeSetNodeValue(_node,_text);
@@ -27145,20 +27285,18 @@ function PageExpand(page_expand_arguments){
 				_node = DocumentCreateText("");
 				parent.appendChild(_node);
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// ブログレスバー（内部用）
 		// --------------------------------------------------------------------------------
 		function UI_ProgressBar(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
-			_container.setValue = function(value){
+			_this.setValue = function(value){
 				if(_now != value){
 					_now = value;
 					update();
@@ -27168,7 +27306,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 最大値をセット
 			// --------------------------------------------------------------------------------
-			_container.setMaximum = function(value){
+			_this.setMaximum = function(value){
 				if(_max != value){
 					_max = value;
 					update();
@@ -27209,8 +27347,6 @@ function PageExpand(page_expand_arguments){
 				ElementSetStyle(_bar,"height:2px; min-height:0; background-color :#888; margin:0px 0px 2px; width:0%; line-height:1.0;");
 				_mater.appendChild(_bar);
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -27228,8 +27364,6 @@ function PageExpand(page_expand_arguments){
 		(function(){
 			_visible = false;
 		})();
-
-		return _container;
 	}
 
 
@@ -27238,21 +27372,19 @@ function PageExpand(page_expand_arguments){
 	// PageExpand バックグラウンド Firefox 用
 	// --------------------------------------------------------------------------------
 	function PageExpandBackGroundForFirefox(){
-
-		var _container = new Object();
+		var _this = this;
 
 
 		// --------------------------------------------------------------------------------
-		// PageExpand バックグラウンド Firefox 用
+		// Worker 辞書
 		// --------------------------------------------------------------------------------
 		function WorkerDictionary(){
-
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// ワーカーを登録
 			// --------------------------------------------------------------------------------
-			_container.attachWorker = function(worker){
+			_this.attachWorker = function(worker){
 				var element = createElement(worker);
 				worker.on("detach",function(e){
 					element.release();
@@ -27262,10 +27394,10 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// タブからワーカーを取得
 			// --------------------------------------------------------------------------------
-			_container.getWorkerByTab = function(tab){
+			_this.getWorkerByTab = function(tab){
 				var a = new Array();
-				var element = _container._next;
-				while(element != _container){
+				var element = _this._next;
+				while(element != _this){
 					if(element.worker.tab == tab){
 						a.push(element.worker);
 					}
@@ -27297,7 +27429,7 @@ function PageExpand(page_expand_arguments){
 				// --------------------------------------------------------------------------------
 				(function(){
 					_element.worker = worker;
-					var _prev = _container;
+					var _prev = _this;
 					var _next = _prev._next;
 					_prev._next = _element;
 					_next._prev = _element;
@@ -27319,11 +27451,9 @@ function PageExpand(page_expand_arguments){
 			// 初期化
 			// --------------------------------------------------------------------------------
 			(function(){
-				_container._prev = _container;
-				_container._next = _container;
+				_this._prev = _this;
+				_this._next = _this;
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -27672,7 +27802,7 @@ function PageExpand(page_expand_arguments){
 								var i = 0;
 								var size = 1024 * 128;
 								var total = xhr.responseText.length;
-								function f(){
+								var f = function (){
 									sendResponse({type:"data",pos:i,total:total,data:xhr.responseText.substr(i,size)},{complete:false});
 
 									i += size;
@@ -27681,7 +27811,7 @@ function PageExpand(page_expand_arguments){
 										return;
 									}
 									sendResponse({type:"xhr",data:response},{complete:true});
-								}
+								};
 								execute_queue.attachLast(f,null);
 								break;
 							}
@@ -27726,7 +27856,7 @@ function PageExpand(page_expand_arguments){
 								var i = 0;
 								var size = 1024 * 128;
 								var total = xhr.text.length;
-								function f(){
+								var f = function (){
 									sendResponse({type:"data",pos:i,total:total,data:xhr.text.substr(i,size)},{complete:false});
 
 									i += size;
@@ -27735,7 +27865,7 @@ function PageExpand(page_expand_arguments){
 										return;
 									}
 									sendResponse({type:"xhr",data:response},{complete:true});
-								}
+								};
 								execute_queue.attachLast(f,null);
 							}
 						};
@@ -27802,7 +27932,7 @@ function PageExpand(page_expand_arguments){
 										var size = 1024 * 128;
 										var data = "data:" + xhr.getResponseHeader("Content-Type") + ";base64," + base64;
 										var total = data.length;
-										function f(){
+										var f = function (){
 											sendResponse({type:"data",pos:i,total:total,data:data.substr(i,size)},{complete:false});
 
 											i += size;
@@ -27811,7 +27941,7 @@ function PageExpand(page_expand_arguments){
 												return;
 											}
 											sendResponse({type:"xhr",data:response},{complete:true});
-										}
+										};
 										execute_queue.attachLast(f,null);
 									});
 								}else{
@@ -27861,7 +27991,7 @@ function PageExpand(page_expand_arguments){
 									var size = 1024 * 128;
 									var data = "data:" + xhr.headers["Content-Type"] + ";base64," + base64;
 									var total = data.length;
-									function f(){
+									var f = function (){
 										sendResponse({type:"data",pos:i,total:total,data:data.substr(i,size)},{complete:false});
 
 										i += size;
@@ -27870,7 +28000,7 @@ function PageExpand(page_expand_arguments){
 											return;
 										}
 										sendResponse({type:"xhr",data:response},{complete:true});
-									}
+									};
 									execute_queue.attachLast(f,null);
 								});
 							}
@@ -27893,6 +28023,87 @@ function PageExpand(page_expand_arguments){
 							break;
 						}
 					}
+				};
+				if(param.single){
+					loader_queue_element.attachSingle();
+				}else{
+					loader_queue_element.attachLast();
+				}
+			};
+
+			// ダウンロード
+			command_dictionary["download"] = function(param,sender,sendResponse){
+				var loader_queue_element = loader_queue.createElement();
+				loader_queue_element.onstart = function(){
+					var request = param.request;
+
+					var Downloads = Modules_Import_Downloads();
+					var OS = Modules_Import_osfile();
+
+					// 完了
+					function complete(result){
+						loader_queue_element.complete();
+						loader_queue_element.release();
+						sendResponse({result:result},{complete:true});
+					}
+
+					// ダウンロード開始
+					function download(file_name){
+						var promise = Downloads.createDownload({
+							source:request.url,
+							target:file_name
+						});
+						promise.then(function (download) {
+							download.start();
+							complete(true);
+						});
+					}
+
+					if(Downloads && OS){
+					}else{
+						complete(false);
+						return;
+					}
+
+					try{
+						if(request.saveAs){
+							var file_picker = XPCOM_Create_nsIFilePicker();
+							if(file_picker){
+								var window_utils = FirefoxAddonGetWindowUtils();
+								if(window_utils){
+									var dom_window = window_utils.getMostRecentBrowserWindow();
+									file_picker.init(dom_window, "Download by PageExpand", file_picker.modeSave);
+									file_picker.open(function(){
+										var file = file_picker.file;
+										var path = file.path;
+										download(path);
+									});
+									return;
+								}
+							}
+						}else{
+							// ダウンロードディレクトリ
+							Downloads.getSystemDownloadsDirectory().then(function (path) {
+								// ネイティプに変換
+								var file_name = OS.Path.join(path,"PageExpand");
+								var ary = request.file_name.split(new RegExp("[/\\\\]+","i"));
+								var i;
+								var num = ary.length;
+								for(i=0;i<num;i++){
+									if(ary[i]){
+										// フォルダを作成
+										OS.File.makeDir(file_name);
+										file_name = OS.Path.join(file_name,ary[i]);
+									}
+								}
+								download(file_name);
+							});
+							return;
+						}
+					}catch(e){
+					}
+
+					complete(false);
 				};
 				if(param.single){
 					loader_queue_element.attachSingle();
@@ -28120,8 +28331,6 @@ function PageExpand(page_expand_arguments){
 			});
 
 		})();
-
-		return _container;
 	}
 
 
@@ -28138,14 +28347,14 @@ function PageExpand(page_expand_arguments){
 		// メニューアイテム
 		// --------------------------------------------------------------------------------
 		function MenuItemCreate(label,id){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 通常状態
 			// --------------------------------------------------------------------------------
-			_container.normal = function(){
-				_item.onmouseout = _container.normal;
-				_item.onmouseover = _container.over;
+			_this.normal = function(){
+				_item.onmouseout = _this.normal;
+				_item.onmouseover = _this.over;
 				_item.onmousedown = click;
 				_style.fontSize = "12px";
 				_style.width = "230px";
@@ -28161,8 +28370,8 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// マウスオーバー状態
 			// --------------------------------------------------------------------------------
-			_container.over = function(){
-				_container.normal();
+			_this.over = function(){
+				_this.normal();
 				_style.width = "240px";
 
 				_brightness = 0.9375;
@@ -28172,7 +28381,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 選択状態
 			// --------------------------------------------------------------------------------
-			_container.active = function(){
+			_this.active = function(){
 				_item.onmouseover = null;
 				_item.onmouseout = null;
 				_item.onmousedown = null;
@@ -28213,7 +28422,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// サポート状態をセット
 			// --------------------------------------------------------------------------------
-			_container.setSupport = function(type){
+			_this.setSupport = function(type){
 				if(type)	_item.style.color = "#000";
 				else		_item.style.color = "#888";
 			};
@@ -28221,7 +28430,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 背景カラーをセット
 			// --------------------------------------------------------------------------------
-			_container.setBackgroundColor = function(argb){
+			_this.setBackgroundColor = function(argb){
 				_color = argb;
 				updateBackgroundColor();
 			};
@@ -28269,8 +28478,6 @@ function PageExpand(page_expand_arguments){
 			_color = 0xFFFFFFFF;
 			_brightness = 1.0;
 			updateBackgroundColor();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -28311,7 +28518,7 @@ function PageExpand(page_expand_arguments){
 			_history_state.selected_menu = id;
 
 			if(param.callback){
-				return param.callback();
+				return (new param.callback());
 			}
 
 			return null;
@@ -28336,7 +28543,7 @@ function PageExpand(page_expand_arguments){
 		// 基本設定
 		// --------------------------------------------------------------------------------
 		function ContentSettingStandard(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -28353,6 +28560,9 @@ function PageExpand(page_expand_arguments){
 			var _stepper_load_thread_max;
 			var _stepper_execute_queue_time_occupancy;
 			var _stepper_execute_queue_sleep_time;
+			var _button_storage_sync_load;
+			var _button_storage_sync_save;
+			var _button_storage_sync_delete;
 			var _button_export;
 			var _button_import;
 			var _button_reset;
@@ -28369,7 +28579,7 @@ function PageExpand(page_expand_arguments){
 				// 動作を制限する
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_setting_standard_filter_url"));
 				var parent = container.getElement();
-				_combo_box_filter_url = UI_ComboBox(parent);
+				_combo_box_filter_url = new UI_ComboBox(parent);
 				_combo_box_filter_url.attachItem(_i18n.getMessage("menu_setting_standard_filter_url_combo_box_item_deny"),"deny");
 				_combo_box_filter_url.attachItem(_i18n.getMessage("menu_setting_standard_filter_url_combo_box_item_allow"),"allow");
 				_combo_box_filter_url.onchange = function(v){
@@ -28377,7 +28587,7 @@ function PageExpand(page_expand_arguments){
 					filterTypeUpdate();
 					projectModify();
 				};
-				_text_area_filter_url = UI_TextArea(parent);
+				_text_area_filter_url = new UI_TextArea(parent);
 				_text_area_filter_url.oninput = function(v){
 					var filter = _text_area_filter_url.spiritByLine();
 					switch(standard.filter_type){
@@ -28390,7 +28600,7 @@ function PageExpand(page_expand_arguments){
 					}
 					projectModify();
 				};
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_standard_filter_url_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_standard_filter_url_hint"));
 
 				// 基本設定
 				var container = new UI_InlineContainer(_content_window,_i18n.getMessage("menu_setting_standard_check_box_container"));
@@ -28398,35 +28608,35 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// アドレスバーアイコンが有効であるか
-				_check_box_enable_icon_address_bar = UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_icon_address_bar"));
+				_check_box_enable_icon_address_bar = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_icon_address_bar"));
 				_check_box_enable_icon_address_bar.onchange = function(v){
 					standard.enable_icon_address_bar = v;
 					projectModify();
 				};
 
 				// コンテキストメニューが有効か
-				_check_box_enable_context_menu = UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_context_menu"));
+				_check_box_enable_context_menu = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_context_menu"));
 				_check_box_enable_context_menu.onchange = function(v){
 					standard.enable_context_menu = v;
 					projectModify();
 				};
 
 				// ロード完了時から動作を開始するか
-				_check_box_enable_startup = UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_startup"));
+				_check_box_enable_startup = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_startup"));
 				_check_box_enable_startup.onchange = function(v){
 					standard.enable_startup = v;
 					projectModify();
 				};
 
 				// デバッグモードが有効であるか
-				_check_box_enable_debug_mode = UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_debug_mode"));
+				_check_box_enable_debug_mode = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_debug_mode"));
 				_check_box_enable_debug_mode.onchange = function(v){
 					standard.enable_debug_mode = v;
 					projectModify();
 				};
 
 				// ログ出力が有効であるか
-				_check_box_enable_output_log = UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_output_log"));
+				_check_box_enable_output_log = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_output_log"));
 				_check_box_enable_output_log.onchange = function(v){
 					standard.enable_output_log = v;
 					projectModify();
@@ -28438,8 +28648,8 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// 最大同時ダウンロード数
-				UI_Text(parent,_i18n.getMessage("menu_setting_standard_load_thread_max"));
-				_stepper_load_thread_max = UI_NumericStepper(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_standard_load_thread_max"));
+				_stepper_load_thread_max = new UI_NumericStepper(parent);
 				_stepper_load_thread_max.setMinimum(1);
 				_stepper_load_thread_max.setMaximum(99999);
 				_stepper_load_thread_max.oninput = function(v){
@@ -28453,14 +28663,14 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// タッチ操作を有効
-				_check_box_enable_input_touch = UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_input_touch"));
+				_check_box_enable_input_touch = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_input_touch"));
 				_check_box_enable_input_touch.onchange = function(v){
 					standard.enable_input_touch = v;
 					projectModify();
 				};
 
 				// ダブルタッチ補助線を表示
-				_check_box_enable_double_touch_assist = UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_double_touch_assist"));
+				_check_box_enable_double_touch_assist = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_double_touch_assist"));
 				_check_box_enable_double_touch_assist.onchange = function(v){
 					standard.enable_double_touch_assist = v;
 					projectModify();
@@ -28472,8 +28682,8 @@ function PageExpand(page_expand_arguments){
 
 				// 最大CPU占有時間
 				var parent = container.getElement();
-				UI_Text(parent,_i18n.getMessage("menu_setting_standard_execute_queue_time_occupancy"));
-				_stepper_execute_queue_time_occupancy = UI_NumericStepper(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_standard_execute_queue_time_occupancy"));
+				_stepper_execute_queue_time_occupancy = new UI_NumericStepper(parent);
 				_stepper_execute_queue_time_occupancy.setMinimum(0);
 				_stepper_execute_queue_time_occupancy.setMaximum(5000);
 				_stepper_execute_queue_time_occupancy.oninput = function(v){
@@ -28481,26 +28691,26 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 				// スリープ時間
-				UI_Text(parent,_i18n.getMessage("menu_setting_standard_execute_queue_time_sleep"));
-				_stepper_execute_queue_sleep_time = UI_NumericStepper(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_standard_execute_queue_time_sleep"));
+				_stepper_execute_queue_sleep_time = new UI_NumericStepper(parent);
 				_stepper_execute_queue_sleep_time.setMinimum(0);
 				_stepper_execute_queue_sleep_time.setMaximum(1000);
 				_stepper_execute_queue_sleep_time.oninput = function(v){
 					standard.execute_queue.time_sleep = v;
 					projectModify();
 				};
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_standard_execute_queue_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_standard_execute_queue_hint"));
 
 				// 設定のエクスポート / インポート
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_setting_standard_export_import"));
 				var parent = container.getElement();
 
 				// エクスポート
-				_button_export = UI_InlineButton(parent,_i18n.getMessage("menu_setting_standard_export_button"));
+				_button_export = new UI_InlineButton(parent,_i18n.getMessage("menu_setting_standard_export_button"));
 				_button_export.onclick = function(){
 
 					// モーダルダイアログ作成
-					var dialog = UI_ModalDialog(_content_window);
+					var dialog = new UI_ModalDialog(_content_window);
 					var dialog_parent = dialog.getElement();
 
 					// タイトル
@@ -28509,12 +28719,12 @@ function PageExpand(page_expand_arguments){
 					var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_standard_export_dialog_export"));
 					var parent = container.getElement();
 
-					var text_area = UI_TextArea(parent);
+					var text_area = new UI_TextArea(parent);
 
-					UI_TextHint(parent,_i18n.getMessage("menu_setting_standard_export_dialog_export_hint"));
+					new UI_TextHint(parent,_i18n.getMessage("menu_setting_standard_export_dialog_export_hint"));
 
 					// Ok ボタン
-					var yes_no_button = UI_OkButton(dialog_parent);
+					var yes_no_button = new UI_OkButton(dialog_parent);
 					yes_no_button.setEnable(false);
 					yes_no_button.onclick = function(v){
 						// ダイアログ終了
@@ -28537,11 +28747,11 @@ function PageExpand(page_expand_arguments){
 				};
 
 				// インポート
-				_button_import = UI_InlineButton(parent,_i18n.getMessage("menu_setting_standard_import_button"));
+				_button_import = new UI_InlineButton(parent,_i18n.getMessage("menu_setting_standard_import_button"));
 				_button_import.onclick = function(){
 
 					// モーダルダイアログ作成
-					var dialog = UI_ModalDialog(_content_window);
+					var dialog = new UI_ModalDialog(_content_window);
 					var dialog_parent = dialog.getElement();
 
 					// タイトル
@@ -28550,7 +28760,7 @@ function PageExpand(page_expand_arguments){
 					// 名前
 					var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_standard_import_dialog_explanation"));
 					var parent = container.getElement();
-					var unordered_list = UI_UnorderedList(parent);
+					var unordered_list = new UI_UnorderedList(parent);
 					unordered_list.addListItem(_i18n.getMessage("menu_setting_standard_import_dialog_explanation_0"));
 					unordered_list.addListItem(_i18n.getMessage("menu_setting_standard_import_dialog_explanation_1"));
 					unordered_list.addListItem(_i18n.getMessage("menu_setting_standard_import_dialog_explanation_2"));
@@ -28558,79 +28768,170 @@ function PageExpand(page_expand_arguments){
 					var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_standard_import_dialog_import"));
 					var parent = container.getElement();
 
-					var text_area_import = UI_TextArea(parent);
+					var text_area_import = new UI_TextArea(parent);
 
-					UI_TextHint(parent,_i18n.getMessage("menu_setting_standard_import_dialog_import_hint"));
+					new UI_TextHint(parent,_i18n.getMessage("menu_setting_standard_import_dialog_import_hint"));
 
 					// 実行しますか？
 					var container = new UI_LineContainer(dialog_parent,null);
 					var parent = container.getElement();
-					UI_Text(parent,_i18n.getMessage("menu_setting_standard_import_dialog_confirm"));
+					new UI_Text(parent,_i18n.getMessage("menu_setting_standard_import_dialog_confirm"));
 
 					// Yes No ボタン
-					var yes_no_button = UI_YesNoButton(dialog_parent);
+					var yes_no_button = new UI_YesNoButton(dialog_parent);
 					yes_no_button.onclick = function(v){
 
-						if(v){
-							function ImportFailure(message){
+						if(!v){
+							// ダイアログ終了
+							dialog.close();
+							return;
+						}
+
+						function ImportFailure(message){
+							// 結果を表示
+							var alert_dialog = new UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_standard_import_alert"));
+							new UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_standard_import_alert_failure"));
+							new UI_Text(alert_dialog.getElement(),message);
+							alert_dialog.oncomplete = function(){
+								// ダイアログ終了
+								dialog.close();
+							};
+							alert_dialog.open();
+						}
+
+						try{
+							var proj_obj = page_expand_project.getObject();
+							var proj_new = new PageExpandProject();
+							var import_obj = JsonParse(text_area_import.getValue());
+
+							// バージョンが一致しない
+							if(import_obj.version > proj_obj.version){
+								throw "Error: It is a version not supported.";
+							}
+
+							// 出力タイプチェック
+							var error = true;
+							try{
+								// v1.0.3 以前
+								if(!(import_obj.setting_export)){
+									error = false;
+								}else{
+									switch(import_obj.setting_export.type){
+									case "setting":
+										error = false;
+										break;
+									}
+								}
+							}catch(e){}
+
+							if(error){
+								throw "Error: It is a type not supported.";
+							}
+
+							delete import_obj.setting_export;
+
+							// プリセットを付加
+							import_obj = PageExpandProjectObjectAppendPreset(import_obj);
+
+							proj_new.importObject(import_obj);
+							page_expand_project = proj_new;
+							projectSave(function(e){
+								if(!e.result){
+									ImportFailure(e.message);
+									return;
+								}
+
+								text_area_import.setValue("");
+
 								// 結果を表示
-								var alert_dialog = UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_standard_import_alert"));
-								UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_standard_import_alert_failure"));
-								UI_Text(alert_dialog.getElement(),message);
+								var alert_dialog = new UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_standard_import_alert"));
+								new UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_standard_import_alert_success"));
 								alert_dialog.oncomplete = function(){
+
+									// フェードアウト完了後
+									dialog.oncomplete = function(){
+
+										// PageExpandConfig を再構築
+										initialize();
+
+										// 基本設定を選択
+										_config.MenuItemSelect(PageExpandConfig.MENU_TYPE_SETTING_STANDARD);
+
+									};
+
 									// ダイアログ終了
 									dialog.close();
 								};
 								alert_dialog.open();
-							}
+							});
 
-							try{
-								var proj_obj = page_expand_project.getObject();
-								var proj_new = new PageExpandProject();
-								var import_obj = JsonParse(text_area_import.getValue());
+						}catch(e){
+							ImportFailure(e);
+						}
+					};
 
-								// バージョンが一致しない
-								if(import_obj.version > proj_obj.version){
-									throw "Error: It is a version not supported.";
-								}
+					// ダイアログ開始
+					dialog.open();
+				};
 
-								// 出力タイプチェック
-								var error = true;
-								try{
-									// v1.0.3 以前
-									if(!(import_obj.setting_export)){
-										error = false;
-									}else{
-										switch(import_obj.setting_export.type){
-										case "setting":
-											error = false;
-											break;
-										}
-									}
-								}catch(e){}
 
-								if(error){
-									throw "Error: It is a type not supported.";
-								}
+				// 設定の初期化
+				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_setting_standard_reset"));
+				var parent = container.getElement();
+				_button_reset = new UI_LineButton(parent,_i18n.getMessage("menu_setting_standard_reset_button"));
+				_button_reset.onclick = function(){
+					// モーダルダイアログ作成
+					var dialog = new UI_ModalDialog(_content_window);
+					var dialog_parent = dialog.getElement();
 
-								delete import_obj.setting_export;
+					// タイトル
+					var title = new UI_Title(dialog_parent,_i18n.getMessage("menu_setting_standard_reset_dialog"));
 
-								// プリセットを付加
-								import_obj = PageExpandProjectObjectAppendPreset(import_obj);
+					// 名前
+					var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_standard_reset_dialog_explanation"));
+					var parent = container.getElement();
+					var unordered_list = new UI_UnorderedList(parent);
+					unordered_list.addListItem(_i18n.getMessage("menu_setting_standard_reset_dialog_explanation_0"));
+					unordered_list.addListItem(_i18n.getMessage("menu_setting_standard_reset_dialog_explanation_1"));
+					new UI_Text(parent,_i18n.getMessage("menu_setting_standard_reset_dialog_confirm"));
 
-								proj_new.importObject(import_obj);
-								page_expand_project = proj_new;
+					// Yes No ボタン
+					var yes_no_button = new UI_YesNoButton(dialog_parent);
+					yes_no_button.onclick = function(v){
+
+						if(!v){
+							// ダイアログ終了
+							dialog.close();
+							return;
+						}
+
+						function LocalStorageDeleteFailure(message){
+							// 結果を表示
+							var alert_dialog = new UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_standard_reset_alert"));
+							new UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_standard_reset_alert_failure"));
+							new UI_Text(alert_dialog.getElement(),message);
+							alert_dialog.oncomplete = function(){
+								// ダイアログ終了
+								dialog.close();
+							};
+							alert_dialog.open();
+						}
+
+						try{
+							// プロジェクトを破棄
+							projectDelete(function(result){
+
+								page_expand_project = new PageExpandProject();
+								page_expand_project.initialize();
 								projectSave(function(e){
 									if(!e.result){
-										ImportFailure(e.message);
+										LocalStorageDeleteFailure(e.message);
 										return;
 									}
 
-									text_area_import.setValue("");
-
 									// 結果を表示
-									var alert_dialog = UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_standard_import_alert"));
-									UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_standard_import_alert_success"));
+									var alert_dialog = new UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_standard_reset_alert"));
+									new UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_standard_reset_alert_success"));
 									alert_dialog.oncomplete = function(){
 
 										// フェードアウト完了後
@@ -28649,98 +28950,10 @@ function PageExpand(page_expand_arguments){
 									};
 									alert_dialog.open();
 								});
+							});
 
-							}catch(e){
-								ImportFailure(e);
-							}
-						}else{
-							// ダイアログ終了
-							dialog.close();
-						}
-					};
-
-					// ダイアログ開始
-					dialog.open();
-				};
-
-
-				// 設定の初期化
-				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_setting_standard_reset"));
-				var parent = container.getElement();
-				_button_reset = UI_LineButton(parent,_i18n.getMessage("menu_setting_standard_reset_button"));
-				_button_reset.onclick = function(){
-					// モーダルダイアログ作成
-					var dialog = UI_ModalDialog(_content_window);
-					var dialog_parent = dialog.getElement();
-
-					// タイトル
-					var title = new UI_Title(dialog_parent,_i18n.getMessage("menu_setting_standard_reset_dialog"));
-
-					// 名前
-					var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_standard_reset_dialog_explanation"));
-					var parent = container.getElement();
-					var unordered_list = UI_UnorderedList(parent);
-					unordered_list.addListItem(_i18n.getMessage("menu_setting_standard_reset_dialog_explanation_0"));
-					unordered_list.addListItem(_i18n.getMessage("menu_setting_standard_reset_dialog_explanation_1"));
-					UI_Text(parent,_i18n.getMessage("menu_setting_standard_reset_dialog_confirm"));
-
-					// Yes No ボタン
-					var yes_no_button = UI_YesNoButton(dialog_parent);
-					yes_no_button.onclick = function(v){
-						if(v){
-							function LocalStorageDeleteFailure(message){
-								// 結果を表示
-								var alert_dialog = UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_standard_reset_alert"));
-								UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_standard_reset_alert_failure"));
-								UI_Text(alert_dialog.getElement(),message);
-								alert_dialog.oncomplete = function(){
-									// ダイアログ終了
-									dialog.close();
-								};
-								alert_dialog.open();
-							}
-
-							try{
-								// プロジェクトを破棄
-								projectDelete(function(result){
-
-									page_expand_project = new PageExpandProject();
-									page_expand_project.initialize();
-									projectSave(function(e){
-										if(!e.result){
-											LocalStorageDeleteFailure(e.message);
-											return;
-										}
-
-										// 結果を表示
-										var alert_dialog = UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_standard_reset_alert"));
-										UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_standard_reset_alert_success"));
-										alert_dialog.oncomplete = function(){
-
-											// フェードアウト完了後
-											dialog.oncomplete = function(){
-
-												// PageExpandConfig を再構築
-												initialize();
-
-												// 基本設定を選択
-												_config.MenuItemSelect(PageExpandConfig.MENU_TYPE_SETTING_STANDARD);
-
-											};
-
-											// ダイアログ終了
-											dialog.close();
-										};
-										alert_dialog.open();
-									});
-								});
-
-							}catch(e){
-								LocalStorageDeleteFailure(e);
-							}
-						}else{
-							// ダイアログ終了
-							dialog.close();
+						}catch(e){
+							LocalStorageDeleteFailure(e);
 						}
 					};
 
@@ -28793,20 +29006,18 @@ function PageExpand(page_expand_arguments){
 				_stepper_execute_queue_sleep_time.setValue(standard.execute_queue.time_sleep);
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// スレッド掲示板拡張設定
 		// --------------------------------------------------------------------------------
 		function ContentSettingExpandBbs(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// URLからリストを選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromURL = function(url){
+			_this.selectFromURL = function(url){
 				var expand_bbs = page_expand_project.getObject().expand_bbs;
 				var i;
 				var j;
@@ -28849,14 +29060,14 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_expand_bbs_list.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_expand_bbs_list.replaceHistory();
 			};
 
@@ -28942,7 +29153,7 @@ function PageExpand(page_expand_arguments){
 				// 掲示板拡張設定一覧
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_setting_expand_bbs_list"));
 				var parent = container.getElement();
-				_expand_bbs_list = UI_ExpandBbsList(parent);
+				_expand_bbs_list = new UI_ExpandBbsList(parent);
 				_expand_bbs_list.attachExpandBbsData(expand_bbs);
 				_expand_bbs_list.onselect = function(id){
 					if(id < 0 || expand_bbs.length <= id){
@@ -28964,7 +29175,7 @@ function PageExpand(page_expand_arguments){
 				// 名前
 				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_expand_bbs_name"));
 				var parent = container.getElement();
-				_text_input_name = UI_TextInput(parent);
+				_text_input_name = new UI_TextInput(parent);
 				_text_input_name.oninput = function(v){
 					getSelectedExpandBbs(function(c){
 						LocaleObjectSetString(c.name,v);
@@ -28978,7 +29189,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// 有効であるか
-				_check_box_enable_expand_bbs = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_bbs_enable_setting"));
+				_check_box_enable_expand_bbs = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_bbs_enable_setting"));
 				_check_box_enable_expand_bbs.onchange = function(v){
 					getSelectedExpandBbs(function(c){
 						c.enable = v;
@@ -28995,7 +29206,7 @@ function PageExpand(page_expand_arguments){
 				// 動作URLの設定
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_filter_url"));
 				var parent = container.getElement();
-				_url_edit_container = UI_UrlEditContainer(parent);
+				_url_edit_container = new UI_UrlEditContainer(parent);
 				_url_edit_container.onchange = function(v){
 					getSelectedExpandBbs(function(c){
 						c.filter = ObjectCopy(v);
@@ -29009,7 +29220,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// ポップアップ時のアニメーション動作を有効
-				_check_box_popup_enable_animation = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_enable_animation"));
+				_check_box_popup_enable_animation = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_enable_animation"));
 				_check_box_popup_enable_animation.onchange = function(v){
 					getSelectedExpandBbs(function(c){
 						c.popup.enable_animation = v;
@@ -29021,7 +29232,7 @@ function PageExpand(page_expand_arguments){
 				// ポップアップの配置基点
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_popup_origin_type"));
 				var parent = container.getElement();
-				_combo_box_popup_origin_type = UI_ComboBox(parent);
+				_combo_box_popup_origin_type = new UI_ComboBox(parent);
 				_combo_box_popup_origin_type.attachItem(_i18n.getMessage("menu_setting_expand_bbs_popup_origin_type_combo_box_item_adsorb_top_bottom"),"adsorb_top_bottom");
 				_combo_box_popup_origin_type.attachItem(_i18n.getMessage("menu_setting_expand_bbs_popup_origin_type_combo_box_item_adsorb_left_right"),"adsorb_left_right");
 				_combo_box_popup_origin_type.onchange = function(v){
@@ -29035,7 +29246,7 @@ function PageExpand(page_expand_arguments){
 				// ポップアップの配置位置
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_popup_position_type"));
 				var parent = container.getElement();
-				_combo_box_popup_position_type = UI_ComboBox(parent);
+				_combo_box_popup_position_type = new UI_ComboBox(parent);
 				_combo_box_popup_position_type.attachItem(_i18n.getMessage("menu_setting_expand_bbs_popup_position_type_combo_box_item_absolute"),"absolute");
 				_combo_box_popup_position_type.attachItem(_i18n.getMessage("menu_setting_expand_bbs_popup_position_type_combo_box_item_fixed"),"fixed");
 				_combo_box_popup_position_type.onchange = function(v){
@@ -29050,8 +29261,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_popup_percent"));
 				var parent = container.getElement();
 				// 横方向パーセント (0～100)
-				UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_percent_h"));
-				_stepper_popup_percent_h = UI_NumericStepper(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_percent_h"));
+				_stepper_popup_percent_h = new UI_NumericStepper(parent);
 				_stepper_popup_percent_h.setMinimum(0);
 				_stepper_popup_percent_h.setMaximum(100);
 				_stepper_popup_percent_h.oninput = function(v){
@@ -29062,8 +29273,8 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 				// 縦方向パーセント (0～100)
-				UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_percent_v"));
-				_stepper_popup_percent_v = UI_NumericStepper(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_percent_v"));
+				_stepper_popup_percent_v = new UI_NumericStepper(parent);
 				_stepper_popup_percent_v.setMinimum(0);
 				_stepper_popup_percent_v.setMaximum(100);
 				_stepper_popup_percent_v.oninput = function(v){
@@ -29078,8 +29289,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_popup_time"));
 				var parent = container.getElement();
 				// 開くまでに待機する時間（ミリ秒）
-				UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_time_wait_open"));
-				_stepper_popup_time_wait_open = UI_NumericStepper(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_time_wait_open"));
+				_stepper_popup_time_wait_open = new UI_NumericStepper(parent);
 				_stepper_popup_time_wait_open.setMinimum(0);
 				_stepper_popup_time_wait_open.setMaximum(9999999);
 				_stepper_popup_time_wait_open.oninput = function(v){
@@ -29090,8 +29301,8 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 				// 閉じるまでに待機する時間（ミリ秒）
-				UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_time_wait_close"));
-				_stepper_popup_time_wait_close = UI_NumericStepper(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_time_wait_close"));
+				_stepper_popup_time_wait_close = new UI_NumericStepper(parent);
 				_stepper_popup_time_wait_close.setMinimum(0);
 				_stepper_popup_time_wait_close.setMaximum(9999999);
 				_stepper_popup_time_wait_close.oninput = function(v){
@@ -29105,7 +29316,7 @@ function PageExpand(page_expand_arguments){
 				// ポップアップのスタイル
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_popup_style_sheet"));
 				var parent = container.getElement();
-				_text_input_popup_style_sheet = UI_TextInput(parent);
+				_text_input_popup_style_sheet = new UI_TextInput(parent);
 				_text_input_popup_style_sheet.oninput = function(v){
 					getSelectedExpandBbs(function(c){
 						c.popup.style_sheet = v;
@@ -29117,7 +29328,7 @@ function PageExpand(page_expand_arguments){
 				// 初期化スクリプト
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_script_initialize"));
 				var parent = container.getElement();
-				_text_area_script_initialize = UI_ScriptArea(parent);
+				_text_area_script_initialize = new UI_ScriptArea(parent);
 				_text_area_script_initialize.oninput = function(v){
 					getSelectedExpandBbs(function(c){
 						c.script_initialize = v;
@@ -29129,7 +29340,7 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_script_callback"));
 				var parent = container.getElement();
-				_text_area_script_callback = UI_ScriptArea(parent);
+				_text_area_script_callback = new UI_ScriptArea(parent);
 				_text_area_script_callback.oninput = function(v){
 					getSelectedExpandBbs(function(c){
 						c.script_callback = v;
@@ -29139,20 +29350,18 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// URLマッピング設定
 		// --------------------------------------------------------------------------------
 		function ContentSettingUrlMap(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// URLからリストを選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromURL = function(url){
+			_this.selectFromURL = function(url){
 				var urlmap = page_expand_project.getObject().urlmap;
 				var i;
 				var j;
@@ -29195,14 +29404,14 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_urlmap_list.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_urlmap_list.replaceHistory();
 			};
 
@@ -29328,7 +29537,7 @@ function PageExpand(page_expand_arguments){
 				// URLマッピング設定一覧
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_setting_urlmap_list"));
 				var parent = container.getElement();
-				_urlmap_list = UI_UrlMapList(parent);
+				_urlmap_list = new UI_UrlMapList(parent);
 				_urlmap_list.attachUrlMapData(urlmap);
 				_urlmap_list.onselect = function(id){
 					if(id < 0 || urlmap.length <= id){
@@ -29347,7 +29556,7 @@ function PageExpand(page_expand_arguments){
 				// URLマッピング設定名
 				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_urlmap_name"));
 				var parent = container.getElement();
-				_text_input_name = UI_TextInput(parent);
+				_text_input_name = new UI_TextInput(parent);
 				_text_input_name.oninput = function(v){
 					getSelectedUrlMaps(function(c){
 						LocaleObjectSetString(c.name,v);
@@ -29361,7 +29570,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// 有効であるか
-				_check_box_enable_urlmap = UI_CheckBox(parent,_i18n.getMessage("menu_setting_urlmap_enable_setting"));
+				_check_box_enable_urlmap = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_urlmap_enable_setting"));
 				_check_box_enable_urlmap.onchange = function(v){
 					getSelectedUrlMaps(function(c){
 						c.enable = v;
@@ -29378,7 +29587,7 @@ function PageExpand(page_expand_arguments){
 				// 動作 URL
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_urlmap_filter_url"));
 				var parent = container.getElement();
-				_url_edit_container = UI_UrlEditContainer(parent);
+				_url_edit_container = new UI_UrlEditContainer(parent);
 				_url_edit_container.onchange = function(v){
 					getSelectedUrlMaps(function(c){
 						c.filter = ObjectCopy(v);
@@ -29392,7 +29601,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// アンセキュア
-				_check_box_enable_unsecure = UI_CheckBox(parent,_i18n.getMessage("menu_setting_urlmap_enable_unsecure"));
+				_check_box_enable_unsecure = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_urlmap_enable_unsecure"));
 				_check_box_enable_unsecure.onchange = function(v){
 					getSelectedUrlMaps(function(c){
 						c.enable_unsecure = v;
@@ -29400,10 +29609,10 @@ function PageExpand(page_expand_arguments){
 					_urlmap_list.update();
 					projectModify();
 				};
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_urlmap_enable_unsecure_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_urlmap_enable_unsecure_hint"));
 
 				// 混在コンテンツ
-				_check_box_enable_mixed_content = UI_CheckBox(parent,_i18n.getMessage("menu_setting_urlmap_enable_mixed_content"));
+				_check_box_enable_mixed_content = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_urlmap_enable_mixed_content"));
 				_check_box_enable_mixed_content.onchange = function(v){
 					getSelectedUrlMaps(function(c){
 						c.enable_mixed_content = v;
@@ -29411,7 +29620,7 @@ function PageExpand(page_expand_arguments){
 					_urlmap_list.update();
 					projectModify();
 				};
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_urlmap_enable_mixed_content_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_urlmap_enable_mixed_content_hint"));
 
 				// 定義
 				_ui_define = new Array();
@@ -29435,7 +29644,7 @@ function PageExpand(page_expand_arguments){
 
 						switch(param.select){
 						case "single":
-							var combo_box = UI_ComboBoxButton(parent,_i18n.getMessage("menu_setting_urlmap_define_button_edit"));
+							var combo_box = new UI_ComboBoxButton(parent,_i18n.getMessage("menu_setting_urlmap_define_button_edit"));
 							_ui_define.push(combo_box);
 
 							// 定義リストを登録
@@ -29476,7 +29685,7 @@ function PageExpand(page_expand_arguments){
 							};
 							break;
 						case "multiple":
-							var multi_list = UI_DefineMultiSelectList(parent);
+							var multi_list = new UI_DefineMultiSelectList(parent);
 							_ui_define.push(multi_list);
 
 							multi_list.setAsset(param.asset);
@@ -29490,34 +29699,32 @@ function PageExpand(page_expand_arguments){
 					})();
 				}
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// 定義関連のクラス
 		// --------------------------------------------------------------------------------
 		function ContentSettingDefine(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_define_list.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_define_list.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_define_list.replaceHistory();
 			};
 
@@ -29538,30 +29745,30 @@ function PageExpand(page_expand_arguments){
 				// 名前
 				_text_input_name.setValue(LocaleObjectGetString(c.name));
 
-				_container.onselect(id);
+				_this.onselect(id);
 			}
 
 			// --------------------------------------------------------------------------------
 			// 更新
 			// --------------------------------------------------------------------------------
-			_container.update = function(){
+			_this.update = function(){
 				_define_list.update();
 			};
 
 			// --------------------------------------------------------------------------------
 			// 選択イベント
 			// --------------------------------------------------------------------------------
-			_container.onselect = function(){};
+			_this.onselect = function(){};
 
 			// --------------------------------------------------------------------------------
 			// リロードイベント
 			// --------------------------------------------------------------------------------
-			_container.onreload = function(){};
+			_this.onreload = function(){};
 
 			// --------------------------------------------------------------------------------
 			// データを関連付け
 			// --------------------------------------------------------------------------------
-			_container.attachDefineData = function(data){
+			_this.attachDefineData = function(data){
 				_define = data;
 
 				// リスト選択時
@@ -29583,35 +29790,35 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 定義の識別名をセット
 			// --------------------------------------------------------------------------------
-			_container.setDefineAssetName = function(asset){
+			_this.setDefineAssetName = function(asset){
 				_define_list.setDefineAssetName(asset);
 			};
 
 			// --------------------------------------------------------------------------------
 			// タイトルをセット
 			// --------------------------------------------------------------------------------
-			_container.setTitle = function(v){
+			_this.setTitle = function(v){
 				_title.setValue(v);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 新規データ作成用関数をセット
 			// --------------------------------------------------------------------------------
-			_container.setFunctionForNewData = function(f){
+			_this.setFunctionForNewData = function(f){
 				_define_list.setFunctionForNewData(f);
 			};
 
 			// --------------------------------------------------------------------------------
 			// フォームエレメントを取得
 			// --------------------------------------------------------------------------------
-			_container.getElementForm = function(){
+			_this.getElementForm = function(){
 				return _form_container_outer.getElement();
 			};
 
 			// --------------------------------------------------------------------------------
 			// 選択している定義オブジェクトを取得
 			// --------------------------------------------------------------------------------
-			_container.getSelectedDefinitions = function(func){
+			_this.getSelectedDefinitions = function(func){
 				var c;
 				var p;
 				var a = _define_list.getSelectedIndices();
@@ -29635,14 +29842,14 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 選択しているアイテムを取得
 			// --------------------------------------------------------------------------------
-			_container.getSelectedIndex = function(){
+			_this.getSelectedIndex = function(){
 				return _define_list.getSelectedIndex();
 			};
 
 			// --------------------------------------------------------------------------------
 			// 選択されたアイテムをすべて取得
 			// --------------------------------------------------------------------------------
-			_container.getSelectedIndices = function(){
+			_this.getSelectedIndices = function(){
 				return ObjectCopy(_define_list.getSelectedIndices());
 			};
 
@@ -29670,9 +29877,9 @@ function PageExpand(page_expand_arguments){
 				// 定義一覧
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_define_list"));
 				var parent = container.getElement();
-				_define_list = UI_DefineList(parent);
+				_define_list = new UI_DefineList(parent);
 				_define_list.onreload = function(){
-					_container.onreload();
+					_this.onreload();
 				};
 
 				// フォームコンテナ
@@ -29688,7 +29895,7 @@ function PageExpand(page_expand_arguments){
 				// ワイルドカードについて
 				var container = new UI_LineContainer(wildcard_parent,_i18n.getMessage("menu_setting_define_wildcard_detail"));
 				var parent = container.getElement();
-				var unordered_list = UI_UnorderedList(parent);
+				var unordered_list = new UI_UnorderedList(parent);
 				unordered_list.addListItem(_i18n.getMessage("menu_setting_define_wildcard_detail_0"));
 				unordered_list.addListItem(_i18n.getMessage("menu_setting_define_wildcard_detail_1"));
 				unordered_list.addListItem(_i18n.getMessage("menu_setting_define_wildcard_detail_2"));
@@ -29696,12 +29903,12 @@ function PageExpand(page_expand_arguments){
 				// 定義名
 				var container = new UI_LineContainer(form_parent,_i18n.getMessage("menu_setting_define_name"));
 				var parent = container.getElement();
-				_text_input_name = UI_TextInput(parent);
+				_text_input_name = new UI_TextInput(parent);
 				_text_input_name.oninput = function(v){
-					_container.getSelectedDefinitions(function(c){
+					_this.getSelectedDefinitions(function(c){
 						LocaleObjectSetString(c.name,v);
 					});
-					_container.update();
+					_this.update();
 					projectModify();
 				};
 
@@ -29710,34 +29917,32 @@ function PageExpand(page_expand_arguments){
 				var form_parent = _form_container_outer.getElement();
 				_form_container_outer.setVisible(false);
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// アクセス遮断の定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingAccessBlock(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 			};
 
@@ -29765,7 +29970,7 @@ function PageExpand(page_expand_arguments){
 				// アクセス遮断 URL
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_access_block_filter_url"));
 				var parent = container.getElement();
-				_url_edit_container = UI_UrlEditContainer(parent);
+				_url_edit_container = new UI_UrlEditContainer(parent);
 				_url_edit_container.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.filter = ObjectCopy(v);
@@ -29795,34 +30000,32 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// エレメントの置換定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingReplacementToElement(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 			};
 
@@ -29850,7 +30053,7 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_element_script"));
 				var parent = container.getElement();
-				_text_area_script = UI_ScriptArea(parent);
+				_text_area_script = new UI_ScriptArea(parent);
 				_text_area_script.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.script = v;
@@ -29880,34 +30083,32 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// テキストの置換定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingReplacementToText(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 			};
 
@@ -29935,7 +30136,7 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_text_script"));
 				var parent = container.getElement();
-				_text_area_script = UI_ScriptArea(parent);
+				_text_area_script = new UI_ScriptArea(parent);
 				_text_area_script.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.script = v;
@@ -29965,34 +30166,32 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// アンカー置換定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingReplacementToAnchor(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 			};
 
@@ -30021,7 +30220,7 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_anchor_script"));
 				var parent = container.getElement();
-				_text_area_allow_url = UI_ScriptArea(parent);
+				_text_area_allow_url = new UI_ScriptArea(parent);
 				_text_area_allow_url.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.script = v;
@@ -30051,41 +30250,39 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// ハイパーリンク置換定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingReplacementToLink(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストからフィルタを選択
 			// --------------------------------------------------------------------------------
-			_container.selectFilterFromList = function(list){
+			_this.selectFilterFromList = function(list){
 				_filter_list.selectFromList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 				_filter_list.replaceHistory();
 			};
@@ -30146,7 +30343,7 @@ function PageExpand(page_expand_arguments){
 				// ファイルタリスト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_link_filter_list"));
 				var parent = container.getElement();
-				_filter_list = UI_FilterList(parent);
+				_filter_list = new UI_FilterList(parent);
 				_filter_list.onselect = function(id){
 					filterListUpdate(id);
 				};
@@ -30161,7 +30358,7 @@ function PageExpand(page_expand_arguments){
 				// フィルタ名
 				var container = new UI_LineContainer(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_link_filter_name"));
 				var parent = container.getElement();
-				_text_input_name = UI_TextInput(parent);
+				_text_input_name = new UI_TextInput(parent);
 				_text_input_name.oninput = function(v){
 					_filter_list.writeFilters(function(c){
 						LocaleObjectSetString(c.name,v);
@@ -30185,7 +30382,7 @@ function PageExpand(page_expand_arguments){
 				// 対象 URL
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_link_filter_filter_url"));
 				var parent = container.getElement();
-				_url_edit_container = UI_UrlEditContainer(parent);
+				_url_edit_container = new UI_UrlEditContainer(parent);
 				_url_edit_container.onchange = function(v){
 					_filter_list.writeFilters(function(c){
 						c.filter = ObjectCopy(v);
@@ -30199,7 +30396,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				//リンクの変更をアンカーに反映する
-				_check_box_enable_reflect_to_anchor = UI_CheckBox(parent,_i18n.getMessage("menu_setting_replacement_to_link_enable_reflect_to_anchor"));
+				_check_box_enable_reflect_to_anchor = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_replacement_to_link_enable_reflect_to_anchor"));
 				_check_box_enable_reflect_to_anchor.onchange = function(v){
 					_filter_list.writeFilters(function(c){
 						c.enable_reflect_to_anchor = v;
@@ -30210,7 +30407,7 @@ function PageExpand(page_expand_arguments){
 				};
 
 				//コールバックスクリプトの実行結果をキャッシュする
-				_check_box_enable_cache = UI_CheckBox(parent,_i18n.getMessage("menu_setting_replacement_to_link_enable_cache"));
+				_check_box_enable_cache = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_replacement_to_link_enable_cache"));
 				_check_box_enable_cache.onchange = function(v){
 					_filter_list.writeFilters(function(c){
 						c.enable_cache = v;
@@ -30224,7 +30421,7 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_link_filter_script"));
 				var parent = container.getElement();
-				_text_area_script = UI_ScriptArea(parent);
+				_text_area_script = new UI_ScriptArea(parent);
 				_text_area_script.oninput = function(v){
 					_filter_list.writeFilters(function(c){
 						c.script = v;
@@ -30265,41 +30462,39 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// リファラ置換定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingReplacementToReferer(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストからフィルタを選択
 			// --------------------------------------------------------------------------------
-			_container.selectFilterFromList = function(list){
+			_this.selectFilterFromList = function(list){
 				_filter_list.selectFromList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 				_filter_list.replaceHistory();
 			};
@@ -30369,7 +30564,7 @@ function PageExpand(page_expand_arguments){
 				// ファイルタリスト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_list"));
 				var parent = container.getElement();
-				_filter_list = UI_FilterList(parent);
+				_filter_list = new UI_FilterList(parent);
 				_filter_list.onselect = function(id){
 					filterListUpdate(id);
 				};
@@ -30384,7 +30579,7 @@ function PageExpand(page_expand_arguments){
 				// フィルタ名
 				var container = new UI_LineContainer(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_referer_filter_name"));
 				var parent = container.getElement();
-				_text_input_name = UI_TextInput(parent);
+				_text_input_name = new UI_TextInput(parent);
 				_text_input_name.oninput = function(v){
 					_filter_list.writeFilters(function(c){
 						LocaleObjectSetString(c.name,v);
@@ -30408,7 +30603,7 @@ function PageExpand(page_expand_arguments){
 				// 対象 URL
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_filter_url"));
 				var parent = container.getElement();
-				_url_edit_container = UI_UrlEditContainer(parent);
+				_url_edit_container = new UI_UrlEditContainer(parent);
 				_url_edit_container.onchange = function(v){
 					_filter_list.writeFilters(function(c){
 						c.filter = ObjectCopy(v);
@@ -30421,8 +30616,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type_combo_box_item"));
-				_combo_box_send_type = UI_ComboBox(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type_combo_box_item"));
+				_combo_box_send_type = new UI_ComboBox(parent);
 				_combo_box_send_type.attachItem(_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type_combo_box_item_default"),"default");
 				_combo_box_send_type.attachItem(_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type_combo_box_item_current_url"),"current_url");
 				_combo_box_send_type.attachItem(_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type_combo_box_item_link_url"),"link_url");
@@ -30440,8 +30635,8 @@ function PageExpand(page_expand_arguments){
 				_form_container_send_custom.setVisible(false);
 				var form_parent_send_custom = _form_container_send_custom.getElement();
 
-				UI_Text(form_parent_send_custom,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_custom"));
-				_text_input_send_custom = UI_TextInput(form_parent_send_custom);
+				new UI_Text(form_parent_send_custom,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_custom"));
+				_text_input_send_custom = new UI_TextInput(form_parent_send_custom);
 				_text_input_send_custom.oninput = function(v){
 					_filter_list.writeFilters(function(c){
 						c.send_referer.custom = v;
@@ -30454,8 +30649,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp_match"));
-				_text_regexp_send_regexp = UI_TextRegExp(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp_match"));
+				_text_regexp_send_regexp = new UI_TextRegExp(parent);
 				_text_regexp_send_regexp.oninput = function(v){
 					_filter_list.writeFilters(function(c){
 						c.send_referer.regexp = ObjectCopy(v);
@@ -30464,8 +30659,8 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp_replacement"));
-				_text_input_send_replacement = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp_replacement"));
+				_text_input_send_replacement = new UI_TextInput(parent);
 				_text_input_send_replacement.oninput = function(v){
 					_filter_list.writeFilters(function(c){
 						c.send_referer.replacement = v;
@@ -30473,7 +30668,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp_replacement_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp_replacement_hint"));
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -30506,41 +30701,39 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// ユーザーエージェント置換定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingReplacementToUserAgent(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストからフィルタを選択
 			// --------------------------------------------------------------------------------
-			_container.selectFilterFromList = function(list){
+			_this.selectFilterFromList = function(list){
 				_filter_list.selectFromList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 				_filter_list.replaceHistory();
 			};
@@ -30594,7 +30787,7 @@ function PageExpand(page_expand_arguments){
 				// ファイルタリスト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_list"));
 				var parent = container.getElement();
-				_filter_list = UI_FilterList(parent);
+				_filter_list = new UI_FilterList(parent);
 				_filter_list.onselect = function(id){
 					filterListUpdate(id);
 				};
@@ -30609,7 +30802,7 @@ function PageExpand(page_expand_arguments){
 				// フィルタ名
 				var container = new UI_LineContainer(form_parent_filter,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_name"));
 				var parent = container.getElement();
-				_text_input_name = UI_TextInput(parent);
+				_text_input_name = new UI_TextInput(parent);
 				_text_input_name.oninput = function(v){
 					_filter_list.writeFilters(function(c){
 						LocaleObjectSetString(c.name,v);
@@ -30633,7 +30826,7 @@ function PageExpand(page_expand_arguments){
 				// 対象 URL
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_filter_url"));
 				var parent = container.getElement();
-				_url_edit_container = UI_UrlEditContainer(parent);
+				_url_edit_container = new UI_UrlEditContainer(parent);
 				_url_edit_container.onchange = function(v){
 					_filter_list.writeFilters(function(c){
 						c.filter = ObjectCopy(v);
@@ -30646,8 +30839,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_send"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_send_custom"));
-				_text_input_send_custom = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_send_custom"));
+				_text_input_send_custom = new UI_TextInput(parent);
 				_text_input_send_custom.oninput = function(v){
 					_filter_list.writeFilters(function(c){
 						c.send_useragent.custom = v;
@@ -30690,34 +30883,32 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// ハイパーリンク化定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingMakeLinkToText(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 			};
 
@@ -30745,7 +30936,7 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_make_link_to_text_script"));
 				var parent = container.getElement();
-				_text_area_script = UI_ScriptArea(parent);
+				_text_area_script = new UI_ScriptArea(parent);
 				_text_area_script.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.script = v;
@@ -30775,34 +30966,32 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// 短縮 URL の展開の定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingExpandShortUrl(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 			};
 
@@ -30831,7 +31020,7 @@ function PageExpand(page_expand_arguments){
 				// 対象 URL
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_short_url_filter_url"));
 				var parent = container.getElement();
-				_url_edit_container = UI_UrlEditContainer(parent);
+				_url_edit_container = new UI_UrlEditContainer(parent);
 				_url_edit_container.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.filter = ObjectCopy(v);
@@ -30861,34 +31050,32 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// テキストの展開の定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingExpandText(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 			};
 
@@ -30921,7 +31108,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// 同じURLは展開しない
-				var check_box_disable_same_text = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_text_inline_disable_same_text"));
+				var check_box_disable_same_text = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_text_inline_disable_same_text"));
 				check_box_disable_same_text.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.inline.disable_same_text = v;
@@ -30934,7 +31121,7 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_text_inline_script_allow"));
 				var parent = container.getElement();
-				var text_area_inline_script_allow = UI_ScriptArea(parent);
+				var text_area_inline_script_allow = new UI_ScriptArea(parent);
 				text_area_inline_script_allow.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.inline.script_allow = v;
@@ -30947,7 +31134,7 @@ function PageExpand(page_expand_arguments){
 				// テキストの挿入位置
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_text_inline_script_insert"));
 				var parent = container.getElement();
-				var text_area_inline_script_insert = UI_ScriptArea(parent);
+				var text_area_inline_script_insert = new UI_ScriptArea(parent);
 				text_area_inline_script_insert.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.inline.script_insert = v;
@@ -30981,34 +31168,32 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// 画像の展開の定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingExpandImage(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 			};
 
@@ -31056,7 +31241,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// 縮小されたイメージをマウスオーバーするとポップアップ表示
-				var check_box_reduced_image_enable_popup = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_popup_enable_popup"));
+				var check_box_reduced_image_enable_popup = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_popup_enable_popup"));
 				check_box_reduced_image_enable_popup.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.reduced_image.enable_popup = v;
@@ -31077,7 +31262,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// 縮小率
-				var stepper_popup_allow_slcale_less_then = UI_NumericStepper(parent);
+				var stepper_popup_allow_slcale_less_then = new UI_NumericStepper(parent);
 				stepper_popup_allow_slcale_less_then.setMinimum(0);
 				stepper_popup_allow_slcale_less_then.setMaximum(100);
 				stepper_popup_allow_slcale_less_then.oninput = function(v){
@@ -31088,7 +31273,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
-				UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_reduced_image_allow_slcale_less_then_text"));
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_reduced_image_allow_slcale_less_then_text"));
 
 				// サムネイル表示設定
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_image_thumbnail"));
@@ -31102,7 +31287,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// サムネイルを表示する
-				var check_box_enable_thumbnail = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_enable_thumbnail"));
+				var check_box_enable_thumbnail = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_enable_thumbnail"));
 				check_box_enable_thumbnail.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.thumbnail.enable_thumbnail = v;
@@ -31122,7 +31307,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// サムネイルにマウスオーバーするとポップアップ表示
-				var check_box_enable_popup_mouseover = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_enable_popup_mouseover"));
+				var check_box_enable_popup_mouseover = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_enable_popup_mouseover"));
 				check_box_enable_popup_mouseover.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.thumbnail.enable_popup_mouseover = v;
@@ -31133,7 +31318,7 @@ function PageExpand(page_expand_arguments){
 				};
 
 				// 同じイメージがすでに配置されている場合サムネイルを表示しない
-				var check_box_disable_same_thumbnail_image = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_disable_same_thumbnail_image"));
+				var check_box_disable_same_thumbnail_image = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_disable_same_thumbnail_image"));
 				check_box_disable_same_thumbnail_image.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.thumbnail.disable_same_image = v;
@@ -31146,7 +31331,7 @@ function PageExpand(page_expand_arguments){
 				// イメージのロード設定
 				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_load_start_type"));
 				var parent = container.getElement();
-				var combo_box_thumbnail_load_type = UI_ComboBox(parent);
+				var combo_box_thumbnail_load_type = new UI_ComboBox(parent);
 				combo_box_thumbnail_load_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_start_type_preload"),"preload");
 				combo_box_thumbnail_load_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_start_type_scroll"),"scroll");
 				combo_box_thumbnail_load_type.onchange = function(v){
@@ -31161,7 +31346,7 @@ function PageExpand(page_expand_arguments){
 				// リンクからサムネイル化する条件
 				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_thumbnail_script_allow"));
 				var parent = container.getElement();
-				var text_area_thumbnail_script_allow = UI_ScriptArea(parent);
+				var text_area_thumbnail_script_allow = new UI_ScriptArea(parent);
 				text_area_thumbnail_script_allow.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.thumbnail.script_allow = v;
@@ -31174,7 +31359,7 @@ function PageExpand(page_expand_arguments){
 				// サムネイルの挿入位置
 				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_thumbnail_script_insert"));
 				var parent = container.getElement();
-				var text_area_thumbnail_script_insert = UI_ScriptArea(parent);
+				var text_area_thumbnail_script_insert = new UI_ScriptArea(parent);
 				text_area_thumbnail_script_insert.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.thumbnail.script_insert = v;
@@ -31196,7 +31381,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// ポップアップ表示の有無
-				var check_box_popup_enable_popup_mouseover = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_popup_enable_popup_mouseover"));
+				var check_box_popup_enable_popup_mouseover = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_popup_enable_popup_mouseover"));
 				check_box_popup_enable_popup_mouseover.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.popup.enable_popup_mouseover = v;
@@ -31216,7 +31401,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// ポップアップ時のスケールアニメーション動作を有効
-				var check_box_enable_animation_scale = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_popup_enable_animation_scale"));
+				var check_box_enable_animation_scale = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_popup_enable_animation_scale"));
 				check_box_enable_animation_scale.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.popup.enable_animation_scale = v;
@@ -31226,7 +31411,7 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 				// ポップアップ時のアルファアニメーション動作を有効
-				var check_box_enable_animation_alpha = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_popup_enable_animation_alpha"));
+				var check_box_enable_animation_alpha = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_popup_enable_animation_alpha"));
 				check_box_enable_animation_alpha.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.popup.enable_animation_alpha = v;
@@ -31239,7 +31424,7 @@ function PageExpand(page_expand_arguments){
 				// イメージのロード設定
 				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_load_start_type"));
 				var parent = container.getElement();
-				var combo_box_popup_load_type = UI_ComboBox(parent);
+				var combo_box_popup_load_type = new UI_ComboBox(parent);
 				combo_box_popup_load_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_start_type_preload"),"preload");
 				combo_box_popup_load_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_start_type_scroll"),"scroll");
 				combo_box_popup_load_type.onchange = function(v){
@@ -31254,7 +31439,7 @@ function PageExpand(page_expand_arguments){
 				// ポップアップイメージの配置基点
 				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_origin_type"));
 				var parent = container.getElement();
-				var combo_box_popup_origin_type = UI_ComboBox(parent);
+				var combo_box_popup_origin_type = new UI_ComboBox(parent);
 				combo_box_popup_origin_type.attachItem(_i18n.getMessage("menu_setting_expand_image_popup_origin_type_combo_box_item_center"),"center");
 				combo_box_popup_origin_type.attachItem(_i18n.getMessage("menu_setting_expand_image_popup_origin_type_combo_box_item_upper_left"),"upper_left");
 				combo_box_popup_origin_type.attachItem(_i18n.getMessage("menu_setting_expand_image_popup_origin_type_combo_box_item_upper_right"),"upper_right");
@@ -31273,7 +31458,7 @@ function PageExpand(page_expand_arguments){
 				// ポップアップイメージの配置位置
 				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_position_type"));
 				var parent = container.getElement();
-				var combo_box_popup_position_type = UI_ComboBox(parent);
+				var combo_box_popup_position_type = new UI_ComboBox(parent);
 				combo_box_popup_position_type.attachItem(_i18n.getMessage("menu_setting_expand_image_popup_position_type_combo_box_item_absolute"),"absolute");
 				combo_box_popup_position_type.attachItem(_i18n.getMessage("menu_setting_expand_image_popup_position_type_combo_box_item_fixed"),"fixed");
 				combo_box_popup_position_type.onchange = function(v){
@@ -31289,8 +31474,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_size"));
 				var parent = container.getElement();
 				// 拡大率（パーセント）
-				UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_popup_size_scale"));
-				var stepper_popup_scale_percent = UI_NumericStepper(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_popup_size_scale"));
+				var stepper_popup_scale_percent = new UI_NumericStepper(parent);
 				stepper_popup_scale_percent.setMinimum(0);
 				stepper_popup_scale_percent.setMaximum(9999999);
 				stepper_popup_scale_percent.oninput = function(v){
@@ -31306,8 +31491,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_time"));
 				var parent = container.getElement();
 				// 開くまでに待機する時間（ミリ秒）
-				UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_popup_time_wait_open"));
-				var stepper_popup_time_wait_open = UI_NumericStepper(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_popup_time_wait_open"));
+				var stepper_popup_time_wait_open = new UI_NumericStepper(parent);
 				stepper_popup_time_wait_open.setMinimum(0);
 				stepper_popup_time_wait_open.setMaximum(9999999);
 				stepper_popup_time_wait_open.oninput = function(v){
@@ -31319,8 +31504,8 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 				// 閉じるまでに待機する時間（ミリ秒）
-				UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_popup_time_wait_close"));
-				var stepper_popup_time_wait_close = UI_NumericStepper(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_popup_time_wait_close"));
+				var stepper_popup_time_wait_close = new UI_NumericStepper(parent);
 				stepper_popup_time_wait_close.setMinimum(0);
 				stepper_popup_time_wait_close.setMaximum(9999999);
 				stepper_popup_time_wait_close.oninput = function(v){
@@ -31335,7 +31520,7 @@ function PageExpand(page_expand_arguments){
 				// リンクからポップアップ表示する条件
 				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_script_allow"));
 				var parent = container.getElement();
-				var text_area_popup_script_allow = UI_ScriptArea(parent);
+				var text_area_popup_script_allow = new UI_ScriptArea(parent);
 				text_area_popup_script_allow.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.popup.script_allow = v;
@@ -31357,7 +31542,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// 読み込み進捗表示を有効
-				var check_box_image_load_enable_notify = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_load_enable_notify"));
+				var check_box_image_load_enable_notify = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_load_enable_notify"));
 				check_box_image_load_enable_notify.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.load.enable_notify = v;
@@ -31370,7 +31555,7 @@ function PageExpand(page_expand_arguments){
 				// イメージのソースタイプ
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_image_load_src_type"));
 				var parent = container.getElement();
-				var combo_box_load_src_type = UI_ComboBox(parent);
+				var combo_box_load_src_type = new UI_ComboBox(parent);
 				combo_box_load_src_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_src_type_combo_box_item_url"),"url");
 				combo_box_load_src_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_src_type_combo_box_item_mixed_content"),"mixed_content");
 				combo_box_load_src_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_src_type_combo_box_item_data_uri_scheme"),"data_uri_scheme");
@@ -31388,7 +31573,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// イメージのアンロードを有効
-				var check_box_enable_unload = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_load_enable_unload"));
+				var check_box_enable_unload = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_image_load_enable_unload"));
 				check_box_enable_unload.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.load.enable_unload = v;
@@ -31407,7 +31592,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(form_parent_unload,_i18n.getMessage("menu_setting_expand_image_load_unload"));
 				var parent = container.getElement();
 
-				var stepper_unload_allow_size_more_then = UI_NumericStepper(parent);
+				var stepper_unload_allow_size_more_then = new UI_NumericStepper(parent);
 				stepper_unload_allow_size_more_then.setMinimum(0);
 				stepper_unload_allow_size_more_then.setMaximum(99999);
 				stepper_unload_allow_size_more_then.oninput = function(v){
@@ -31418,7 +31603,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
-				UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_load_allow_unload_more_then_text"));
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_load_allow_unload_more_then_text"));
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -31485,34 +31670,32 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// サウンドの展開の定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingExpandSound(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 			};
 
@@ -31545,7 +31728,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// 同じオーディオがすでに配置されている場合サムネイルを表示しない
-				var check_box_disable_same_sound = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_sound_inline_disable_same_text"));
+				var check_box_disable_same_sound = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_sound_inline_disable_same_text"));
 				check_box_disable_same_sound.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.inline.disable_same_audio = v;
@@ -31559,7 +31742,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_sound_max"));
 				var parent = container.getElement();
 
-				var stepper_inline_sound_max = UI_NumericStepper(parent);
+				var stepper_inline_sound_max = new UI_NumericStepper(parent);
 				stepper_inline_sound_max.setMinimum(1);
 				stepper_inline_sound_max.setMaximum(99999);
 				stepper_inline_sound_max.oninput = function(v){
@@ -31574,7 +31757,7 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_script_allow"));
 				var parent = container.getElement();
-				var text_area_inline_script_allow = UI_ScriptArea(parent);
+				var text_area_inline_script_allow = new UI_ScriptArea(parent);
 				text_area_inline_script_allow.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.inline.script_allow = v;
@@ -31587,7 +31770,7 @@ function PageExpand(page_expand_arguments){
 				// オーディオの挿入位置
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_script_insert"));
 				var parent = container.getElement();
-				var text_area_inline_script_insert = UI_ScriptArea(parent);
+				var text_area_inline_script_insert = new UI_ScriptArea(parent);
 				text_area_inline_script_insert.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.inline.script_insert = v;
@@ -31607,7 +31790,7 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_element_script_allow"));
 				var parent = container.getElement();
-				var text_area_audio_element_script_allow = UI_ScriptArea(parent);
+				var text_area_audio_element_script_allow = new UI_ScriptArea(parent);
 				text_area_audio_element_script_allow.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.audio_element.script_allow = v;
@@ -31629,7 +31812,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// Flash 版プレイヤーを表示
-				var check_box_soundcloud_visible_player_flash = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_sound_inline_soundcloud_visible_player_flash"));
+				var check_box_soundcloud_visible_player_flash = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_sound_inline_soundcloud_visible_player_flash"));
 				check_box_soundcloud_visible_player_flash.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.soundcloud.visible_player_flash = v;
@@ -31640,7 +31823,7 @@ function PageExpand(page_expand_arguments){
 				};
 
 				// HTML5 版プレイヤーを表示
-				var check_box_soundcloud_visible_player_html5 = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_sound_inline_soundcloud_visible_player_html5"));
+				var check_box_soundcloud_visible_player_html5 = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_sound_inline_soundcloud_visible_player_html5"));
 				check_box_soundcloud_visible_player_html5.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.soundcloud.visible_player_html5 = v;
@@ -31662,7 +31845,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// プレイヤーを表示
-				var check_box_mixcloud_visible_player = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_sound_inline_mixcloud_visible_player"));
+				var check_box_mixcloud_visible_player = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_sound_inline_mixcloud_visible_player"));
 				check_box_mixcloud_visible_player.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.mixcloud.visible_player = v;
@@ -31705,34 +31888,32 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// ビデオの展開の定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingExpandVideo(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 			};
 
@@ -31765,7 +31946,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// 同じURLは展開しない
-				var check_box_inline_disable_same_video = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_disable_same_video"));
+				var check_box_inline_disable_same_video = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_disable_same_video"));
 				check_box_inline_disable_same_video.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.inline.disable_same_video = v;
@@ -31779,7 +31960,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_video_max"));
 				var parent = container.getElement();
 
-				var stepper_inline_video_max = UI_NumericStepper(parent);
+				var stepper_inline_video_max = new UI_NumericStepper(parent);
 				stepper_inline_video_max.setMinimum(1);
 				stepper_inline_video_max.setMaximum(99999);
 				stepper_inline_video_max.oninput = function(v){
@@ -31794,7 +31975,7 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_script_allow"));
 				var parent = container.getElement();
-				var text_area_inline_script_allow = UI_ScriptArea(parent);
+				var text_area_inline_script_allow = new UI_ScriptArea(parent);
 				text_area_inline_script_allow.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.inline.script_allow = v;
@@ -31807,7 +31988,7 @@ function PageExpand(page_expand_arguments){
 				// エレメントの挿入位置
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_script_insert"));
 				var parent = container.getElement();
-				var text_area_inline_script_insert = UI_ScriptArea(parent);
+				var text_area_inline_script_insert = new UI_ScriptArea(parent);
 				text_area_inline_script_insert.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.inline.script_insert = v;
@@ -31827,7 +32008,7 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_element_script_allow"));
 				var parent = container.getElement();
-				var text_area_video_element_script_allow = UI_ScriptArea(parent);
+				var text_area_video_element_script_allow = new UI_ScriptArea(parent);
 				text_area_video_element_script_allow.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.video_element.script_allow = v;
@@ -31849,7 +32030,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// ビデオを表示
-				var check_box_youtube_visible_video = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_youtube_visible_video"));
+				var check_box_youtube_visible_video = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_youtube_visible_video"));
 				check_box_youtube_visible_video.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.youtube.visible_video = v;
@@ -31871,7 +32052,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// ビデオを表示
-				var check_box_nicovideo_visible_video = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_video"));
+				var check_box_nicovideo_visible_video = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_video"));
 				check_box_nicovideo_visible_video.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.nicovideo.visible_video = v;
@@ -31882,7 +32063,7 @@ function PageExpand(page_expand_arguments){
 				};
 
 				// ビデオサムネイルを表示
-				var check_box_nicovideo_visible_thumbnail_video = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_video"));
+				var check_box_nicovideo_visible_thumbnail_video = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_video"));
 				check_box_nicovideo_visible_thumbnail_video.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.nicovideo.visible_thumbnail_video = v;
@@ -31893,7 +32074,7 @@ function PageExpand(page_expand_arguments){
 				};
 
 				// マイリストサムネイルを表示
-				var check_box_nicovideo_visible_thumbnail_mylist = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_mylist"));
+				var check_box_nicovideo_visible_thumbnail_mylist = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_mylist"));
 				check_box_nicovideo_visible_thumbnail_mylist.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.nicovideo.visible_thumbnail_mylist = v;
@@ -31904,7 +32085,7 @@ function PageExpand(page_expand_arguments){
 				};
 
 				// ユーザーサムネイルを表示
-				var check_box_nicovideo_visible_thumbnail_user = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_user"));
+				var check_box_nicovideo_visible_thumbnail_user = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_user"));
 				check_box_nicovideo_visible_thumbnail_user.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.nicovideo.visible_thumbnail_user = v;
@@ -31915,7 +32096,7 @@ function PageExpand(page_expand_arguments){
 				};
 
 				// コミュニティサムネイルを表示
-				var check_box_nicovideo_visible_thumbnail_community = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_community"));
+				var check_box_nicovideo_visible_thumbnail_community = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_community"));
 				check_box_nicovideo_visible_thumbnail_community.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.nicovideo.visible_thumbnail_community = v;
@@ -31926,7 +32107,7 @@ function PageExpand(page_expand_arguments){
 				};
 
 				// 生放送サムネイルを表示
-				var check_box_nicovideo_visible_thumbnail_live = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_live"));
+				var check_box_nicovideo_visible_thumbnail_live = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_live"));
 				check_box_nicovideo_visible_thumbnail_live.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.nicovideo.visible_thumbnail_live = v;
@@ -31937,7 +32118,7 @@ function PageExpand(page_expand_arguments){
 				};
 
 				// 静画サムネイルを表示
-				var check_box_nicovideo_visible_thumbnail_seiga = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_seiga"));
+				var check_box_nicovideo_visible_thumbnail_seiga = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_seiga"));
 				check_box_nicovideo_visible_thumbnail_seiga.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.nicovideo.visible_thumbnail_seiga = v;
@@ -31959,7 +32140,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// 配信ビデオを表示
-				var check_box_ustream_visible_video_live = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream_visible_video_live"));
+				var check_box_ustream_visible_video_live = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream_visible_video_live"));
 				check_box_ustream_visible_video_live.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.ustream.visible_video_live = v;
@@ -31970,7 +32151,7 @@ function PageExpand(page_expand_arguments){
 				};
 
 				// 録画ビデオを表示
-				var check_box_ustream_visible_video_record = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream_visible_video_record"));
+				var check_box_ustream_visible_video_record = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream_visible_video_record"));
 				check_box_ustream_visible_video_record.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.ustream.visible_video_record = v;
@@ -31992,7 +32173,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// ビデオを表示
-				var check_box_dailymotion_visible_video = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_dailymotion_visible_video"));
+				var check_box_dailymotion_visible_video = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_dailymotion_visible_video"));
 				check_box_dailymotion_visible_video.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.dailymotion.visible_video = v;
@@ -32014,7 +32195,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// ビデオを表示
-				var check_box_vimeo_visible_video = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_video_visible_video"));
+				var check_box_vimeo_visible_video = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_video_visible_video"));
 				check_box_vimeo_visible_video.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.vimeo.visible_video = v;
@@ -32036,7 +32217,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// ビデオを表示
-				var check_box_fc2video_visible_video = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_fc2video_visible_video"));
+				var check_box_fc2video_visible_video = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_fc2video_visible_video"));
 				check_box_fc2video_visible_video.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.fc2video.visible_video = v;
@@ -32058,7 +32239,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// ビデオを表示
-				var check_box_liveleak_visible_video = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_liveleak_visible_video"));
+				var check_box_liveleak_visible_video = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_liveleak_visible_video"));
 				check_box_liveleak_visible_video.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.liveleak.visible_video = v;
@@ -32124,34 +32305,32 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// インラインフレームの展開の定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingExpandIframe(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 			};
 
@@ -32184,7 +32363,7 @@ function PageExpand(page_expand_arguments){
 				var parent = container.getElement();
 
 				// 同じURLは展開しない
-				var check_box_disable_same_iframe = UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_iframe_inline_disable_same_iframe"));
+				var check_box_disable_same_iframe = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_iframe_inline_disable_same_iframe"));
 				check_box_disable_same_iframe.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.inline.disable_same_iframe = v;
@@ -32197,7 +32376,7 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_iframe_inline_script_allow"));
 				var parent = container.getElement();
-				var text_area_inline_script_allow = UI_ScriptArea(parent);
+				var text_area_inline_script_allow = new UI_ScriptArea(parent);
 				text_area_inline_script_allow.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.inline.script_allow = v;
@@ -32210,7 +32389,7 @@ function PageExpand(page_expand_arguments){
 				// HTMLIFrameElement の挿入位置
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_iframe_inline_script_insert"));
 				var parent = container.getElement();
-				var text_area_inline_script_insert = UI_ScriptArea(parent);
+				var text_area_inline_script_insert = new UI_ScriptArea(parent);
 				text_area_inline_script_insert.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.inline.script_insert = v;
@@ -32244,34 +32423,32 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// スタイルシートの定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingStyleSheet(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 			};
 
@@ -32303,8 +32480,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_text_element"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_text_element_inline"));
-				var text_input_expand_text_inline = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_text_element_inline"));
+				var text_input_expand_text_inline = new UI_TextInput(parent);
 				text_input_expand_text_inline.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_text.inline = v;
@@ -32324,8 +32501,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element_inline"));
-				var text_input_expand_image_thumbnail = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element_inline"));
+				var text_input_expand_image_thumbnail = new UI_TextInput(parent);
 				text_input_expand_image_thumbnail.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_image.thumbnail = v;
@@ -32334,8 +32511,8 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element_popup"));
-				var text_input_expand_image_popup = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element_popup"));
+				var text_input_expand_image_popup = new UI_TextInput(parent);
 				text_input_expand_image_popup.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_image.popup = v;
@@ -32355,8 +32532,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_element"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_element_inline_audio"));
-				var text_input_expand_sound_inline_audio_element = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_element_inline_audio"));
+				var text_input_expand_sound_inline_audio_element = new UI_TextInput(parent);
 				text_input_expand_sound_inline_audio_element.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_sound.inline.audio_element.audio = v;
@@ -32369,8 +32546,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud_inline_player_flash"));
-				var text_input_expand_sound_soundcloud_inline_player_flash = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud_inline_player_flash"));
+				var text_input_expand_sound_soundcloud_inline_player_flash = new UI_TextInput(parent);
 				text_input_expand_sound_soundcloud_inline_player_flash.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_sound.inline.soundcloud.player_flash = v;
@@ -32379,8 +32556,8 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud_inline_player_html5"));
-				var text_input_expand_sound_soundcloud_inline_player_html5 = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud_inline_player_html5"));
+				var text_input_expand_sound_soundcloud_inline_player_html5 = new UI_TextInput(parent);
 				text_input_expand_sound_soundcloud_inline_player_html5.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_sound.inline.soundcloud.player_html5 = v;
@@ -32393,8 +32570,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_mixcloud"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_mixcloud_inline_player"));
-				var text_input_expand_sound_mixcloud_inline_player = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_mixcloud_inline_player"));
+				var text_input_expand_sound_mixcloud_inline_player = new UI_TextInput(parent);
 				text_input_expand_sound_mixcloud_inline_player.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_sound.inline.mixcloud.player = v;
@@ -32414,8 +32591,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_element"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_element_inline_video"));
-				var text_input_expand_video_inline_video_element = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_element_inline_video"));
+				var text_input_expand_video_inline_video_element = new UI_TextInput(parent);
 				text_input_expand_video_inline_video_element.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.video_element.video = v;
@@ -32428,8 +32605,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_youtube"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_youtube_inline_video"));
-				var text_input_expand_video_youtube_inline_video = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_youtube_inline_video"));
+				var text_input_expand_video_youtube_inline_video = new UI_TextInput(parent);
 				text_input_expand_video_youtube_inline_video.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.youtube.video = v;
@@ -32442,8 +32619,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_video"));
-				var text_input_expand_video_nicovideo_inline_video = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_video"));
+				var text_input_expand_video_nicovideo_inline_video = new UI_TextInput(parent);
 				text_input_expand_video_nicovideo_inline_video.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.nicovideo.video = v;
@@ -32452,8 +32629,8 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_video"));
-				var text_input_expand_video_nicovideo_inline_thumbnail_video = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_video"));
+				var text_input_expand_video_nicovideo_inline_thumbnail_video = new UI_TextInput(parent);
 				text_input_expand_video_nicovideo_inline_thumbnail_video.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.nicovideo.thumbnail_video = v;
@@ -32462,8 +32639,8 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_mylist"));
-				var text_input_expand_video_nicovideo_inline_thumbnail_mylist = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_mylist"));
+				var text_input_expand_video_nicovideo_inline_thumbnail_mylist = new UI_TextInput(parent);
 				text_input_expand_video_nicovideo_inline_thumbnail_mylist.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.nicovideo.thumbnail_mylist = v;
@@ -32472,8 +32649,8 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_user"));
-				var text_input_expand_video_nicovideo_inline_thumbnail_user = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_user"));
+				var text_input_expand_video_nicovideo_inline_thumbnail_user = new UI_TextInput(parent);
 				text_input_expand_video_nicovideo_inline_thumbnail_user.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.nicovideo.thumbnail_user = v;
@@ -32482,8 +32659,8 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_community"));
-				var text_input_expand_video_nicovideo_inline_thumbnail_community = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_community"));
+				var text_input_expand_video_nicovideo_inline_thumbnail_community = new UI_TextInput(parent);
 				text_input_expand_video_nicovideo_inline_thumbnail_community.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.nicovideo.thumbnail_community = v;
@@ -32492,8 +32669,8 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_live"));
-				var text_input_expand_video_nicovideo_inline_thumbnail_live = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_live"));
+				var text_input_expand_video_nicovideo_inline_thumbnail_live = new UI_TextInput(parent);
 				text_input_expand_video_nicovideo_inline_thumbnail_live.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.nicovideo.thumbnail_live = v;
@@ -32502,8 +32679,8 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga"));
-				var text_input_expand_video_nicovideo_inline_thumbnail_seiga = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga"));
+				var text_input_expand_video_nicovideo_inline_thumbnail_seiga = new UI_TextInput(parent);
 				text_input_expand_video_nicovideo_inline_thumbnail_seiga.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.nicovideo.thumbnail_seiga = v;
@@ -32516,8 +32693,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream_inline_video_record"));
-				var text_input_expand_video_ustream_inline_video_record = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream_inline_video_record"));
+				var text_input_expand_video_ustream_inline_video_record = new UI_TextInput(parent);
 				text_input_expand_video_ustream_inline_video_record.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.ustream.video_record = v;
@@ -32526,8 +32703,8 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream_inline_video_live"));
-				var text_input_expand_video_ustream_inline_video_live = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream_inline_video_live"));
+				var text_input_expand_video_ustream_inline_video_live = new UI_TextInput(parent);
 				text_input_expand_video_ustream_inline_video_live.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.ustream.video_live = v;
@@ -32540,8 +32717,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_dailymotion"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_dailymotion_inline_video"));
-				var text_input_expand_video_dailymotion_inline_video = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_dailymotion_inline_video"));
+				var text_input_expand_video_dailymotion_inline_video = new UI_TextInput(parent);
 				text_input_expand_video_dailymotion_inline_video.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.dailymotion.video = v;
@@ -32554,8 +32731,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_vimeo"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_vimeo_inline_video"));
-				var text_input_expand_video_vimeo_inline_video = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_vimeo_inline_video"));
+				var text_input_expand_video_vimeo_inline_video = new UI_TextInput(parent);
 				text_input_expand_video_vimeo_inline_video.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.vimeo.video = v;
@@ -32568,8 +32745,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_fc2video"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_fc2video_inline_video"));
-				var text_input_expand_video_fc2video_inline_video = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_fc2video_inline_video"));
+				var text_input_expand_video_fc2video_inline_video = new UI_TextInput(parent);
 				text_input_expand_video_fc2video_inline_video.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.fc2video.video = v;
@@ -32582,8 +32759,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_liveleak"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_liveleak_inline_video"));
-				var text_input_expand_video_liveleak_inline_video = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_liveleak_inline_video"));
+				var text_input_expand_video_liveleak_inline_video = new UI_TextInput(parent);
 				text_input_expand_video_liveleak_inline_video.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.liveleak.video = v;
@@ -32603,8 +32780,8 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_iframe_element"));
 				var parent = container.getElement();
 
-				UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_iframe_element_inline"));
-				var text_input_expand_iframe_inline = UI_TextInput(parent);
+				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_iframe_element_inline"));
+				var text_input_expand_iframe_inline = new UI_TextInput(parent);
 				text_input_expand_iframe_inline.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_iframe.inline = v;
@@ -32654,34 +32831,32 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// 試験運用の定義
 		// --------------------------------------------------------------------------------
 		function ContentSettingExperimental(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_setting_define.select(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				_setting_define.selectFromIdList(list);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				_setting_define.replaceHistory();
 			};
 
@@ -32719,15 +32894,13 @@ function PageExpand(page_expand_arguments){
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// 言語設定
 		// --------------------------------------------------------------------------------
 		function ContentSettingLanguage(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -32746,7 +32919,7 @@ function PageExpand(page_expand_arguments){
 				// 言語設定
 				var container = new UI_LineContainer(_content_window,"Language");
 				var parent = container.getElement();
-				_combo_box_language = UI_ComboBox(parent);
+				_combo_box_language = new UI_ComboBox(parent);
 				_combo_box_language.attachItem("BROWSER LANGUAGE",-1);
 				_combo_box_language.attachItem("日本語",0);
 				_combo_box_language.attachItem("ENGLISH",1);
@@ -32763,15 +32936,13 @@ function PageExpand(page_expand_arguments){
 				_combo_box_language.setValue(language.type);
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// クレジット
 		// --------------------------------------------------------------------------------
 		function ContentCredit(){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -32782,35 +32953,33 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				UI_Text(parent,"PageExpand ver.1.3.3");
+				new UI_Text(parent,"PageExpand ver.1.3.5");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
 				var parent = container.getElement();
-				UI_Text(parent,'(c) Hakuhin 2010-2014');
-				UI_AnchorText(parent,"http://hakuhin.jp/","http://hakuhin.jp/");
+				new UI_Text(parent,'(c) Hakuhin 2010-2014');
+				new UI_AnchorText(parent,"http://hakuhin.jp/","http://hakuhin.jp/");
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// ラインコンテナ
 		// --------------------------------------------------------------------------------
 		function UI_LineContainer(parent,label){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 透明度をセット
 			// --------------------------------------------------------------------------------
-			_container.setAlpha = function(v){
+			_this.setAlpha = function(v){
 				_window.style.opacity = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// エレメント取得
 			// --------------------------------------------------------------------------------
-			_container.getElement = function(){
+			_this.getElement = function(){
 				return _body;
 			};
 
@@ -32839,34 +33008,32 @@ function PageExpand(page_expand_arguments){
 				ElementSetStyle(_body,"margin:0px 10px 0px 10px;");
 				_window.appendChild(_body);
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// インラインコンテナ
 		// --------------------------------------------------------------------------------
 		function UI_InlineContainer(parent,label){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 幅をセット
 			// --------------------------------------------------------------------------------
-			_container.setWidth = function(v){
+			_this.setWidth = function(v){
 				_window.style.width = v + "px";
 			};
 
 			// --------------------------------------------------------------------------------
 			// 透明度をセット
 			// --------------------------------------------------------------------------------
-			_container.setAlpha = function(v){
+			_this.setAlpha = function(v){
 				_window.style.opacity = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 背景カラーをセット
 			// --------------------------------------------------------------------------------
-			_container.setBackgroundColor = function(argb){
+			_this.setBackgroundColor = function(argb){
 				var color = argb;
 				var brightness = 0.9;
 				var r = (color >> 16) & 0xFF;
@@ -32888,7 +33055,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// エレメント取得
 			// --------------------------------------------------------------------------------
-			_container.getElement = function(){
+			_this.getElement = function(){
 				return _body;
 			};
 
@@ -32918,20 +33085,18 @@ function PageExpand(page_expand_arguments){
 				ElementSetStyle(_body,"margin:0px 10px 0px 10px;");
 				_window.appendChild(_body);
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// フォームコンテナ
 		// --------------------------------------------------------------------------------
 		function UI_FormContainer(parent,label){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 可視状態セット
 			// --------------------------------------------------------------------------------
-			_container.setVisible = function(type){
+			_this.setVisible = function(type){
 				if(type){
 					_form.style.display = "";
 				}else{
@@ -32942,7 +33107,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// エレメント取得
 			// --------------------------------------------------------------------------------
-			_container.getElement = function(){
+			_this.getElement = function(){
 				return _form;
 			};
 
@@ -32957,22 +33122,20 @@ function PageExpand(page_expand_arguments){
 			(function(){
 				_form = DocumentCreateElement("form");
 				parent.appendChild(_form);
-				_container.setVisible(true);
+				_this.setVisible(true);
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// グループコンテナ
 		// --------------------------------------------------------------------------------
 		function UI_GroupContainer(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// エレメント取得
 			// --------------------------------------------------------------------------------
-			_container.getElement = function(){
+			_this.getElement = function(){
 				return _div;
 			};
 
@@ -32989,27 +33152,25 @@ function PageExpand(page_expand_arguments){
 				_div.style.cssText = "padding-left:10px; padding-right:10px; border-left:20px #f4f4f4 solid; border-right:20px #f4f4f4 solid;";
 				parent.appendChild(_div);
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// モーダルダイアログ
 		// --------------------------------------------------------------------------------
 		function UI_ModalDialog(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 幅を変更
 			// --------------------------------------------------------------------------------
-			_container.setWidth = function(v){
+			_this.setWidth = function(v){
 				_window.style.width = v + "px";
 			};
 
 			// --------------------------------------------------------------------------------
 			// 開く
 			// --------------------------------------------------------------------------------
-			_container.open = function(){
+			_this.open = function(){
 				var task = task_container.createTask(null);
 
 				var d = 0.0;
@@ -33040,7 +33201,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 閉じる
 			// --------------------------------------------------------------------------------
-			_container.close = function(){
+			_this.close = function(){
 				var task = task_container.createTask(null);
 
 				var d = 1.0;
@@ -33056,7 +33217,7 @@ function PageExpand(page_expand_arguments){
 
 					if(complete){
 						DomNodeRemove(_background);
-						_container.oncomplete();
+						_this.oncomplete();
 						task.release();
 						return;
 					}
@@ -33070,14 +33231,14 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// エレメント取得
 			// --------------------------------------------------------------------------------
-			_container.getElement = function(){
+			_this.getElement = function(){
 				return _window;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 完了イベント
 			// --------------------------------------------------------------------------------
-			_container.oncomplete = function(){};
+			_this.oncomplete = function(){};
 
 			// --------------------------------------------------------------------------------
 			// リサイズ（内部用 ）
@@ -33145,27 +33306,25 @@ function PageExpand(page_expand_arguments){
 				ElementSetStyle(_window,"position:absolute; width:800px; padding:10px 20px 5px; background:#00F; background-color:#FFF; border-radius:5px; box-shadow:5px 5px 10px #444;");
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// アラートダイアログ
 		// --------------------------------------------------------------------------------
 		function UI_AlertDialog(parent,title){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// エレメント取得
 			// --------------------------------------------------------------------------------
-			_container.getElement = function(){
+			_this.getElement = function(){
 				return _element;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 開く
 			// --------------------------------------------------------------------------------
-			_container.open = function(){
+			_this.open = function(){
 				// ダイアログ開始
 				_dialog.open();
 			};
@@ -33173,7 +33332,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 完了イベント
 			// --------------------------------------------------------------------------------
-			_container.oncomplete = function(){};
+			_this.oncomplete = function(){};
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -33187,39 +33346,37 @@ function PageExpand(page_expand_arguments){
 			(function(){
 
 				// モーダルダイアログ作成
-				_dialog = UI_ModalDialog(_content_window);
+				_dialog = new UI_ModalDialog(_content_window);
 				_dialog.setWidth(600);
 				var dialog_parent = _dialog.getElement();
 
 				// タイトル
-				UI_Title(dialog_parent,title);
+				new UI_Title(dialog_parent,title);
 
 				var container = new UI_LineContainer(dialog_parent,null);
 				_element = container.getElement();
 
 				// ボタン
-				var ok_button = UI_OkButton(dialog_parent);
+				var ok_button = new UI_OkButton(dialog_parent);
 				ok_button.onclick = function(){
 					// ダイアログ終了
 					_dialog.close();
-					_container.oncomplete();
+					_this.oncomplete();
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// タイトル
 		// --------------------------------------------------------------------------------
 		function UI_Title(parent,label){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
-			_container.setValue = function(v){
+			_this.setValue = function(v){
 				ElementSetTextContent(_body,v);
 			};
 
@@ -33237,20 +33394,18 @@ function PageExpand(page_expand_arguments){
 				ElementSetTextContent(_body,label);
 				parent.appendChild(_body);
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// サブタイトル
 		// --------------------------------------------------------------------------------
 		function UI_TitleSub(parent,label){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
-			_container.setValue = function(v){
+			_this.setValue = function(v){
 				ElementSetTextContent(_body,v);
 			};
 
@@ -33268,8 +33423,6 @@ function PageExpand(page_expand_arguments){
 				ElementSetTextContent(_body,label);
 				parent.appendChild(_body);
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -33314,12 +33467,12 @@ function PageExpand(page_expand_arguments){
 		// 順序無しリスト
 		// --------------------------------------------------------------------------------
 		function UI_UnorderedList(parent,label){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// アイテムを追加
 			// --------------------------------------------------------------------------------
-			_container.addListItem = function(label){
+			_this.addListItem = function(label){
 				var li = DocumentCreateElement("li");
 				ElementSetTextContent(li,label);
 				_ul.appendChild(li);
@@ -33341,34 +33494,32 @@ function PageExpand(page_expand_arguments){
 				_ul = DocumentCreateElement("ul");
 				container.appendChild(_ul);
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// チェックボックス
 		// --------------------------------------------------------------------------------
 		function UI_CheckBox(parent,label){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 値を取得
 			// --------------------------------------------------------------------------------
-			_container.getValue = function(){
+			_this.getValue = function(){
 				return _input.checked;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
-			_container.setValue = function(v){
+			_this.setValue = function(v){
 				_input.checked = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.onchange = function(){};
+			_this.onchange = function(){};
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -33392,7 +33543,7 @@ function PageExpand(page_expand_arguments){
 				_input.type = "checkbox";
 				_label.appendChild(_input);
 				_input.onchange = function(){
-					_container.onchange(_input.checked);
+					_this.onchange(_input.checked);
 				};
 
 				var span = DocumentCreateElement("span");
@@ -33400,34 +33551,32 @@ function PageExpand(page_expand_arguments){
 				ElementSetTextContent(span,":" + label);
 				_label.appendChild(span);
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// チェックボックス
 		// --------------------------------------------------------------------------------
 		function UI_LineCheckBox(parent,label){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 値を取得
 			// --------------------------------------------------------------------------------
-			_container.getValue = function(){
+			_this.getValue = function(){
 				return _input.checked;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
-			_container.setValue = function(v){
+			_this.setValue = function(v){
 				_input.checked = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.onchange = function(){};
+			_this.onchange = function(){};
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -33451,7 +33600,7 @@ function PageExpand(page_expand_arguments){
 				_input.type = "checkbox";
 				_label.appendChild(_input);
 				_input.onchange = function(){
-					_container.onchange(_input.checked);
+					_this.onchange(_input.checked);
 				};
 
 				var span = DocumentCreateElement("span");
@@ -33459,27 +33608,25 @@ function PageExpand(page_expand_arguments){
 				ElementSetTextContent(span,":" + label);
 				_label.appendChild(span);
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// テキストダイナミック
 		// --------------------------------------------------------------------------------
 		function UI_TextDynamic(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 値を取得
 			// --------------------------------------------------------------------------------
-			_container.getValue = function(){
+			_this.getValue = function(){
 				return _input.value;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
-			_container.setValue = function(v){
+			_this.setValue = function(v){
 				_input.value = v;
 			};
 
@@ -33501,34 +33648,32 @@ function PageExpand(page_expand_arguments){
 				ElementSetStyle(_input,"width:100%; padding:2px; background:#f8f8f8; color:#888;");
 				container.appendChild(_input);
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// テキストインプット
 		// --------------------------------------------------------------------------------
 		function UI_TextInput(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 値を取得
 			// --------------------------------------------------------------------------------
-			_container.getValue = function(){
+			_this.getValue = function(){
 				return _input.value;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
-			_container.setValue = function(v){
+			_this.setValue = function(v){
 				_input.value = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.oninput = function(){};
+			_this.oninput = function(){};
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -33548,23 +33693,21 @@ function PageExpand(page_expand_arguments){
 				container.appendChild(_input);
 
 				_input.oninput = function(){
-					_container.oninput(_input.value);
+					_this.oninput(_input.value);
 				};
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// 正規表現入力
 		// --------------------------------------------------------------------------------
 		function UI_TextRegExp(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 値を取得
 			// --------------------------------------------------------------------------------
-			_container.getValue = function(){
+			_this.getValue = function(){
 				return getValue();
 			};
 
@@ -33584,14 +33727,14 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// エレメント取得
 			// --------------------------------------------------------------------------------
-			_container.getElement = function(){
+			_this.getElement = function(){
 				return _body;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
-			_container.setValue = function(v){
+			_this.setValue = function(v){
 				_input_pattern.value = v.pattern;
 				_check_box_enable_i.setValue(v.flags.i);
 				_check_box_enable_g.setValue(v.flags.g);
@@ -33602,7 +33745,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.oninput = function(){};
+			_this.oninput = function(){};
 
 			// --------------------------------------------------------------------------------
 			// 更新イベント
@@ -33611,7 +33754,7 @@ function PageExpand(page_expand_arguments){
 				errorCheck();
 
 				if(!_visible){
-					_container.oninput(getValue());
+					_this.oninput(getValue());
 				}
 			}
 
@@ -33684,12 +33827,12 @@ function PageExpand(page_expand_arguments){
 				table.appendChild(input_flags_container);
 
 				// g チェック
-				_check_box_enable_g = UI_LineCheckBox(input_flags_container,"g");
+				_check_box_enable_g = new UI_LineCheckBox(input_flags_container,"g");
 				_check_box_enable_g.onchange = function(v){
 					oninput();
 				};
 				// i チェック
-				_check_box_enable_i = UI_LineCheckBox(input_flags_container,"i");
+				_check_box_enable_i = new UI_LineCheckBox(input_flags_container,"i");
 				_check_box_enable_i.onchange = function(v){
 					oninput();
 				};
@@ -33702,37 +33845,35 @@ function PageExpand(page_expand_arguments){
 				_input_result.readOnly = "readonly";
 				ElementSetStyle(_input_result,"width:100%; font-size:12px; padding:2px; background:#f88;");
 
-				UI_TextHint(_body,_i18n.getMessage("menu_text_regexp_hint"));
+				new UI_TextHint(_body,_i18n.getMessage("menu_text_regexp_hint"));
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// テキストエリア
 		// --------------------------------------------------------------------------------
 		function UI_TextArea(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 値を取得
 			// --------------------------------------------------------------------------------
-			_container.getValue = function(){
+			_this.getValue = function(){
 				return _textarea.value;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
-			_container.setValue = function(v){
+			_this.setValue = function(v){
 				_textarea.value = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 改行コードで分割した配列を取得
 			// --------------------------------------------------------------------------------
-			_container.spiritByLine = function(v){
+			_this.spiritByLine = function(v){
 				// 改行コードを統一
 				var s = _textarea.value.replace(/\r\n?/g,"\n");
 				var a = s.split("\n");
@@ -33747,14 +33888,14 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 配列の各番地のデータに文字を挟んだ文字列をセット
 			// --------------------------------------------------------------------------------
-			_container.joinArray = function(ary,v){
+			_this.joinArray = function(ary,v){
 				_textarea.value = ary.join(v);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.oninput = function(){};
+			_this.oninput = function(){};
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -33774,37 +33915,35 @@ function PageExpand(page_expand_arguments){
 				container.appendChild(_textarea);
 
 				_textarea.oninput = function(){
-					_container.oninput(_textarea.value);
+					_this.oninput(_textarea.value);
 				};
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// スクリプトエリア
 		// --------------------------------------------------------------------------------
 		function UI_ScriptArea(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 値を取得
 			// --------------------------------------------------------------------------------
-			_container.getValue = function(){
+			_this.getValue = function(){
 				return _textarea.value;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
-			_container.setValue = function(v){
+			_this.setValue = function(v){
 				_textarea.value = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.oninput = function(){};
+			_this.oninput = function(){};
 
 			// --------------------------------------------------------------------------------
 			// 可視状態セット
@@ -33849,7 +33988,7 @@ function PageExpand(page_expand_arguments){
 							eval("[function(){" + _textarea.value + "}]");
 						})();
 						setVisibleResult(false);
-						_container.oninput(_textarea.value);
+						_this.oninput(_textarea.value);
 					}catch(e){
 						_input.value = e;
 						setVisibleResult(true);
@@ -33864,43 +34003,41 @@ function PageExpand(page_expand_arguments){
 				ElementSetStyle(_input,"width:100%; font-size:12px; padding:2px; background:#f88;");
 				_input_container.appendChild(_input);
 
-				UI_TextHint(parent,_i18n.getMessage("menu_scriptarea_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_scriptarea_hint"));
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// ステッパー
 		// --------------------------------------------------------------------------------
 		function UI_NumericStepper(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
-			_container.setValue = function(v){
+			_this.setValue = function(v){
 				_input.value = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 最小値をセット
 			// --------------------------------------------------------------------------------
-			_container.setMinimum = function(v){
+			_this.setMinimum = function(v){
 				_min = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 最大値をセット
 			// --------------------------------------------------------------------------------
-			_container.setMaximum = function(v){
+			_this.setMaximum = function(v){
 				_max = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.oninput = function(){};
+			_this.oninput = function(){};
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -33928,26 +34065,24 @@ function PageExpand(page_expand_arguments){
 					if(v < _min)	v = _min;
 					if(v > _max)	v = _max;
 					_input.value = v;
-					_container.oninput(v);
+					_this.oninput(v);
 				};
 
-				_container.setMinimum(-0x80000000);
-				_container.setMaximum( 0x7fffffff);
+				_this.setMinimum(-0x80000000);
+				_this.setMaximum( 0x7fffffff);
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// ラインボタン
 		// --------------------------------------------------------------------------------
 		function UI_LineButton(parent,label){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// クリックイベント
 			// --------------------------------------------------------------------------------
-			_container.onclick = function(){};
+			_this.onclick = function(){};
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -33963,7 +34098,7 @@ function PageExpand(page_expand_arguments){
 				parent.appendChild(container);
 
 				function ButtonOnClick(){
-					_container.onclick();
+					_this.onclick();
 				}
 
 				_input = DocumentCreateElement("input");
@@ -33975,20 +34110,18 @@ function PageExpand(page_expand_arguments){
 					ButtonOnClick();
 				};
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// インラインボタン
 		// --------------------------------------------------------------------------------
 		function UI_InlineButton(parent,label){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// クリックイベント
 			// --------------------------------------------------------------------------------
-			_container.onclick = function(){};
+			_this.onclick = function(){};
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -34006,27 +34139,25 @@ function PageExpand(page_expand_arguments){
 				parent.appendChild(_input);
 
 				function ButtonOnClick(){
-					_container.onclick();
+					_this.onclick();
 				}
 
 				_input.onclick = function(){
 					ButtonOnClick();
 				};
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// YES NO ボタン
 		// --------------------------------------------------------------------------------
 		function UI_YesNoButton(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// クリックイベント
 			// --------------------------------------------------------------------------------
-			_container.onclick = function(){};
+			_this.onclick = function(){};
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -34039,7 +34170,7 @@ function PageExpand(page_expand_arguments){
 				function ButtonOnClick(result){
 					input_yes.disabled = true;
 					input_no.disabled = true;
-					_container.onclick(result);
+					_this.onclick(result);
 				}
 
 				var input_yes = DocumentCreateElement("input");
@@ -34060,25 +34191,23 @@ function PageExpand(page_expand_arguments){
 					ButtonOnClick(false);
 				};
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// OK ボタン
 		// --------------------------------------------------------------------------------
 		function UI_OkButton(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// クリックイベント
 			// --------------------------------------------------------------------------------
-			_container.onclick = function(){};
+			_this.onclick = function(){};
 
 			// --------------------------------------------------------------------------------
 			// クリックイベント
 			// --------------------------------------------------------------------------------
-			_container.setEnable = function(type){
+			_this.setEnable = function(type){
 				input_ok.disabled = ((!type) ? true : false);
 			};
 
@@ -34096,8 +34225,8 @@ function PageExpand(page_expand_arguments){
 				parent.appendChild(container);
 
 				function ButtonOnClick(){
-					_container.setEnable(false);
-					_container.onclick();
+					_this.setEnable(false);
+					_this.onclick();
 				}
 
 				input_ok = DocumentCreateElement("input");
@@ -34109,20 +34238,18 @@ function PageExpand(page_expand_arguments){
 					ButtonOnClick();
 				};
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// コンボボックス
 		// --------------------------------------------------------------------------------
 		function UI_ComboBox(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// アイテム追加
 			// --------------------------------------------------------------------------------
-			_container.attachItem = function(label,value){
+			_this.attachItem = function(label,value){
 				var item = DocumentCreateElement("option");
 				ElementSetStyle(item,"margin:2px 0px;");
 				ElementSetTextContent(item,label);
@@ -34133,21 +34260,21 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 値を取得
 			// --------------------------------------------------------------------------------
-			_container.getValue = function(){
+			_this.getValue = function(){
 				return _combo_box.value;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
-			_container.setValue = function(v){
+			_this.setValue = function(v){
 				_combo_box.value = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.onchange = function(){};
+			_this.onchange = function(){};
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -34167,23 +34294,21 @@ function PageExpand(page_expand_arguments){
 				container.appendChild(_combo_box);
 
 				_combo_box.onchange = function(){
-					_container.onchange(_combo_box.value);
+					_this.onchange(_combo_box.value);
 				};
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// リストボックス
 		// --------------------------------------------------------------------------------
 		function UI_ListBox(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// アイテム追加
 			// --------------------------------------------------------------------------------
-			_container.attachItem = function(label,value){
+			_this.attachItem = function(label,value){
 				var item = DocumentCreateElement("option");
 				ElementSetStyle(item,"margin:2px 0px;");
 				ElementSetTextContent(item,label);
@@ -34194,28 +34319,28 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 値を取得
 			// --------------------------------------------------------------------------------
-			_container.getValue = function(v){
+			_this.getValue = function(v){
 				return _list.value;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
-			_container.setValue = function(v){
+			_this.setValue = function(v){
 				_list.value = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 複数選択設定
 			// --------------------------------------------------------------------------------
-			_container.setMultiple = function(type){
+			_this.setMultiple = function(type){
 				_list.multiple = type;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 選択されたアイテムをすべて取得
 			// --------------------------------------------------------------------------------
-			_container.getSelectedValues = function(){
+			_this.getSelectedValues = function(){
 				var ary = new Array();
 				var a = _list.options;
 				var i;
@@ -34232,7 +34357,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.onchange = function(){};
+			_this.onchange = function(){};
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -34253,25 +34378,23 @@ function PageExpand(page_expand_arguments){
 				container.appendChild(_list);
 
 				_list.onchange = function(){
-					_container.onchange(_list.value);
+					_this.onchange(_list.value);
 				};
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// 正規表現リスト
 		// --------------------------------------------------------------------------------
 		function UI_RegExpList(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// カスタムオブジェクトを関連付け
 			// --------------------------------------------------------------------------------
-			_container.attachArray = function(ary){
+			_this.attachArray = function(ary){
 				// クリア
-				_container.clear();
+				_this.clear();
 
 				_regexp_list = ObjectCopy(ary);
 
@@ -34282,13 +34405,13 @@ function PageExpand(page_expand_arguments){
 					attachItem(i);
 				}
 				
-				_container.select(-1);
+				_this.select(-1);
 			};
 
 			// --------------------------------------------------------------------------------
 			// クリア
 			// --------------------------------------------------------------------------------
-			_container.clear = function(){
+			_this.clear = function(){
 				var a = _list.options;
 				var i;
 				var num = a.length;
@@ -34300,7 +34423,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 表示更新
 			// --------------------------------------------------------------------------------
-			_container.update = function(){
+			_this.update = function(){
 				var a = _list.options;
 				var i;
 				var num = a.length;
@@ -34317,9 +34440,9 @@ function PageExpand(page_expand_arguments){
 
 				var id = _regexp_list.length - 1;
 				attachItem(id);
-				_container.update();
-				_container.select(id);
-				_container.onchange(_regexp_list);
+				_this.update();
+				_this.select(id);
+				_this.onchange(_regexp_list);
 			}
 
 			// --------------------------------------------------------------------------------
@@ -34349,9 +34472,9 @@ function PageExpand(page_expand_arguments){
 						a[i].value = i;
 					}
 
-					_container.update();
+					_this.update();
 					onselect(_list.selectedIndex);
-					_container.onchange(_regexp_list);
+					_this.onchange(_regexp_list);
 				}
 			}
 
@@ -34388,8 +34511,8 @@ function PageExpand(page_expand_arguments){
 				}
 
 				if(changed){
-					_container.update();
-					_container.onchange(_regexp_list);
+					_this.update();
+					_this.onchange(_regexp_list);
 				}
 			}
 
@@ -34426,15 +34549,15 @@ function PageExpand(page_expand_arguments){
 				}
 
 				if(changed){
-					_container.update();
-					_container.onchange(_regexp_list);
+					_this.update();
+					_this.onchange(_regexp_list);
 				}
 			}
 
 			// --------------------------------------------------------------------------------
 			// 選択されたアイテムをすべて取得
 			// --------------------------------------------------------------------------------
-			_container.getSelectedIndices = function(){
+			_this.getSelectedIndices = function(){
 				var ary = new Array();
 				var a = _list.options;
 				var i;
@@ -34450,12 +34573,12 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.onchange = function(){};
+			_this.onchange = function(){};
 
 			// --------------------------------------------------------------------------------
 			// 選択イベント
 			// --------------------------------------------------------------------------------
-			_container.onselect = function(){};
+			_this.onselect = function(){};
 
 			// --------------------------------------------------------------------------------
 			// 選択イベント（内部用）
@@ -34468,13 +34591,13 @@ function PageExpand(page_expand_arguments){
 				}else{
 					DomNodeRemove(text_regexp);
 				}
-				_container.onselect(id);
+				_this.onselect(id);
 			}
 
 			// --------------------------------------------------------------------------------
 			// リストを選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_list.selectedIndex = id;
 				onselect(id);
 			};
@@ -34588,7 +34711,7 @@ function PageExpand(page_expand_arguments){
 					moveDownClick();
 				};
 
-				_text_regexp = UI_TextRegExp(parent);
+				_text_regexp = new UI_TextRegExp(parent);
 				_text_regexp.oninput = function(v){
 					var a = _list.options;
 					var i;
@@ -34599,24 +34722,22 @@ function PageExpand(page_expand_arguments){
 							updateItem(a[i]);
 						}
 					}
-					_container.onchange(_regexp_list);
+					_this.onchange(_regexp_list);
 				};
 
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// コンボボックス+ボタン
 		// --------------------------------------------------------------------------------
 		function UI_ComboBoxButton(parent,label){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// アイテム追加
 			// --------------------------------------------------------------------------------
-			_container.attachItem = function(label,value){
+			_this.attachItem = function(label,value){
 				var item = DocumentCreateElement("option");
 				ElementSetStyle(item,"margin:2px 0px;");
 				ElementSetTextContent(item,label);
@@ -34627,7 +34748,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// アイテムクリア
 			// --------------------------------------------------------------------------------
-			_container.clearItem = function(){
+			_this.clearItem = function(){
 				var options = _combo_box.options;
 				var i;
 				var num = options.length;
@@ -34639,26 +34760,26 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 選択番号を取得
 			// --------------------------------------------------------------------------------
-			_container.getSelectedIndex = function(){
+			_this.getSelectedIndex = function(){
 				return _combo_box.selectedIndex;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
-			_container.setValue = function(v){
+			_this.setValue = function(v){
 				_combo_box.value = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// ボタンクリックイベント
 			// --------------------------------------------------------------------------------
-			_container.onclick = function(){};
+			_this.onclick = function(){};
 
 			// --------------------------------------------------------------------------------
 			// 変更イベント
 			// --------------------------------------------------------------------------------
-			_container.onchange = function(){};
+			_this.onchange = function(){};
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -34681,7 +34802,7 @@ function PageExpand(page_expand_arguments){
 				ElementSetStyle(_combo_box,"width:100%; height:22px; font-size:14px;");
 				combo_box_container.appendChild(_combo_box);
 				_combo_box.onchange = function(){
-					_container.onchange(_combo_box.value);
+					_this.onchange(_combo_box.value);
 				};
 
 				var button_container = DocumentCreateElement("div");
@@ -34694,23 +34815,21 @@ function PageExpand(page_expand_arguments){
 				button.value = label;
 				button_container.appendChild(button);
 				button.onclick = function(){
-					_container.onclick();
+					_this.onclick();
 				};
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// 掲示板拡張用リスト
 		// --------------------------------------------------------------------------------
 		function UI_ExpandBbsList(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// カスタムオブジェクトを関連付け
 			// --------------------------------------------------------------------------------
-			_container.attachExpandBbsData = function(obj){
+			_this.attachExpandBbsData = function(obj){
 				_expand_bbs = obj;
 
 				// リストに登録
@@ -34724,7 +34843,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// クリア
 			// --------------------------------------------------------------------------------
-			_container.clear = function(){
+			_this.clear = function(){
 				var a = _list.options;
 				var i;
 				var num = a.length;
@@ -34736,7 +34855,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 表示更新
 			// --------------------------------------------------------------------------------
-			_container.update = function(){
+			_this.update = function(){
 				var a = _list.options;
 				var i;
 				var num = a.length;
@@ -34751,7 +34870,7 @@ function PageExpand(page_expand_arguments){
 			function addClick(){
 
 				// モーダルダイアログ作成
-				var dialog = UI_ModalDialog(_content_window);
+				var dialog = new UI_ModalDialog(_content_window);
 				var dialog_parent = dialog.getElement();
 
 				// タイトル
@@ -34760,12 +34879,12 @@ function PageExpand(page_expand_arguments){
 				// 名前
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_add_dialog_name"));
 				var parent = container.getElement();
-				var text_input_name = UI_TextInput(parent);
+				var text_input_name = new UI_TextInput(parent);
 
 				// 既存のURLマッピング設定から複製する
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_add_dialog_copy_define"));
 				var parent = container.getElement();
-				var list_box_expand_bbs = UI_ListBox(parent);
+				var list_box_expand_bbs = new UI_ListBox(parent);
 
 				var i;
 				var num = _expand_bbs.length;
@@ -34777,7 +34896,7 @@ function PageExpand(page_expand_arguments){
 				list_box_expand_bbs.setValue("");
 
 				// Yes No ボタン
-				var yes_no_button = UI_YesNoButton(dialog_parent);
+				var yes_no_button = new UI_YesNoButton(dialog_parent);
 				yes_no_button.onclick = function(v){
 
 					if(v){
@@ -34821,12 +34940,12 @@ function PageExpand(page_expand_arguments){
 						_expand_bbs.unshift(obj);
 
 						// 再構築
-						_container.clear();
-						_container.attachExpandBbsData(_expand_bbs);
+						_this.clear();
+						_this.attachExpandBbsData(_expand_bbs);
 						projectModify();
 
 						// 選択
-						_container.select(0);
+						_this.select(0);
 					}
 
 					// ダイアログ終了
@@ -34859,8 +34978,8 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				_container.update();
-				_container.onselect(_list.selectedIndex);
+				_this.update();
+				_this.onselect(_list.selectedIndex);
 				projectModify();
 			}
 
@@ -34894,7 +35013,7 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				_container.update();
+				_this.update();
 				projectModify();
 			}
 
@@ -34928,7 +35047,7 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				_container.update();
+				_this.update();
 				projectModify();
 			}
 
@@ -34961,7 +35080,7 @@ function PageExpand(page_expand_arguments){
 				export_obj = PageExpandProjectObjectRemovePreset(export_obj);
 
 				// モーダルダイアログ作成
-				var dialog = UI_ModalDialog(_content_window);
+				var dialog = new UI_ModalDialog(_content_window);
 				var dialog_parent = dialog.getElement();
 
 				// タイトル
@@ -34970,13 +35089,13 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_export_dialog_export"));
 				var parent = container.getElement();
 
-				var text_area = UI_TextArea(parent);
+				var text_area = new UI_TextArea(parent);
 				text_area.setValue(JsonStringify(export_obj));
 
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_expand_bbs_export_dialog_export_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_expand_bbs_export_dialog_export_hint"));
 
 				// Ok ボタン
-				var yes_no_button = UI_OkButton(dialog_parent);
+				var yes_no_button = new UI_OkButton(dialog_parent);
 				yes_no_button.onclick = function(v){
 					// ダイアログ終了
 					dialog.close();
@@ -34992,7 +35111,7 @@ function PageExpand(page_expand_arguments){
 			function importClick(){
 
 				// モーダルダイアログ作成
-				var dialog = UI_ModalDialog(_content_window);
+				var dialog = new UI_ModalDialog(_content_window);
 				var dialog_parent = dialog.getElement();
 
 				// タイトル
@@ -35001,7 +35120,7 @@ function PageExpand(page_expand_arguments){
 				// 名前
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_import_dialog_explanation"));
 				var parent = container.getElement();
-				var unordered_list = UI_UnorderedList(parent);
+				var unordered_list = new UI_UnorderedList(parent);
 				unordered_list.addListItem(_i18n.getMessage("menu_setting_expand_bbs_import_dialog_explanation_0"));
 				unordered_list.addListItem(_i18n.getMessage("menu_setting_expand_bbs_import_dialog_explanation_1"));
 				unordered_list.addListItem(_i18n.getMessage("menu_setting_expand_bbs_import_dialog_explanation_2"));
@@ -35009,90 +35128,91 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_import_dialog_import"));
 				var parent = container.getElement();
 
-				var text_area_import = UI_TextArea(parent);
+				var text_area_import = new UI_TextArea(parent);
 
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_expand_bbs_import_dialog_import_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_expand_bbs_import_dialog_import_hint"));
 
 				// 実行しますか？
 				var container = new UI_LineContainer(dialog_parent,null);
 				var parent = container.getElement();
-				UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_import_dialog_confirm"));
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_import_dialog_confirm"));
 
 				// Yes No ボタン
-				var yes_no_button = UI_YesNoButton(dialog_parent);
+				var yes_no_button = new UI_YesNoButton(dialog_parent);
 				yes_no_button.onclick = function(v){
 
-					if(v){
-						function ExpandBbsImportFailure(message){
+					if(!v){
+						// ダイアログ終了
+						dialog.close();
+						return;
+					}
+
+					function ExpandBbsImportFailure(message){
+						// 結果を表示
+						var alert_dialog = new UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_import_alert"));
+						new UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_expand_bbs_import_alert_failure"));
+						new UI_Text(alert_dialog.getElement(),message);
+						alert_dialog.oncomplete = function(){
+							// ダイアログ終了
+							dialog.close();
+						};
+						alert_dialog.open();
+					}
+
+					try{
+						var proj_obj = page_expand_project.getObject();
+						var import_obj = JsonParse(text_area_import.getValue());
+
+						// バージョンが一致しない
+						if(import_obj.version > proj_obj.version){
+							throw "Error: It is a version not supported.";
+						}
+
+						// 出力タイプチェック
+						var error = true;
+						try{
+							switch(import_obj.setting_export.type){
+							case "expand_bbs":
+								error = false;
+								break;
+							}
+						}catch(e){}
+
+						if(error){
+							throw "Error: It is a type not supported.";
+						}
+
+						// 定義をインポート
+						PageExpandProjectObjectImportExpandBbs(proj_obj,import_obj);
+
+						projectSave(function(e){
+							if(!e.result){
+								ExpandBbsImportFailure(e.message);
+								return;
+							}
+
+							text_area_import.setValue("");
+
 							// 結果を表示
-							var alert_dialog = UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_import_alert"));
-							UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_expand_bbs_import_alert_failure"));
-							UI_Text(alert_dialog.getElement(),message);
+							var alert_dialog = new UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_import_alert"));
+							new UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_expand_bbs_import_alert_success"));
 							alert_dialog.oncomplete = function(){
+
+								// フェードアウト完了後
+								dialog.oncomplete = function(){
+
+									// リロード
+									_this.onreload();
+								};
+
 								// ダイアログ終了
 								dialog.close();
 							};
 							alert_dialog.open();
-						}
+						});
 
-						try{
-							var proj_obj = page_expand_project.getObject();
-							var import_obj = JsonParse(text_area_import.getValue());
-
-							// バージョンが一致しない
-							if(import_obj.version > proj_obj.version){
-								throw "Error: It is a version not supported.";
-							}
-
-							// 出力タイプチェック
-							var error = true;
-							try{
-								switch(import_obj.setting_export.type){
-								case "expand_bbs":
-									error = false;
-									break;
-								}
-							}catch(e){}
-
-							if(error){
-								throw "Error: It is a type not supported.";
-							}
-
-							// 定義をインポート
-							PageExpandProjectObjectImportExpandBbs(proj_obj,import_obj);
-
-							projectSave(function(e){
-								if(!e.result){
-									ExpandBbsImportFailure(e.message);
-									return;
-								}
-
-								text_area_import.setValue("");
-
-								// 結果を表示
-								var alert_dialog = UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_expand_bbs_import_alert"));
-								UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_expand_bbs_import_alert_success"));
-								alert_dialog.oncomplete = function(){
-
-									// フェードアウト完了後
-									dialog.oncomplete = function(){
-
-										// リロード
-										_container.onreload();
-									};
-
-									// ダイアログ終了
-									dialog.close();
-								};
-								alert_dialog.open();
-							});
-
-						}catch(e){
-							ExpandBbsImportFailure(e);
-						}
-					}else{
-						// ダイアログ終了
-						dialog.close();
+					}catch(e){
+						ExpandBbsImportFailure(e);
 					}
 				};
 
@@ -35103,7 +35223,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 選択されたアイテムをすべて取得
 			// --------------------------------------------------------------------------------
-			_container.getSelectedIndices = function(){
+			_this.getSelectedIndices = function(){
 				var ary = new Array();
 				var a = _list.options;
 				var i;
@@ -35119,30 +35239,30 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.onchange = function(){};
+			_this.onchange = function(){};
 
 			// --------------------------------------------------------------------------------
 			// 選択イベント
 			// --------------------------------------------------------------------------------
-			_container.onselect = function(){};
+			_this.onselect = function(){};
 
 			// --------------------------------------------------------------------------------
 			// リロードイベント
 			// --------------------------------------------------------------------------------
-			_container.onreload = function(){};
+			_this.onreload = function(){};
 
 			// --------------------------------------------------------------------------------
 			// リストを選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_list.selectedIndex = _select_id = _select_mouse = id;
-				_container.onselect(id);
+				_this.onselect(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				var dic = new Object();
 				var i;
 				var num = _expand_bbs.length;
@@ -35163,16 +35283,16 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 				if(index !== undefined){
-					_container.onselect(index);
+					_this.onselect(index);
 				}
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				var selected_defines = new Array();
-				var a = _container.getSelectedIndices();
+				var a = _this.getSelectedIndices();
 				var i;
 				var num = a.length;
 				for(i=0;i<num;i++){
@@ -35266,8 +35386,8 @@ function PageExpand(page_expand_arguments){
 							_select_id = _select_mouse;
 						}
 					}
-					_container.onselect(_select_id);
-					_container.replaceHistory();
+					_this.onselect(_select_id);
+					_this.replaceHistory();
 				};
 
 				var button_container = DocumentCreateElement("div");
@@ -35328,22 +35448,20 @@ function PageExpand(page_expand_arguments){
 					importClick();
 				};
 
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_expand_bbs_list_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_expand_bbs_list_hint"));
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// URLマッピング用リスト
 		// --------------------------------------------------------------------------------
 		function UI_UrlMapList(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// カスタムオブジェクトを関連付け
 			// --------------------------------------------------------------------------------
-			_container.attachUrlMapData = function(obj){
+			_this.attachUrlMapData = function(obj){
 				_urlmap = obj;
 
 				// リストに登録
@@ -35357,7 +35475,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// クリア
 			// --------------------------------------------------------------------------------
-			_container.clear = function(){
+			_this.clear = function(){
 				var a = _list.options;
 				var i;
 				var num = a.length;
@@ -35369,7 +35487,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 表示更新
 			// --------------------------------------------------------------------------------
-			_container.update = function(){
+			_this.update = function(){
 				var a = _list.options;
 				var i;
 				var num = a.length;
@@ -35384,7 +35502,7 @@ function PageExpand(page_expand_arguments){
 			function addClick(){
 
 				// モーダルダイアログ作成
-				var dialog = UI_ModalDialog(_content_window);
+				var dialog = new UI_ModalDialog(_content_window);
 				var dialog_parent = dialog.getElement();
 
 				// タイトル
@@ -35393,12 +35511,12 @@ function PageExpand(page_expand_arguments){
 				// 名前
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_urlmap_add_dialog_name"));
 				var parent = container.getElement();
-				var text_input_name = UI_TextInput(parent);
+				var text_input_name = new UI_TextInput(parent);
 
 				// 既存のURLマッピング設定から複製する
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_urlmap_add_dialog_copy_define"));
 				var parent = container.getElement();
-				var list_box_urlmap = UI_ListBox(parent);
+				var list_box_urlmap = new UI_ListBox(parent);
 
 				var i;
 				var num = _urlmap.length;
@@ -35410,7 +35528,7 @@ function PageExpand(page_expand_arguments){
 				list_box_urlmap.setValue("");
 
 				// Yes No ボタン
-				var yes_no_button = UI_YesNoButton(dialog_parent);
+				var yes_no_button = new UI_YesNoButton(dialog_parent);
 				yes_no_button.onclick = function(v){
 
 					if(v){
@@ -35454,12 +35572,12 @@ function PageExpand(page_expand_arguments){
 						_urlmap.unshift(obj);
 
 						// 再構築
-						_container.clear();
-						_container.attachUrlMapData(_urlmap);
+						_this.clear();
+						_this.attachUrlMapData(_urlmap);
 						projectModify();
 
 						// 選択
-						_container.select(0);
+						_this.select(0);
 					}
 
 					// ダイアログ終了
@@ -35492,8 +35610,8 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				_container.update();
-				_container.onselect(_list.selectedIndex);
+				_this.update();
+				_this.onselect(_list.selectedIndex);
 				projectModify();
 			}
 
@@ -35527,7 +35645,7 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				_container.update();
+				_this.update();
 				projectModify();
 			}
 
@@ -35561,14 +35679,14 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				_container.update();
+				_this.update();
 				projectModify();
 			}
 
 			// --------------------------------------------------------------------------------
 			// 選択されたアイテムをすべて取得
 			// --------------------------------------------------------------------------------
-			_container.getSelectedIndices = function(){
+			_this.getSelectedIndices = function(){
 				var ary = new Array();
 				var a = _list.options;
 				var i;
@@ -35584,25 +35702,25 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.onchange = function(){};
+			_this.onchange = function(){};
 
 			// --------------------------------------------------------------------------------
 			// 選択イベント
 			// --------------------------------------------------------------------------------
-			_container.onselect = function(){};
+			_this.onselect = function(){};
 
 			// --------------------------------------------------------------------------------
 			// リストを選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_list.selectedIndex = id;
-				_container.onselect(id);
+				_this.onselect(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				var dic = new Object();
 				var i;
 				var num = _urlmap.length;
@@ -35623,16 +35741,16 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 				if(index !== undefined){
-					_container.onselect(index);
+					_this.onselect(index);
 				}
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				var selected_defines = new Array();
-				var a = _container.getSelectedIndices();
+				var a = _this.getSelectedIndices();
 				var i;
 				var num = a.length;
 				for(i=0;i<num;i++){
@@ -35726,8 +35844,8 @@ function PageExpand(page_expand_arguments){
 							_select_id = _select_mouse;
 						}
 					}
-					_container.onselect(_select_id);
-					_container.replaceHistory();
+					_this.onselect(_select_id);
+					_this.replaceHistory();
 				};
 
 				var button_container = DocumentCreateElement("div");
@@ -35770,22 +35888,20 @@ function PageExpand(page_expand_arguments){
 					prioDownClick();
 				};
 
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_urlmap_list_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_urlmap_list_hint"));
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// 定義用リスト
 		// --------------------------------------------------------------------------------
 		function UI_DefineList(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// カスタムオブジェクトを関連付け
 			// --------------------------------------------------------------------------------
-			_container.attachDefineData = function(obj){
+			_this.attachDefineData = function(obj){
 				_define = obj;
 
 				// リストに登録
@@ -35799,21 +35915,21 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 定義の識別名をセット
 			// --------------------------------------------------------------------------------
-			_container.setDefineAssetName = function(asset){
+			_this.setDefineAssetName = function(asset){
 				_define_id = asset;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 新規データ作成用関数をセット
 			// --------------------------------------------------------------------------------
-			_container.setFunctionForNewData = function(f){
+			_this.setFunctionForNewData = function(f){
 				_new_data_func = f;
 			};
 
 			// --------------------------------------------------------------------------------
 			// クリア
 			// --------------------------------------------------------------------------------
-			_container.clear = function(){
+			_this.clear = function(){
 				var a = _list.options;
 				var i;
 				var num = a.length;
@@ -35825,7 +35941,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 表示更新
 			// --------------------------------------------------------------------------------
-			_container.update = function(){
+			_this.update = function(){
 				var a = _list.options;
 				var i;
 				var num = a.length;
@@ -35840,7 +35956,7 @@ function PageExpand(page_expand_arguments){
 			function addClick(){
 
 				// モーダルダイアログ作成
-				var dialog = UI_ModalDialog(_content_window);
+				var dialog = new UI_ModalDialog(_content_window);
 				var dialog_parent = dialog.getElement();
 
 				// タイトル
@@ -35849,12 +35965,12 @@ function PageExpand(page_expand_arguments){
 				// 名前
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_define_add_dialog_name"));
 				var parent = container.getElement();
-				var text_input_name = UI_TextInput(parent);
+				var text_input_name = new UI_TextInput(parent);
 
 				// 既存のURLマッピング設定から複製する
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_define_add_dialog_copy_define"));
 				var parent = container.getElement();
-				var list_box_define = UI_ListBox(parent);
+				var list_box_define = new UI_ListBox(parent);
 
 				var i;
 				var num = _define.length;
@@ -35866,7 +35982,7 @@ function PageExpand(page_expand_arguments){
 				list_box_define.setValue("");
 
 				// Yes No ボタン
-				var yes_no_button = UI_YesNoButton(dialog_parent);
+				var yes_no_button = new UI_YesNoButton(dialog_parent);
 				yes_no_button.onclick = function(v){
 
 					if(v){
@@ -35910,12 +36026,12 @@ function PageExpand(page_expand_arguments){
 						_define.unshift(obj);
 
 						// 再構築
-						_container.clear();
-						_container.attachDefineData(_define);
+						_this.clear();
+						_this.attachDefineData(_define);
 						projectModify();
 
 						// 選択
-						_container.select(0);
+						_this.select(0);
 					}
 
 					// ダイアログ終了
@@ -35976,8 +36092,8 @@ function PageExpand(page_expand_arguments){
 					while(true){
 						var param = stack.pop();
 						if(!param){
-							_container.update();
-							_container.onselect(_list.selectedIndex);
+							_this.update();
+							_this.onselect(_list.selectedIndex);
 							projectModify();
 							return;
 						}
@@ -36023,7 +36139,7 @@ function PageExpand(page_expand_arguments){
 						if(urlmap_use.length){
 
 							// モーダルダイアログ作成
-							var dialog = UI_ModalDialog(_content_window);
+							var dialog = new UI_ModalDialog(_content_window);
 							var dialog_parent = dialog.getElement();
 
 							// タイトル
@@ -36032,13 +36148,13 @@ function PageExpand(page_expand_arguments){
 							// 名前
 							var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_define_delete_dialog_name"));
 							var parent = container.getElement();
-							var text_name = UI_TextDynamic(parent);
+							var text_name = new UI_TextDynamic(parent);
 							text_name.setValue(LocaleObjectGetString(define.user.name));
 
 							// 既存のURLマッピング設定から複製する
 							var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_define_delete_dialog_change_define"));
 							var parent = container.getElement();
-							var list_box_define = UI_ListBox(parent);
+							var list_box_define = new UI_ListBox(parent);
 
 							// 代替リスト
 							(function(){
@@ -36053,7 +36169,7 @@ function PageExpand(page_expand_arguments){
 							})();
 
 							// Yes No ボタン
-							var yes_no_button = UI_YesNoButton(dialog_parent);
+							var yes_no_button = new UI_YesNoButton(dialog_parent);
 							yes_no_button.onclick = function(v){
 
 								if(v){
@@ -36106,8 +36222,8 @@ function PageExpand(page_expand_arguments){
 							dialog.open();
 
 							// 表示更新
-							_container.update();
-							_container.onselect(_list.selectedIndex);
+							_this.update();
+							_this.onselect(_list.selectedIndex);
 							projectModify();
 							return;
 						}else{
@@ -36153,7 +36269,7 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				_container.update();
+				_this.update();
 				projectModify();
 			}
 
@@ -36187,7 +36303,7 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				_container.update();
+				_this.update();
 				projectModify();
 			}
 
@@ -36221,7 +36337,7 @@ function PageExpand(page_expand_arguments){
 				export_obj = PageExpandProjectObjectRemovePreset(export_obj);
 
 				// モーダルダイアログ作成
-				var dialog = UI_ModalDialog(_content_window);
+				var dialog = new UI_ModalDialog(_content_window);
 				var dialog_parent = dialog.getElement();
 
 				// タイトル
@@ -36230,13 +36346,13 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_define_export_dialog_export"));
 				var parent = container.getElement();
 
-				var text_area = UI_TextArea(parent);
+				var text_area = new UI_TextArea(parent);
 				text_area.setValue(JsonStringify(export_obj));
 
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_define_export_dialog_export_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_define_export_dialog_export_hint"));
 
 				// Ok ボタン
-				var yes_no_button = UI_OkButton(dialog_parent);
+				var yes_no_button = new UI_OkButton(dialog_parent);
 				yes_no_button.onclick = function(v){
 					// ダイアログ終了
 					dialog.close();
@@ -36252,7 +36368,7 @@ function PageExpand(page_expand_arguments){
 			function importClick(){
 
 				// モーダルダイアログ作成
-				var dialog = UI_ModalDialog(_content_window);
+				var dialog = new UI_ModalDialog(_content_window);
 				var dialog_parent = dialog.getElement();
 
 				// タイトル
@@ -36261,7 +36377,7 @@ function PageExpand(page_expand_arguments){
 				// 名前
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_define_import_dialog_explanation"));
 				var parent = container.getElement();
-				var unordered_list = UI_UnorderedList(parent);
+				var unordered_list = new UI_UnorderedList(parent);
 				unordered_list.addListItem(_i18n.getMessage("menu_setting_define_import_dialog_explanation_0"));
 				unordered_list.addListItem(_i18n.getMessage("menu_setting_define_import_dialog_explanation_1"));
 				unordered_list.addListItem(_i18n.getMessage("menu_setting_define_import_dialog_explanation_2"));
@@ -36269,91 +36385,92 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_define_import_dialog_import"));
 				var parent = container.getElement();
 
-				var text_area_import = UI_TextArea(parent);
+				var text_area_import = new UI_TextArea(parent);
 
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_define_import_dialog_import_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_define_import_dialog_import_hint"));
 
 				// 実行しますか？
 				var container = new UI_LineContainer(dialog_parent,null);
 				var parent = container.getElement();
-				UI_Text(parent,_i18n.getMessage("menu_setting_define_import_dialog_confirm"));
+				new UI_Text(parent,_i18n.getMessage("menu_setting_define_import_dialog_confirm"));
 
 				// Yes No ボタン
-				var yes_no_button = UI_YesNoButton(dialog_parent);
+				var yes_no_button = new UI_YesNoButton(dialog_parent);
 				yes_no_button.onclick = function(v){
 
-					if(v){
-						function DefineImportFailure(message){
+					if(!v){
+						// ダイアログ終了
+						dialog.close();
+						return;
+					}
+
+					function DefineImportFailure(message){
+						// 結果を表示
+						var alert_dialog = new UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_define_import_alert"));
+						new UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_define_import_alert_failure"));
+						new UI_Text(alert_dialog.getElement(),message);
+						alert_dialog.oncomplete = function(){
+							// ダイアログ終了
+							dialog.close();
+						};
+						alert_dialog.open();
+					}
+
+					try{
+						var proj_obj = page_expand_project.getObject();
+						var import_obj = JsonParse(text_area_import.getValue());
+
+						// バージョンが一致しない
+						if(import_obj.version > proj_obj.version){
+							throw "Error: It is a version not supported.";
+						}
+
+						// 出力タイプチェック
+						var error = true;
+						try{
+							switch(import_obj.setting_export.type){
+							case "setting":
+							case "define":
+								error = false;
+								break;
+							}
+						}catch(e){}
+
+						if(error){
+							throw "Error: It is a type not supported.";
+						}
+
+						// 定義をインポート
+						PageExpandProjectObjectImportDefine(proj_obj,import_obj,_define_id);
+
+						projectSave(function(e){
+							if(!e.result){
+								DefineImportFailure(e.message);
+								return;
+							}
+
+							text_area_import.setValue("");
+
 							// 結果を表示
-							var alert_dialog = UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_define_import_alert"));
-							UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_define_import_alert_failure"));
-							UI_Text(alert_dialog.getElement(),message);
+							var alert_dialog = new UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_define_import_alert"));
+							new UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_define_import_alert_success"));
 							alert_dialog.oncomplete = function(){
+
+								// フェードアウト完了後
+								dialog.oncomplete = function(){
+
+									// リロード
+									_this.onreload();
+								};
+
 								// ダイアログ終了
 								dialog.close();
 							};
 							alert_dialog.open();
-						}
+						});
 
-						try{
-							var proj_obj = page_expand_project.getObject();
-							var import_obj = JsonParse(text_area_import.getValue());
-
-							// バージョンが一致しない
-							if(import_obj.version > proj_obj.version){
-								throw "Error: It is a version not supported.";
-							}
-
-							// 出力タイプチェック
-							var error = true;
-							try{
-								switch(import_obj.setting_export.type){
-								case "setting":
-								case "define":
-									error = false;
-									break;
-								}
-							}catch(e){}
-
-							if(error){
-								throw "Error: It is a type not supported.";
-							}
-
-							// 定義をインポート
-							PageExpandProjectObjectImportDefine(proj_obj,import_obj,_define_id);
-
-							projectSave(function(e){
-								if(!e.result){
-									DefineImportFailure(e.message);
-									return;
-								}
-
-								text_area_import.setValue("");
-
-								// 結果を表示
-								var alert_dialog = UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_define_import_alert"));
-								UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_define_import_alert_success"));
-								alert_dialog.oncomplete = function(){
-
-									// フェードアウト完了後
-									dialog.oncomplete = function(){
-
-										// リロード
-										_container.onreload();
-									};
-
-									// ダイアログ終了
-									dialog.close();
-								};
-								alert_dialog.open();
-							});
-
-						}catch(e){
-							DefineImportFailure(e);
-						}
-					}else{
-						// ダイアログ終了
-						dialog.close();
+					}catch(e){
+						DefineImportFailure(e);
 					}
 				};
 
@@ -36364,14 +36481,14 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 選択されたアイテムを取得
 			// --------------------------------------------------------------------------------
-			_container.getSelectedIndex = function(){
+			_this.getSelectedIndex = function(){
 				return _select_id = _list.selectedIndex;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 選択されたアイテムをすべて取得
 			// --------------------------------------------------------------------------------
-			_container.getSelectedIndices = function(){
+			_this.getSelectedIndices = function(){
 				var ary = new Array();
 				var a = _list.options;
 				var i;
@@ -36387,30 +36504,30 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.onchange = function(){};
+			_this.onchange = function(){};
 
 			// --------------------------------------------------------------------------------
 			// 選択イベント
 			// --------------------------------------------------------------------------------
-			_container.onselect = function(){};
+			_this.onselect = function(){};
 
 			// --------------------------------------------------------------------------------
 			// リロードイベント
 			// --------------------------------------------------------------------------------
-			_container.onreload = function(){};
+			_this.onreload = function(){};
 
 			// --------------------------------------------------------------------------------
 			// リストを選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_list.selectedIndex = _select_id = _select_mouse = id;
-				_container.onselect(id);
+				_this.onselect(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストから選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromIdList = function(list){
+			_this.selectFromIdList = function(list){
 				var dic = new Object();
 				var i;
 				var num = _define.length;
@@ -36431,16 +36548,16 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 				if(index !== undefined){
-					_container.onselect(index);
+					_this.onselect(index);
 				}
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				var selected_defines = new Array();
-				var a = _container.getSelectedIndices();
+				var a = _this.getSelectedIndices();
 				var i;
 				var num = a.length;
 				for(i=0;i<num;i++){
@@ -36544,8 +36661,8 @@ function PageExpand(page_expand_arguments){
 							_select_id = _select_mouse;
 						}
 					}
-					_container.onselect(_select_id);
-					_container.replaceHistory();
+					_this.onselect(_select_id);
+					_this.replaceHistory();
 				};
 
 				var button_container = DocumentCreateElement("div");
@@ -36606,25 +36723,23 @@ function PageExpand(page_expand_arguments){
 					importClick();
 				};
 
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_define_list_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_define_list_hint"));
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// フィルタ用リスト
 		// --------------------------------------------------------------------------------
 		function UI_FilterList(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// フィルタを関連付け
 			// --------------------------------------------------------------------------------
-			_container.attachDefinitions = function(ary,active){
+			_this.attachDefinitions = function(ary,active){
 
 				// 全てクリア
-				_container.clear();
+				_this.clear();
 
 				_definitions = ary;
 				_definition_active = active;
@@ -36653,35 +36768,35 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// アクティブなフィルタを取得
 			// --------------------------------------------------------------------------------
-			_container.getDefinitionActive = function(){
+			_this.getDefinitionActive = function(){
 				return _definition_active;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 定義の識別名をセット
 			// --------------------------------------------------------------------------------
-			_container.setDefineAssetName = function(asset){
+			_this.setDefineAssetName = function(asset){
 				_define_id = asset;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 新規定義データ作成用関数をセット
 			// --------------------------------------------------------------------------------
-			_container.setFunctionForNewDefineData = function(f){
+			_this.setFunctionForNewDefineData = function(f){
 				_new_define_data_func = f;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 新規フィルタデータ作成用関数をセット
 			// --------------------------------------------------------------------------------
-			_container.setFunctionForNewFilterData = function(f){
+			_this.setFunctionForNewFilterData = function(f){
 				_new_filter_data_func = f;
 			};
 
 			// --------------------------------------------------------------------------------
 			// クリア
 			// --------------------------------------------------------------------------------
-			_container.clear = function(){
+			_this.clear = function(){
 				var a = _list.options;
 				var i;
 				var num = a.length;
@@ -36693,7 +36808,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 表示更新
 			// --------------------------------------------------------------------------------
-			_container.update = function(){
+			_this.update = function(){
 				var a = _list.options;
 				var i;
 				var num = a.length;
@@ -36706,13 +36821,13 @@ function PageExpand(page_expand_arguments){
 			// 表示更新（内部用）
 			// --------------------------------------------------------------------------------
 			function update(){
-				_container.attachDefinitions(_definitions,_definition_active);
+				_this.attachDefinitions(_definitions,_definition_active);
 			}
 
 			// --------------------------------------------------------------------------------
 			// フィルタを書き込み更新
 			// --------------------------------------------------------------------------------
-			_container.writeDefinitions = function(func){
+			_this.writeDefinitions = function(func){
 				var c;
 				var p;
 				var i;
@@ -36734,11 +36849,11 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// フィルタを書き込み更新
 			// --------------------------------------------------------------------------------
-			_container.writeFilters = function(func){
-				var ary = _container.getSelectedIndices();
+			_this.writeFilters = function(func){
+				var ary = _this.getSelectedIndices();
 				var i;
 				var num = ary.length;
-				_container.writeDefinitions(function(c){
+				_this.writeDefinitions(function(c){
 					var filter = c.filter;
 					for(i=0;i<num;i++){
 						if(ary[i] < filter.length){
@@ -36754,7 +36869,7 @@ function PageExpand(page_expand_arguments){
 			function addClick(){
 
 				// モーダルダイアログ作成
-				var dialog = UI_ModalDialog(_content_window);
+				var dialog = new UI_ModalDialog(_content_window);
 				var dialog_parent = dialog.getElement();
 
 				// タイトル
@@ -36763,12 +36878,12 @@ function PageExpand(page_expand_arguments){
 				// 名前
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_filter_add_dialog_name"));
 				var parent = container.getElement();
-				var text_input_name = UI_TextInput(parent);
+				var text_input_name = new UI_TextInput(parent);
 
 				// 既存のURLマッピング設定から複製する
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_filter_add_dialog_copy_define"));
 				var parent = container.getElement();
-				var list_box_filter = UI_ListBox(parent);
+				var list_box_filter = new UI_ListBox(parent);
 
 				var dictionary = new Object();
 				var unique = 0;
@@ -36790,20 +36905,20 @@ function PageExpand(page_expand_arguments){
 				list_box_filter.setValue("");
 
 				// Yes No ボタン
-				var yes_no_button = UI_YesNoButton(dialog_parent);
+				var yes_no_button = new UI_YesNoButton(dialog_parent);
 				yes_no_button.onclick = function(v){
 
 					if(v){
 						var filter = dictionary[list_box_filter.getValue()];
 						if(filter){
-							_container.writeDefinitions(function(c){
+							_this.writeDefinitions(function(c){
 								var filter_copy = ObjectCopy(filter);
 								c.filter.unshift(filter_copy);
 								filter_copy.name = LocaleObjectCreate();
 								LocaleObjectSetString(filter_copy.name,text_input_name.getValue());
 							});
 						}else{
-							_container.writeDefinitions(function(c){
+							_this.writeDefinitions(function(c){
 								if(_new_filter_data_func){
 									var filter_new = _new_filter_data_func();
 									c.filter.unshift(filter_new);
@@ -36815,8 +36930,8 @@ function PageExpand(page_expand_arguments){
 
 						update();
 						projectModify();
-						_container.select(0);
-						_container.onchange();
+						_this.select(0);
+						_this.onchange();
 					}
 
 					// ダイアログ終了
@@ -36839,7 +36954,7 @@ function PageExpand(page_expand_arguments){
 					var item = a[i];
 					if(item.selected){
 						var id = parseInt(item.value);
-						_container.writeDefinitions(function(c){
+						_this.writeDefinitions(function(c){
 							var filter = c.filter;
 							if(filter.length > id){
 								filter.splice(id,1);
@@ -36852,8 +36967,8 @@ function PageExpand(page_expand_arguments){
 
 				update();
 				projectModify();
-				_container.onselect(_list.selectedIndex);
-				_container.onchange();
+				_this.onselect(_list.selectedIndex);
+				_this.onchange();
 			}
 
 			// --------------------------------------------------------------------------------
@@ -36887,7 +37002,7 @@ function PageExpand(page_expand_arguments){
 
 						var j = i;
 						var k = (i-1);
-						_container.writeDefinitions(function(c){
+						_this.writeDefinitions(function(c){
 							var filter = c.filter;
 							t = filter[k];
 							filter[k] = filter[j];
@@ -36896,9 +37011,9 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				_container.update();
+				_this.update();
 				projectModify();
-				_container.onchange();
+				_this.onchange();
 			}
 
 			// --------------------------------------------------------------------------------
@@ -36932,7 +37047,7 @@ function PageExpand(page_expand_arguments){
 
 						var j = i;
 						var k = (i+1);
-						_container.writeDefinitions(function(c){
+						_this.writeDefinitions(function(c){
 							var filter = c.filter;
 							t = filter[k];
 							filter[k] = filter[j];
@@ -36941,9 +37056,9 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				_container.update();
+				_this.update();
 				projectModify();
-				_container.onchange();
+				_this.onchange();
 			}
 
 			// --------------------------------------------------------------------------------
@@ -36983,7 +37098,7 @@ function PageExpand(page_expand_arguments){
 				export_obj = PageExpandProjectObjectRemovePreset(export_obj);
 
 				// モーダルダイアログ作成
-				var dialog = UI_ModalDialog(_content_window);
+				var dialog = new UI_ModalDialog(_content_window);
 				var dialog_parent = dialog.getElement();
 
 				// タイトル
@@ -36992,13 +37107,13 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_filter_export_dialog_export"));
 				var parent = container.getElement();
 
-				var text_area = UI_TextArea(parent);
+				var text_area = new UI_TextArea(parent);
 				text_area.setValue(JsonStringify(export_obj));
 
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_filter_export_dialog_export_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_filter_export_dialog_export_hint"));
 
 				// Ok ボタン
-				var yes_no_button = UI_OkButton(dialog_parent);
+				var yes_no_button = new UI_OkButton(dialog_parent);
 				yes_no_button.onclick = function(v){
 					// ダイアログ終了
 					dialog.close();
@@ -37014,7 +37129,7 @@ function PageExpand(page_expand_arguments){
 			function importClick(){
 
 				// モーダルダイアログ作成
-				var dialog = UI_ModalDialog(_content_window);
+				var dialog = new UI_ModalDialog(_content_window);
 				var dialog_parent = dialog.getElement();
 
 				// タイトル
@@ -37023,7 +37138,7 @@ function PageExpand(page_expand_arguments){
 				// 名前
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_filter_import_dialog_explanation"));
 				var parent = container.getElement();
-				var unordered_list = UI_UnorderedList(parent);
+				var unordered_list = new UI_UnorderedList(parent);
 				unordered_list.addListItem(_i18n.getMessage("menu_setting_filter_import_dialog_explanation_0"));
 				unordered_list.addListItem(_i18n.getMessage("menu_setting_filter_import_dialog_explanation_1"));
 				unordered_list.addListItem(_i18n.getMessage("menu_setting_filter_import_dialog_explanation_2"));
@@ -37031,98 +37146,99 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_filter_import_dialog_import"));
 				var parent = container.getElement();
 
-				var text_area_import = UI_TextArea(parent);
+				var text_area_import = new UI_TextArea(parent);
 
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_filter_import_dialog_import_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_filter_import_dialog_import_hint"));
 
 				// 実行しますか？
 				var container = new UI_LineContainer(dialog_parent,null);
 				var parent = container.getElement();
-				UI_Text(parent,_i18n.getMessage("menu_setting_filter_import_dialog_confirm"));
+				new UI_Text(parent,_i18n.getMessage("menu_setting_filter_import_dialog_confirm"));
 
 				// Yes No ボタン
-				var yes_no_button = UI_YesNoButton(dialog_parent);
+				var yes_no_button = new UI_YesNoButton(dialog_parent);
 				yes_no_button.onclick = function(v){
 
-					if(v){
-						function ExpandBbsImportFailure(message){
+					if(!v){
+						// ダイアログ終了
+						dialog.close();
+						return;
+					}
+
+					function ExpandBbsImportFailure(message){
+						// 結果を表示
+						var alert_dialog = new UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_filter_import_alert"));
+						new UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_filter_import_alert_failure"));
+						new UI_Text(alert_dialog.getElement(),message);
+						alert_dialog.oncomplete = function(){
+							// ダイアログ終了
+							dialog.close();
+						};
+						alert_dialog.open();
+					}
+
+					try{
+						var proj_obj = page_expand_project.getObject();
+						var import_obj = JsonParse(text_area_import.getValue());
+
+						// バージョンが一致しない
+						if(import_obj.version > proj_obj.version){
+							throw "Error: It is a version not supported.";
+						}
+
+						// 出力タイプチェック
+						var error = false;
+						try{
+							var setting_export = import_obj.setting_export;
+							if(setting_export.type != "filter"){
+								error = true;
+							}
+							if(setting_export.asset != _define_id){
+								error = true;
+							}
+						}catch(e){
+							error = true;
+						}
+
+						if(error){
+							throw "Error: It is a type not supported.";
+						}
+
+						// 最新のフィルタを追加
+						var filter_latest = PageExpandProjectObjectGetDefineFilterLatest(import_obj,_define_id);
+						_this.writeDefinitions(function(c){
+							var filter = c.filter;
+							c.filter = c.filter.concat(filter_latest);
+						});
+
+						projectSave(function(e){
+							if(!e.result){
+								ExpandBbsImportFailure(e.message);
+								return;
+							}
+
+							text_area_import.setValue("");
+
 							// 結果を表示
-							var alert_dialog = UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_filter_import_alert"));
-							UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_filter_import_alert_failure"));
-							UI_Text(alert_dialog.getElement(),message);
+							var alert_dialog = new UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_filter_import_alert"));
+							new UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_filter_import_alert_success"));
 							alert_dialog.oncomplete = function(){
+
+								// フェードアウト完了後
+								dialog.oncomplete = function(){
+									update();
+									projectModify();
+									_this.onchange();
+								};
+
 								// ダイアログ終了
 								dialog.close();
 							};
 							alert_dialog.open();
-						}
+						});
 
-						try{
-							var proj_obj = page_expand_project.getObject();
-							var import_obj = JsonParse(text_area_import.getValue());
-
-							// バージョンが一致しない
-							if(import_obj.version > proj_obj.version){
-								throw "Error: It is a version not supported.";
-							}
-
-							// 出力タイプチェック
-							var error = false;
-							try{
-								var setting_export = import_obj.setting_export;
-								if(setting_export.type != "filter"){
-									error = true;
-								}
-								if(setting_export.asset != _define_id){
-									error = true;
-								}
-							}catch(e){
-								error = true;
-							}
-
-							if(error){
-								throw "Error: It is a type not supported.";
-							}
-
-							// 最新のフィルタを追加
-							var filter_latest = PageExpandProjectObjectGetDefineFilterLatest(import_obj,_define_id);
-							_container.writeDefinitions(function(c){
-								var filter = c.filter;
-								c.filter = c.filter.concat(filter_latest);
-							});
-
-							projectSave(function(e){
-								if(!e.result){
-									ExpandBbsImportFailure(e.message);
-									return;
-								}
-
-								text_area_import.setValue("");
-
-								// 結果を表示
-								var alert_dialog = UI_AlertDialog(dialog_parent,_i18n.getMessage("menu_setting_filter_import_alert"));
-								UI_Text(alert_dialog.getElement(),_i18n.getMessage("menu_setting_filter_import_alert_success"));
-								alert_dialog.oncomplete = function(){
-
-									// フェードアウト完了後
-									dialog.oncomplete = function(){
-										update();
-										projectModify();
-										_container.onchange();
-									};
-
-									// ダイアログ終了
-									dialog.close();
-								};
-								alert_dialog.open();
-							});
-
-						}catch(e){
-							ExpandBbsImportFailure(e);
-						}
-					}else{
-						// ダイアログ終了
-						dialog.close();
+					}catch(e){
+						ExpandBbsImportFailure(e);
 					}
 				};
 
@@ -37133,7 +37249,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 選択されたアイテムをすべて取得
 			// --------------------------------------------------------------------------------
-			_container.getSelectedIndices = function(){
+			_this.getSelectedIndices = function(){
 				var ary = new Array();
 				var a = _list.options;
 				var i;
@@ -37149,25 +37265,25 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.onchange = function(){};
+			_this.onchange = function(){};
 
 			// --------------------------------------------------------------------------------
 			// 選択イベント
 			// --------------------------------------------------------------------------------
-			_container.onselect = function(){};
+			_this.onselect = function(){};
 
 			// --------------------------------------------------------------------------------
 			// リストを選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_list.selectedIndex = _select_id = _select_mouse = id;
-				_container.onselect(id);
+				_this.onselect(id);
 			};
 
 			// --------------------------------------------------------------------------------
 			// リストを選択
 			// --------------------------------------------------------------------------------
-			_container.selectFromList = function(list){
+			_this.selectFromList = function(list){
 				var dic = new Object();
 				var i;
 				var num = list.length;
@@ -37181,16 +37297,16 @@ function PageExpand(page_expand_arguments){
 					if(o) o.selected = true;
 				}
 				if(index !== undefined){
-					_container.onselect(index);
+					_this.onselect(index);
 				}
 			};
 
 			// --------------------------------------------------------------------------------
 			// 履歴を上書き
 			// --------------------------------------------------------------------------------
-			_container.replaceHistory = function(){
+			_this.replaceHistory = function(){
 				var selected_filters = new Array();
-				var a = _container.getSelectedIndices();
+				var a = _this.getSelectedIndices();
 				var i;
 				var num = a.length;
 				for(i=0;i<num;i++){
@@ -37292,8 +37408,8 @@ function PageExpand(page_expand_arguments){
 							_select_id = _select_mouse;
 						}
 					}
-					_container.onselect(_select_id);
-					_container.replaceHistory();
+					_this.onselect(_select_id);
+					_this.replaceHistory();
 				};
 
 				var button_container = DocumentCreateElement("div");
@@ -37354,36 +37470,34 @@ function PageExpand(page_expand_arguments){
 					importClick();
 				};
 
-				UI_TextHint(parent,_i18n.getMessage("menu_setting_filter_list_hint"));
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_filter_list_hint"));
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// 定義複数選択用リスト
 		// --------------------------------------------------------------------------------
 		function UI_DefineMultiSelectList(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 識別名をセット
 			// --------------------------------------------------------------------------------
-			_container.setAsset = function(asset){
+			_this.setAsset = function(asset){
 				_asset = asset;
 			};
 
 			// --------------------------------------------------------------------------------
 			// メニュー番号をセット
 			// --------------------------------------------------------------------------------
-			_container.setMenuId = function(id){
+			_this.setMenuId = function(id){
 				_menu_id = id;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 定義データをセット
 			// --------------------------------------------------------------------------------
-			_container.setDefineData = function(define_data){
+			_this.setDefineData = function(define_data){
 				_define_data = define_data;
 				_define_dictionary = new Object();
 				var i;
@@ -37398,10 +37512,10 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// URLマップを関連付け
 			// --------------------------------------------------------------------------------
-			_container.attachUrlMaps = function(ary,active){
+			_this.attachUrlMaps = function(ary,active){
 
 				// 全てクリア
-				_container.clear();
+				_this.clear();
 
 				_urlmaps = ary;
 				_urlmap_active = active;
@@ -37436,14 +37550,14 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// アクティブなフィルタを取得
 			// --------------------------------------------------------------------------------
-			_container.getUrlmapActive = function(){
+			_this.getUrlmapActive = function(){
 				return _urlmap_active;
 			};
 
 			// --------------------------------------------------------------------------------
 			// クリア
 			// --------------------------------------------------------------------------------
-			_container.clear = function(){
+			_this.clear = function(){
 				var a = _list.options;
 				var i;
 				var num = a.length;
@@ -37456,7 +37570,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 表示更新
 			// --------------------------------------------------------------------------------
-			_container.update = function(){
+			_this.update = function(){
 				var a = _list.options;
 				var i;
 				var num = a.length;
@@ -37470,14 +37584,14 @@ function PageExpand(page_expand_arguments){
 			// 表示更新（内部用）
 			// --------------------------------------------------------------------------------
 			function update(){
-				_container.attachUrlMaps(_urlmaps,_urlmap_active);
+				_this.attachUrlMaps(_urlmaps,_urlmap_active);
 			}
 
 			// --------------------------------------------------------------------------------
 			// UI 表示更新（内部用）
 			// --------------------------------------------------------------------------------
 			function updateUI(){
-				var _selected_index = _container.getSelectedIndex();
+				var _selected_index = _this.getSelectedIndex();
 				var disabled = (_selected_index < 0);
 
 				_button_prio_up.disabled = disabled;
@@ -37511,7 +37625,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 書き込み更新
 			// --------------------------------------------------------------------------------
-			_container.writeUrlmaps = function(func){
+			_this.writeUrlmaps = function(func){
 				var c;
 				var p;
 				var i;
@@ -37536,7 +37650,7 @@ function PageExpand(page_expand_arguments){
 			function addClick(){
 
 				// モーダルダイアログ作成
-				var dialog = UI_ModalDialog(_content_window);
+				var dialog = new UI_ModalDialog(_content_window);
 				var dialog_parent = dialog.getElement();
 				dialog.setWidth(600);
 
@@ -37546,7 +37660,7 @@ function PageExpand(page_expand_arguments){
 				// 定義の一覧
 				var container = new UI_LineContainer(dialog_parent,_i18n.getMessage("menu_setting_define_multi_select_add_dialog_list"));
 				var parent = container.getElement();
-				var list_box_filter = UI_ListBox(parent);
+				var list_box_filter = new UI_ListBox(parent);
 				list_box_filter.setMultiple(true);
 
 				var i;
@@ -37558,12 +37672,12 @@ function PageExpand(page_expand_arguments){
 				}
 
 				// Yes No ボタン
-				var yes_no_button = UI_YesNoButton(dialog_parent);
+				var yes_no_button = new UI_YesNoButton(dialog_parent);
 				yes_no_button.onclick = function(v){
 
 					if(v){
 						var indeices = list_box_filter.getSelectedValues();
-						_container.writeUrlmaps(function(c){
+						_this.writeUrlmaps(function(c){
 							var i;
 							var num = indeices.length;
 							for(i=0;i<num;i++){
@@ -37602,7 +37716,7 @@ function PageExpand(page_expand_arguments){
 					var item = a[i];
 					if(item.selected){
 						var id = parseInt(item.value);
-						_container.writeUrlmaps(function(c){
+						_this.writeUrlmaps(function(c){
 							var ary = c[_asset].id;
 							if(ary.length > id){
 								ary.splice(id,1);
@@ -37625,13 +37739,13 @@ function PageExpand(page_expand_arguments){
 			// 編集（内部用 ）
 			// --------------------------------------------------------------------------------
 			function editClick(){
-				var _selected_index = _container.getSelectedIndex();
+				var _selected_index = _this.getSelectedIndex();
 				var selected_defines = new Array();
 
 				if(_selected_index >= 0){
 					var ary = ProjectObjectGetActiveData(_urlmap_active)[_asset].id;
 
-					var a = _container.getSelectedIndices();
+					var a = _this.getSelectedIndices();
 					var i;
 					var num = a.length;
 					for(i=0;i<num;i++){
@@ -37679,7 +37793,7 @@ function PageExpand(page_expand_arguments){
 
 						var j = i;
 						var k = (i-1);
-						_container.writeUrlmaps(function(c){
+						_this.writeUrlmaps(function(c){
 							var ary = c[_asset].id;
 							t = ary[k];
 							ary[k] = ary[j];
@@ -37688,7 +37802,7 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				_container.update();
+				_this.update();
 				onchange();
 				projectModify();
 			}
@@ -37724,7 +37838,7 @@ function PageExpand(page_expand_arguments){
 
 						var j = i;
 						var k = (i+1);
-						_container.writeUrlmaps(function(c){
+						_this.writeUrlmaps(function(c){
 							var ary = c[_asset].id;
 							t = ary[k];
 							ary[k] = ary[j];
@@ -37733,7 +37847,7 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				_container.update();
+				_this.update();
 				onchange();
 				projectModify();
 			}
@@ -37741,14 +37855,14 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 選択されたアイテムを取得
 			// --------------------------------------------------------------------------------
-			_container.getSelectedIndex = function(){
+			_this.getSelectedIndex = function(){
 				return _select_id = _list.selectedIndex;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 選択されたアイテムをすべて取得
 			// --------------------------------------------------------------------------------
-			_container.getSelectedIndices = function(){
+			_this.getSelectedIndices = function(){
 				var ary = new Array();
 				var a = _list.options;
 				var i;
@@ -37764,28 +37878,28 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.onchange = function(){};
+			_this.onchange = function(){};
 
 			// --------------------------------------------------------------------------------
 			// 更新イベント（内部用）
 			// --------------------------------------------------------------------------------
 			function onchange(){
-				if(_container.onchange){
-					_container.onchange();
+				if(_this.onchange){
+					_this.onchange();
 				}
 			}
 
 			// --------------------------------------------------------------------------------
 			// 選択イベント
 			// --------------------------------------------------------------------------------
-			_container.onselect = function(){};
+			_this.onselect = function(){};
 
 			// --------------------------------------------------------------------------------
 			// リストを選択
 			// --------------------------------------------------------------------------------
-			_container.select = function(id){
+			_this.select = function(id){
 				_list.selectedIndex = _select_id = _select_mouse = id;
-				_container.onselect(id);
+				_this.onselect(id);
 			};
 
 			// --------------------------------------------------------------------------------
@@ -37887,7 +38001,7 @@ function PageExpand(page_expand_arguments){
 						}
 					}
 					updateUI();
-					_container.onselect(_select_id);
+					_this.onselect(_select_id);
 				};
 
 				var button_container = DocumentCreateElement("div");
@@ -37941,22 +38055,20 @@ function PageExpand(page_expand_arguments){
 
 				updateUI();
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// URL エディットコンテナ
 		// --------------------------------------------------------------------------------
 		function UI_UrlEditContainer(parent){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// カスタムオブジェクトを関連付け
 			// --------------------------------------------------------------------------------
-			_container.attachObject = function(obj){
+			_this.attachObject = function(obj){
 				// クリア
-				_container.clear();
+				_this.clear();
 
 				_filter_container = ObjectCopy(obj);
 				update();
@@ -37965,7 +38077,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// クリア
 			// --------------------------------------------------------------------------------
-			_container.clear = function(){
+			_this.clear = function(){
 				_text_area_filter_url.setValue("");
 				_regexp_list_filter.clear();
 			};
@@ -37994,7 +38106,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
-			_container.onchange = function(){};
+			_this.onchange = function(){};
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -38010,13 +38122,13 @@ function PageExpand(page_expand_arguments){
 			// 初期化
 			// --------------------------------------------------------------------------------
 			(function(){
-				_combo_box_type = UI_ComboBox(parent);
+				_combo_box_type = new UI_ComboBox(parent);
 				_combo_box_type.attachItem(_i18n.getMessage("menu_setting_url_edit_container_combo_box_item_asterisk"),"asterisk");
 				_combo_box_type.attachItem(_i18n.getMessage("menu_setting_url_edit_container_combo_box_item_regexp"),"regexp");
 				_combo_box_type.onchange = function(v){
 					_filter_container.type = v;
 					update();
-					_container.onchange(_filter_container);
+					_this.onchange(_filter_container);
 				};
 
 				_form_container_asterisk = new UI_FormContainer(parent);
@@ -38024,26 +38136,24 @@ function PageExpand(page_expand_arguments){
 				var form_parent_asterisk = _form_container_asterisk.getElement();
 
 				// アスタリスクリスト
-				_text_area_filter_url = UI_TextArea(form_parent_asterisk);
+				_text_area_filter_url = new UI_TextArea(form_parent_asterisk);
 				_text_area_filter_url.oninput = function(v){
 					_filter_container.asterisk.filter = _text_area_filter_url.spiritByLine();
-					_container.onchange(_filter_container);
+					_this.onchange(_filter_container);
 				};
-				UI_TextHint(form_parent_asterisk,_i18n.getMessage("menu_setting_url_edit_container_type_asterisk_hint"));
+				new UI_TextHint(form_parent_asterisk,_i18n.getMessage("menu_setting_url_edit_container_type_asterisk_hint"));
 
 				_form_container_regexp = new UI_FormContainer(parent);
 				_form_container_regexp.setVisible(false);
 				var form_parent_regexp = _form_container_regexp.getElement();
 
 				// 正規表現リスト
-				_regexp_list_filter = UI_RegExpList(form_parent_regexp);
+				_regexp_list_filter = new UI_RegExpList(form_parent_regexp);
 				_regexp_list_filter.onchange = function(v){
 					_filter_container.regexp.filter = ObjectCopy(v);
-					_container.onchange(_filter_container);
+					_this.onchange(_filter_container);
 				};
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -39524,12 +39634,12 @@ function PageExpand(page_expand_arguments){
 	// ポップアップメニュー
 	// --------------------------------------------------------------------------------
 	function PageExpandPopupMenu(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// リロード
 		// --------------------------------------------------------------------------------
-		_container.reload = function (){
+		_this.reload = function (){
 			// プロジェクト読み込み
 			projectLoad(function(e){
 
@@ -39602,7 +39712,7 @@ function PageExpand(page_expand_arguments){
 		// ラインボタン（内部用）
 		// --------------------------------------------------------------------------------
 		function UI_LineButton(parent,label){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 通常状態（内部用）
@@ -39634,7 +39744,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// クリックイベント
 			// --------------------------------------------------------------------------------
-			_container.onclick = function(){};
+			_this.onclick = function(){};
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -39653,7 +39763,7 @@ function PageExpand(page_expand_arguments){
 				parent.appendChild(_item);
 
 				_item.onclick = function(){
-					_container.onclick();
+					_this.onclick();
 				};
 				_item.onmouseover = function(){
 					mouse_over();
@@ -39669,8 +39779,6 @@ function PageExpand(page_expand_arguments){
 				};
 				normal();
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -39707,14 +39815,14 @@ function PageExpand(page_expand_arguments){
 			out_table.appendChild(_menu_window);
 
 			// PageExpand の設定
-			var button_config = UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_page"));
+			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_page"));
 			button_config.onclick = function(){
 				click("configCurrentPage");
 			};
 
 			// 掲示板拡張の設定
 			if(project.getEnableExpandBbs()){
-				var button_config = UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_bbs"));
+				var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_bbs"));
 				button_config.onclick = function(){
 					click("configCurrentBbs");
 				};
@@ -39722,14 +39830,14 @@ function PageExpand(page_expand_arguments){
 
 			// PageExpand の実行
 			if(!(project.getEnableStartup())){
-				var button_execute_pageexpand = UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_execute"));
+				var button_execute_pageexpand = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_execute"));
 				button_execute_pageexpand.onclick = function(){
 					click("executePageExpand");
 				};
 			}
 
 			// PageExpand デバッグ
-			var button_execute_debug = UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_debug"));
+			var button_execute_debug = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_debug"));
 			button_execute_debug.onclick = function(){
 				click("executeDebug");
 			};
@@ -39756,8 +39864,6 @@ function PageExpand(page_expand_arguments){
 			});
 
 		})();
-
-		return _container;
 	}
 
 
@@ -42056,14 +42162,14 @@ function PageExpand(page_expand_arguments){
 			// テキストの読み込み
 			loader = new Loader();
 			loader.onload = function(str){
-
-				if(str.match(new RegExp("<link[ ]*?rel[ ]*?=[ ]*?\"video_src\"[ ]*?href[ ]*?=[ ]*?\"((http|https)://www\\.mixcloud\\.com/media/swf/player/mixcloudLoader.swf?[?].*?)\"","i"))){
-					// 自動再生を無効化
-					iframe_url = RegExp.$1.replace(/autoplay=1/ig,"autoplay=0");
+				var m = str.match(new RegExp("<meta[^>]+name[ \n\r\t]*=[ \n\r\t]*\"twitter:player\"[^>]*>","i"));
+				if(m){
+					m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
+					if(m){
+						iframe_url = m[1];
+						iframe_url = iframe_url.replace(new RegExp("^//"),"https://");
+					}
 				}
-
-				// セキュアページに変更
-				iframe_url = iframe_url.replace(/^http:/,"https:");
 
 				// アドレス取得失敗
 				if(!iframe_url){
@@ -42097,6 +42203,16 @@ function PageExpand(page_expand_arguments){
 
 				// スタイルをセット
 				ElementSetStyle(iframe,project.getStyleSheetExpandSoundMixcloudInlinePlayer());
+
+				// 高さを設定
+				var m = str.match(new RegExp("<meta[^>]+name[ \n\r\t]*=[ \n\r\t]*\"twitter:player:height\"[^>]*>","i"));
+				if(m){
+					m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
+					if(m){
+						iframe.style.height = parseInt(m[1]) + "px";
+
+					}
+				}
 
 				// 解析ワーク作成
 				iframe_analyze_work = AnalyzeWorkCreate(iframe);
@@ -42842,66 +42958,66 @@ function PageExpand(page_expand_arguments){
 					}
 
 					if(player_url && flashvars){
-						var embed;
-						video = DocumentCreateElement('div');
-
-						// スタイルをセット
-						ElementSetStyle(video,project.getStyleSheetExpandVideoNicovideoInlineVideo());
-
-						// 解析ワーク作成
-						video_analyze_work = AnalyzeWorkCreate(video);
-
-						// 解析辞書登録オプション
-						var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-						attach_options.SetOutsider();
-
-						// 解析辞書登録
-						analyze_work_dictionary.attachAnalyzeWork(video_analyze_work,attach_options);
-
-						// エレメントのリムーブ監視
-						observer_remove = new DomNodeObserverRemoveFromDocument(video);
-						observer_remove.setFunction(releaseElement);
-
-						function responseInsert(){
-							if(!video)	return;
-
-							limitter_element = element_limitter_video.createElement();
-							limitter_element.onattach = function(){
-								if(!embed){
-									embed = DocumentCreateElement('embed');
-									embed.type = "application/x-shockwave-flash";
-									embed.width = "100%";
-									embed.height = "100%";
-									embed.setAttribute("allowScriptAccess","always");
-									embed.setAttribute("bgcolor","#000000");
-									embed.setAttribute("quality","high");
-									embed.setAttribute("flashVars",flashvars);
-									embed.src = player_url;
-									video.appendChild(embed);
-								}
-							};
-							limitter_element.onremove = function(){
-								if(embed){
-									DomNodeRemove(embed);
-									embed = null;
-								}
-							};
-							limitter_element.setElementHitArea(video);
-
-							// 更新
-							limitter_element.update();
-
-							expand_video_complete();
-						}
-
-						// コールバック関数を実行
-						project.executeScriptInsertInlineVideo(element,video,work.event_dispatcher,responseInsert);
-
 					}else{
 						// 解析失敗
 						expand_video_complete();
+						return;
 					}
 
+					var embed;
+					video = DocumentCreateElement('div');
+
+					// スタイルをセット
+					ElementSetStyle(video,project.getStyleSheetExpandVideoNicovideoInlineVideo());
+
+					// 解析ワーク作成
+					video_analyze_work = AnalyzeWorkCreate(video);
+
+					// 解析辞書登録オプション
+					var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+					attach_options.SetOutsider();
+
+					// 解析辞書登録
+					analyze_work_dictionary.attachAnalyzeWork(video_analyze_work,attach_options);
+
+					// エレメントのリムーブ監視
+					observer_remove = new DomNodeObserverRemoveFromDocument(video);
+					observer_remove.setFunction(releaseElement);
+
+					function responseInsert(){
+						if(!video)	return;
+
+						limitter_element = element_limitter_video.createElement();
+						limitter_element.onattach = function(){
+							if(!embed){
+								embed = DocumentCreateElement('embed');
+								embed.type = "application/x-shockwave-flash";
+								embed.width = "100%";
+								embed.height = "100%";
+								embed.setAttribute("allowScriptAccess","always");
+								embed.setAttribute("bgcolor","#000000");
+								embed.setAttribute("quality","high");
+								embed.setAttribute("flashVars",flashvars);
+								embed.src = player_url;
+								video.appendChild(embed);
+							}
+						};
+						limitter_element.onremove = function(){
+							if(embed){
+								DomNodeRemove(embed);
+								embed = null;
+							}
+						};
+						limitter_element.setElementHitArea(video);
+
+						// 更新
+						limitter_element.update();
+
+						expand_video_complete();
+					}
+
+					// コールバック関数を実行
+					project.executeScriptInsertInlineVideo(element,video,work.event_dispatcher,responseInsert);
 				};
 
 				// ロードエラー
@@ -44859,7 +44975,8 @@ function PageExpand(page_expand_arguments){
 
 		try{
 			var window_obj = element.contentWindow;
-			if(window_obj.document.URL.match(new RegExp("^(blob|data|about):","i"))){
+			if(element.src){
+			}else if(window_obj.document.URL.match(new RegExp("^(blob|data|about):","i"))){
 				PageExpand({execute_type:page_expand_arguments.execute_type,admin:admin,window:window_obj});
 			}
 		}catch(e){
@@ -45152,35 +45269,35 @@ function PageExpand(page_expand_arguments){
 		function response(obj){
 			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
 
-			if(completed)	return;
+			if(completed) return;
 			completed = true;
 
-			if(!obj)	return;
-			if(obj.useful){
-				var observer_remove;
+			if(!obj) return;
+			if(!(obj.useful)) return;
 
-				// 解放
-				function releaseExpandBbs(){
-					// 解析クリア
-					AnalyzeWorkClearAnalyzedExpandBbs(work);
+			var observer_remove;
 
-					// リムーブ監視を破棄
-					if(observer_remove){
-						observer_remove.release();
-						observer_remove = null;
-					}
+			// 解放
+			function releaseExpandBbs(){
+				// 解析クリア
+				AnalyzeWorkClearAnalyzedExpandBbs(work);
 
-					// 解析辞書除外
-					analyze_work_dictionary.removeAnalyzeWork(work);
+				// リムーブ監視を破棄
+				if(observer_remove){
+					observer_remove.release();
+					observer_remove = null;
 				}
 
-				// リムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(element);
-				observer_remove.setFunction(releaseExpandBbs);
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(work);
+				// 解析辞書除外
+				analyze_work_dictionary.removeAnalyzeWork(work);
 			}
+
+			// リムーブ監視
+			observer_remove = new DomNodeObserverRemoveFromDocument(element);
+			observer_remove.setFunction(releaseExpandBbs);
+
+			// 解析辞書登録
+			analyze_work_dictionary.attachAnalyzeWork(work);
 		}
 
 		// 解析済みチェック
@@ -45282,12 +45399,12 @@ function PageExpand(page_expand_arguments){
 	// ポップアップイメージ
 	// --------------------------------------------------------------------------------
 	function PopupImage(image){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 開放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 			if(!_image)	return;
 
 			// クリックイベントを外す
@@ -45317,19 +45434,19 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 自殺
 		// --------------------------------------------------------------------------------
-		_container.suicide = function(){
+		_this.suicide = function(){
 			if(_task){
-				_container.setElementHitArea(null);
+				_this.setElementHitArea(null);
 				_suicide = true;
 			}else{
-				_container.release();
+				_this.release();
 			}
 		};
 
 		// --------------------------------------------------------------------------------
 		// 親をセット
 		// --------------------------------------------------------------------------------
-		_container.setElementParent = function(element){
+		_this.setElementParent = function(element){
 			if(window_manager.existWindowRoot()){
 				_element_parent = window_manager.getWindowRoot().document.body;
 			}else{
@@ -45340,14 +45457,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// リンクをセット
 		// --------------------------------------------------------------------------------
-		_container.setElementAnchor = function(element){
+		_this.setElementAnchor = function(element){
 			_element_anchor = element;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 当たり判定用エレメントをセット
 		// --------------------------------------------------------------------------------
-		_container.setElementHitArea = function(element){
+		_this.setElementHitArea = function(element){
 			// マウスイベントを外す
 			removeEventMouseOver();
 			// タッチイベントを外す
@@ -45368,14 +45485,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 開始範囲用エレメントをセット
 		// --------------------------------------------------------------------------------
-		_container.setElementBeginArea = function(element){
+		_this.setElementBeginArea = function(element){
 			_element_begin_area = element;
 		};
 
 		// --------------------------------------------------------------------------------
 		// トリミング範囲をセット
 		// --------------------------------------------------------------------------------
-		_container.setTrimRect = function(rect){
+		_this.setTrimRect = function(rect){
 			if(!_trim_rect){
 				// クリックイベントを外す
 				removeEventClick();
@@ -45402,7 +45519,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ポップアップ
 		// --------------------------------------------------------------------------------
-		_container.popup = function(element){
+		_this.popup = function(element){
 			createTask();
 		};
 
@@ -45461,7 +45578,7 @@ function PageExpand(page_expand_arguments){
 			removeEventClick();
 
 			if(_element_current.addEventListener){
-				_element_current.addEventListener("click",_container.release,false);
+				_element_current.addEventListener("click",_this.release,false);
 			}
 		}
 
@@ -45470,7 +45587,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function removeEventClick(){
 			if(_element_current.removeEventListener){
-				_element_current.removeEventListener("click",_container.release,false);
+				_element_current.removeEventListener("click",_this.release,false);
 			}
 		}
 
@@ -45485,7 +45602,7 @@ function PageExpand(page_expand_arguments){
 			if(!_observer_remove){
 				// リムーブ監視
 				_observer_remove = new DomNodeObserverRemoveFromDocument(_element_hit_area);
-				_observer_remove.setFunction(_container.suicide);
+				_observer_remove.setFunction(_this.suicide);
 			}
 		}
 
@@ -45835,8 +45952,8 @@ function PageExpand(page_expand_arguments){
 			_element_current.style.width  = "0px";
 			_element_current.style.height = "0px";
 
-			if(_container.ontrim){
-				_container.ontrim();
+			if(_this.ontrim){
+				_this.ontrim();
 			}
 
 			if(_trim_rect){
@@ -46225,7 +46342,7 @@ function PageExpand(page_expand_arguments){
 
 			// 自殺
 			if(_suicide){
-				_container.release();
+				_this.release();
 			}
 		}
 
@@ -46281,7 +46398,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// トリミング要求イベント
 		// --------------------------------------------------------------------------------
-		_container.ontrim = function(){};
+		_this.ontrim = function(){};
 
 		// --------------------------------------------------------------------------------
 		// プライベート変数
@@ -46331,8 +46448,6 @@ function PageExpand(page_expand_arguments){
 			// クリックイベント
 			addEventClick();
 		})();
-
-		return _container;
 	}
 
 
@@ -46340,12 +46455,12 @@ function PageExpand(page_expand_arguments){
 	// インターナショナルメッセージ
 	// --------------------------------------------------------------------------------
 	function InternationalMessage(language){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// アドレスを登録
 		// --------------------------------------------------------------------------------
-		_container.getMessage = function(asset){
+		_this.getMessage = function(asset){
 			if(_dictionary[asset]){
 				return _dictionary[asset].message;
 			}
@@ -46368,8 +46483,6 @@ function PageExpand(page_expand_arguments){
 			_dictionary = InternationalMessage.locales.en;
 			break;
 		}
-
-		return _container;
 	}
 
 
@@ -49064,12 +49177,12 @@ function PageExpand(page_expand_arguments){
 	// アドレスコレクション
 	// --------------------------------------------------------------------------------
 	function AddressCollection(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// アドレスを登録
 		// --------------------------------------------------------------------------------
-		_container.addAddress = function(category,url){
+		_this.addAddress = function(category,url){
 			url = convertAddress(url);
 
 			// カテゴリが存在しない
@@ -49092,7 +49205,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// アドレスの登録を外す
 		// --------------------------------------------------------------------------------
-		_container.removeAddress = function(category,url){
+		_this.removeAddress = function(category,url){
 			url = convertAddress(url);
 
 			// カテゴリが存在しない
@@ -49115,7 +49228,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// アドレスが登録済みであるか調べる
 		// --------------------------------------------------------------------------------
-		_container.hasAddress = function(category,url){
+		_this.hasAddress = function(category,url){
 			url = convertAddress(url);
 
 			// カテゴリが存在しない
@@ -49140,7 +49253,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 登録数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCountAddress = function(){
+		_this.getCountAddress = function(){
 			return _count;
 		};
 
@@ -49155,8 +49268,6 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		_count = 0;
 		_dictionary = new Object();
-
-		return _container;
 	}
 
 
@@ -49164,12 +49275,12 @@ function PageExpand(page_expand_arguments){
 	// 実行キュー
 	// --------------------------------------------------------------------------------
 	function ExecuteQueue(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 最前列に処理を追加
 		// --------------------------------------------------------------------------------
-		_container.attachFirst = function(func,param){
+		_this.attachFirst = function(func,param){
 			var o = {func:func,param:param};
 			var _prev = _queue_list[0];
 			var _next = _prev._next;
@@ -49184,7 +49295,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 割り込み用の処理を最後尾に追加
 		// --------------------------------------------------------------------------------
-		_container.attachLastForInterrupt = function(func,param){
+		_this.attachLastForInterrupt = function(func,param){
 			var o = {func:func,param:param};
 			var _next = _queue_list[0];
 			var _prev = _next._prev;
@@ -49199,7 +49310,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// DOM オブジェクト除外用の処理を最前列に追加
 		// --------------------------------------------------------------------------------
-		_container.attachFirstForRemoveDomNode = function(func,param){
+		_this.attachFirstForRemoveDomNode = function(func,param){
 			var o = {func:func,param:param};
 			var _prev = _queue_list[1];
 			var _next = _prev._next;
@@ -49214,7 +49325,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// DOM オブジェクト除外用の処理を最後尾に追加
 		// --------------------------------------------------------------------------------
-		_container.attachLastForRemoveDomNode = function(func,param){
+		_this.attachLastForRemoveDomNode = function(func,param){
 			var o = {func:func,param:param};
 			var _next = _queue_list[1];
 			var _prev = _next._prev;
@@ -49229,7 +49340,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// DOM オブジェクト挿入用の処理を最前列に追加
 		// --------------------------------------------------------------------------------
-		_container.attachFirstForInsertDomNode = function(func,param){
+		_this.attachFirstForInsertDomNode = function(func,param){
 			var o = {func:func,param:param};
 			var _prev = _queue_list[2];
 			var _next = _prev._next;
@@ -49244,7 +49355,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// DOM オブジェクト挿入用の処理を最後尾に追加
 		// --------------------------------------------------------------------------------
-		_container.attachLastForInsertDomNode = function(func,param){
+		_this.attachLastForInsertDomNode = function(func,param){
 			var o = {func:func,param:param};
 			var _next = _queue_list[2];
 			var _prev = _next._prev;
@@ -49259,7 +49370,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 掲示板展開用の処理を追加
 		// --------------------------------------------------------------------------------
-		_container.attachForExpandBbs = function(func,param){
+		_this.attachForExpandBbs = function(func,param){
 			var o = {func:func,param:param};
 			var _next = _queue_list[3];
 			var _prev = _next._prev;
@@ -49274,7 +49385,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// エレメント展開用の処理を追加
 		// --------------------------------------------------------------------------------
-		_container.attachForExpandElement = function(func,param){
+		_this.attachForExpandElement = function(func,param){
 			var o = {func:func,param:param};
 			var _next = _queue_list[4];
 			var _prev = _next._prev;
@@ -49289,7 +49400,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// エレメント解析用の処理を追加
 		// --------------------------------------------------------------------------------
-		_container.attachForAnalyzeElement = function(func,param){
+		_this.attachForAnalyzeElement = function(func,param){
 			var o = {func:func,param:param};
 			var _next = _queue_list[5];
 			var _prev = _next._prev;
@@ -49304,7 +49415,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// テキストノード解析用の処理を追加
 		// --------------------------------------------------------------------------------
-		_container.attachForAnalyzeTextNode = function(func,param){
+		_this.attachForAnalyzeTextNode = function(func,param){
 			var o = {func:func,param:param};
 			var _next = _queue_list[6];
 			var _prev = _next._prev;
@@ -49319,7 +49430,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 最後尾に処理を追加
 		// --------------------------------------------------------------------------------
-		_container.attachLast = function(func,param){
+		_this.attachLast = function(func,param){
 			var o = {func:func,param:param};
 			var _next = _queue_list[7];
 			var _prev = _next._prev;
@@ -49342,84 +49453,82 @@ function PageExpand(page_expand_arguments){
 				_queue = _queue_list[_queue_pos];
 			}
 
-			if(_time_handle === undefined){
+			if(_time_handle !== undefined) return;
 
-				function func(){
-					var time = _getTime();
-					do{
-						var o = _queue._next;
-						var _prev = o._prev;
-						var _next = o._next;
-						_prev._next = _next;
-						_next._prev = _prev;
-						try{
-							o.func(o.param);
-							_success_count += 1;
-						}catch(e){
-							if(project.getEnableDebugMode()){
-								ConsoleError(e.stack);
-							}
-							_error_count += 1;
+			_time_handle = setTimeout(function callee(){
+				var time = _getTime();
+				do{
+					var o = _queue._next;
+					var _prev = o._prev;
+					var _next = o._next;
+					_prev._next = _next;
+					_next._prev = _prev;
+					try{
+						o.func(o.param);
+						_success_count += 1;
+					}catch(e){
+						if(project.getEnableDebugMode()){
+							ConsoleError(e.stack);
 						}
+						_error_count += 1;
+					}
 
-						while(_queue_pos<_queue_max){
-							if(_queue._next != _queue)	break;
-							_queue_pos++;
-							_queue = _queue_list[_queue_pos];
-						}
+					while(_queue_pos<_queue_max){
+						if(_queue._next != _queue)	break;
+						_queue_pos++;
+						_queue = _queue_list[_queue_pos];
+					}
 
-						_count -= 1;
-						if(_count <= 0){
-							clearTimeout(_time_handle);
-							_time_handle = undefined;
-							return;
-						}
-					}while (_getTime() - time <= _time_occupancy);
-					_time_handle = setTimeout(func, _time_sleep);
-				}
-				_time_handle = setTimeout(func, _time_sleep);
-			}
+					_count -= 1;
+					if(_count <= 0){
+						clearTimeout(_time_handle);
+						_time_handle = undefined;
+						return;
+					}
+				}while (_getTime() - time <= _time_occupancy);
+				_time_handle = setTimeout(callee, _time_sleep);
+			}, _time_sleep);
 		}
 
 		// --------------------------------------------------------------------------------
 		// キューの数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCountQueue = function(){
+		_this.getCountQueue = function(){
 			return _count;
 		};
 
 		// --------------------------------------------------------------------------------
 		// キューの成功数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCountSuccess = function(){
+		_this.getCountSuccess = function(){
 			return _success_count;
 		};
 
 		// --------------------------------------------------------------------------------
 		// キューのエラー数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCountError = function(){
+		_this.getCountError = function(){
 			return _error_count;
 		};
 
 		// --------------------------------------------------------------------------------
 		// キューのフェーズを取得
 		// --------------------------------------------------------------------------------
-		_container.getPhase = function(){
+		_this.getPhase = function(){
 			return _queue_pos;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 占有時間をセット
 		// --------------------------------------------------------------------------------
-		_container.setOccupancyTime = function(v){
+		_this.setOccupancyTime = function(v){
 			_time_occupancy = v;
 		};
 
 		// --------------------------------------------------------------------------------
 		// スリープ時間をセット
 		// --------------------------------------------------------------------------------
-		_container.setSleepTime = function(v){
+		_this.setSleepTime = function(v){
 			_time_sleep = v;
 		};
 
@@ -49462,8 +49571,6 @@ function PageExpand(page_expand_arguments){
 		// 時間取得関数
 		_getTime = Date.now;
 		if(!_getTime)	_getTime = function(){ return (new Date()).getTime(); };
-
-		return _container;
 	}
 
 
@@ -49471,12 +49578,12 @@ function PageExpand(page_expand_arguments){
 	// ローダーキュー
 	// --------------------------------------------------------------------------------
 	function LoaderQueue(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 要素を作成
 		// --------------------------------------------------------------------------------
-		_container.createElement = function(){
+		_this.createElement = function(){
 			var _element = new Object();
 
 			// --------------------------------------------------------------------------------
@@ -49507,7 +49614,7 @@ function PageExpand(page_expand_arguments){
 			_element.attachFirst = function(){
 				ElementRemove(_element);
 
-				var _prev = _container.queue;
+				var _prev = _this.queue;
 				var _next = _prev._next;
 				_prev._next = _element;
 				_next._prev = _element;
@@ -49523,7 +49630,7 @@ function PageExpand(page_expand_arguments){
 			_element.attachLast = function(){
 				ElementRemove(_element);
 
-				var _next = _container.queue;
+				var _next = _this.queue;
 				var _prev = _next._prev;
 				_prev._next = _element;
 				_next._prev = _element;
@@ -49539,7 +49646,7 @@ function PageExpand(page_expand_arguments){
 			_element.attachSingle = function(){
 				ElementRemove(_element);
 
-				var _next = _container.queue_single;
+				var _next = _this.queue_single;
 				var _prev = _next._prev;
 				_prev._next = _element;
 				_next._prev = _element;
@@ -49589,10 +49696,10 @@ function PageExpand(page_expand_arguments){
 		function dequeue(){
 			// 通常キュー
 			while(_thread_count < _thread_max){
-				var element = _container.queue._next;
+				var element = _this.queue._next;
 
 				// キューが空
-				if(element == _container.queue){
+				if(element == _this.queue){
 					break;
 				}
 				ElementLoadStart(element);
@@ -49600,9 +49707,9 @@ function PageExpand(page_expand_arguments){
 
 			// シングルキュー
 			if(_thread_count <= 0){
-				var element = _container.queue_single._next;
+				var element = _this.queue_single._next;
 
-				if(element != _container.queue_single){
+				if(element != _this.queue_single){
 					ElementLoadStart(element);
 				}
 			}
@@ -49611,42 +49718,42 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// キューの数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCountQueue = function(){
+		_this.getCountQueue = function(){
 			return _queue_count;
 		};
 
 		// --------------------------------------------------------------------------------
 		// スレッドの数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCountThread = function(){
+		_this.getCountThread = function(){
 			return _thread_count;
 		};
 
 		// --------------------------------------------------------------------------------
 		// エラー数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCountError = function(){
+		_this.getCountError = function(){
 			return _error_count;
 		};
 
 		// --------------------------------------------------------------------------------
 		// エラー数を加算
 		// --------------------------------------------------------------------------------
-		_container.addCountError = function(){
+		_this.addCountError = function(){
 			_error_count += 1;
 		};
 
 		// --------------------------------------------------------------------------------
 		// スレッドの最大数を取得
 		// --------------------------------------------------------------------------------
-		_container.getMaxThread = function(){
+		_this.getMaxThread = function(){
 			return _thread_max;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ロードスレッドの最大数をセット
 		// --------------------------------------------------------------------------------
-		_container.setMaxThread = function(v){
+		_this.setMaxThread = function(v){
 			_thread_max = v;
 		};
 
@@ -49664,79 +49771,76 @@ function PageExpand(page_expand_arguments){
 		(function(){
 			_queue_count = 0;
 			_thread_count = 0;
-			_container.setMaxThread(10);
+			_this.setMaxThread(10);
 			_error_count = 0;
 
 			var queue = new Object();
 			queue._prev = queue;
 			queue._next = queue;
-			_container.queue = queue;
+			_this.queue = queue;
 
 			var queue_single = new Object();
 			queue_single._prev = queue_single;
 			queue_single._next = queue_single;
-			_container.queue_single = queue_single;
+			_this.queue_single = queue_single;
 		})();
-
-		return _container;
 	}
-
 
 	// --------------------------------------------------------------------------------
 	// ローダー
 	// --------------------------------------------------------------------------------
 	function Loader(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// ロード成功イベント
 		// --------------------------------------------------------------------------------
-		_container.onload = function(){};
+		_this.onload = function(){};
 
 		// --------------------------------------------------------------------------------
 		// ロード失敗イベント
 		// --------------------------------------------------------------------------------
-		_container.onerror = function(){};
+		_this.onerror = function(){};
 
 		// --------------------------------------------------------------------------------
 		// リクエストヘッダを設定
 		// --------------------------------------------------------------------------------
-		_container.setRequestHeader = function(name,value){
+		_this.setRequestHeader = function(name,value){
 			_request.headers[name] = value;
 		};
 
 		// --------------------------------------------------------------------------------
 		// オーバーライドコンテンツタイプを設定
 		// --------------------------------------------------------------------------------
-		_container.overrideMimeType = function(type){
+		_this.overrideMimeType = function(type){
 			_request.override_mime_type = type;
 		};
 
 		// --------------------------------------------------------------------------------
 		// メソッドを設定
 		// --------------------------------------------------------------------------------
-		_container.setMethod = function(method){
+		_this.setMethod = function(method){
 			_request.method = method;
 		};
 
 		// --------------------------------------------------------------------------------
 		// アドレスを設定
 		// --------------------------------------------------------------------------------
-		_container.setURL = function(url){
+		_this.setURL = function(url){
 			_request.url = url;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 送信データを設定
 		// --------------------------------------------------------------------------------
-		_container.setSendData = function(data){
+		_this.setSendData = function(data){
 			_request.data = data;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 画像をロード
 		// --------------------------------------------------------------------------------
-		_container.loadImage = function(){
+		_this.loadImage = function(){
 			if(!(getEnable())){
 				loadError();
 				return;
@@ -49940,7 +50044,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// オーディオをロード
 		// --------------------------------------------------------------------------------
-		_container.loadAudio = function(){
+		_this.loadAudio = function(){
 			var error = false;
 			// 無効
 			if(!(getEnable())){
@@ -50041,7 +50145,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ビデオをロード
 		// --------------------------------------------------------------------------------
-		_container.loadVideo = function(){
+		_this.loadVideo = function(){
 			var error = false;
 			// 無効
 			if(!(getEnable())){
@@ -50142,7 +50246,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// テキストをロード
 		// --------------------------------------------------------------------------------
-		_container.loadText = function(){
+		_this.loadText = function(){
 			if(!(getEnable())){
 				loadError();
 				return;
@@ -50202,14 +50306,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// リダイレクト先 URL をロード
 		// --------------------------------------------------------------------------------
-		_container.loadFinalURL = function(){
+		_this.loadFinalURL = function(){
 			if(!(getEnable())){
 				loadError();
 				return;
 			}
 
 			// HTTP メソッド
-			_container.setMethod("GET");
+			_this.setMethod("GET");
 
 			// カレント URL
 			var current_url = _request.url;
@@ -50254,7 +50358,7 @@ function PageExpand(page_expand_arguments){
 						// ロード成功
 						if(result){
 							// GET メソッドに変更
-							_container.setMethod("GET");
+							_this.setMethod("GET");
 
 							// キューに登録
 							RetryCountInitialize();
@@ -50314,119 +50418,13 @@ function PageExpand(page_expand_arguments){
 
 						// ロード成功
 						if(result){
-
 							// メタタグのリダイレクトを調べる
 							var redirect_url = null;
-							var r = new RegExp("<[ \r\n\t]*(meta)[ \r\n\t]+.+?>","igm");
-							var match;
-							while(true){
-								match = r.exec(xhr.responseText);
-								if(!match)	break;
-
-								var meta = (function(s){
-									var obj = new Object();
-									var i = 0;
-									var num = s.length;
-									// 文字の先頭を検索
-									function searchName(){
-										while(true){
-											if(i >= num)	return false;
-											if(!(s.charAt(i).match(/[ |　|\t|\r|\n|\/|<|>]/))){
-												return true;
-											}
-											i++;
-										}
-									}
-									// 文字を取得
-									function getName(){
-										var b = i;
-										while(true){
-											if(i >= num)	break;
-											if(s.charAt(i).match(/[ |　|\t|\r|\n|\/|<|>|=]/)){
-												break;
-											}
-											i++;
-										}
-										return s.substring(b,i);
-									}
-									// 値を持つかチェック
-									function haveValue(){
-										var j = i;
-										while(true){
-											if(j >= num)	break;
-											var c = s.charAt(j);
-											if(c == "=")	return true;
-											if(!(c.match(/[ |　|\t|\r|\n|]/))){
-												return false;
-											}
-											j++;
-										}
-										return false;
-									}
-									// 値の先頭を検索
-									function searchValue(){
-										while(true){
-											if(i >= num)	return false;
-											if(!(s.charAt(i).match(/[ |　|\t|\r|\n|\/|<|>|=]/))){
-												return true;
-											}
-											i++;
-										}
-									}
-									// 値を取得
-									function getValue(){
-										var q = s.charAt(i);
-										var e = false;
-										// 名前として取得
-										if(!q.match(/['|"]/))	return getName();
-										i++;
-										var b = i;
-										while(true){
-											if(i >= num)	break;
-											var c = s.charAt(i);
-											if(!(e) && (q == c)){
-												i++;
-												return s.substring(b,i-1);
-											}
-											e = (c == "\\");
-											i++;
-										}
-										return s.substring(b,i);
-									}
-
-									// 文字の先頭を検索
-									if(!searchName())	return obj;
-									// 名前を取得(タグ名)
-									var tag_name = getName();
-									while(true){
-										// 文字の先頭を検索
-										if(!searchName())	return obj;
-										// 文字を取得
-										var name = getName().toLowerCase();
-										// 値を持つか
-										if(!haveValue()){
-											obj[name] = null;
-											continue;
-										}
-										// 値の先頭を検索
-										if(!searchValue())	return obj;
-										// 値を取得
-										obj[name] = getValue();
-									}
-
-								})(match[0]);
-
-								var http_equiv = meta["http-equiv"];
-								if(http_equiv){
-									if(http_equiv.toLowerCase() == "refresh"){
-										var content = meta["content"];
-										if(content){
-											// 相対パスは除外
-											if(content.match(/url=(http:\/\/.*|https:\/\/.*)/i)){
-												redirect_url = RegExp.$1;
-											}
-										}
-									}
+							var m = xhr.responseText.match(new RegExp("<meta[^>]http-equiv[ \n\r\t]*=[ \n\r\t]*\"refresh\"[^>]*>","i"));
+							if(m){
+								m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"[0-9]+;URL=([^\"]+)\"","i"));
+								if(m){
+									redirect_url = m[1];
 								}
 							}
 
@@ -50498,14 +50496,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// レスポンスヘッダをロード
 		// --------------------------------------------------------------------------------
-		_container.loadResponseHeader = function(){
+		_this.loadResponseHeader = function(){
 			if(!(getEnable())){
 				loadError();
 				return;
 			}
 
 			// HTTP メソッド
-			_container.setMethod("HEAD");
+			_this.setMethod("HEAD");
 
 			// 通常リトライ回数
 			_count = 1;
@@ -50849,7 +50847,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function loadError(){
 			loader_queue.addCountError();
-			if(_container.onerror)	_container.onerror();
+			if(_this.onerror)	_this.onerror();
 			_queue_element.release();
 		}
 
@@ -50857,7 +50855,7 @@ function PageExpand(page_expand_arguments){
 		// ロード成功（内部用）
 		// --------------------------------------------------------------------------------
 		function loadSuccess(v){
-			if(_container.onload)	_container.onload(v);
+			if(_this.onload)	_this.onload(v);
 			_queue_element.release();
 		}
 
@@ -50884,21 +50882,236 @@ function PageExpand(page_expand_arguments){
 			_single_count = 0;
 			_queue_element = loader_queue.createElement();
 		})();
+	}
 
-		return _container;
+	// --------------------------------------------------------------------------------
+	// ダウンロードキュー
+	// --------------------------------------------------------------------------------
+	function DownloadQueue(){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// 要素を作成
+		// --------------------------------------------------------------------------------
+		_this.createElement = function(){
+			var _element = new Object();
+
+			// --------------------------------------------------------------------------------
+			// 要素を外す（内部用）
+			// --------------------------------------------------------------------------------
+			function remove(){
+				var _prev = _element._prev;
+				var _next = _element._next;
+				_prev._next = _next;
+				_next._prev = _prev;
+				_element._prev = _element;
+				_element._next = _element;
+			}
+
+			// --------------------------------------------------------------------------------
+			// 要素を破棄
+			// --------------------------------------------------------------------------------
+			_element.release = function(){
+				if(_element._prev == _element) return;
+
+				remove();
+
+				_queue_count -= 1;
+			};
+
+			// --------------------------------------------------------------------------------
+			// URL をセット
+			// --------------------------------------------------------------------------------
+			_element.setURL = function(url){
+				_element._url = url;
+			};
+
+			// --------------------------------------------------------------------------------
+			// 名前をセット
+			// --------------------------------------------------------------------------------
+			_element.setName = function(name){
+				_element._name = name;
+			};
+
+			// --------------------------------------------------------------------------------
+			// 通常最前列に処理を追加
+			// --------------------------------------------------------------------------------
+			_element.attachFirst = function(){
+				remove();
+
+				var _prev = _this.queue;
+				var _next = _prev._next;
+				_prev._next = _element;
+				_next._prev = _element;
+				_element._prev = _prev;
+				_element._next = _next;
+
+				dequeue();
+			};
+
+			// --------------------------------------------------------------------------------
+			// 通常最後尾に追加
+			// --------------------------------------------------------------------------------
+			_element.attachLast = function(){
+				remove();
+
+				var _next = _this.queue;
+				var _prev = _next._prev;
+				_prev._next = _element;
+				_next._prev = _element;
+				_element._prev = _prev;
+				_element._next = _next;
+
+				dequeue();
+			};
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_element._prev = _element;
+				_element._next = _element;
+
+				_queue_count += 1;
+			})();
+
+			return _element;
+		};
+
+		// --------------------------------------------------------------------------------
+		// デキュー（内部用）
+		// --------------------------------------------------------------------------------
+		function dequeue(){
+			var element = _this.queue._next;
+
+			if(_time_handle !== null) return;
+			if(element == _this.queue) return;
+
+			try{
+				var anchor = document.createElement("a");
+				anchor.href = element._url;
+				anchor.target = "_blank";
+				anchor.download = element._name;
+				document.body.appendChild(anchor);
+				anchor.click();
+				anchor.parentNode.removeChild(anchor);
+				element.release();
+			}catch(e){
+			}
+
+			_time_handle = setTimeout(function (){
+				_time_handle = null;
+				dequeue();
+			},_execute_interval);
+		}
+
+		// --------------------------------------------------------------------------------
+		// キューの数を取得
+		// --------------------------------------------------------------------------------
+		_this.getCountQueue = function(){
+			return _queue_count;
+		};
+
+		// --------------------------------------------------------------------------------
+		// プライベート変数
+		// --------------------------------------------------------------------------------
+		var _queue_count;
+		var _execute_interval;
+		var _time_handle;
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		(function(){
+			_queue_count = 0;
+			_execute_interval = 500;
+			_time_handle = null;
+
+			var queue = new Object();
+			queue._prev = queue;
+			queue._next = queue;
+			_this.queue = queue;
+
+			var queue_single = new Object();
+			queue_single._prev = queue_single;
+			queue_single._next = queue_single;
+			_this.queue_single = queue_single;
+		})();
+
+	}
+
+	// --------------------------------------------------------------------------------
+	// ダウンローダー
+	// --------------------------------------------------------------------------------
+	function Downloader(){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// ソースをセット
+		// --------------------------------------------------------------------------------
+		_this.setURL = function(){
+			
+		};
+
+		// --------------------------------------------------------------------------------
+		// 保存場所をセット
+		// --------------------------------------------------------------------------------
+		_this.setFileName = function(){
+			
+		};
+
+		// --------------------------------------------------------------------------------
+		// 保存タイアログを使用する
+		// --------------------------------------------------------------------------------
+		_this.setSaveAs = function(){
+			
+		};
+
+		// --------------------------------------------------------------------------------
+		// 開始する
+		// --------------------------------------------------------------------------------
+		_this.start = function(){
+			
+		};
+
+		// --------------------------------------------------------------------------------
+		// プライベート変数
+		// --------------------------------------------------------------------------------
+		var _queue_count;
+		var _execute_interval;
+		var _time_handle;
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		(function(){
+			_queue_count = 0;
+			_execute_interval = 500;
+			_time_handle = null;
+
+			var queue = new Object();
+			queue._prev = queue;
+			queue._next = queue;
+			_this.queue = queue;
+
+			var queue_single = new Object();
+			queue_single._prev = queue_single;
+			queue_single._next = queue_single;
+			_this.queue_single = queue_single;
+		})();
+
 	}
 
 	// --------------------------------------------------------------------------------
 	// タスクコンテナ
 	// --------------------------------------------------------------------------------
 	function TaskContainer(){
-
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// タスク生成
 		// --------------------------------------------------------------------------------
-		_container.createTask = function(parent){
+		_this.createTask = function(parent){
 			var _task = new Object();
 
 			// --------------------------------------------------------------------------------
@@ -51139,13 +51352,13 @@ function PageExpand(page_expand_arguments){
 			_task._user_work = new Object();
 			_task._execute_func = null;
 			_task._destructor_func = null;
-			_container.attachPrioLast(_task);
+			_this.attachPrioLast(_task);
 
 			if(parent){
 				parent.attachChild(_task);
 			}
 
-			_container.attachPrioLast(_task);
+			_this.attachPrioLast(_task);
 
 			if(_task_count == 1){
 				if(_start_func)	_start_func();
@@ -51158,10 +51371,10 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// タスクコンテナ実行
 		// --------------------------------------------------------------------------------
-		_container.execute = function(level){
+		_this.execute = function(level){
 			var a = new Array();
-			var task = _container._prio_next;
-			while(task != _container){
+			var task = _this._prio_next;
+			while(task != _this){
 				a.push(task);
 				task = task._prio_next;
 			}
@@ -51185,10 +51398,10 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// タスクコンテナ開放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 			var a = new Array();
-			var task = _container._prio_next;
-			while(task != _container){
+			var task = _this._prio_next;
+			while(task != _this){
 				a.push(task);
 				task = task._prio_next;
 			}
@@ -51210,16 +51423,16 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 子としてタスクを登録
 		// --------------------------------------------------------------------------------
-		_container.attachChild = function(task){
+		_this.attachChild = function(task){
 			_root_task.attachChild(task);
 		};
 
 		// --------------------------------------------------------------------------------
 		// 優先度を最前列で登録
 		// --------------------------------------------------------------------------------
-		_container.attachPrioFirst = function(task){
+		_this.attachPrioFirst = function(task){
 			TaskRemovePrio(task);
-			var prev = _container;
+			var prev = _this;
 			var next = prev._prio_next;
 			prev._prio_next = task;
 			next._prio_prev = task;
@@ -51230,9 +51443,9 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 優先度を最後尾で登録
 		// --------------------------------------------------------------------------------
-		_container.attachPrioLast = function(task){
+		_this.attachPrioLast = function(task){
 			TaskRemovePrio(task);
-			var next = _container;
+			var next = _this;
 			var prev = next._prio_prev;
 			prev._prio_next = task;
 			next._prio_prev = task;
@@ -51279,21 +51492,21 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// タスク総数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCountTask = function(){
+		_this.getCountTask = function(){
 			return _task_count - 1;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 開始関数をセット
 		// --------------------------------------------------------------------------------
-		_container.setStartFunc = function(f){
+		_this.setStartFunc = function(f){
 			_start_func = f;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 終了関数をセット
 		// --------------------------------------------------------------------------------
-		_container.setEndFunc = function(f){
+		_this.setEndFunc = function(f){
 			_end_func = f;
 		};
 
@@ -51309,18 +51522,16 @@ function PageExpand(page_expand_arguments){
 		// 初期化
 		// --------------------------------------------------------------------------------
 		_task_count = 0;
-		_container._prio_prev = _container;
-		_container._prio_next = _container;
-		_root_task = _container.createTask(null);
-
-		return _container;
+		_this._prio_prev = _this;
+		_this._prio_next = _this;
+		_root_task = _this.createTask(null);
 	}
 
 	// --------------------------------------------------------------------------------
 	// リダイレクト辞書
 	// --------------------------------------------------------------------------------
 	function RedirectUrlDictionary(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 要素を作成
@@ -51384,7 +51595,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// URL を登録
 		// --------------------------------------------------------------------------------
-		_container.addURL = function(current_url,url){
+		_this.addURL = function(current_url,url){
 			var element = null;
 			element = _dictionary[current_url];
 			if(element){
@@ -51396,7 +51607,7 @@ function PageExpand(page_expand_arguments){
 
 			// 最新へ登録
 			element.setURL(url);
-			var _next = _container._prev;
+			var _next = _this._prev;
 			var _prev = _next._prev;
 			_prev._next = element;
 			_next._prev = element;
@@ -51405,7 +51616,7 @@ function PageExpand(page_expand_arguments){
 
 			// 古い要素を破棄
 			if(_count >= _cache_max){
-				element = _container._next;
+				element = _this._next;
 				element.release();
 			}
 		};
@@ -51413,7 +51624,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// リダイレクト先 URL を繰り返し取得する
 		// --------------------------------------------------------------------------------
-		_container.getRedirectURL = function(current_url){
+		_this.getRedirectURL = function(current_url){
 			var i;
 			var num = _repeat_max;
 			for(i=0;i<num;i++){
@@ -51429,14 +51640,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// キャッシュ最大数をセット
 		// --------------------------------------------------------------------------------
-		_container.setMaxCache = function(v){
+		_this.setMaxCache = function(v){
 			_cache_max = v;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 繰り返し最大数をセット
 		// --------------------------------------------------------------------------------
-		_container.setMaxRepeat = function(v){
+		_this.setMaxRepeat = function(v){
 			_cache_max = v;
 		};
 
@@ -51453,26 +51664,24 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		(function(){
 			_dictionary = new Object();
-			_container._prev = _container;
-			_container._next = _container;
+			_this._prev = _this;
+			_this._next = _this;
 			_count = 0;
 			_cache_max = 256;
 			_repeat_max = 16;
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// ローダー進捗通知
 	// --------------------------------------------------------------------------------
 	function NotifyProgress(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 要素生成
 		// --------------------------------------------------------------------------------
-		_container.createElement = function(){
+		_this.createElement = function(){
 			var _element = new Object();
 
 			// --------------------------------------------------------------------------------
@@ -51834,8 +52043,6 @@ function PageExpand(page_expand_arguments){
 			_icon = DocumentCreateElement("img");
 			_notify = NotifyProgress.NOTIFY_TYPE_UNKNOWN;
 		})();
-
-		return _container;
 	}
 	NotifyProgress.NOTIFY_TYPE_UNKNOWN = 0;
 	NotifyProgress.NOTIFY_TYPE_LOADING = 1;
@@ -51848,12 +52055,12 @@ function PageExpand(page_expand_arguments){
 	// ダブルタッチ補助
 	// --------------------------------------------------------------------------------
 	function DoubleTouchAssist(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 表示開始
 		// --------------------------------------------------------------------------------
-		_container.setShow = function (pos,vec){
+		_this.setShow = function (pos,vec){
 			if(_task){
 				_task.release();
 				_task = null;
@@ -51983,20 +52190,18 @@ function PageExpand(page_expand_arguments){
 			_line.style.position = "absolute";
 			_line.style.pointerEvents = "none";
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// 可視制限コンテナ（数指定）
 	// --------------------------------------------------------------------------------
 	function ElementLimiterByCount(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 要素生成
 		// --------------------------------------------------------------------------------
-		_container.createElement = function(){
+		_this.createElement = function(){
 			var _element = new Object();
 
 			// --------------------------------------------------------------------------------
@@ -52132,28 +52337,28 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 使用数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCountUse = function(){
+		_this.getCountUse = function(){
 			return _use_count;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 使用最大数を取得
 		// --------------------------------------------------------------------------------
-		_container.getMaxUse = function(){
+		_this.getMaxUse = function(){
 			return _use_max;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 使用最大数をセット
 		// --------------------------------------------------------------------------------
-		_container.setMaxUse = function(v){
+		_this.setMaxUse = function(v){
 			_use_max = v;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 使用数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCount = function(){
+		_this.getCount = function(){
 			return _count;
 		};
 
@@ -52253,20 +52458,18 @@ function PageExpand(page_expand_arguments){
 			_rest_list._prev = _rest_list;
 			_rest_list._next = _rest_list;
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// 可視制限コンテナ（バイト数指定）
 	// --------------------------------------------------------------------------------
 	function ElementLimiterByByteSize(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 要素生成
 		// --------------------------------------------------------------------------------
-		_container.createElement = function(){
+		_this.createElement = function(){
 			var _element = new Object();
 
 			// --------------------------------------------------------------------------------
@@ -52387,7 +52590,7 @@ function PageExpand(page_expand_arguments){
 					}else{
 						if(!_inner){
 							// 古いデータを破棄
-							_container.removeOldElements();
+							_this.removeOldElements();
 
 							// アタッチ
 							_element.attach();
@@ -52427,7 +52630,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 古い要素を破棄
 		// --------------------------------------------------------------------------------
-		_container.removeOldElements = function(){
+		_this.removeOldElements = function(){
 			if(!_enable_unload)	return;
 
 			if(_byte_size_now > _byte_size_max){
@@ -52458,35 +52661,35 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 使用数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCountUse = function(){
+		_this.getCountUse = function(){
 			return _use_count;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 現在の使用バイト数を取得
 		// --------------------------------------------------------------------------------
-		_container.getByteSizeNow = function(){
+		_this.getByteSizeNow = function(){
 			return _byte_size_now;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 使用最大バイト数をセット
 		// --------------------------------------------------------------------------------
-		_container.setByteSizeMax = function(v){
+		_this.setByteSizeMax = function(v){
 			_byte_size_max = v * 1024 * 1024;
 		};
 
 		// --------------------------------------------------------------------------------
 		// アンロード設定のセット
 		// --------------------------------------------------------------------------------
-		_container.setEnableUnload = function(v){
+		_this.setEnableUnload = function(v){
 			_enable_unload = v;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 使用数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCount = function(){
+		_this.getCount = function(){
 			return _count;
 		};
 
@@ -52559,20 +52762,18 @@ function PageExpand(page_expand_arguments){
 			_rest_list._prev = _rest_list;
 			_rest_list._next = _rest_list;
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// イベントディスパッチャー
 	// --------------------------------------------------------------------------------
 	function EventDispatcher(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// イベントハンドラ生成
 		// --------------------------------------------------------------------------------
-		_container.createEventHandler = function(name){
+		_this.createEventHandler = function(name){
 			var _event_handler = new Object();
 
 			// --------------------------------------------------------------------------------
@@ -52624,7 +52825,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 発火
 		// --------------------------------------------------------------------------------
-		_container.dispatchEvent = function(name,param){
+		_this.dispatchEvent = function(name,param){
 			var list = _dictionary[name];
 			if(!list)	return;
 
@@ -52648,7 +52849,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// すべてのイベントハンドラを外す
 		// --------------------------------------------------------------------------------
-		_container.removeAll = function(){
+		_this.removeAll = function(){
 			for(var p in _dictionary){
 				var list = _dictionary[p];
 				while(true){
@@ -52670,27 +52871,25 @@ function PageExpand(page_expand_arguments){
 		(function(){
 			_dictionary = new Object();
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// スクロール補正
 	// --------------------------------------------------------------------------------
 	function DocumentReviseScroll(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// エレメントの挿入直前に実行
 		// --------------------------------------------------------------------------------
-		_container.executeAttachElementBefore = function(element){
+		_this.executeAttachElementBefore = function(element){
 			update();
 		};
 
 		// --------------------------------------------------------------------------------
 		// エレメントの挿入直後に実行
 		// --------------------------------------------------------------------------------
-		_container.executeAttachElementAfter = function(element){
+		_this.executeAttachElementAfter = function(element){
 			var bounding_size = ElementGetBoundingClientRect(element);
 			_enable_revise_x = (bounding_size.right  < 0) ? true : false;
 			_enable_revise_y = (bounding_size.bottom < 0) ? true : false;
@@ -52700,7 +52899,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// エレメントのリムーブ直前に実行
 		// --------------------------------------------------------------------------------
-		_container.executeRemoveElementBefore = function(element){
+		_this.executeRemoveElementBefore = function(element){
 			var bounding_size = ElementGetBoundingClientRect(element);
 			_enable_revise_x = (bounding_size.right  < 0) ? true : false;
 			_enable_revise_y = (bounding_size.bottom < 0) ? true : false;
@@ -52710,7 +52909,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// エレメントのリムーブ直後に実行
 		// --------------------------------------------------------------------------------
-		_container.executeRemoveElementAfter = function(element){
+		_this.executeRemoveElementAfter = function(element){
 			revise();
 		};
 
@@ -52759,27 +52958,25 @@ function PageExpand(page_expand_arguments){
 			_enable_revise_y = false;
 			update();
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// マウス入力
 	// --------------------------------------------------------------------------------
 	function InputMouse(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// マウスイベントをセット
 		// --------------------------------------------------------------------------------
-		_container.setMouseEvent = function(e){
+		_this.setMouseEvent = function(e){
 			mouse_move_func(e);
 		};
 
 		// --------------------------------------------------------------------------------
 		// タッチ操作をセット
 		// --------------------------------------------------------------------------------
-		_container.setInputTouch = function(input_touch){
+		_this.setInputTouch = function(input_touch){
 			if(!input_touch.getEnableTouch()){
 				_button = false;
 			}
@@ -52790,28 +52987,28 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 座標を取得
 		// --------------------------------------------------------------------------------
-		_container.getPositionClient = function(){
+		_this.getPositionClient = function(){
 			return ObjectCopy(_pos_client);
 		};
 
 		// --------------------------------------------------------------------------------
 		// ボタンの押下状態を取得
 		// --------------------------------------------------------------------------------
-		_container.getButtonLeft = function(){
+		_this.getButtonLeft = function(){
 			return _button;
 		};
 
 		// --------------------------------------------------------------------------------
 		// シフトキーの押下状態を取得
 		// --------------------------------------------------------------------------------
-		_container.getKeyShift = function(){
+		_this.getKeyShift = function(){
 			return _key_shift;
 		};
 
 		// --------------------------------------------------------------------------------
 		// マウスが有効か調べる
 		// --------------------------------------------------------------------------------
-		_container.getEnableMouse = function(){
+		_this.getEnableMouse = function(){
 			return _enable_mouse;
 		};
 
@@ -52905,48 +53102,46 @@ function PageExpand(page_expand_arguments){
 				window.addEventListener("blur",blur_func);
 			}
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// タッチ入力
 	// --------------------------------------------------------------------------------
 	function InputTouch(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// タッチイベントをセット
 		// --------------------------------------------------------------------------------
-		_container.setTouchEvent = function(e){
+		_this.setTouchEvent = function(e){
 			touch_move_func(e);
 		};
 
 		// --------------------------------------------------------------------------------
 		// 平均座標を取得
 		// --------------------------------------------------------------------------------
-		_container.getPositionAverage = function(){
+		_this.getPositionAverage = function(){
 			return ObjectCopy(_pos_average);
 		};
 
 		// --------------------------------------------------------------------------------
 		// タッチが有効か調べる
 		// --------------------------------------------------------------------------------
-		_container.getEnableTouch = function(){
+		_this.getEnableTouch = function(){
 			return _enable_touch;
 		};
 
 		// --------------------------------------------------------------------------------
 		// タッチリストを取得する
 		// --------------------------------------------------------------------------------
-		_container.getTouchList = function(){
+		_this.getTouchList = function(){
 			return _touch_list;
 		};
 
 		// --------------------------------------------------------------------------------
 		// イベントハンドラを作成
 		// --------------------------------------------------------------------------------
-		_container.createEventHandler = function(type){
+		_this.createEventHandler = function(type){
 			return _event_dispatcher.createEventHandler(type);
 		};
 
@@ -52987,7 +53182,7 @@ function PageExpand(page_expand_arguments){
 			touch_input_func(e);
 
 			// イベントを発火
-			_event_dispatcher.dispatchEvent("update",_container);
+			_event_dispatcher.dispatchEvent("update",_this);
 		}
 
 		// --------------------------------------------------------------------------------
@@ -53016,7 +53211,7 @@ function PageExpand(page_expand_arguments){
 			}
 
 			// イベントを発火
-			_event_dispatcher.dispatchEvent("update",_container);
+			_event_dispatcher.dispatchEvent("update",_this);
 		}
 
 		// --------------------------------------------------------------------------------
@@ -53027,7 +53222,7 @@ function PageExpand(page_expand_arguments){
 			_touch_list.length;
 
 			// イベントを発火
-			_event_dispatcher.dispatchEvent("update",_container);
+			_event_dispatcher.dispatchEvent("update",_this);
 		}
 
 		// --------------------------------------------------------------------------------
@@ -53058,20 +53253,18 @@ function PageExpand(page_expand_arguments){
 				window.addEventListener("blur",blur_func);
 			}
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// 仮想マウスポインタ
 	// --------------------------------------------------------------------------------
 	function VirtualMousePointer(document_obj){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 座標をセット
 		// --------------------------------------------------------------------------------
-		_container.setPosition = function(pos){
+		_this.setPosition = function(pos){
 			_mouse_pos = pos;
 			mouse_move_func();
 		};
@@ -53079,7 +53272,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 移動量を加算
 		// --------------------------------------------------------------------------------
-		_container.addVector = function(vec){
+		_this.addVector = function(vec){
 			var pos_end = {
 				x:_mouse_pos.x + vec.x,
 				y:_mouse_pos.y + vec.y
@@ -53148,20 +53341,18 @@ function PageExpand(page_expand_arguments){
 			_mouse_pos.x = -1;
 			_mouse_pos.y = -1;
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// URLキャッシュ辞書
 	// --------------------------------------------------------------------------------
 	function UrlCacheDictionary(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// オブジェクトを取得
 		// --------------------------------------------------------------------------------
-		_container.getObject = function(url){
+		_this.getObject = function(url){
 			var obj = _dictionary[url];
 			if(obj){
 				var prev = obj.prev;
@@ -53206,7 +53397,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// キャッシュの最大数をセット
 		// --------------------------------------------------------------------------------
-		_container.setCacheMax = function(v){
+		_this.setCacheMax = function(v){
 			_queue_max = v;
 		};
 
@@ -53230,8 +53421,6 @@ function PageExpand(page_expand_arguments){
 			_queue_count = 0;
 			_queue_max = 16;
 		})();
-
-		return _container;
 	}
 
 
@@ -53302,16 +53491,16 @@ function PageExpand(page_expand_arguments){
 	// Firefox 拡張機能通信 コンテンツ用
 	// --------------------------------------------------------------------------------
 	function FirefoxExtensionMessageForContent(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------------------
-		_container.initialize = function(callback){
+		_this.initialize = function(callback){
 
 			// ポート受信
-			self.port.on(_identity, function(message) {
-				self.port.removeListener(_identity,arguments.callee);
+			self.port.on(_identity, function callee(message) {
+				self.port.removeListener(_identity,callee);
 				_identity = message;
 
 				// 受信用コールバック関数
@@ -53360,7 +53549,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// リスナーをセット
 		// --------------------------------------------------------------------------------
-		_container.addListener = function(f){
+		_this.addListener = function(f){
 
 			// イベントハンドラを作成
 			var event_handler = _event_dispatcher.createEventHandler("message");
@@ -53381,7 +53570,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// リクエストを送信
 		// --------------------------------------------------------------------------------
-		_container.sendRequest = function(data,callback){
+		_this.sendRequest = function(data,callback){
 
 			var request = new Object();
 			request.phase = 0;
@@ -53415,20 +53604,18 @@ function PageExpand(page_expand_arguments){
 			_event_dispatcher = new EventDispatcher();
 			_identity = "_" + (new Date()).getTime() +  "_" + Math.floor(Math.random() * 0xffffffff);
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// Firefox拡張機能通信 バックグラウンド用
 	// --------------------------------------------------------------------------------
 	function FirefoxExtensionMessageForBackground(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// ワーカーを登録
 		// --------------------------------------------------------------------------------
-		_container.attachContent = function(worker){
+		_this.attachContent = function(worker){
 
 			// メッセージを受信する
 			worker.on("message",function(message){
@@ -53472,7 +53659,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// リスナーをセット
 		// --------------------------------------------------------------------------------
-		_container.addListener = function(f){
+		_this.addListener = function(f){
 
 			// イベントハンドラを作成
 			var event_handler = _event_dispatcher.createEventHandler("message");
@@ -53498,7 +53685,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// リクエストを送信
 		// --------------------------------------------------------------------------------
-		_container.sendRequestToContent = function(worker,data,callback){
+		_this.sendRequestToContent = function(worker,data,callback){
 
 			var request = new Object();
 			request.phase = 0;
@@ -53521,7 +53708,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// リクエストを送信
 		// --------------------------------------------------------------------------------
-		_container.sendRequestToBackground = function(worker,data,callback){
+		_this.sendRequestToBackground = function(worker,data,callback){
 
 			var request = new Object();
 			request.phase = 0;
@@ -53556,8 +53743,6 @@ function PageExpand(page_expand_arguments){
 			_callback_dictionary = new Array();
 			_event_dispatcher = new EventDispatcher();
 		})();
-
-		return _container;
 	}
 
 
@@ -53566,12 +53751,12 @@ function PageExpand(page_expand_arguments){
 	// 要素管理
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzeManager(element,outsider){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 解放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 			if(!_element)	return;
 
 			// リムーブ監視を破棄
@@ -53590,7 +53775,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 解析
 		// --------------------------------------------------------------------------------
-		_container.analyze = function(){
+		_this.analyze = function(){
 			// 解析有効化
 			AnalyzeWorkClearInvalid(_analyze_work);
 
@@ -53614,7 +53799,7 @@ function PageExpand(page_expand_arguments){
 
 			// リムーブ監視
 			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_container.release);
+			_observer_remove.setFunction(_this.release);
 
 			// 解析ワーク
 			_analyze_work = analyze_work_dictionary.getAnalyzeWork(_element);
@@ -53634,8 +53819,6 @@ function PageExpand(page_expand_arguments){
 			// 解析無効化
 			AnalyzeWorkSetInvalid(_analyze_work);
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -53899,30 +54082,28 @@ function PageExpand(page_expand_arguments){
 	// 解析辞書登録フラグ
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkDictionaryAttachOptions(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// PageExpand 生成ノード
 		// --------------------------------------------------------------------------------
-		_container.SetOutsider = function(){
-			_container._flag |= ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_OUTSIDER;
+		_this.SetOutsider = function(){
+			_this._flag |= ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_OUTSIDER;
 		};
 
 		// --------------------------------------------------------------------------------
 		// PageExpand ゲストノード
 		// --------------------------------------------------------------------------------
-		_container.SetGuest = function(){
-			_container._flag |= ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_GUEST;
+		_this.SetGuest = function(){
+			_this._flag |= ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_GUEST;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------------------
 		(function(){
-			_container._flag = 0;
+			_this._flag = 0;
 		})();
-
-		return _container;
 	}
 	var ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_OUTSIDER	= 0x00000001;
 	var ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_GUEST		= 0x00000002;
@@ -53932,12 +54113,12 @@ function PageExpand(page_expand_arguments){
 	// 解析辞書
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkDictionary(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 解析ワークを登録
 		// --------------------------------------------------------------------------------
-		_container.attachAnalyzeWork = function(work,attach_options){
+		_this.attachAnalyzeWork = function(work,attach_options){
 			if(work.id)	return true;
 
 			var node = AnalyzeWorkGetDomNode(work);
@@ -53963,7 +54144,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 解析ワークを除外
 		// --------------------------------------------------------------------------------
-		_container.removeAnalyzeWork = function(work){
+		_this.removeAnalyzeWork = function(work){
 			var id = work.id;
 			if(!id)	return false;
 
@@ -53976,7 +54157,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// エレメントからオブジェクトを取得
 		// --------------------------------------------------------------------------------
-		_container.getAnalyzeWork = function(node){
+		_this.getAnalyzeWork = function(node){
 			var id;
 			id = node._pageexpand_;
 			if(id){
@@ -53993,7 +54174,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// クローンであるか確認する
 		// --------------------------------------------------------------------------------
-		_container.verifyClone = function(node){
+		_this.verifyClone = function(node){
 			if(node.getAttribute){
 				var id = node.getAttribute("_pageexpand_");
 				if(id){
@@ -54014,7 +54195,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 解放後の要素であるか確認する
 		// --------------------------------------------------------------------------------
-		_container.verifyRemoved = function(node){
+		_this.verifyRemoved = function(node){
 			if(node.getAttribute){
 				var id = node.getAttribute("_pageexpand_");
 				if(id){
@@ -54033,7 +54214,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ゲスト要素であるか確認する
 		// --------------------------------------------------------------------------------
-		_container.verifyGuest = function(node){
+		_this.verifyGuest = function(node){
 			if(node.getAttribute){
 				var id = node.getAttribute("_pageexpand_");
 				if(id){
@@ -54061,15 +54242,13 @@ function PageExpand(page_expand_arguments){
 			_identity = 1;
 			_dictionary = new Array();
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// 掲示板辞書
 	// --------------------------------------------------------------------------------
 	function BbsDictionary(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// フォロー生成
@@ -54667,7 +54846,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 番号からレスポンスが存在するか調べる
 		// --------------------------------------------------------------------------------
-		_container.getExist = function(number){
+		_this.getExist = function(number){
 			if(_number_dictionary[number]){
 				return true;
 			}
@@ -54677,7 +54856,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 番号からレスポンスを取得
 		// --------------------------------------------------------------------------------
-		_container.getResponse = function(number){
+		_this.getResponse = function(number){
 			var response = _number_dictionary[number];
 			if(!response){
 				response = createResponse(number);
@@ -54690,7 +54869,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ID からレスポンスを取得
 		// --------------------------------------------------------------------------------
-		_container.getResponsesFromId = function(id){
+		_this.getResponsesFromId = function(id){
 			var ary = new Array();
 			var id_list = _id_dictionary[id];
 			if(id_list){
@@ -54706,7 +54885,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 名前からレスポンスを取得
 		// --------------------------------------------------------------------------------
-		_container.getResponsesFromName = function(name){
+		_this.getResponsesFromName = function(name){
 			var ary = new Array();
 			var name_list = _name_dictionary[name];
 			if(name_list){
@@ -54722,7 +54901,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ホストからレスポンスを取得
 		// --------------------------------------------------------------------------------
-		_container.getResponsesFromHost = function(host){
+		_this.getResponsesFromHost = function(host){
 			var ary = new Array();
 			var host_list = _host_dictionary[host];
 			if(host_list){
@@ -54738,7 +54917,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ID カウント用のイベントハンドラを生成
 		// --------------------------------------------------------------------------------
-		_container.createEventHandlerForIdCounter = function(id){
+		_this.createEventHandlerForIdCounter = function(id){
 			var event_dispatcher = _id_counter_event_dictionary[id];
 			if(!event_dispatcher){
 				event_dispatcher = new EventDispatcher();
@@ -54750,7 +54929,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 名前カウント用のイベントハンドラを生成
 		// --------------------------------------------------------------------------------
-		_container.createEventHandlerForNameCounter = function(name){
+		_this.createEventHandlerForNameCounter = function(name){
 			var event_dispatcher = _name_counter_event_dictionary[name];
 			if(!event_dispatcher){
 				event_dispatcher = new EventDispatcher();
@@ -54762,7 +54941,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ホストカウント用のイベントハンドラを生成
 		// --------------------------------------------------------------------------------
-		_container.createEventHandlerForHostCounter = function(host){
+		_this.createEventHandlerForHostCounter = function(host){
 			var event_dispatcher = _host_counter_event_dictionary[host];
 			if(!event_dispatcher){
 				event_dispatcher = new EventDispatcher();
@@ -54774,7 +54953,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// フォロワーカウント用のイベントハンドラを生成
 		// --------------------------------------------------------------------------------
-		_container.createEventHandlerForFollowerCounter = function(number){
+		_this.createEventHandlerForFollowerCounter = function(number){
 			var event_dispatcher = _follower_counter_event_dictionary[number];
 			if(!event_dispatcher){
 				event_dispatcher = new EventDispatcher();
@@ -54786,7 +54965,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// IDカウント数取得
 		// --------------------------------------------------------------------------------
-		_container.getCountId = function(id){
+		_this.getCountId = function(id){
 			if(_id_counter_dictionary[id])	return _id_counter_dictionary[id];
 			return 0;
 		};
@@ -54810,7 +54989,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 名前カウント数取得
 		// --------------------------------------------------------------------------------
-		_container.getCountName = function(name){
+		_this.getCountName = function(name){
 			if(_name_counter_dictionary[name])	return _name_counter_dictionary[name];
 			return 0;
 		};
@@ -54834,7 +55013,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ホストカウント数取得
 		// --------------------------------------------------------------------------------
-		_container.getCountHost = function(host){
+		_this.getCountHost = function(host){
 			if(_host_counter_dictionary[host])	return _host_counter_dictionary[host];
 			return 0;
 		};
@@ -54886,20 +55065,18 @@ function PageExpand(page_expand_arguments){
 			_host_counter_event_dictionary = new Object();
 			_follower_counter_event_dictionary = new Object();
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// 掲示板ポップアップレスポンス
 	// --------------------------------------------------------------------------------
 	function BbsResponseDialog(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 開放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 			if(_released) return;
 			_released = true;
 
@@ -54910,7 +55087,7 @@ function PageExpand(page_expand_arguments){
 			});
 
 			// ダイアログの親子関係を外す
-			_container.removeParent();
+			_this.removeParent();
 
 			// マウスイベントを外す
 			removeEventMouseOverHitArea();
@@ -54929,19 +55106,19 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 自殺
 		// --------------------------------------------------------------------------------
-		_container.suicide = function(){
+		_this.suicide = function(){
 			if(_task){
-				_container.setElementHitArea(null);
+				_this.setElementHitArea(null);
 				_suicide = true;
 			}else{
-				_container.release();
+				_this.release();
 			}
 		};
 
 		// --------------------------------------------------------------------------------
 		// ヒットエリアとなる範囲を指定
 		// --------------------------------------------------------------------------------
-		_container.setElementHitArea = function(element){
+		_this.setElementHitArea = function(element){
 			// マウスイベントを外す
 			removeEventMouseOverHitArea();
 			// タッチイベントを外す
@@ -54967,14 +55144,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 配置用親エレメントを指定
 		// --------------------------------------------------------------------------------
-		_container.setElementParent = function(element){
+		_this.setElementParent = function(element){
 			_element_parent = element;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ウィンドウとの当たり判定
 		// --------------------------------------------------------------------------------
-		_container.hittestWindow = function(pos){
+		_this.hittestWindow = function(pos){
 			if(!_window)	return false;
 			return ElementHitTestPosition(_window,pos,false);
 		};
@@ -54982,29 +55159,29 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 子ダイアログとして登録
 		// --------------------------------------------------------------------------------
-		_container.attachChild = function(child){
+		_this.attachChild = function(child){
 			child.removeParent();
-			var _child = _container._child;
+			var _child = _this._child;
 			var _prev = _child;
 			var _next = _prev._next;
 			child._prev = _prev;
 			child._next = _next;
 			_prev._next = child;
 			_next._prev = child;
-			_container._parent = child;
+			_this._parent = child;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 親からの登録を外す
 		// --------------------------------------------------------------------------------
-		_container.removeParent = function(){
-			var _prev = _container._prev;
-			var _next = _container._next;
+		_this.removeParent = function(){
+			var _prev = _this._prev;
+			var _next = _this._next;
 			_prev._next = _next;
 			_next._prev = _prev;
-			_container._prev = _container;
-			_container._next = _container;
-			_container._parent = null;
+			_this._prev = _this;
+			_this._next = _this;
+			_this._parent = null;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -55013,7 +55190,7 @@ function PageExpand(page_expand_arguments){
 		function getChildren(func){
 			var queue = new Array();
 
-			var _child = _container._child;
+			var _child = _this._child;
 			var child = _child._next;
 			while(child != _child){
 				queue.push(child);
@@ -55095,7 +55272,7 @@ function PageExpand(page_expand_arguments){
 
 			if(!_observer_remove){
 				_observer_remove = new DomNodeObserverRemoveFromDocument(_element_hit_area);
-				_observer_remove.setFunction(_container.suicide);
+				_observer_remove.setFunction(_this.suicide);
 			}
 		}
 
@@ -55180,7 +55357,7 @@ function PageExpand(page_expand_arguments){
 
 			var hit = ElementHitTestPosition(_element_hit_area,input_mouse.getPositionClient(),false);
 			if(!hit){
-				hit = _container.hittestWindow(input_mouse.getPositionClient());
+				hit = _this.hittestWindow(input_mouse.getPositionClient());
 			}
 
 			if(!hit){
@@ -55516,7 +55693,7 @@ function PageExpand(page_expand_arguments){
 			_task.setExecuteFunc(null);
 
 			// 生成イベント
-			var result = _container.oncreate(_window,response);
+			var result = _this.oncreate(_window,response);
 			if(result !== undefined){
 				response({result:result});
 			}
@@ -55651,7 +55828,7 @@ function PageExpand(page_expand_arguments){
 
 			// 自殺
 			if(_suicide){
-				_container.release();
+				_this.release();
 			}
 		}
 
@@ -55669,7 +55846,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ダイアログ生成イベント
 		// --------------------------------------------------------------------------------
-		_container.oncreate = function(element){};
+		_this.oncreate = function(element){};
 
 		// --------------------------------------------------------------------------------
 		// プライベート変数
@@ -55696,88 +55873,86 @@ function PageExpand(page_expand_arguments){
 			_invalid_timestamp = 0;
 			_suicide = false;
 			_released = false;
-			_container._parent = null;
-			_container._prev = _container;
-			_container._next = _container;
+			_this._parent = null;
+			_this._prev = _this;
+			_this._next = _this;
 
 			var _child = new Object();
 			_child._prev = _child;
 			_child._next = _child;
-			_container._child = _child;
+			_this._child = _child;
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// 掲示板コントロール レスアンカー
 	// --------------------------------------------------------------------------------
 	function BbsControlResponseAnchor(element,outsider){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// タイプを取得
 		// --------------------------------------------------------------------------------
-		_container.getType = function(id){
+		_this.getType = function(id){
 			return "res_a";
 		};
 
 		// --------------------------------------------------------------------------------
 		// ResponseAnchorNumbers オブジェクトを取得
 		// --------------------------------------------------------------------------------
-		_container.getResponseAnchorNumbers = function(){
+		_this.getResponseAnchorNumbers = function(){
 			return _numbers;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ResponseAnchorNumbers オブジェクトをセット
 		// --------------------------------------------------------------------------------
-		_container.setResponseAnchorNumbers = function(numbers){
+		_this.setResponseAnchorNumbers = function(numbers){
 			_numbers = numbers;
 		};
 
 		// --------------------------------------------------------------------------------
 		// レスポンスオブジェクトをセット
 		// --------------------------------------------------------------------------------
-		_container.setResponse = function(response){
+		_this.setResponse = function(response){
 			if(!_response){
 				_response = response;
 
 				// 解放イベント
 				var event_dispatcher = response.getEventDispatcher();
 				_event_handler_release = event_dispatcher.createEventHandler("release");
-				_event_handler_release.setFunction(_container.release);
+				_event_handler_release.setFunction(_this.release);
 			}
 		};
 
 		// --------------------------------------------------------------------------------
 		// 要素を取得
 		// --------------------------------------------------------------------------------
-		_container.getElement = function(){
+		_this.getElement = function(){
 			return _element;
 		};
 
 		// --------------------------------------------------------------------------------
 		// テキストノードを取得
 		// --------------------------------------------------------------------------------
-		_container.getTextNode = function(){
+		_this.getTextNode = function(){
 			return _text_node;
 		};
 
 		// --------------------------------------------------------------------------------
 		// テキストノードをセット
 		// --------------------------------------------------------------------------------
-		_container.setTextNode = function(node){
+		_this.setTextNode = function(node){
 			_text_node = node;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 開放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 			_numbers = null;
 
-			_container.onchange(0);
+			_this.onchange(0);
 
 			// イベント解放
 			if(_event_handler_release){
@@ -55809,7 +55984,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 更新通知
 		// --------------------------------------------------------------------------------
-		_container.onchange = function(v){};
+		_this.onchange = function(v){};
 
 		// --------------------------------------------------------------------------------
 		// プライベート変数
@@ -55836,7 +56011,7 @@ function PageExpand(page_expand_arguments){
 			// 解析ワーク作成
 			_analyze_work = AnalyzeWorkCreate(_element);
 			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_container);
+			AnalyzeWorkSetBbsControl(_analyze_work,_this);
 			// 解析済み
 			AnalyzeWorkSetInvalid(_analyze_work);
 			// 解析辞書登録オプション
@@ -55847,10 +56022,8 @@ function PageExpand(page_expand_arguments){
 
 			// リムーブ監視
 			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_container.release);
+			_observer_remove.setFunction(_this.release);
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -55905,71 +56078,71 @@ function PageExpand(page_expand_arguments){
 	// 掲示板コントロール 引用
 	// --------------------------------------------------------------------------------
 	function BbsControlQuote(element,outsider){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// タイプを取得
 		// --------------------------------------------------------------------------------
-		_container.getType = function(id){
+		_this.getType = function(id){
 			return "res_q";
 		};
 
 		// --------------------------------------------------------------------------------
 		// ResponseAnchorNumbers オブジェクトを取得
 		// --------------------------------------------------------------------------------
-		_container.getResponseAnchorNumbers = function(){
+		_this.getResponseAnchorNumbers = function(){
 			return _numbers;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ResponseAnchorNumbers オブジェクトをセット
 		// --------------------------------------------------------------------------------
-		_container.setResponseAnchorNumbers = function(numbers){
+		_this.setResponseAnchorNumbers = function(numbers){
 			_numbers = numbers;
 		};
 
 		// --------------------------------------------------------------------------------
 		// レスポンスオブジェクトをセット
 		// --------------------------------------------------------------------------------
-		_container.setResponse = function(response){
+		_this.setResponse = function(response){
 			if(!_response){
 				_response = response;
 
 				// 解放イベント
 				var event_dispatcher = response.getEventDispatcher();
 				_event_handler_release = event_dispatcher.createEventHandler("release");
-				_event_handler_release.setFunction(_container.release);
+				_event_handler_release.setFunction(_this.release);
 			}
 		};
 
 		// --------------------------------------------------------------------------------
 		// 要素を取得
 		// --------------------------------------------------------------------------------
-		_container.getElement = function(){
+		_this.getElement = function(){
 			return _element;
 		};
 
 		// --------------------------------------------------------------------------------
 		// テキストノードを取得
 		// --------------------------------------------------------------------------------
-		_container.getTextNode = function(){
+		_this.getTextNode = function(){
 			return _text_node;
 		};
 
 		// --------------------------------------------------------------------------------
 		// テキストノードをセット
 		// --------------------------------------------------------------------------------
-		_container.setTextNode = function(node){
+		_this.setTextNode = function(node){
 			_text_node = node;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 開放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 			_numbers = null;
 
-			_container.onchange(0);
+			_this.onchange(0);
 
 			// イベント解放
 			if(_event_handler_release){
@@ -56001,7 +56174,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 更新通知
 		// --------------------------------------------------------------------------------
-		_container.onchange = function(v){};
+		_this.onchange = function(v){};
 
 		// --------------------------------------------------------------------------------
 		// プライベート変数
@@ -56028,7 +56201,7 @@ function PageExpand(page_expand_arguments){
 			// 解析ワーク作成
 			_analyze_work = AnalyzeWorkCreate(_element);
 			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_container);
+			AnalyzeWorkSetBbsControl(_analyze_work,_this);
 			// 解析済み
 			AnalyzeWorkSetInvalid(_analyze_work);
 			// 解析辞書登録オプション
@@ -56039,10 +56212,8 @@ function PageExpand(page_expand_arguments){
 
 			// リムーブ監視
 			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_container.release);
+			_observer_remove.setFunction(_this.release);
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -56097,33 +56268,33 @@ function PageExpand(page_expand_arguments){
 	// 掲示板コントロール ID
 	// --------------------------------------------------------------------------------
 	function BbsControlId(element,outsider){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// タイプを取得
 		// --------------------------------------------------------------------------------
-		_container.getType = function(id){
+		_this.getType = function(id){
 			return "id";
 		};
 
 		// --------------------------------------------------------------------------------
 		// ID を取得
 		// --------------------------------------------------------------------------------
-		_container.getId = function(){
+		_this.getId = function(){
 			return _id;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ID をセット
 		// --------------------------------------------------------------------------------
-		_container.setId = function(id){
+		_this.setId = function(id){
 			if(!_id){
 				_id = id;
 
 				// ID 数の更新イベント
 				_event_handler_update = bbs_dictionary.createEventHandlerForIdCounter(_id);
 				_event_handler_update.setFunction(function(v){
-					_container.onchange(v);
+					_this.onchange(v);
 				});
 			}
 		};
@@ -56131,52 +56302,52 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// レスポンスオブジェクトをセット
 		// --------------------------------------------------------------------------------
-		_container.setResponse = function(response){
+		_this.setResponse = function(response){
 			if(!_response){
 				_response = response;
 
 				// 解放イベント
 				var event_dispatcher = response.getEventDispatcher();
 				_event_handler_release = event_dispatcher.createEventHandler("release");
-				_event_handler_release.setFunction(_container.release);
+				_event_handler_release.setFunction(_this.release);
 			}
 		};
 
 		// --------------------------------------------------------------------------------
 		// 要素を取得
 		// --------------------------------------------------------------------------------
-		_container.getElement = function(){
+		_this.getElement = function(){
 			return _element;
 		};
 
 		// --------------------------------------------------------------------------------
 		// テキストノードを取得
 		// --------------------------------------------------------------------------------
-		_container.getTextNode = function(){
+		_this.getTextNode = function(){
 			return _text_node;
 		};
 
 		// --------------------------------------------------------------------------------
 		// テキストノードをセット
 		// --------------------------------------------------------------------------------
-		_container.setTextNode = function(node){
+		_this.setTextNode = function(node){
 			_text_node = node;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 更新
 		// --------------------------------------------------------------------------------
-		_container.update = function(){
+		_this.update = function(){
 			var v = bbs_dictionary.getCountId(_id);
-			_container.onchange(v);
+			_this.onchange(v);
 		};
 
 		// --------------------------------------------------------------------------------
 		// 開放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 
-			_container.onchange(0);
+			_this.onchange(0);
 
 			// イベント解放
 			if(_event_handler_update){
@@ -56213,7 +56384,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 更新通知
 		// --------------------------------------------------------------------------------
-		_container.onchange = function(v){};
+		_this.onchange = function(v){};
 
 		// --------------------------------------------------------------------------------
 		// マウスクリック時に実行される関数（内部用）
@@ -56231,7 +56402,7 @@ function PageExpand(page_expand_arguments){
 				if(i >= 0){
 					execute_queue.attachFirst(f,null);
 				}else{
-					_container.release();
+					_this.release();
 				}
 			}
 			execute_queue.attachFirst(f,null);
@@ -56276,7 +56447,7 @@ function PageExpand(page_expand_arguments){
 			// 解析ワーク作成
 			_analyze_work = AnalyzeWorkCreate(_element);
 			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_container);
+			AnalyzeWorkSetBbsControl(_analyze_work,_this);
 			// 解析済み
 			AnalyzeWorkSetInvalid(_analyze_work);
 			// 解析辞書登録オプション
@@ -56287,10 +56458,8 @@ function PageExpand(page_expand_arguments){
 
 			// リムーブ監視
 			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_container.release);
+			_observer_remove.setFunction(_this.release);
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -56345,33 +56514,33 @@ function PageExpand(page_expand_arguments){
 	// 掲示板コントロール 名前
 	// --------------------------------------------------------------------------------
 	function BbsControlName(element,outsider){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// タイプを取得
 		// --------------------------------------------------------------------------------
-		_container.getType = function(name){
+		_this.getType = function(name){
 			return "name";
 		};
 
 		// --------------------------------------------------------------------------------
 		// 名前を取得
 		// --------------------------------------------------------------------------------
-		_container.getName = function(){
+		_this.getName = function(){
 			return _name;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 名前をセット
 		// --------------------------------------------------------------------------------
-		_container.setName = function(name){
+		_this.setName = function(name){
 			if(!_name){
 				_name = name;
 
 				// 名前数の更新イベント
 				_event_handler_update = bbs_dictionary.createEventHandlerForNameCounter(_name);
 				_event_handler_update.setFunction(function(v){
-					_container.onchange(v);
+					_this.onchange(v);
 				});
 			}
 		};
@@ -56379,52 +56548,52 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// レスポンスオブジェクトをセット
 		// --------------------------------------------------------------------------------
-		_container.setResponse = function(response){
+		_this.setResponse = function(response){
 			if(!_response){
 				_response = response;
 
 				// 解放イベント
 				var event_dispatcher = response.getEventDispatcher();
 				_event_handler_release = event_dispatcher.createEventHandler("release");
-				_event_handler_release.setFunction(_container.release);
+				_event_handler_release.setFunction(_this.release);
 			}
 		};
 
 		// --------------------------------------------------------------------------------
 		// 要素を取得
 		// --------------------------------------------------------------------------------
-		_container.getElement = function(){
+		_this.getElement = function(){
 			return _element;
 		};
 
 		// --------------------------------------------------------------------------------
 		// テキストノードを取得
 		// --------------------------------------------------------------------------------
-		_container.getTextNode = function(){
+		_this.getTextNode = function(){
 			return _text_node;
 		};
 
 		// --------------------------------------------------------------------------------
 		// テキストノードをセット
 		// --------------------------------------------------------------------------------
-		_container.setTextNode = function(node){
+		_this.setTextNode = function(node){
 			_text_node = node;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 更新
 		// --------------------------------------------------------------------------------
-		_container.update = function(){
+		_this.update = function(){
 			var v = bbs_dictionary.getCountName(_name);
-			_container.onchange(v);
+			_this.onchange(v);
 		};
 
 		// --------------------------------------------------------------------------------
 		// 開放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 
-			_container.onchange(0);
+			_this.onchange(0);
 
 			// イベント解放
 			if(_event_handler_update){
@@ -56461,7 +56630,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 更新通知
 		// --------------------------------------------------------------------------------
-		_container.onchange = function(v){};
+		_this.onchange = function(v){};
 
 		// --------------------------------------------------------------------------------
 		// マウスクリック時に実行される関数（内部用）
@@ -56479,7 +56648,7 @@ function PageExpand(page_expand_arguments){
 				if(i >= 0){
 					execute_queue.attachFirst(f,null);
 				}else{
-					_container.release();
+					_this.release();
 				}
 			}
 			execute_queue.attachFirst(f,null);
@@ -56524,7 +56693,7 @@ function PageExpand(page_expand_arguments){
 			// 解析ワーク作成
 			_analyze_work = AnalyzeWorkCreate(_element);
 			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_container);
+			AnalyzeWorkSetBbsControl(_analyze_work,_this);
 			// 解析済み
 			AnalyzeWorkSetInvalid(_analyze_work);
 			// 解析辞書登録オプション
@@ -56535,10 +56704,8 @@ function PageExpand(page_expand_arguments){
 
 			// リムーブ監視
 			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_container.release);
+			_observer_remove.setFunction(_this.release);
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -56593,33 +56760,33 @@ function PageExpand(page_expand_arguments){
 	// 掲示板コントロール ホスト
 	// --------------------------------------------------------------------------------
 	function BbsControlHost(element,outsider){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// タイプを取得
 		// --------------------------------------------------------------------------------
-		_container.getType = function(host){
+		_this.getType = function(host){
 			return "host";
 		};
 
 		// --------------------------------------------------------------------------------
 		// ホストを取得
 		// --------------------------------------------------------------------------------
-		_container.getHost = function(){
+		_this.getHost = function(){
 			return _host;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ホストをセット
 		// --------------------------------------------------------------------------------
-		_container.setHost = function(host){
+		_this.setHost = function(host){
 			if(!_host){
 				_host = host;
 
 				// ホスト数の更新イベント
 				_event_handler_update = bbs_dictionary.createEventHandlerForHostCounter(_host);
 				_event_handler_update.setFunction(function(v){
-					_container.onchange(v);
+					_this.onchange(v);
 				});
 			}
 		};
@@ -56627,52 +56794,52 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// レスポンスオブジェクトをセット
 		// --------------------------------------------------------------------------------
-		_container.setResponse = function(response){
+		_this.setResponse = function(response){
 			if(!_response){
 				_response = response;
 
 				// 解放イベント
 				var event_dispatcher = response.getEventDispatcher();
 				_event_handler_release = event_dispatcher.createEventHandler("release");
-				_event_handler_release.setFunction(_container.release);
+				_event_handler_release.setFunction(_this.release);
 			}
 		};
 
 		// --------------------------------------------------------------------------------
 		// 要素を取得
 		// --------------------------------------------------------------------------------
-		_container.getElement = function(){
+		_this.getElement = function(){
 			return _element;
 		};
 
 		// --------------------------------------------------------------------------------
 		// テキストノードを取得
 		// --------------------------------------------------------------------------------
-		_container.getTextNode = function(){
+		_this.getTextNode = function(){
 			return _text_node;
 		};
 
 		// --------------------------------------------------------------------------------
 		// テキストノードをセット
 		// --------------------------------------------------------------------------------
-		_container.setTextNode = function(node){
+		_this.setTextNode = function(node){
 			_text_node = node;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 更新
 		// --------------------------------------------------------------------------------
-		_container.update = function(){
+		_this.update = function(){
 			var v = bbs_dictionary.getCountHost(_host);
-			_container.onchange(v);
+			_this.onchange(v);
 		};
 
 		// --------------------------------------------------------------------------------
 		// 開放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 
-			_container.onchange(0);
+			_this.onchange(0);
 
 			// イベント解放
 			if(_event_handler_update){
@@ -56709,7 +56876,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 更新通知
 		// --------------------------------------------------------------------------------
-		_container.onchange = function(v){};
+		_this.onchange = function(v){};
 
 		// --------------------------------------------------------------------------------
 		// マウスクリック時に実行される関数（内部用）
@@ -56727,7 +56894,7 @@ function PageExpand(page_expand_arguments){
 				if(i >= 0){
 					execute_queue.attachFirst(f,null);
 				}else{
-					_container.release();
+					_this.release();
 				}
 			}
 			execute_queue.attachFirst(f,null);
@@ -56772,7 +56939,7 @@ function PageExpand(page_expand_arguments){
 			// 解析ワーク作成
 			_analyze_work = AnalyzeWorkCreate(_element);
 			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_container);
+			AnalyzeWorkSetBbsControl(_analyze_work,_this);
 			// 解析済み
 			AnalyzeWorkSetInvalid(_analyze_work);
 			// 解析辞書登録オプション
@@ -56783,10 +56950,8 @@ function PageExpand(page_expand_arguments){
 
 			// リムーブ監視
 			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_container.release);
+			_observer_remove.setFunction(_this.release);
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -56841,68 +57006,68 @@ function PageExpand(page_expand_arguments){
 	// 掲示板コントロール Follower
 	// --------------------------------------------------------------------------------
 	function BbsControlFollower(element,outsider){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// タイプを取得
 		// --------------------------------------------------------------------------------
-		_container.getType = function(id){
+		_this.getType = function(id){
 			return "follower";
 		};
 
 		// --------------------------------------------------------------------------------
 		// レスポンスオブジェクトをセット
 		// --------------------------------------------------------------------------------
-		_container.setResponse = function(response){
+		_this.setResponse = function(response){
 			if(!_response){
 				_response = response;
 
 				// フォロワー数の更新イベント
 				_event_handler_update = bbs_dictionary.createEventHandlerForFollowerCounter(response.getNumber());
 				_event_handler_update.setFunction(function(v){
-					_container.onchange(v);
+					_this.onchange(v);
 				});
 
 				// 解放イベント
 				var event_dispatcher = response.getEventDispatcher();
 				_event_handler_release = event_dispatcher.createEventHandler("release");
-				_event_handler_release.setFunction(_container.release);
+				_event_handler_release.setFunction(_this.release);
 			}
 		};
 
 		// --------------------------------------------------------------------------------
 		// 要素を取得
 		// --------------------------------------------------------------------------------
-		_container.getElement = function(){
+		_this.getElement = function(){
 			return _element;
 		};
 
 		// --------------------------------------------------------------------------------
 		// テキストノードを取得
 		// --------------------------------------------------------------------------------
-		_container.getTextNode = function(){
+		_this.getTextNode = function(){
 			return _text_node;
 		};
 
 		// --------------------------------------------------------------------------------
 		// テキストノードをセット
 		// --------------------------------------------------------------------------------
-		_container.setTextNode = function(node){
+		_this.setTextNode = function(node){
 			_text_node = node;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 更新
 		// --------------------------------------------------------------------------------
-		_container.update = function(){
+		_this.update = function(){
 			var v = _response.getCountFollower();
-			_container.onchange(v);
+			_this.onchange(v);
 		};
 
 		// --------------------------------------------------------------------------------
 		// 開放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 			// イベント解放
 			if(_event_handler_update){
 				_event_handler_update.release();
@@ -56938,7 +57103,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 更新通知
 		// --------------------------------------------------------------------------------
-		_container.onchange = function(v){};
+		_this.onchange = function(v){};
 
 		// --------------------------------------------------------------------------------
 		// マウスクリック時に実行される関数（内部用）
@@ -56957,7 +57122,7 @@ function PageExpand(page_expand_arguments){
 				if(i >= 0){
 					execute_queue.attachFirst(f,null);
 				}else{
-					_container.release();
+					_this.release();
 				}
 			}
 			execute_queue.attachFirst(f,null);
@@ -57001,7 +57166,7 @@ function PageExpand(page_expand_arguments){
 			// 解析ワーク作成
 			_analyze_work = AnalyzeWorkCreate(_element);
 			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_container);
+			AnalyzeWorkSetBbsControl(_analyze_work,_this);
 			// 解析済み
 			AnalyzeWorkSetInvalid(_analyze_work);
 			// 解析辞書登録オプション
@@ -57012,10 +57177,8 @@ function PageExpand(page_expand_arguments){
 
 			// リムーブ監視
 			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_container.release);
+			_observer_remove.setFunction(_this.release);
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -57070,19 +57233,19 @@ function PageExpand(page_expand_arguments){
 	// 掲示板コントロール ReadMoreButton
 	// --------------------------------------------------------------------------------
 	function BbsControlReadMoreButton(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// タイプを取得
 		// --------------------------------------------------------------------------------
-		_container.getType = function(id){
+		_this.getType = function(id){
 			return "read_more";
 		};
 
 		// --------------------------------------------------------------------------------
 		// 開放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 
 			// リムーブ監視を破棄
 			if(_observer_remove){
@@ -57109,21 +57272,21 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 要素取得
 		// --------------------------------------------------------------------------------
-		_container.getElement = function(){
+		_this.getElement = function(){
 			return _element;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 待機時間を設定 (単位:ミリ秒)
 		// --------------------------------------------------------------------------------
-		_container.setWaitTime = function(v){
+		_this.setWaitTime = function(v){
 			_wait_time = v;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------------------
-		_container.init = function(){
+		_this.init = function(){
 			_element.value = "Read More";
 			_element.disabled = false;
 			_timer = _getTime();
@@ -57155,8 +57318,8 @@ function PageExpand(page_expand_arguments){
 					_task = null;
 
 					_element.value = "loading...";
-					if(_container.onclick){
-						_container.onclick();
+					if(_this.onclick){
+						_this.onclick();
 					}
 				}
 			});
@@ -57178,7 +57341,7 @@ function PageExpand(page_expand_arguments){
 		// 初期化
 		// --------------------------------------------------------------------------------
 		(function(){
-			_container.onclick = null;
+			_this.onclick = null;
 			_timer = 0;
 			_wait_time = 5000;
 
@@ -57193,7 +57356,7 @@ function PageExpand(page_expand_arguments){
 			// 解析ワーク作成
 			_analyze_work = AnalyzeWorkCreate(_element);
 			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_container);
+			AnalyzeWorkSetBbsControl(_analyze_work,_this);
 			// 解析済み
 			AnalyzeWorkSetInvalid(_analyze_work);
 			// 解析辞書登録オプション
@@ -57204,16 +57367,14 @@ function PageExpand(page_expand_arguments){
 
 			// リムーブ監視
 			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_container.release);
+			_observer_remove.setFunction(_this.release);
 
 			// 時間取得関数
 			_getTime = Date.now;
 			if(!_getTime)	_getTime = function(){ return (new Date()).getTime(); };
 
-			_container.init();
+			_this.init();
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -57240,12 +57401,12 @@ function PageExpand(page_expand_arguments){
 	// レスアンカー番号管理
 	// --------------------------------------------------------------------------------
 	function ResponseAnchorNumbers(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 番号追加
 		// --------------------------------------------------------------------------------
-		_container.addNumber = function(number){
+		_this.addNumber = function(number){
 			var p;
 			var n;
 			var list = _list.n;
@@ -57269,7 +57430,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 範囲追加
 		// --------------------------------------------------------------------------------
-		_container.addNumbers = function(min,max){
+		_this.addNumbers = function(min,max){
 			if(min > max){
 				var t = max;
 				max = min;
@@ -57319,7 +57480,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// すべての番号を取得
 		// --------------------------------------------------------------------------------
-		_container.getNumbers = function(func){
+		_this.getNumbers = function(func){
 			var d = 0;
 			var min = 0;
 			var max = 0;
@@ -57356,7 +57517,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// すべての番号を配列形式で取得
 		// --------------------------------------------------------------------------------
-		_container.getNumberList = function(){
+		_this.getNumberList = function(){
 			var a = new Array();
 			var d = 0;
 			var min = 0;
@@ -57395,7 +57556,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 総数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCount = function(){
+		_this.getCount = function(){
 			var count = 0;
 			var d = 0;
 			var min = 0;
@@ -57440,8 +57601,6 @@ function PageExpand(page_expand_arguments){
 			_list.p = _list;
 			_list.n = _list;
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -58259,9 +58418,858 @@ function PageExpand(page_expand_arguments){
 	}
 
 	// --------------------------------------------------------------------------------
+	// 属性辞書 HTML5
+	// --------------------------------------------------------------------------------
+	var DICTIONARY_ATTRIBUTE_HTML5 = {
+		globals :{ "accesskey":true, "class":true, "contenteditable":true, "dir":true, "draggable":true, "dropzone":true, "hidden":true, "id":true, "lang":true, "spellcheck":true, "style":true, "tabindex":true, "title":true, "translate":true },
+		elements:{
+			"A":{
+				allow:true,
+				attributes:{ "href":true, "target":true, "download":true, "rel":true, "hreflang":true, "type":true }
+			},
+			"ABBR":{
+				allow:true,
+				attributes:{ }
+			},
+			"ADDRESS":{
+				allow:true,
+				attributes:{ }
+			},
+			"AREA":{
+				allow:true,
+				attributes:{ "alt":true, "coords":true, "shape":true, "href":true, "target":true, "download":true, "rel":true, "hreflang":true, "type":true }
+			},
+			"ARTICLE":{
+				allow:true,
+				attributes:{ }
+			},
+			"ASIDE":{
+				allow:true,
+				attributes:{ }
+			},
+			"AUDIO":{
+				allow:true,
+				attributes:{ "src":true, "crossorigin":true, "preload":true, "autoplay":true, "mediagroup":true, "loop":true, "muted":true, "controls":true }
+			},
+			"B":{
+				allow:true,
+				attributes:{ }
+			},
+			"BASE":{
+				allow:true,
+				attributes:{ "href":true, "target":true }
+			},
+			"BDI":{
+				allow:true,
+				attributes:{ }
+			},
+			"BDO":{
+				allow:true,
+				attributes:{ }
+			},
+			"BLOCKQUOTE":{
+				allow:true,
+				attributes:{ "cite":true }
+			},
+			"BODY":{
+				allow:false,
+				attributes:{ }
+			},
+			"BR":{
+				allow:true,
+				attributes:{ }
+			},
+			"BUTTON":{
+				allow:true,
+				attributes:{ "autofocus":true, "disabled":true, "form":true, "formaction":true, "formenctype":true, "formmethod":true, "formnovalidate":true, "formtarget":true, "name":true, "type":true, "value":true }
+			},
+			"CANVAS":{
+				allow:true,
+				attributes:{ "width":true, "height":true }
+			},
+			"CAPTION":{
+				allow:true,
+				attributes:{ }
+			},
+			"CITE":{
+				allow:true,
+				attributes:{ }
+			},
+			"CODE":{
+				allow:true,
+				attributes:{ }
+			},
+			"COL":{
+				allow:true,
+				attributes:{ "span":true }
+			},
+			"COLGROUP":{
+				allow:true,
+				attributes:{ "span":true }
+			},
+			"DATA":{
+				allow:true,
+				attributes:{ "value":true }
+			},
+			"DATALIST":{
+				allow:true,
+				attributes:{ }
+			},
+			"DD":{
+				allow:true,
+				attributes:{ }
+			},
+			"DEL":{
+				allow:true,
+				attributes:{ "cite":true, "datetime":true }
+			},
+			"DETAILS":{
+				allow:true,
+				attributes:{ "open":true }
+			},
+			"DFN":{
+				allow:true,
+				attributes:{ }
+			},
+			"DIALOG":{
+				allow:true,
+				attributes:{ "open":true }
+			},
+			"DIV":{
+				allow:true,
+				attributes:{ }
+			},
+			"DL":{
+				allow:true,
+				attributes:{ }
+			},
+			"DT":{
+				allow:true,
+				attributes:{ }
+			},
+			"EM":{
+				allow:true,
+				attributes:{ }
+			},
+			"EMBED":{
+				allow:false,
+				attributes:{ "src":true, "type":true, "width":true, "height":true, "any*":true }
+			},
+			"FIELDSET":{
+				allow:true,
+				attributes:{ "disabled":true, "form":true, "name":true }
+			},
+			"FIGCAPTION":{
+				allow:true,
+				attributes:{ }
+			},
+			"FIGURE":{
+				allow:true,
+				attributes:{ }
+			},
+			"FOOTER":{
+				allow:true,
+				attributes:{ }
+			},
+			"FORM":{
+				allow:true,
+				attributes:{ "accept-charset":true, "action":true, "autocomplete":true, "enctype":true, "method":true, "name":true, "novalidate":true, "target":true }
+			},
+			"H1":{
+				allow:true,
+				attributes:{ }
+			},
+			"H2":{
+				allow:true,
+				attributes:{ }
+			},
+			"H3":{
+				allow:true,
+				attributes:{ }
+			},
+			"H4":{
+				allow:true,
+				attributes:{ }
+			},
+			"H5":{
+				allow:true,
+				attributes:{ }
+			},
+			"H6":{
+				allow:true,
+				attributes:{ }
+			},
+			"HEAD":{
+				allow:false,
+				attributes:{ }
+			},
+			"HEADER":{
+				allow:true,
+				attributes:{ }
+			},
+			"HR":{
+				allow:true,
+				attributes:{ }
+			},
+			"HTML":{
+				allow:false,
+				attributes:{ "manifest":true }
+			},
+			"I":{
+				allow:true,
+				attributes:{ }
+			},
+			"IFRAME":{
+				allow:false,
+				attributes:{ "src":true, "srcdoc":true, "name":true, "sandbox":true, "seamless":true, "width":true, "height":true }
+			},
+			"IMG":{
+				allow:true,
+				attributes:{ "alt":true, "src":true, "crossorigin":true, "usemap":true, "ismap":true, "width":true, "height":true }
+			},
+			"INPUT":{
+				allow:true,
+				attributes:{ "accept":true, "alt":true, "autocomplete":true, "autofocus":true, "checked":true, "dirname":true, "disabled":true, "form":true, "formaction":true, "formenctype":true, "formmethod":true, "formnovalidate":true, "formtarget":true, "height":true, "list":true, "max":true, "maxlength":true, "min":true, "minlength":true, "multiple":true, "name":true, "pattern":true, "placeholder":true, "readonly":true, "required":true, "size":true, "src":true, "step":true, "type":true, "value":true, "width":true }
+			},
+			"INS":{
+				allow:true,
+				attributes:{ "cite":true, "datetime":true }
+			},
+			"KBD":{
+				allow:true,
+				attributes:{ }
+			},
+			"KEYGEN":{
+				allow:true,
+				attributes:{ "autofocus":true, "challenge":true, "disabled":true, "form":true, "keytype":true, "name":true }
+			},
+			"LABEL":{
+				allow:true,
+				attributes:{ "form":true, "for":true }
+			},
+			"LEGEND":{
+				allow:true,
+				attributes:{ }
+			},
+			"LI":{
+				allow:true,
+				attributes:{ "value*":true }
+			},
+			"LINK":{
+				allow:true,
+				attributes:{ "href":true, "crossorigin":true, "rel":true, "media":true, "hreflang":true, "type":true, "sizes":true }
+			},
+			"MAIN":{
+				allow:true,
+				attributes:{ "":true }
+			},
+			"MAP":{
+				allow:true,
+				attributes:{ "name":true }
+			},
+			"MARK":{
+				allow:true,
+				attributes:{ }
+			},
+			"META":{
+				allow:true,
+				attributes:{ "name":true, "http-equiv":true, "content":true, "charset":true }
+			},
+			"METER":{
+				allow:true,
+				attributes:{ "value":true, "min":true, "max":true, "low":true, "high":true, "optimum":true }
+			},
+			"NAV":{
+				allow:true,
+				attributes:{ }
+			},
+			"NOSCRIPT":{
+				allow:true,
+				attributes:{ }
+			},
+			"OBJECT":{
+				allow:true,
+				attributes:{ "data":true, "type":true, "typemustmatch":true, "name":true, "usemap":true, "form":true, "width":true, "height":true }
+			},
+			"OL":{
+				allow:true,
+				attributes:{ "reversed":true, "start":true, "type":true }
+			},
+			"OPTGROUP":{
+				allow:true,
+				attributes:{ "disabled":true, "label":true }
+			},
+			"OPTION":{
+				allow:true,
+				attributes:{ "disabled":true, "label":true, "selected":true, "value":true }
+			},
+			"OUTPUT":{
+				allow:true,
+				attributes:{ "for":true, "form":true, "name":true }
+			},
+			"P":{
+				allow:true,
+				attributes:{ }
+			},
+			"PARAM":{
+				allow:true,
+				attributes:{ "name":true, "value":true }
+			},
+			"PRE":{
+				allow:true,
+				attributes:{ }
+			},
+			"PROGRESS":{
+				allow:true,
+				attributes:{ "value":true, "max":true }
+			},
+			"Q":{
+				allow:true,
+				attributes:{ "cite":true }
+			},
+			"RB":{
+				allow:true,
+				attributes:{ }
+			},
+			"RP":{
+				allow:true,
+				attributes:{ }
+			},
+			"RT":{
+				allow:true,
+				attributes:{ }
+			},
+			"RTC":{
+				allow:true,
+				attributes:{ }
+			},
+			"RUBY":{
+				allow:true,
+				attributes:{ }
+			},
+			"S":{
+				allow:true,
+				attributes:{ }
+			},
+			"SAMP":{
+				allow:true,
+				attributes:{ }
+			},
+			"SCRIPT":{
+				allow:false,
+				attributes:{ "src":true, "type":true, "charset":true, "async":true, "defer":true, "crossorigin":true }
+			},
+			"SECTION":{
+				allow:true,
+				attributes:{ }
+			},
+			"SELECT":{
+				allow:true,
+				attributes:{ "autofocus":true, "disabled":true, "form":true, "multiple":true, "name":true, "required":true, "size":true }
+			},
+			"SMALL":{
+				allow:true,
+				attributes:{ }
+			},
+			"SOURCE":{
+				allow:true,
+				attributes:{ "src":true, "type":true, "media":true }
+			},
+			"SPAN":{
+				allow:true,
+				attributes:{ }
+			},
+			"STRONG":{
+				allow:true,
+				attributes:{ }
+			},
+			"STYLE":{
+				allow:false,
+				attributes:{ "media":true, "type":true, "scoped":true }
+			},
+			"SUB":{
+				allow:true,
+				attributes:{ }
+			},
+			"SUMMARY":{
+				allow:true,
+				attributes:{ }
+			},
+			"SUP":{
+				allow:true,
+				attributes:{ }
+			},
+			"TABLE":{
+				allow:true,
+				attributes:{ "border":true }
+			},
+			"TBODY":{
+				allow:true,
+				attributes:{ }
+			},
+			"TD":{
+				allow:true,
+				attributes:{ "colspan":true, "rowspan":true, "headers":true }
+			},
+			"TEMPLATE":{
+				allow:true,
+				attributes:{ }
+			},
+			"TEXTAREA":{
+				allow:true,
+				attributes:{ "autofocus":true, "cols":true, "dirname":true, "disabled":true, "form":true, "maxlength":true, "minlength":true, "name":true, "placeholder":true, "readonly":true, "required":true, "rows":true, "wrap":true }
+			},
+			"TFOOT":{
+				allow:true,
+				attributes:{ }
+			},
+			"TH":{
+				allow:true,
+				attributes:{ "colspan":true, "rowspan":true, "headers":true, "scope":true, "abbr":true }
+			},
+			"THEAD":{
+				allow:true,
+				attributes:{ }
+			},
+			"TIME":{
+				allow:true,
+				attributes:{ "datetime":true }
+			},
+			"TITLE":{
+				allow:true,
+				attributes:{ }
+			},
+			"TR":{
+				allow:true,
+				attributes:{ }
+			},
+			"TRACK":{
+				allow:true,
+				attributes:{ "default":true, "kind":true, "label":true, "src":true, "srclang":true }
+			},
+			"U":{
+				allow:true,
+				attributes:{ }
+			},
+			"UL":{
+				allow:true,
+				attributes:{ }
+			},
+			"VAR":{
+				allow:true,
+				attributes:{ }
+			},
+			"VIDEO":{
+				allow:true,
+				attributes:{ "src":true, "crossorigin":true, "poster":true, "preload":true, "autoplay":true, "mediagroup":true, "loop":true, "muted":true, "controls":true, "width":true, "height":true }
+			},
+			"WBR":{
+				allow:true,
+				attributes:{ }
+			}
+		}
+	};
+
+	// --------------------------------------------------------------------------------
+	// 属性辞書 HTML4.1
+	// --------------------------------------------------------------------------------
+	var DICTIONARY_ATTRIBUTE_HTML4 = {
+		globals :{ "class":true, "dir":true, "id":true, "lang":true, "style":true, "title":true },
+		elements:{
+			"A":{
+				allow:true,
+				attributes:{ "accesskey":true, "charset":true, "coords":true, "href":true, "hreflang":true, "name":true, "rel":true, "rev":true, "shape":true, "tabindex":true, "target":true, "type":true }
+			},
+			"ABBR":{
+				allow:true,
+				attributes:{ }
+			},
+			"ACRONYM":{
+				allow:true,
+				attributes:{ }
+			},
+			"ADDRESS":{
+				allow:true,
+				attributes:{ }
+			},
+			"APPLET":{
+				allow:false,
+				attributes:{ "align":true, "alt":true, "archive":true, "code":true, "codebase":true, "height":true, "hspace":true, "name":true, "object":true, "vspace":true, "width":true }
+			},
+			"AREA":{
+				allow:true,
+				attributes:{ "accesskey":true, "alt":true, "coords":true, "href":true, "nohref":true, "shape":true, "tabindex":true, "target":true }
+			},
+			"B":{
+				allow:true,
+				attributes:{ }
+			},
+			"BASE":{
+				allow:true,
+				attributes:{ "href":true, "target":true }
+			},
+			"BASEFONT":{
+				allow:true,
+				attributes:{ "color":true, "face":true, "size":true }
+			},
+			"BDO":{
+				allow:true,
+				attributes:{ "dir":true }
+			},
+			"BIG":{
+				allow:true,
+				attributes:{ }
+			},
+			"BLOCKQUOTE":{
+				allow:true,
+				attributes:{ "cite":true }
+			},
+			"BODY":{
+				allow:false,
+				attributes:{ "alink":true, "background":true, "bgcolor":true, "link":true, "text":true, "vlink":true }
+			},
+			"BR":{
+				allow:true,
+				attributes:{ "clear":true }
+			},
+			"BUTTON":{
+				allow:true,
+				attributes:{ "accesskey":true, "disabled":true, "name":true, "tabindex":true, "type":true, "value":true }
+			},
+			"CAPTION":{
+				allow:true,
+				attributes:{ "align":true }
+			},
+			"CENTER":{
+				allow:true,
+				attributes:{ }
+			},
+			"CITE":{
+				allow:true,
+				attributes:{ }
+			},
+			"CODE":{
+				allow:true,
+				attributes:{ }
+			},
+			"COL":{
+				allow:true,
+				attributes:{ "align":true, "char":true, "charoff":true, "span":true, "valign":true, "width":true }
+			},
+			"COLGROUP":{
+				allow:true,
+				attributes:{ "align":true, "char":true, "charoff":true, "span":true, "valign":true, "width":true }
+			},
+			"DD":{
+				allow:true,
+				attributes:{ }
+			},
+			"DEL":{
+				allow:true,
+				attributes:{ "cite":true, "datetime":true }
+			},
+			"DFN":{
+				allow:true,
+				attributes:{ }
+			},
+			"DIR":{
+				allow:true,
+				attributes:{ "compact":true }
+			},
+			"DIV":{
+				allow:true,
+				attributes:{ "align":true }
+			},
+			"DL":{
+				allow:true,
+				attributes:{ "compact":true }
+			},
+			"DT":{
+				allow:true,
+				attributes:{ }
+			},
+			"EM":{
+				allow:true,
+				attributes:{ }
+			},
+			"FIELDSET":{
+				allow:true,
+				attributes:{ }
+			},
+			"FONT":{
+				allow:true,
+				attributes:{ "color":true, "face":true, "size":true }
+			},
+			"FORM":{
+				allow:true,
+				attributes:{ "accept-charset":true, "accept":true, "action":true, "enctype":true, "method":true, "name":true, "target":true }
+			},
+			"FRAME":{
+				allow:false,
+				attributes:{ "frameborder":true, "longdesc":true, "marginheight":true, "marginwidth":true, "name":true, "noresize":true, "scrolling":true, "src":true }
+			},
+			"FRAMESET":{
+				allow:false,
+				attributes:{ "cols":true, "rows":true }
+			},
+			"H1":{
+				allow:true,
+				attributes:{ "align":true }
+			},
+			"H2":{
+				allow:true,
+				attributes:{ "align":true }
+			},
+			"H3":{
+				allow:true,
+				attributes:{ "align":true }
+			},
+			"H4":{
+				allow:true,
+				attributes:{ "align":true }
+			},
+			"H5":{
+				allow:true,
+				attributes:{ "align":true }
+			},
+			"H6":{
+				allow:true,
+				attributes:{ "align":true }
+			},
+			"HEAD":{
+				allow:false,
+				attributes:{ "profile":true }
+			},
+			"HR":{
+				allow:true,
+				attributes:{ "align":true, "noshade":true, "size":true, "width":true }
+			},
+			"HTML":{
+				allow:false,
+				attributes:{ "version":true }
+			},
+			"I":{
+				allow:true,
+				attributes:{ }
+			},
+			"IFRAME":{
+				allow:false,
+				attributes:{ "align":true, "frameborder":true, "height":true, "longdesc":true, "marginheight":true, "marginwidth":true, "name":true, "scrolling":true, "src":true, "width":true }
+			},
+			"IMG":{
+				allow:true,
+				attributes:{ "align":true, "alt":true, "border":true, "height":true, "hspace":true, "ismap":true, "longdesc":true, "name":true, "src":true, "usemap":true, "vspace":true, "width":true }
+			},
+			"INPUT":{
+				allow:true,
+				attributes:{ "accept":true, "accesskey":true, "align":true, "alt":true, "checked":true, "disabled":true, "ismap":true, "maxlength":true, "name":true, "readonly":true, "size":true, "src":true, "tabindex":true, "type":true, "usemap":true, "value":true }
+			},
+			"INS":{
+				allow:true,
+				attributes:{ "cite":true, "datetime":true }
+			},
+			"ISINDEX":{
+				allow:true,
+				attributes:{ "prompt":true }
+			},
+			"KBD":{
+				allow:true,
+				attributes:{ }
+			},
+			"LABEL":{
+				allow:true,
+				attributes:{ "accesskey":true, "for":true }
+			},
+			"LEGEND":{
+				allow:true,
+				attributes:{ "accesskey":true, "align":true }
+			},
+			"LI":{
+				allow:true,
+				attributes:{ "type":true, "value":true }
+			},
+			"LINK":{
+				allow:true,
+				attributes:{ "charset":true, "href":true, "hreflang":true, "media":true, "rel":true, "rev":true, "target":true, "type":true }
+			},
+			"MAP":{
+				allow:true,
+				attributes:{ "name":true }
+			},
+			"MENU":{
+				allow:true,
+				attributes:{ "compact":true }
+			},
+			"META":{
+				allow:true,
+				attributes:{ "content":true, "http-equiv":true, "name":true, "scheme":true }
+			},
+			"NOFRAMES":{
+				allow:true,
+				attributes:{ }
+			},
+			"NOSCRIPT":{
+				allow:true,
+				attributes:{ }
+			},
+			"OBJECT":{
+				allow:false,
+				attributes:{ "align":true, "archive":true, "border":true, "classid":true, "codebase":true, "codetype":true, "data":true, "declare":true, "height":true, "hspace":true, "name":true, "standby":true, "tabindex":true, "type":true, "usemap":true, "vspace":true, "width":true }
+			},
+			"OL":{
+				allow:true,
+				attributes:{ "compact":true, "start":true, "type":true }
+			},
+			"OPTGROUP":{
+				allow:true,
+				attributes:{ "disabled":true, "label":true }
+			},
+			"OPTION":{
+				allow:true,
+				attributes:{ "disabled":true, "label":true, "selected":true, "value":true }
+			},
+			"P":{
+				allow:true,
+				attributes:{ "align":true }
+			},
+			"PARAM":{
+				allow:true,
+				attributes:{ "name":true, "type":true, "value":true, "valuetype":true }
+			},
+			"PRE":{
+				allow:true,
+				attributes:{ "width":true }
+			},
+			"Q":{
+				allow:true,
+				attributes:{ "cite":true }
+			},
+			"S":{
+				allow:true,
+				attributes:{ }
+			},
+			"SAMP":{
+				allow:true,
+				attributes:{ }
+			},
+			"SCRIPT":{
+				allow:false,
+				attributes:{ "charset":true, "defer":true, "language":true, "src":true, "type":true }
+			},
+			"SELECT":{
+				allow:true,
+				attributes:{ "disabled":true, "multiple":true, "name":true, "size":true, "tabindex":true }
+			},
+			"SMALL":{
+				allow:true,
+				attributes:{ }
+			},
+			"SPAN":{
+				allow:true,
+				attributes:{ }
+			},
+			"STRIKE":{
+				allow:true,
+				attributes:{ }
+			},
+			"STRONG":{
+				allow:true,
+				attributes:{ }
+			},
+			"STYLE":{
+				allow:false,
+				attributes:{ "media":true, "type":true }
+			},
+			"SUB":{
+				allow:true,
+				attributes:{ }
+			},
+			"SUP":{
+				allow:true,
+				attributes:{ }
+			},
+			"TABLE":{
+				allow:true,
+				attributes:{ "align":true, "bgcolor":true, "border":true, "cellpadding":true, "cellspacing":true, "frame":true, "rules":true, "summary":true, "width":true }
+			},
+			"TBODY":{
+				allow:true,
+				attributes:{ "align":true, "char":true, "charoff":true, "valign":true }
+			},
+			"TD":{
+				allow:true,
+				attributes:{ "abbr":true, "align":true, "axis":true, "bgcolor":true, "char":true, "charoff":true, "colspan":true, "headers":true, "height":true, "nowrap":true, "rowspan":true, "scope":true, "valign":true, "width":true }
+			},
+			"TEXTAREA":{
+				allow:true,
+				attributes:{ "accesskey":true, "cols":true, "disabled":true, "name":true, "readonly":true, "rows":true, "tabindex":true }
+			},
+			"TFOOT":{
+				allow:true,
+				attributes:{ "align":true, "char":true, "charoff":true, "valign":true }
+			},
+			"TH":{
+				allow:true,
+				attributes:{ "abbr":true, "align":true, "axis":true, "bgcolor":true, "char":true, "charoff":true, "colspan":true, "headers":true, "height":true, "nowrap":true, "rowspan":true, "scope":true, "valign":true, "width":true }
+			},
+			"THEAD":{
+				allow:true,
+				attributes:{ "align":true, "char":true, "charoff":true, "valign":true }
+			},
+			"TITLE":{
+				allow:true,
+				attributes:{ }
+			},
+			"TR":{
+				allow:true,
+				attributes:{ "align":true, "bgcolor":true, "char":true, "charoff":true, "valign":true }
+			},
+			"TT":{
+				allow:true,
+				attributes:{ }
+			},
+			"U":{
+				allow:true,
+				attributes:{ }
+			},
+			"UL":{
+				allow:true,
+				attributes:{ "compact":true, "type":true }
+			},
+			"VAR":{
+				allow:true,
+				attributes:{ }
+			}
+		}
+	};
+
+	// --------------------------------------------------------------------------------
 	// HTML 文字列から DOM オブジェクトを生成（スクリプト要素 と イベントハンドラは除外）
 	// --------------------------------------------------------------------------------
 	function StringHtmlCreateDomNodesSafe(html){
+
+		// 属性名終端文字
+		var end_attr_name = new Object();
+		end_attr_name[' '] = end_attr_name['　'] = end_attr_name['\t'] = end_attr_name['\r'] = end_attr_name['\n'] = end_attr_name['>'] = end_attr_name['='] = true;
+
+		// 属性値端文字
+		var end_attr_value = new Object();
+		end_attr_value[' '] = end_attr_value['　'] = end_attr_value['\t'] = end_attr_value['\r'] = end_attr_value['\n'] = end_attr_value['>'] = true;
+
+		// 整形用文字
+		var dic_space = new Object();
+		dic_space[' '] = dic_space['　'] = dic_space['\t'] = dic_space['\r'] = dic_space['\n'] = true;
+
+		// 空要素
+		var dic_empty = new Object();
+		dic_empty["AREA"] = dic_empty["BASE"] = dic_empty["BASEFONT"] = dic_empty["BR"] = dic_empty["COL"] = dic_empty["FRAME"] = dic_empty["HR"] = dic_empty["IMG"] = 
+		dic_empty["INPUT"] = dic_empty["ISINDEX"] = dic_empty["LINK"] = dic_empty["META"] = dic_empty["PARAM"] = dic_empty["WBR"] = true;
+
+		// 空要素(任意)
+		var dic_optional = new Object();
+		dic_optional["BODY"] = dic_optional["COLGROUP"] = dic_optional["DD"] = dic_optional["DT"] = dic_optional["HEAD"] = dic_optional["HTML"] = dic_optional["LI"] = dic_optional["OPTION"] = 
+		dic_optional["P"] = dic_optional["TBODY"] = dic_optional["TD"] = dic_optional["TFOOT"] = dic_optional["TH"] = dic_optional["THEAD"] = dic_optional["TR"] = true;
+
 		var nodes = new Array();
 		var stack = new Array();
 
@@ -58270,7 +59278,7 @@ function PageExpand(page_expand_arguments){
 		var e;
 		var p = 0;
 		var l = html.length;
-		
+
 		var edit = {
 			element:null,
 			name:"",
@@ -58299,11 +59307,7 @@ function PageExpand(page_expand_arguments){
 						while(l > p){
 							c = html.charAt(p);
 							p ++;
-							if(c == ' '){
-							}else if(c == '　'){
-							}else if(c == '\t'){
-							}else if(c == '\r'){
-							}else if(c == '\n'){
+							if(dic_space[c]){
 							}else{
 								break;
 							}
@@ -58316,11 +59320,7 @@ function PageExpand(page_expand_arguments){
 						// 整形無視
 						while(l > p){
 							c = html.charAt(p);
-							if(c == ' '){
-							}else if(c == '　'){
-							}else if(c == '\t'){
-							}else if(c == '\r'){
-							}else if(c == '\n'){
+							if(dic_space[c]){
 							}else{
 								break;
 							}
@@ -58337,11 +59337,7 @@ function PageExpand(page_expand_arguments){
 						while(l > p){
 							c = html.charAt(p);
 							p ++;
-							if(c == ' '){
-							}else if(c == '　'){
-							}else if(c == '\t'){
-							}else if(c == '\r'){
-							}else if(c == '\n'){
+							if(dic_space[c]){
 							}else{
 								break;
 							}
@@ -58488,23 +59484,13 @@ function PageExpand(page_expand_arguments){
 					var tag_name = html.substring(b,e).toUpperCase();
 
 					// 要素終了
-					var tag_list = ["LI","DT","DD"];
 					var i;
-					var j;
-					var num = tag_list.length;
-					for(i=0;i<num;i++){
-						if(tag_name == tag_list[i]){
-							break;
-						}
-					}
-					if(i < num){
+					if(dic_optional[tag_name]){
 						b = e = stack.length;
 						for(i=e-1;i>=0;i--){
-							for(j=0;j<num;j++){
-								if(stack[i].name == tag_list[j]){
-									b = i;
-									break;
-								}
+							if(dic_optional[stack[i].name]){
+								b = i;
+								break;
 							}
 						}
 						for(;b<e;b++){
@@ -58518,18 +59504,28 @@ function PageExpand(page_expand_arguments){
 					// 要素生成
 					var parent = edit.element;
 					var empty = false;
+					var attr_allow = new Array();
 					var element = null;
-					switch(tag_name){
-					case "HTML":
-					case "HEAD":
-					case "BODY":
-					case "SCRIPT":
-					case "STYLE":
-					case "IFRAME":
-						break;
-					default:
+
+					var dic_attr = DICTIONARY_ATTRIBUTE_HTML4;
+					var item = dic_attr.elements[tag_name];
+					if(item){
+						if(item.allow){
+							attr_allow.push(dic_attr.globals);
+							attr_allow.push(item.attributes);
+						}
+					}
+					var dic_attr = DICTIONARY_ATTRIBUTE_HTML5;
+					var item = dic_attr.elements[tag_name];
+					if(item){
+						if(item.allow){
+							attr_allow.push(dic_attr.globals);
+							attr_allow.push(item.attributes);
+						}
+					}
+
+					if(attr_allow.length){
 						element = document.createElement(tag_name);
-						break;
 					}
 					if(element){
 						if(edit.depth){
@@ -58542,15 +59538,8 @@ function PageExpand(page_expand_arguments){
 					}
 
 					// 空要素
-					switch(tag_name){
-					case "META":
-					case "LINK":
-					case "IMG":
-					case "HR":
-					case "BR":
-					case "INPUT":
+					if(dic_empty[tag_name]){
 						empty = true;
-						break;
 					}
 
 					// スタックプッシュ
@@ -58568,11 +59557,7 @@ function PageExpand(page_expand_arguments){
 							c = html.charAt(p);
 
 							// 整形無視
-							if(c == ' '){
-							}else if(c == '　'){
-							}else if(c == '\t'){
-							}else if(c == '\r'){
-							}else if(c == '\n'){
+							if(dic_space[c]){
 							}else{
 								b = p;
 								break;
@@ -58603,7 +59588,7 @@ function PageExpand(page_expand_arguments){
 							// 属性名の終了
 							while(l > p){
 								c = html.charAt(p);
-								if((c == ' ') || (c == '　') || (c == ' ') || (c == '\t') || (c == '\r') || (c == '\n') || (c == '>') || (c == '=')){
+								if(end_attr_name[c]){
 									e = p;
 									break;
 								}
@@ -58618,11 +59603,7 @@ function PageExpand(page_expand_arguments){
 							// 整形無視
 							while(l > p){
 								c = html.charAt(p);
-								if(c == ' '){
-								}else if(c == '　'){
-								}else if(c == '\t'){
-								}else if(c == '\r'){
-								}else if(c == '\n'){
+								if(dic_space[c]){
 								}else{
 									break;
 								}
@@ -58637,11 +59618,7 @@ function PageExpand(page_expand_arguments){
 								// 整形無視
 								while(l > p){
 									c = html.charAt(p);
-									if(c == ' '){
-									}else if(c == '　'){
-									}else if(c == '\t'){
-									}else if(c == '\r'){
-									}else if(c == '\n'){
+									if(dic_space[c]){
 									}else{
 										break;
 									}
@@ -58673,7 +59650,7 @@ function PageExpand(page_expand_arguments){
 										}
 									}else{
 										// 属性値の終了
-										if((c == ' ') || (c == '　') || (c == ' ') || (c == '\t') || (c == '\r') || (c == '\n') || (c == '>')){
+										if(end_attr_value[c]){
 											e = p;
 											break;
 										}
@@ -58689,14 +59666,18 @@ function PageExpand(page_expand_arguments){
 							}
 
 							if(edit.element){
-								if(attr_name.toLowerCase().indexOf("on") == 0){
-								}else{
-									if(attr_value === undefined)	attr_value = "";
+								attr_name = attr_name.toLowerCase();
+								for(var id in attr_allow){
+									if(attr_allow[id][attr_name]){
+										if(attr_value === undefined)	attr_value = "";
 
-									// 属性生成
-									var attribute = document.createAttribute(attr_name);
-									attribute.value = attr_value;
-									edit.element.setAttributeNode(attribute);
+										// 属性生成
+										var attribute = document.createAttribute(attr_name);
+										attribute.value = attr_value;
+										edit.element.setAttributeNode(attribute);
+
+										break;
+									}
 								}
 							}
 						}
@@ -58803,29 +59784,35 @@ function PageExpand(page_expand_arguments){
 	}
 
 	// --------------------------------------------------------------------------------
+	// ファイルダウンロード
+	// --------------------------------------------------------------------------------
+	function FileDownload(options,callback){
+	}
+
+	// --------------------------------------------------------------------------------
 	// ウィンドウ用クラス
 	// --------------------------------------------------------------------------------
 	function WindowManager(window_obj){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// ルートウィンドウを取得
 		// --------------------------------------------------------------------------------
-		_container.getWindowRoot = function(){
+		_this.getWindowRoot = function(){
 			return _window_root;
 		};
 
 		// --------------------------------------------------------------------------------
 		// ルートウィンドウが存在するか調べる
 		// --------------------------------------------------------------------------------
-		_container.existWindowRoot = function(){
+		_this.existWindowRoot = function(){
 			return (_window_root != _window_self);
 		};
 
 		// --------------------------------------------------------------------------------
 		// ルートからの座標
 		// --------------------------------------------------------------------------------
-		_container.getPositionFromRoot = function(){
+		_this.getPositionFromRoot = function(){
 			var x = 0.0;
 			var y = 0.0;
 
@@ -58878,8 +59865,6 @@ function PageExpand(page_expand_arguments){
 			}
 			_window_root = window_obj;
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -58966,12 +59951,13 @@ function PageExpand(page_expand_arguments){
 		var url = "";
 		var re = new RegExp("^(blob|data|about):","i");
 		try{
+			url = window_obj.document.URL;
 			var top = window_obj.top;
-			do {
-				url = window_obj.document.URL;
+			while(window_obj != top) {
 				if(!url.match(re)) break;
 				window_obj = window_obj.parent;
-			} while (window_obj != top);
+				url = window_obj.document.URL;
+			}
 		}catch(e){
 		}
 
@@ -59113,12 +60099,12 @@ function PageExpand(page_expand_arguments){
 	// プロパティの更新監視
 	// --------------------------------------------------------------------------------
 	function DocumentObserverModifyProperty (){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 要素生成
 		// --------------------------------------------------------------------------------
-		_container.createElement = function(){
+		_this.createElement = function(){
 			var _element = new Object();
 
 			// --------------------------------------------------------------------------------
@@ -59210,7 +60196,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 実行
 		// --------------------------------------------------------------------------------
-		_container.execute = function(){
+		_this.execute = function(){
 			var i = 0;
 			var num = 5;
 			var start = _list;
@@ -59230,7 +60216,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 要素数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCount = function(){
+		_this.getCount = function(){
 			return _count;
 		};
 
@@ -59250,20 +60236,18 @@ function PageExpand(page_expand_arguments){
 
 			_count = 0;
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// DOMノードが外れたか監視
 	// --------------------------------------------------------------------------------
 	function DocumentObserverRemoveDomNode(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 開放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 			if(_mutation_observer){
 				_mutation_observer.disconnect();
 				_mutation_observer = null;
@@ -59273,7 +60257,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 要素生成
 		// --------------------------------------------------------------------------------
-		_container.createElement = function(){
+		_this.createElement = function(){
 			var _element = new Object();
 
 			// --------------------------------------------------------------------------------
@@ -59382,14 +60366,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 要素数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCount = function(){
+		_this.getCount = function(){
 			return _count;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 実行
 		// --------------------------------------------------------------------------------
-		_container.execute = function(){
+		_this.execute = function(){
 			_list_end = _list_pos;
 			var num = 5;
 			var i;
@@ -59533,20 +60517,18 @@ function PageExpand(page_expand_arguments){
 				_list_end = _list;
 			}
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// スクロール監視
 	// --------------------------------------------------------------------------------
 	function DocumentObserverScroll(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 開放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 			if(window.addEventListener){
 				window.addEventListener("scroll",scroll_func,true);
 			}
@@ -59555,7 +60537,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 要素生成
 		// --------------------------------------------------------------------------------
-		_container.createElement = function(){
+		_this.createElement = function(){
 			var _element = new Object();
 
 			// --------------------------------------------------------------------------------
@@ -59610,7 +60592,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 要素数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCount = function(){
+		_this.getCount = function(){
 			return _count;
 		};
 
@@ -59672,27 +60654,25 @@ function PageExpand(page_expand_arguments){
 				window.addEventListener("scroll",detect,true);
 			}
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
 	// キュー辞書
 	// --------------------------------------------------------------------------------
 	function QueueDictionary(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 開放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 			_dic = null;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 要素生成
 		// --------------------------------------------------------------------------------
-		_container.createElement = function(key){
+		_this.createElement = function(key){
 			var _element = new Object();
 
 			// --------------------------------------------------------------------------------
@@ -59761,7 +60741,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 
 		// --------------------------------------------------------------------------------
-		_container.get = function(key){
+		_this.get = function(key){
 			var obj = _dic[key];
 			if(!obj) return null;
 			return obj._next;
@@ -59770,7 +60750,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 登録数を取得
 		// --------------------------------------------------------------------------------
-		_container.getCount = function(){
+		_this.getCount = function(){
 			return _count;
 		};
 
@@ -59787,8 +60767,6 @@ function PageExpand(page_expand_arguments){
 			_count = 0;
 			_dic = new Object();
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -60503,12 +61481,12 @@ function PageExpand(page_expand_arguments){
 	// DOM ノードが外れるか調べる
 	// --------------------------------------------------------------------------------
 	function DomNodeObserverRemoveFromDocument(node){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// 開放
 		// --------------------------------------------------------------------------------
-		_container.release = function(){
+		_this.release = function(){
 			if(_observer_remove_node){
 				_observer_remove_node.release();
 				_observer_remove_node = null;
@@ -60518,7 +61496,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// コールバック関数をセット
 		// --------------------------------------------------------------------------------
-		_container.setFunction = function(f){
+		_this.setFunction = function(f){
 			_func = f;
 		};
 
@@ -60552,8 +61530,6 @@ function PageExpand(page_expand_arguments){
 				_observer_remove_node.setFunction(detect);
 			}
 		})();
-
-		return _container;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -60648,12 +61624,6 @@ function PageExpand(page_expand_arguments){
 	function ImageClone(image){
 		var c = ElementCloneNode(image,false);
 
-		var style = image.style;
-		for(var p in style){
-			try{
-				c.style[p] = style[p];
-			}catch(e){}
-		}
 		return c;
 	}
 
@@ -61080,6 +62050,54 @@ function FirefoxAddonGetSystem(){
 	return null;
 }
 
+// --------------------------------------------------------------------------------
+// Firefox アドオン用 WindowUtils 取得
+// --------------------------------------------------------------------------------
+function FirefoxAddonGetWindowUtils(){
+	try{
+		return require("sdk/window/utils");
+	}catch(e){}
+
+	return null;
+}
+
+// --------------------------------------------------------------------------------
+// Downloads.jsm インポート
+// --------------------------------------------------------------------------------
+function Modules_Import_Downloads(){
+	try{
+		var {Cu} = require("chrome");
+		Cu.import("resource://gre/modules/Downloads.jsm");
+		return Downloads;
+	}catch(e){}
+
+	return null;
+}
+
+// --------------------------------------------------------------------------------
+// osfile.jsm インポート
+// --------------------------------------------------------------------------------
+function Modules_Import_osfile(){
+	try{
+		var {Cu} = require("chrome");
+		Cu.import("resource://gre/modules/osfile.jsm");
+		return OS;
+	}catch(e){}
+
+	return null;
+}
+
+// --------------------------------------------------------------------------------
+// nsIFilePicker 作成
+// --------------------------------------------------------------------------------
+function XPCOM_Create_nsIFilePicker(){
+	try{
+		var {Cc,Ci} = require("chrome");
+		return Cc["@mozilla.org/filepicker;1"].createInstance(Ci.nsIFilePicker);
+	}catch(e){}
+
+	return null;
+}
 
 // --------------------------------------------------------------------------------
 // nsIXMLHttpRequest 作成

@@ -14,12 +14,12 @@ function PageExpand(page_expand_arguments){
 	// ポップアップメニュー
 	// --------------------------------------------------------------------------------
 	function PageExpandPopupMenu(){
-		var _container = new Object();
+		var _this = this;
 
 		// --------------------------------------------------------------------------------
 		// リロード
 		// --------------------------------------------------------------------------------
-		_container.reload = function (){
+		_this.reload = function (){
 			// プロジェクト読み込み
 			projectLoad(function(e){
 
@@ -90,7 +90,7 @@ function PageExpand(page_expand_arguments){
 		// ラインボタン（内部用）
 		// --------------------------------------------------------------------------------
 		function UI_LineButton(parent,label){
-			var _container = new Object();
+			var _this = this;
 
 			// --------------------------------------------------------------------------------
 			// 通常状態（内部用）
@@ -122,7 +122,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// クリックイベント
 			// --------------------------------------------------------------------------------
-			_container.onclick = function(){};
+			_this.onclick = function(){};
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -141,7 +141,7 @@ function PageExpand(page_expand_arguments){
 				parent.appendChild(_item);
 
 				_item.onclick = function(){
-					_container.onclick();
+					_this.onclick();
 				};
 				_item.onmouseover = function(){
 					mouse_over();
@@ -157,8 +157,6 @@ function PageExpand(page_expand_arguments){
 				};
 				normal();
 			})();
-
-			return _container;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -195,14 +193,14 @@ function PageExpand(page_expand_arguments){
 			out_table.appendChild(_menu_window);
 
 			// PageExpand の設定
-			var button_config = UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_page"));
+			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_page"));
 			button_config.onclick = function(){
 				click("configCurrentPage");
 			};
 
 			// 掲示板拡張の設定
 			if(project.getEnableExpandBbs()){
-				var button_config = UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_bbs"));
+				var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_bbs"));
 				button_config.onclick = function(){
 					click("configCurrentBbs");
 				};
@@ -210,14 +208,14 @@ function PageExpand(page_expand_arguments){
 
 			// PageExpand の実行
 			if(!(project.getEnableStartup())){
-				var button_execute_pageexpand = UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_execute"));
+				var button_execute_pageexpand = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_execute"));
 				button_execute_pageexpand.onclick = function(){
 					click("executePageExpand");
 				};
 			}
 
 			// PageExpand デバッグ
-			var button_execute_debug = UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_debug"));
+			var button_execute_debug = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_debug"));
 			button_execute_debug.onclick = function(){
 				click("executeDebug");
 			};
@@ -244,8 +242,6 @@ function PageExpand(page_expand_arguments){
 			});
 
 		})();
-
-		return _container;
 	}
 
 
@@ -262,7 +258,7 @@ function PageExpand(page_expand_arguments){
 		// Opera拡張機能通信
 		extension_message = new OperaExtensionMessageForContent();
 
-		PageExpandPopupMenu();
+		new PageExpandPopupMenu();
 		break;
 	};
 
