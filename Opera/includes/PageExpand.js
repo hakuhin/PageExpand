@@ -22,6 +22,7 @@ function PageExpand(page_expand_arguments){
 		// 設定
 		// --------------------------------------------------------------------------------
 		loader_queue.setMaxThread(project.getLoadThreadMax());
+		downloader_queue.setMaxThread(project.getDownloadThreadMax());
 		element_limitter_image.setEnableUnload(project.getEnableUnloadExpandImage());
 		element_limitter_image.setByteSizeMax(project.getSizeMoreThenAllowUnloadExpandImage());
 		element_limitter_sound.setMaxUse(project.getSoundMaxInlineSound());
@@ -757,14 +758,24 @@ function PageExpand(page_expand_arguments){
 		var element = AnalyzeWorkGetDomNode(work);
 		var tag_name = element.tagName;
 
-		// --------------------------------------------------------------------------------
-		// イメージのアドレスを調べる
-		// --------------------------------------------------------------------------------
-		if(project.getDisableSameThumbnailImage()){
-			if(tag_name == "IMG"){
-				if(element.src){
-					address_collection.addAddress("image",element.src);
+		if(tag_name == "IMG"){
+			if(element.src.search(new RegExp("^(http|https)://")) == 0){
+
+				// --------------------------------------------------------------------------------
+				// イメージのアドレスを調べる
+				// --------------------------------------------------------------------------------
+				if(project.getDisableSameThumbnailImage()){
+					if(element.src){
+						address_collection.addAddress("image",element.src);
+					}
 				}
+
+				// --------------------------------------------------------------------------------
+				// ダウンロードリストに登録
+				// --------------------------------------------------------------------------------
+				var item = download_list_image.createItem();
+				item.setURL(element.src);
+				item.setFileName(element.src);
 			}
 		}
 
@@ -1639,6 +1650,11 @@ function PageExpand(page_expand_arguments){
 						notify_element = null;
 					}
 
+					// ダウンロードリストに登録
+					var item = download_list_image.createItem();
+					item.setURL(thumbnail_url);
+					item.setFileName(thumbnail_url);
+
 					// 画像サイズをセット
 					var image_size = ImageGetNaturalSize(thumbnail_image);
 					limitter_element.setByteSize(image_size.width * image_size.height * 4);
@@ -1837,6 +1853,11 @@ function PageExpand(page_expand_arguments){
 				loader = new Loader();
 				loader.onload = function(image){
 					complete();
+
+					// ダウンロードリストに登録
+					var item = download_list_image.createItem();
+					item.setURL(url);
+					item.setFileName(url);
 
 					// 画像サイズをセット
 					var image_size = ImageGetNaturalSize(image);
@@ -5746,6 +5767,20 @@ function PageExpand(page_expand_arguments){
 					case "executeDebug":
 						// デバッグモード
 						page_expand_debug.setVisible(true);
+						break;
+
+					case "batchDownloadImage":
+						if (WindowIsChild(window)){
+						}else{
+							download_list_image.createArchive();
+						}
+						break;
+
+					case "batchDownloadUser":
+						if (WindowIsChild(window)){
+						}else{
+							download_list_user.createArchive();
+						}
 						break;
 
 					// 未知の要求

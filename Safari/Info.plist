@@ -13,9 +13,9 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.3.5</string>
+	<string>1.3.6</string>
 	<key>CFBundleVersion</key>
-	<string>1.3.5</string>
+	<string>1.3.6</string>
 	<key>Chrome</key>
 	<dict>
 		<key>Database Quota</key>
@@ -69,7 +69,7 @@
 		</dict>
 	</dict>
 	<key>Description</key>
-	<string>すべてのWEBページをリッチに展開。URL文字列のリンク化、画像のポップアップ表示、動画のインライン表示、掲示板の拡張表示など。</string>
+	<string>画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、掲示板の拡張表示など...</string>
 	<key>ExtensionInfoDictionaryVersion</key>
 	<string>1.0</string>
 	<key>Permissions</key>

@@ -52,6 +52,13 @@ function PageExpand(page_expand_arguments){
 	// ローダーキュー関連
 	var loader_queue;
 
+	// ダウンローダーキュー関連
+	var downloader_queue;
+
+	// ダウンロードリスト
+	var download_list_image;
+	var download_list_user;
+
 	// アドレス関連
 	var address_collection;
 
@@ -134,8 +141,15 @@ function PageExpand(page_expand_arguments){
 			// ローダーキュー
 			loader_queue = new LoaderQueue();
 
+			// ダウンローダーキュー
+			downloader_queue = new DownloaderQueue();
+
 			// アドレスコレクション
 			address_collection = new AddressCollection();
+
+			// ダウンロードリスト
+			download_list_image = new DownloadList();
+			download_list_user = new DownloadList();
 
 			// タスクコンテナを生成
 			task_container = new TaskContainer();
@@ -224,6 +238,7 @@ function PageExpand(page_expand_arguments){
 		// 設定
 		// --------------------------------------------------------------------------------
 		loader_queue.setMaxThread(project.getLoadThreadMax());
+		downloader_queue.setMaxThread(project.getDownloadThreadMax());
 		element_limitter_image.setEnableUnload(project.getEnableUnloadExpandImage());
 		element_limitter_image.setByteSizeMax(project.getSizeMoreThenAllowUnloadExpandImage());
 		element_limitter_sound.setMaxUse(project.getSoundMaxInlineSound());
@@ -616,6 +631,9 @@ function PageExpand(page_expand_arguments){
 					// 基本設定
 					proj_obj.standard = _proj_src.standard;
 
+					// ダウンロード設定
+					proj_obj.download = _proj_src.download;
+
 					// 簡易フィルタ
 					if(cache_obj.enable === undefined){
 						cache_obj.enable = getEnable(url);
@@ -698,6 +716,9 @@ function PageExpand(page_expand_arguments){
 
 				// 基本設定
 				proj_obj.standard = _proj_src.standard;
+
+				// ダウンロード設定
+				proj_obj.download = _proj_src.download;
 
 				// 簡易フィルタ
 				proj_obj.enable = getEnable(url);
@@ -1039,6 +1060,7 @@ function PageExpand(page_expand_arguments){
 			_project_unknown.importObjectForBackground({
 				enable:true,
 				standard:_proj_src.standard,
+				download:_proj_src.download,
 				expand_bbs:null
 			});
 
@@ -1398,6 +1420,7 @@ function PageExpand(page_expand_arguments){
 			_proj_ins = {
 				enable:_proj_src.enable,
 				standard:_proj_src.standard,
+				download:_proj_src.download,
 				expand_bbs:_proj_src.expand_bbs
 			};
 		};
@@ -1426,6 +1449,7 @@ function PageExpand(page_expand_arguments){
 			_proj_ins.enable_unsecure = _proj_src.enable_unsecure;
 			_proj_ins.enable_mixed_content = _proj_src.enable_mixed_content;
 			_proj_ins.standard = _proj_src.standard;
+			_proj_ins.download = _proj_src.download;
 
 			// インスタンス化リスト（コンテント）
 			var instantiate_project = [
@@ -1516,9 +1540,34 @@ function PageExpand(page_expand_arguments){
 		// ロードスレッドの最大数
 		// --------------------------------------------------------------------------------
 		_this.getLoadThreadMax = function(){
-			var v = _proj_ins.standard.load_thread_max;
+			var v = _proj_ins.download.load.thread_max;
 			if(v < 1)	v = 1;
 			return v;
+		};
+
+		// --------------------------------------------------------------------------------
+		// ロードのタイムアウト
+		// --------------------------------------------------------------------------------
+		_this.getLoadTimeout = function(){
+			var v = _proj_ins.download.load.timeout;
+			if(v < 0)	v = 0;
+			return v;
+		};
+
+		// --------------------------------------------------------------------------------
+		// ダウンロードスレッドの最大数
+		// --------------------------------------------------------------------------------
+		_this.getDownloadThreadMax = function(){
+			var v = _proj_ins.download.download.thread_max;
+			if(v < 1)	v = 1;
+			return v;
+		};
+
+		// --------------------------------------------------------------------------------
+		// ダウンロードファイル名衝突時
+		// --------------------------------------------------------------------------------
+		_this.getDownloadConflict = function(){
+			return _proj_ins.download.download.conflict_type;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -26948,6 +26997,217 @@ function PageExpand(page_expand_arguments){
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.17
+		// --------------------------------------------------------------------------------
+		if(proj.version < 17){
+			// バージョン値
+			proj.version = 17;
+
+			// --------------------------------------------------------------------------------
+			// ダウンロード設定
+			// --------------------------------------------------------------------------------
+			proj.download = new Object();
+			proj.download.load = new Object();
+			proj.download.download = new Object();
+			proj.download.load.thread_max = proj.standard.load_thread_max;
+			proj.download.load.timeout = 0;
+			proj.download.download.thread_max = 2;
+			proj.download.download.conflict_type = "rename";
+
+			// --------------------------------------------------------------------------------
+			// 基本設定
+			// --------------------------------------------------------------------------------
+			delete proj.standard.load_thread_max;
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義
+			// --------------------------------------------------------------------------------
+			// 自動ダウンロード（すべて）
+			var obj = addPreset(proj.replacement_to_anchor,"auto_download_all","disable_popup_image_search");
+			obj.preset = {
+				name:{
+					standard:"Auto Download (all)",
+					locales:{
+						ja:"自動ダウンロード（すべて）",
+						en:"Auto Download (all)"
+					}
+				},
+				script:
+"[\n\t" + 
+	function(info,response){
+		var anchor_element = info.anchor_element;
+
+		var url = anchor_element.href;
+		if(url.search("^(http|https|data):") >= 0){
+
+			// Downloader オブジェクトを作成
+			var downloader = new Downloader();
+
+			// ダウンロード設定
+			downloader.setURL(url);
+			downloader.setFileName(url);
+			downloader.setSaveAs(false);
+
+			// ダウンロード開始
+			downloader.start();
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		response({});
+		return true;
+	}.toString() +
+"\n]"
+			};
+
+			// 自動ダウンロード（画像のみ）
+			var obj = addPreset(proj.replacement_to_anchor,"auto_download_image","disable_popup_image_search");
+			obj.preset = {
+				name:{
+					standard:"Auto Download (image only)",
+					locales:{
+						ja:"自動ダウンロード（画像のみ）",
+						en:"Auto Download (image only)"
+					}
+				},
+				script:
+"[\n\t" + 
+	function(info,response){
+		var anchor_element = info.anchor_element;
+
+		var url = anchor_element.href;
+		var ext_list = [
+			"bmp",
+			"gif",
+			"jpg",
+			"jpe",
+			"jpeg",
+			"png"
+		];
+
+		var i;
+		var num = ext_list.length;
+		for(i=0;i<num;i++){
+			if(url.search(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i")) >= 0){
+
+				// Downloader オブジェクトを作成
+				var downloader = new Downloader();
+
+				// ダウンロード設定
+				downloader.setURL(url);
+				downloader.setFileName(url);
+				downloader.setSaveAs(false);
+
+				// ダウンロード開始
+				downloader.start();
+
+				break;
+			}
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		response({});
+		return true;
+	}.toString() +
+"\n]"
+			};
+
+			// ダウンロードリストに登録（すべて）
+			var obj = addPreset(proj.replacement_to_anchor,"add_download_list_all","disable_popup_image_search");
+			obj.preset = {
+				name:{
+					standard:"Add the DownloadList (all)",
+					locales:{
+						ja:"ダウンロードリストに登録（すべて）",
+						en:"Add the DownloadList (all)"
+					}
+				},
+				script:
+"[\n\t" + 
+	function(info,response){
+		var anchor_element = info.anchor_element;
+
+		var url = anchor_element.href;
+		if(url.search("^(http|https|data):") >= 0){
+
+			// ユーザーリストからアイテムを作成
+			var item = download_list_user.createItem();
+
+			// ダウンロード設定
+			item.setURL(url);
+			item.setFileName(url);
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		response({});
+		return true;
+	}.toString() +
+"\n]"
+			};
+
+			// ダウンロードリストに登録（画像のみ）
+			var obj = addPreset(proj.replacement_to_anchor,"add_download_list_image","disable_popup_image_search");
+			obj.preset = {
+				name:{
+					standard:"Add the DownloadList (image only)",
+					locales:{
+						ja:"ダウンロードリストに登録（画像のみ）",
+						en:"Add the DownloadList (image only)"
+					}
+				},
+				script:
+"[\n\t" + 
+	function(info,response){
+		var anchor_element = info.anchor_element;
+
+		var url = anchor_element.href;
+		var ext_list = [
+			"bmp",
+			"gif",
+			"jpg",
+			"jpe",
+			"jpeg",
+			"png"
+		];
+
+		var i;
+		var num = ext_list.length;
+		for(i=0;i<num;i++){
+			if(url.search(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i")) >= 0){
+
+				// ユーザーリストからアイテムを作成
+				var item = download_list_user.createItem();
+
+				// ダウンロード設定
+				item.setURL(url);
+				item.setFileName(url);
+
+				break;
+			}
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		response({});
+		return true;
+	}.toString() +
+"\n]"
+			};
+
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
@@ -27129,6 +27389,29 @@ function PageExpand(page_expand_arguments){
 			// ビデオスレッドメーター
 			var video_thread_meter = new UI_ProgressBar(background);
 
+			if(0){
+				// ダウンローダーキュー数
+				element = DocumentCreateElement("div");
+				ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
+				background.appendChild(element);
+				var downloader_queue_msg = new UI_Text(element);
+
+				// ダウンローダーキューエラー数
+				element = DocumentCreateElement("div");
+				ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
+				background.appendChild(element);
+				var downloader_queue_error_msg = new UI_Text(element);
+
+				// ダウンローダースレッド数
+				element = DocumentCreateElement("div");
+				ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
+				background.appendChild(element);
+				var downloader_thread_msg = new UI_Text(element);
+
+				// ダウンローダースレッドメーター
+				var downloader_thread_meter = new UI_ProgressBar(background);
+			}
+
 			// リムーブ監視数
 			element = DocumentCreateElement("div");
 			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
@@ -27173,6 +27456,7 @@ function PageExpand(page_expand_arguments){
 				execute_queue_msg.setText("execute queue: " + execute_queue.getCountQueue());
 				execute_queue_phase_msg.setText("execute phase: " + execute_queue_phase_msg_list[execute_queue.getPhase()]);
 				execute_queue_error_msg.setText("execute error: " + execute_queue.getCountError());
+
 				loader_queue_msg.setText("loader queue: " + loader_queue.getCountQueue());
 				loader_queue_error_msg.setText("loader error: " + loader_queue.getCountError());
 				loader_thread_msg.setText("loader thread: " + loader_queue.getCountThread() + " / " + loader_queue.getMaxThread());
@@ -27196,6 +27480,14 @@ function PageExpand(page_expand_arguments){
 				video_thread_msg.setText("video thread: " + element_limitter_video.getCountUse() + " / " + element_limitter_video.getMaxUse());
 				video_thread_meter.setValue(element_limitter_video.getCountUse());
 				video_thread_meter.setMaximum(element_limitter_video.getMaxUse());
+
+				if(0){
+					downloader_queue_msg.setText("download queue: " + downloader_queue.getCountQueue());
+					downloader_queue_error_msg.setText("download error: " + downloader_queue.getCountError());
+					downloader_thread_msg.setText("download thread: " + downloader_queue.getCountThread() + " / " + downloader_queue.getMaxThread());
+					downloader_thread_meter.setValue(downloader_queue.getCountThread());
+					downloader_thread_meter.setMaximum(downloader_queue.getMaxThread());
+				}
 
 				observer_remove_msg.setText("observer remove: " + document_observer_remove_node.getCount());
 				observer_modify_msg.setText("observer modify: " + document_observer_modify_node.getCount());
@@ -27351,6 +27643,12 @@ function PageExpand(page_expand_arguments){
 			var tab = e.target;
 			var context_menu = e.contextMenu;
 
+			// 一括ダウンロード（画像）
+			context_menu.appendContextMenuItem("batchDownloadImage","PageExpand - " + _i18n.getMessage("context_menu_batch_download_image"));
+
+			// 一括ダウンロード（ユーザー）
+			context_menu.appendContextMenuItem("batchDownloadUser","PageExpand - " + _i18n.getMessage("context_menu_batch_download_user"));
+
 			// 現在のページの設定を編集
 			context_menu.appendContextMenuItem("configCurrentPage","PageExpand - " + _i18n.getMessage("context_menu_pageexpand_config_current_page"));
 
@@ -27423,6 +27721,7 @@ function PageExpand(page_expand_arguments){
 
 				// 設定更新
 				loader_queue.setMaxThread(project.getLoadThreadMax());
+				downloader_queue.setMaxThread(project.getDownloadThreadMax());
 				execute_queue.setOccupancyTime(project.getExecuteQueueOccupancyTime());
 				execute_queue.setSleepTime(project.getExecuteQueueSleepTime());
 
@@ -27762,24 +28061,13 @@ function PageExpand(page_expand_arguments){
 						SafariExtensionOpenPageExpandConfig(query);
 						break;
 
-					case "executePageExpand":
+					default:
 						var active_window = safari.application.activeBrowserWindow;
 						if(active_window){
 							var active_tab = active_window.activeTab;
 							if(active_tab){
 								// アクティブなタブに通知
-								extension_message.sendRequestToContent(active_tab,{command:"executePageExpand"});
-							}
-						}
-						break;
-
-					case "executeDebug":
-						var active_window = safari.application.activeBrowserWindow;
-						if(active_window){
-							var active_tab = active_window.activeTab;
-							if(active_tab){
-								// アクティブなタブに通知
-								extension_message.sendRequestToContent(active_tab,{command:"executeDebug"});
+								extension_message.sendRequestToContent(active_tab,{command:e.command});
 							}
 						}
 						break;
@@ -28026,7 +28314,6 @@ function PageExpand(page_expand_arguments){
 			var _check_box_enable_output_log;
 			var _check_box_enable_input_touch;
 			var _check_box_enable_double_touch_assist;
-			var _stepper_load_thread_max;
 			var _stepper_execute_queue_time_occupancy;
 			var _stepper_execute_queue_sleep_time;
 			var _button_storage_sync_load;
@@ -28108,21 +28395,6 @@ function PageExpand(page_expand_arguments){
 				_check_box_enable_output_log = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_output_log"));
 				_check_box_enable_output_log.onchange = function(v){
 					standard.enable_output_log = v;
-					projectModify();
-				};
-
-				// ダウンロード設定
-				var container = new UI_InlineContainer(_content_window,_i18n.getMessage("menu_setting_standard_load"));
-				container.setWidth(400);
-				var parent = container.getElement();
-
-				// 最大同時ダウンロード数
-				new UI_Text(parent,_i18n.getMessage("menu_setting_standard_load_thread_max"));
-				_stepper_load_thread_max = new UI_NumericStepper(parent);
-				_stepper_load_thread_max.setMinimum(1);
-				_stepper_load_thread_max.setMaximum(99999);
-				_stepper_load_thread_max.oninput = function(v){
-					standard.load_thread_max = v;
 					projectModify();
 				};
 
@@ -28459,9 +28731,6 @@ function PageExpand(page_expand_arguments){
 				// ログ出力が有効であるか
 				_check_box_enable_output_log.setValue(standard.enable_output_log);
 
-				// 最大同時ダウンロード数
-				_stepper_load_thread_max.setValue(standard.load_thread_max);
-
 				// タッチ操作が有効であるか
 				_check_box_enable_input_touch.setValue(standard.enable_input_touch);
 
@@ -28473,6 +28742,106 @@ function PageExpand(page_expand_arguments){
 
 				// スリープ時間
 				_stepper_execute_queue_sleep_time.setValue(standard.execute_queue.time_sleep);
+
+			})();
+		}
+
+		// --------------------------------------------------------------------------------
+		// ダウンロード設定
+		// --------------------------------------------------------------------------------
+		function ContentSettingDownload(){
+			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _stepper_load_thread_max;
+			var _stepper_load_timeout;
+			var _stepper_download_thread_max;
+			var _combo_box_conflict_type;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				var download = page_expand_project.getObject().download;
+
+				// タイトル
+				var title = new UI_Title(_content_window,_i18n.getMessage("menu_setting_download"));
+
+				// ロード設定
+				var title = new UI_TitleSub(_content_window,_i18n.getMessage("menu_setting_download_load"));
+
+				// グループ
+				var group = new UI_GroupContainer(_content_window);
+				var group_parent = group.getElement();
+
+				// 最大同時ロード数
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_download_load_thread_max"));
+				var parent = container.getElement();
+				_stepper_load_thread_max = new UI_NumericStepper(parent);
+				_stepper_load_thread_max.setMinimum(1);
+				_stepper_load_thread_max.setMaximum(99999);
+				_stepper_load_thread_max.oninput = function(v){
+					download.load.thread_max = v;
+					projectModify();
+				};
+
+				// タイムアウト
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_download_load_timeout"));
+				var parent = container.getElement();
+				_stepper_load_timeout = new UI_NumericStepper(parent);
+				_stepper_load_timeout.setMinimum(0);
+				_stepper_load_timeout.setMaximum(1000 * 60 * 10);
+				_stepper_load_timeout.oninput = function(v){
+					download.load.timeout = v;
+					projectModify();
+				};
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_download_load_timeout_hint"));
+				new UI_Break(_content_window);
+
+				// ダウンロード設定
+				var title = new UI_TitleSub(_content_window,_i18n.getMessage("menu_setting_download_download"));
+
+				// グループ
+				var group = new UI_GroupContainer(_content_window);
+				var group_parent = group.getElement();
+
+				// 最大同時ダウンロード数
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_download_download_thread_max"));
+				var parent = container.getElement();
+				_stepper_download_thread_max = new UI_NumericStepper(parent);
+				_stepper_download_thread_max.setMinimum(1);
+				_stepper_download_thread_max.setMaximum(99999);
+				_stepper_download_thread_max.oninput = function(v){
+					download.download.thread_max = v;
+					projectModify();
+				};
+
+				// ファイル名衝突時の処理
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_download_download_conflict_type"));
+				var parent = container.getElement();
+				_combo_box_conflict_type = new UI_ComboBox(parent);
+				_combo_box_conflict_type.attachItem(_i18n.getMessage("menu_setting_download_download_conflict_type_combo_box_item_rename"),"rename");
+				_combo_box_conflict_type.attachItem(_i18n.getMessage("menu_setting_download_download_conflict_type_combo_box_item_overwrite"),"overwrite");
+				_combo_box_conflict_type.onchange = function(v){
+					download.download.conflict_type = v;
+					projectModify();
+				};
+
+				new UI_Break(_content_window);
+
+				// 最大同時ロード数
+				_stepper_load_thread_max.setValue(download.load.thread_max);
+
+				// タイムアウト
+				_stepper_load_timeout.setValue(download.load.timeout);
+
+				// 最大同時ダウンロード数
+				_stepper_download_thread_max.setValue(download.download.thread_max);
+
+				// ファイル名衝突時の処理
+				_combo_box_conflict_type.setValue(download.download.conflict_type);
 
 			})();
 		}
@@ -29380,6 +29749,7 @@ function PageExpand(page_expand_arguments){
 					_this.update();
 					projectModify();
 				};
+				new UI_Break(_content_window);
 
 				// フォームコンテナ
 				_form_container_outer = new UI_FormContainer(_content_window);
@@ -29448,6 +29818,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -29531,6 +29902,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -29614,6 +29986,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -29698,6 +30071,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -29836,6 +30210,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				_form_container_filter_outer = new UI_FormContainer(form_parent);
 				_form_container_filter_outer.setVisible(false);
@@ -29899,6 +30274,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent_filter);
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -30057,6 +30433,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				_form_container_filter_outer = new UI_FormContainer(form_parent);
 				_form_container_filter_outer.setVisible(false);
@@ -30138,6 +30515,7 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 				new UI_TextHint(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp_replacement_hint"));
+				new UI_Break(form_parent_filter);
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -30280,6 +30658,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				_form_container_filter_outer = new UI_FormContainer(form_parent);
 				_form_container_filter_outer.setVisible(false);
@@ -30317,6 +30696,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent_filter);
 
 				// タイトル
 				_setting_define.setTitle(_i18n.getMessage("menu_setting_replacement_to_useragent"));
@@ -30414,6 +30794,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -30498,6 +30879,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -30612,6 +30994,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -30743,6 +31126,7 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_reduced_image_allow_slcale_less_then_text"));
+				new UI_Break(form_parent);
 
 				// サムネイル表示設定
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_image_thumbnail"));
@@ -30837,6 +31221,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// ポップアップ表示設定
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_image_popup"));
@@ -30998,6 +31383,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// イメージのロード設定
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_image_load"));
@@ -31073,6 +31459,7 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_load_allow_unload_more_then_text"));
+				new UI_Break(form_parent);
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -31248,6 +31635,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// HTMLAudioElement の設定
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_sound_inline_element"));
@@ -31268,6 +31656,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_sound_inline_soundcloud"));
@@ -31301,6 +31690,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_sound_inline_mixcloud"));
@@ -31323,6 +31713,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -31466,6 +31857,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// HTMLVideoElement の設定
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_element"));
@@ -31486,6 +31878,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_youtube"));
@@ -31508,6 +31901,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo"));
@@ -31596,6 +31990,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream"));
@@ -31629,6 +32024,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_dailymotion"));
@@ -31651,6 +32047,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_video"));
@@ -31673,6 +32070,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_fc2video"));
@@ -31695,6 +32093,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_liveleak"));
@@ -31717,6 +32116,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -31867,6 +32267,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -31958,6 +32359,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_image"));
@@ -31989,6 +32391,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound"));
@@ -32048,6 +32451,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video"));
@@ -32237,6 +32641,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_style_sheet_expand_iframe"));
@@ -32258,6 +32663,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_Break(form_parent);
 
 				// データの関連付け
 				_setting_define.attachDefineData(define);
@@ -32422,7 +32828,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.3.5");
+				new UI_Text(parent,"PageExpand ver.1.3.6");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -32888,8 +33294,36 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			(function(){
 				_body = DocumentCreateElement("div");
-				ElementSetStyle(_body,"margin:50px 0px 10px; font-size:24px; text-align:left;");
+				ElementSetStyle(_body,"margin:0px 0px 10px; font-size:24px; text-align:left;");
 				ElementSetTextContent(_body,label);
+				parent.appendChild(_body);
+			})();
+		}
+
+		// --------------------------------------------------------------------------------
+		// 改行
+		// --------------------------------------------------------------------------------
+		function UI_Break(parent){
+			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// 値をセット
+			// --------------------------------------------------------------------------------
+			_this.setHeight = function(v){
+				_body.style.height = (v) + "px";
+			};
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _body;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_body = DocumentCreateElement("div");
+				ElementSetStyle(_body,"margin:0px; height:20px;");
 				parent.appendChild(_body);
 			})();
 		}
@@ -38891,6 +39325,7 @@ function PageExpand(page_expand_arguments){
 			{asset:"menu_setting_experimental",callback:ContentSettingExperimental,bgcolor:0xFFE0E0FF},
 			{asset:"menu_setting_urlmap",callback:ContentSettingUrlMap,bgcolor:0xFFFFF0D8},
 			{asset:"menu_setting_expand_bbs",callback:ContentSettingExpandBbs,bgcolor:0xFFFFFFFF},
+			{asset:"menu_setting_download",callback:ContentSettingDownload,bgcolor:0xFFFFFFFF},
 			{asset:"menu_setting_language",callback:ContentSettingLanguage,bgcolor:0xFFFFFFFF},
 			{asset:"menu_credit",callback:ContentCredit,bgcolor:0xFFFFFFFF}
 		];
@@ -38905,6 +39340,7 @@ function PageExpand(page_expand_arguments){
 			{menu:true,urlmap:true},
 			{menu:true,urlmap:true},
 			{menu:false,urlmap:false},
+			{menu:true,urlmap:true},
 			{menu:true,urlmap:true},
 			{menu:true,urlmap:true},
 			{menu:true,urlmap:true},
@@ -38945,7 +39381,7 @@ function PageExpand(page_expand_arguments){
 
 			// ボディ
 			var body = DocumentCreateElement("body");
-			ElementSetStyle(body,'background-color:#CCC; font-family:"メイリオ"; margin:0px; padding:0px; overflow-y:scroll;');
+			ElementSetStyle(body,'background-color:#CCC; font-family:"Meiryo"; margin:0px; padding:0px; overflow-y:scroll;');
 			html.appendChild(body);
 
 			// ロケール
@@ -39095,8 +39531,9 @@ function PageExpand(page_expand_arguments){
 	PageExpandConfig.MENU_TYPE_SETTING_EXPERIMENTAL = 16;
 	PageExpandConfig.MENU_TYPE_SETTING_URL_MAPPING = 17;
 	PageExpandConfig.MENU_TYPE_SETTING_EXPAND_BBS = 18;
-	PageExpandConfig.MENU_TYPE_SETTING_LANGUAGE = 19;
-	PageExpandConfig.MENU_TYPE_CREDIT = 20;
+	PageExpandConfig.MENU_TYPE_SETTING_DOWNLOAD = 19;
+	PageExpandConfig.MENU_TYPE_SETTING_LANGUAGE = 20;
+	PageExpandConfig.MENU_TYPE_CREDIT = 21;
 
 
 	// --------------------------------------------------------------------------------
@@ -39167,23 +39604,13 @@ function PageExpand(page_expand_arguments){
 					SafariExtensionOpenPageExpandConfig(query);
 				});
 				break;
-			case "executePageExpand":
+			default:
 				var active_window = safari.application.activeBrowserWindow;
 				if(active_window){
 					var active_tab = active_window.activeTab;
 					if(active_tab){
 						// アクティブなタブに通知
-						extension_message.sendRequestToContent(active_tab,{command:"executePageExpand"});
-					}
-				}
-				break;
-			case "executeDebug":
-				var active_window = safari.application.activeBrowserWindow;
-				if(active_window){
-					var active_tab = active_window.activeTab;
-					if(active_tab){
-						// アクティブなタブに通知
-						extension_message.sendRequestToContent(active_tab,{command:"executeDebug"});
+						extension_message.sendRequestToContent(active_tab,{command:command});
 					}
 				}
 				break;
@@ -39218,17 +39645,15 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			function normal(){
 				_style.color = "#222";
-				_style.marginLeft = _style.marginRight = "1px";
-				_style.background = "#f8f8f8";
+				_style.background = "none";
 			}
 
 			// --------------------------------------------------------------------------------
 			// マウスオーバー状態（内部用）
 			// --------------------------------------------------------------------------------
 			function mouse_over(){
-				_style.color = "#000";
-				_style.marginLeft = _style.marginRight = "0px";
-				_style.background = "#fff";
+				_style.color = "#fff";
+				_style.background = "#4281F4";
 			}
 
 			// --------------------------------------------------------------------------------
@@ -39236,8 +39661,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			function mouse_down(){
 				_style.color = "#fff";
-				_style.marginLeft = _style.marginRight = "0px";
-				_style.background = "#888";
+				_style.background = "#4281F4";
 			}
 
 			// --------------------------------------------------------------------------------
@@ -39255,9 +39679,11 @@ function PageExpand(page_expand_arguments){
 			// 初期化
 			// --------------------------------------------------------------------------------
 			(function(){
-				_item = DocumentCreateElement("div");
+				_item = DocumentCreateElement("a");
+				_item.href = "javascript:void(0);";
 				_style = _item.style;
-				ElementSetStyle(_item,"font-size:13px; color:#000; margin:0px 0px 4px; padding:10px 20px; border-radius:5px; -webkit-border-radius:5px; -moz-border-radius:5px; -webkit-box-shadow:0px 0px 2px #888; -moz-box-shadow:0px 0px 2px #888; box-shadow:0px 0px 2px #888;");
+//				ElementSetStyle(_item,"font-size:12px; color:#000; margin:0px 0px 2px; padding:2px 20px; border-radius:5px; box-shadow:0px 0px 2px #888;");
+				ElementSetStyle(_item,"display:block; text-decoration: none; font-size:13px; color:#000; margin:0px 0px 2px; padding:4px 20px; border-radius:5px;");
 				ElementSetTextContent(_item,label);
 				parent.appendChild(_item);
 
@@ -39281,6 +39707,28 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
+		// セパレータ（内部用）
+		// --------------------------------------------------------------------------------
+		function UI_Separator(parent){
+			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _item;
+			var _style;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_item = DocumentCreateElement("div");
+				ElementSetStyle(_item,"height: 0px; border-top:1px solid #ddd; margin:2px 0px;");
+				parent.appendChild(_item);
+			})();
+		}
+
+		// --------------------------------------------------------------------------------
 		// 初期化（内部用）
 		// --------------------------------------------------------------------------------
 		function initialize(){
@@ -39290,18 +39738,23 @@ function PageExpand(page_expand_arguments){
 
 			// ボディ
 			var body = document.body;
-			ElementSetStyle(body,'background-color:#CCC; font-family:"メイリオ"; margin:0px; padding:0px; width:300px;');
+			ElementSetStyle(body,'background-color:#ccc; font-family:"Meiryo"; margin:0px; padding:0px; width:300px; border:0px solid #000;');
 
 			// ヘッダ
 			var head_window = DocumentCreateElement("div");
-			ElementSetStyle(head_window,"background-color:#000; color:#fff; font-size:12px; font-weight:bold; padding:2px 5px; margin:0px 0px 20px;");
+			ElementSetStyle(head_window,"background-color:#000; color:#fff; font-size:12px; font-weight:bold; padding:2px 5px; margin:0px;");
 			ElementSetTextContent(head_window,_i18n.getMessage("page_expand_popup_menu"));
 			body.appendChild(head_window);
 
+			// ボディ
+			var body_window = DocumentCreateElement("div");
+			ElementSetStyle(body_window,"border:2px inset #f0f0f0; background-color:#fcfcfc;");
+			body.appendChild(body_window);
+
 			// 外周
 			var out_window = DocumentCreateElement("div");
-			ElementSetStyle(out_window,"margin:0px 5px 0px 5px;");
-			body.appendChild(out_window);
+			ElementSetStyle(out_window,"margin:5px 5px 5px 5px;");
+			body_window.appendChild(out_window);
 
 			// 外周
 			var out_table = DocumentCreateElement("div");
@@ -39313,7 +39766,21 @@ function PageExpand(page_expand_arguments){
 			ElementSetStyle(_menu_window,"display:table-cell; vertical-align:top; user-select:none; -webkit-user-select:none; -moz-user-select:none; -khtml-user-select:none; margin:0px;");
 			out_table.appendChild(_menu_window);
 
-			// PageExpand の設定
+			// 一括ダウンロード（画像）
+			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_batch_download_image"));
+			button_config.onclick = function(){
+				click("batchDownloadImage");
+			};
+
+			// 一括ダウンロード（ユーザー）
+			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_batch_download_user"));
+			button_config.onclick = function(){
+				click("batchDownloadUser");
+			};
+
+			new UI_Separator(_menu_window);
+
+			// 現在のページの設定を編集
 			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_page"));
 			button_config.onclick = function(){
 				click("configCurrentPage");
@@ -39326,6 +39793,8 @@ function PageExpand(page_expand_arguments){
 					click("configCurrentBbs");
 				};
 			}
+
+			new UI_Separator(_menu_window);
 
 			// PageExpand の実行
 			if(!(project.getEnableStartup())){
@@ -39889,14 +40358,24 @@ function PageExpand(page_expand_arguments){
 		var element = AnalyzeWorkGetDomNode(work);
 		var tag_name = element.tagName;
 
-		// --------------------------------------------------------------------------------
-		// イメージのアドレスを調べる
-		// --------------------------------------------------------------------------------
-		if(project.getDisableSameThumbnailImage()){
-			if(tag_name == "IMG"){
-				if(element.src){
-					address_collection.addAddress("image",element.src);
+		if(tag_name == "IMG"){
+			if(element.src.search(new RegExp("^(http|https)://")) == 0){
+
+				// --------------------------------------------------------------------------------
+				// イメージのアドレスを調べる
+				// --------------------------------------------------------------------------------
+				if(project.getDisableSameThumbnailImage()){
+					if(element.src){
+						address_collection.addAddress("image",element.src);
+					}
 				}
+
+				// --------------------------------------------------------------------------------
+				// ダウンロードリストに登録
+				// --------------------------------------------------------------------------------
+				var item = download_list_image.createItem();
+				item.setURL(element.src);
+				item.setFileName(element.src);
 			}
 		}
 
@@ -40771,6 +41250,11 @@ function PageExpand(page_expand_arguments){
 						notify_element = null;
 					}
 
+					// ダウンロードリストに登録
+					var item = download_list_image.createItem();
+					item.setURL(thumbnail_url);
+					item.setFileName(thumbnail_url);
+
 					// 画像サイズをセット
 					var image_size = ImageGetNaturalSize(thumbnail_image);
 					limitter_element.setByteSize(image_size.width * image_size.height * 4);
@@ -40969,6 +41453,11 @@ function PageExpand(page_expand_arguments){
 				loader = new Loader();
 				loader.onload = function(image){
 					complete();
+
+					// ダウンロードリストに登録
+					var item = download_list_image.createItem();
+					item.setURL(url);
+					item.setFileName(url);
 
 					// 画像サイズをセット
 					var image_size = ImageGetNaturalSize(image);
@@ -45949,6 +46438,358 @@ function PageExpand(page_expand_arguments){
 		})();
 	}
 
+	// --------------------------------------------------------------------------------
+	// ダウンロード進捗
+	// --------------------------------------------------------------------------------
+	function DownloadProgress(parent){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// テキスト（内部用）
+		// --------------------------------------------------------------------------------
+		function UI_Text(parent){
+			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// 値をセット
+			// --------------------------------------------------------------------------------
+			_this.setMessage = function(value){
+				if(!value) value = "　";
+				_text_node.nodeValue = value;
+			};
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _div;
+			var _text_node;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_div = DocumentCreateElement("div");
+				ElementSetStyle(_div,"width:100%; font-size:12px; text-align:left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom:5px;");
+
+				_text_node = DocumentCreateText("　");
+				_div.appendChild(_text_node);
+
+				parent.appendChild(_div);
+			})();
+		}
+
+		// --------------------------------------------------------------------------------
+		// ブログレスバー（内部用）
+		// --------------------------------------------------------------------------------
+		function UI_ProgressBar(parent){
+			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// 開放
+			// --------------------------------------------------------------------------------
+			_this.release = function(){
+				if(_progress){
+					DomNodeRemove(_progress);
+				}else{
+					DomNodeRemove(_mater);
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// 値をセット
+			// --------------------------------------------------------------------------------
+			_this.setValue = function(value){
+				update(value);
+			};
+
+			// --------------------------------------------------------------------------------
+			// 更新（内部用）
+			// --------------------------------------------------------------------------------
+			function update(v){
+				if(_progress){
+					_progress.value = v;
+				}else{
+					_bar.style.width = (v * 100) + "%";
+				}
+			}
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _progress;
+			var _mater;
+			var _bar;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				if(window.HTMLProgressElement){
+					_progress = DocumentCreateElement("progress");
+					ElementSetStyle(_progress,"display:block; width:100%;");
+					parent.appendChild(_progress);
+				}else{
+					_mater = DocumentCreateElement("div");
+					ElementSetStyle(_mater,"height:16px; min-height:0; border:1px #888 solid; margin-bottom:5px; line-height:1.0;");
+					parent.appendChild(_mater);
+
+					_bar = DocumentCreateElement("div");
+					ElementSetStyle(_bar,"height:16px; min-height:0; background-color :#888; margin:0px; width:0%; line-height:1.0;");
+					_mater.appendChild(_bar);
+				}
+			})();
+		}
+
+		// --------------------------------------------------------------------------------
+		// 幅を変更
+		// --------------------------------------------------------------------------------
+		_this.setWidth = function(v){
+			_window.style.width = v + "px";
+		};
+
+		// --------------------------------------------------------------------------------
+		// メッセージを設定
+		// --------------------------------------------------------------------------------
+		_this.setMessage = function(str,id){
+			var ui_text;
+			switch(id){
+			case 0:
+				ui_text = _text_upper;
+				break;
+			default:
+				ui_text = _text_lower;
+				break;
+			}
+			ui_text.setMessage(str);
+		};
+
+		// --------------------------------------------------------------------------------
+		// プログレス値を設定
+		// --------------------------------------------------------------------------------
+		_this.setValueProgress = function(v,id){
+			var ui_progress;
+			switch(id){
+			case 0:
+				ui_progress = _progress_upper;
+				break;
+			default:
+				ui_progress = _progress_lower;
+				break;
+			}
+			ui_progress.setValue(v);
+		};
+
+		// --------------------------------------------------------------------------------
+		// アンカーを設定
+		// --------------------------------------------------------------------------------
+		_this.setAnchor = function(options){
+			_progress_lower.release();
+			_button_cancel.value = "OK";
+
+			var anchor = DocumentCreateElement("a");
+			ElementSetTextContent(anchor,options.download);
+			anchor.href = options.href;
+			anchor.download = options.download;
+			ElementSetStyle(anchor,"width:100%; font-size:14px; text-align:left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom:5px;");
+			_container_lower.appendChild(anchor);
+		};
+
+		// --------------------------------------------------------------------------------
+		// 開く
+		// --------------------------------------------------------------------------------
+		_this.open = function(callback){
+			var task = task_container.createTask(null);
+
+			var d = 0.0;
+			parent.appendChild(_window);
+
+			// イベントを登録
+			addEvent();
+
+			// リサイズ
+			resize();
+
+			task.setExecuteFunc(function(){
+				var complete = false;
+				d += 0.2;
+				if(d > 1.0){
+					d = 1.0;
+					complete = true;
+				}
+				_background.style.opacity = d * 0.5;
+
+				if(complete){
+					task.release();
+					_this.setEnable(true);
+					callback();
+				}
+			});
+			task.execute(0xffffffff);
+		};
+
+		// --------------------------------------------------------------------------------
+		// 有効状態をセット
+		// --------------------------------------------------------------------------------
+		_this.setEnable = function(type){
+			_button_cancel.disabled = !(type);
+		};
+
+		// --------------------------------------------------------------------------------
+		// 閉じる
+		// --------------------------------------------------------------------------------
+		_this.close = function(){
+			var task = task_container.createTask(null);
+
+			var d = 1.0;
+			DomNodeRemove(_window);
+			task.setExecuteFunc(function(){
+				var complete = false;
+				d -= 0.2;
+				if(d < 0.0){
+					d = 0.0;
+					complete = true;
+				}
+				_background.style.opacity = d * 0.5;
+
+				if(complete){
+					DomNodeRemove(_background);
+					_this.oncomplete();
+					task.release();
+					return;
+				}
+			});
+			task.execute(0xffffffff);
+
+			// イベントを破棄
+			removeEvent();
+
+			_this.setEnable(false);
+		};
+
+		// --------------------------------------------------------------------------------
+		// エレメント取得
+		// --------------------------------------------------------------------------------
+		_this.getElement = function(){
+			return _window;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 完了イベント
+		// --------------------------------------------------------------------------------
+		_this.oncomplete = function(){};
+
+		// --------------------------------------------------------------------------------
+		// 中断イベント
+		// --------------------------------------------------------------------------------
+		_this.onclose = function(){};
+
+		// --------------------------------------------------------------------------------
+		// リサイズ（内部用 ）
+		// --------------------------------------------------------------------------------
+		function resize(){
+			var scroll_pos = WindowGetScrollPosition(window);
+			var client_size = DocumentGetClientSize(document);
+			var dialog_rect = ElementGetBoundingClientRect(_window);
+
+			var w = dialog_rect.right - dialog_rect.left;
+			var h = dialog_rect.bottom - dialog_rect.top;
+
+			_window.style.left = (client_size.width  / 2 - w / 2 + scroll_pos.x) + "px";
+			if(client_size.height > h){
+				_window.style.top  = (client_size.height / 2 - h / 2 + scroll_pos.y) + "px";
+			}else{
+				_window.style.top  = "0px";
+			}
+
+		}
+
+		// --------------------------------------------------------------------------------
+		// イベント登録（内部用 ）
+		// --------------------------------------------------------------------------------
+		function addEvent(){
+			// イベントリスナーに対応している
+			if(window.addEventListener){
+
+				window.addEventListener("scroll" ,resize);
+				window.addEventListener("resize" ,resize);
+
+			}
+
+		}
+
+		// --------------------------------------------------------------------------------
+		// イベント破棄（内部用 ）
+		// --------------------------------------------------------------------------------
+		function removeEvent(){
+			// イベントリスナーに対応している
+			if(window.removeEventListener){
+
+				window.removeEventListener("scroll" ,resize);
+				window.removeEventListener("resize" ,resize);
+
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// プライベート変数
+		// --------------------------------------------------------------------------------
+		var _background;
+		var _window;
+		var _container_upper;
+		var _container_lower;
+		var _text_upper;
+		var _text_lower;
+		var _progress_upper;
+		var _progress_lower;
+		var _button_cancel;
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		(function(){
+
+			var css_text_progress = "display:block; width:100%;";
+
+			_background = DocumentCreateElement("div");
+			ElementSetStyle(_background,"position:fixed; top:0px; bottom:0px; left:0px; right:0px; opacity:0.0; background:#000; line-height:1.0; z-index:2147483646;");
+			parent.appendChild(_background);
+
+			_window = DocumentCreateElement("div");
+			ElementSetStyle(_window,"position:absolute; width:800px; padding:25px; background:#00F; background-color:#FFF; border-radius:5px; box-shadow:5px 5px 10px #444; z-index:2147483646;");
+
+			_container_upper = DocumentCreateElement("div");
+			ElementSetStyle(_container_upper,"min-height:50px;");
+			_window.appendChild(_container_upper);
+
+			_text_upper = new UI_Text(_container_upper);
+			_progress_upper = new UI_ProgressBar(_container_upper);
+
+			_container_lower = DocumentCreateElement("div");
+			ElementSetStyle(_container_lower,"min-height:60px;");
+			_window.appendChild(_container_lower);
+
+			_text_lower = new UI_Text(_container_lower);
+			_progress_lower = new UI_ProgressBar(_container_lower);
+
+			_button_cancel = DocumentCreateElement("input");
+			_button_cancel.type = "button";
+			_button_cancel.value = "CANCEL";
+			ElementSetStyle(_button_cancel,"width:100%; height:50px;");
+			_window.appendChild(_button_cancel);
+			_button_cancel.onclick = function(){
+				if(_this.onclose){
+					_this.onclose();
+				}
+				_this.close();
+			};
+
+			_this.setMessage("",0);
+			_this.setMessage("",1);
+			_this.setValueProgress(0.0,0);
+			_this.setValueProgress(0.0,1);
+			_this.setEnable(false);
+		})();
+	}
 
 	// --------------------------------------------------------------------------------
 	// インターナショナルメッセージ
@@ -45994,7 +46835,7 @@ function PageExpand(page_expand_arguments){
 				message: "PageExpand"
 			},
 			extension_description: {
-				message: "すべてのWEBページをリッチに展開。短縮URLの展開、URL文字列のリンク化、画像のポップアップ表示、動画のインライン表示、掲示板の拡張表示など。"
+				message: "画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、リファラ置換、掲示板の拡張表示など..."
 			},
 			page_expand_config: {
 				message: "PageExpand 設定"
@@ -46031,12 +46872,6 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_setting_standard_enable_output_log: {
 				message: "コンソールにログを出力（デバッグ用）"
-			},
-			menu_setting_standard_load: {
-				message: "ダウンロード設定"
-			},
-			menu_setting_standard_load_thread_max: {
-				message: "最大同時ダウンロード数"
 			},
 			menu_setting_standard_execute_queue: {
 				message: "実行キュー設定（通常は変更の必要はありません）"
@@ -46227,6 +47062,38 @@ function PageExpand(page_expand_arguments){
 			menu_setting_standard_reset_alert_failure: {
 				message: "設定の初期化に失敗しました。"
 			},
+
+			menu_setting_download: {
+				message: "ダウンロード設定"
+			},
+			menu_setting_download_load: {
+				message: "ロード設定（XHR通信）"
+			},
+			menu_setting_download_load_thread_max: {
+				message: "最大同時ロード数"
+			},
+			menu_setting_download_load_timeout: {
+				message: "タイムアウト（ミリ秒）"
+			},
+			menu_setting_download_load_timeout_hint: {
+				message: "タイムアウトエラーと判定する時間をミリ秒で指定。0 で無制限。"
+			},
+			menu_setting_download_download: {
+				message: "ダウンロード設定"
+			},
+			menu_setting_download_download_thread_max: {
+				message: "最大同時ダウンロード数"
+			},
+			menu_setting_download_download_conflict_type: {
+				message: "ファイル名衝突時の処理"
+			},
+			menu_setting_download_download_conflict_type_combo_box_item_rename: {
+				message: "別名にリネーム"
+			},
+			menu_setting_download_download_conflict_type_combo_box_item_overwrite: {
+				message: "同名で上書き"
+			},
+
 			menu_setting_expand_bbs: {
 				message: "掲示板拡張設定"
 			},
@@ -47313,6 +48180,12 @@ function PageExpand(page_expand_arguments){
 			context_menu_pageexpand_config: {
 				message: "PageExpand の設定"
 			},
+			context_menu_batch_download_image: {
+				message: "一括ダウンロード（画像）"
+			},
+			context_menu_batch_download_user: {
+				message: "一括ダウンロード（ユーザー）"
+			},
 			context_menu_pageexpand_config_current_page: {
 				message: "現在のページの設定を編集"
 			},
@@ -47334,7 +48207,7 @@ function PageExpand(page_expand_arguments){
 				message: "PageExpand"
 			},
 			extension_description: {
-				message: "Image Zoom. Expand Audio and Video. Expand the short URL. Generate a link from text. Override Referer. Extend BBS. etc..."
+				message: "All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Override Referer. Extend BBS. etc..."
 			},
 			page_expand_config: {
 				message: "PageExpand Setting"
@@ -47371,12 +48244,6 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_setting_standard_enable_output_log: {
 				message: "Output the log to the console.(debug)"
-			},
-			menu_setting_standard_load: {
-				message: "Download Setting"
-			},
-			menu_setting_standard_load_thread_max: {
-				message: "Maximum number of simultaneous downloads"
 			},
 			menu_setting_standard_execute_queue: {
 				message: "ExecuteQueue Setting (Normally, you do not need to change.)"
@@ -47567,6 +48434,38 @@ function PageExpand(page_expand_arguments){
 			menu_setting_standard_reset_alert_failure: {
 				message: "Failed to initialize the configuration."
 			},
+
+			menu_setting_download: {
+				message: "Download Setting"
+			},
+			menu_setting_download_load: {
+				message: "Load Setting (XHR)"
+			},
+			menu_setting_download_load_thread_max: {
+				message: "Maximum number of simultaneous loads"
+			},
+			menu_setting_download_load_timeout: {
+				message: "Timeout (Millisecond)"
+			},
+			menu_setting_download_load_timeout_hint: {
+				message: "If specify 0, timeout is no limit."
+			},
+			menu_setting_download_download: {
+				message: "Download Setting"
+			},
+			menu_setting_download_download_thread_max: {
+				message: "Maximum number of simultaneous downloads"
+			},
+			menu_setting_download_download_conflict_type: {
+				message: "File Name Conflict"
+			},
+			menu_setting_download_download_conflict_type_combo_box_item_rename: {
+				message: "rename"
+			},
+			menu_setting_download_download_conflict_type_combo_box_item_overwrite: {
+				message: "overwrite"
+			},
+
 			menu_setting_expand_bbs: {
 				message: "BBS Settng"
 			},
@@ -48652,6 +49551,12 @@ function PageExpand(page_expand_arguments){
 			},
 			context_menu_pageexpand_config: {
 				message: "PageExpand Setting"
+			},
+			context_menu_batch_download_image: {
+				message: "Batch Download (image)"
+			},
+			context_menu_batch_download_user: {
+				message: "Batch Download (user)"
 			},
 			context_menu_pageexpand_config_current_page: {
 				message: "PageExpand Setting Current Page"
@@ -49803,6 +50708,65 @@ function PageExpand(page_expand_arguments){
 		};
 
 		// --------------------------------------------------------------------------------
+		// DataURIScheme をロード
+		// --------------------------------------------------------------------------------
+		_this.loadDataUriScheme = function(){
+			if(!(getEnable())){
+				loadError();
+				return;
+			}
+
+			// 通常リトライ回数
+			_count = 1;
+			// シングルリトライ回数
+			_single_count = 1;
+			// 開始関数をセット
+			_queue_element.onstart = function(){
+
+				// 読み込みを開始する
+				var result = loadDataUriScheme(function(result,xhr){
+
+					// ロード完了を通知
+					_queue_element.complete();
+
+					// ロード成功
+					if(result){
+						loadSuccess(xhr.dataUriScheme);
+						return;
+
+					// 失敗
+					}else{
+						if(xhr.status == 401){
+							// 認証エラー
+							loadError();
+						}else{
+							// キューに再登録
+							if(!tryAttachElement(false)){
+								// エラーで終了
+								loadError();
+								return;
+							}
+						}
+					}
+				});
+
+				// ロードエラー
+				if(!result){
+					// ロード完了を通知
+					_queue_element.complete();
+
+					// エラーで終了
+					loadError();
+					return;
+				}
+			};
+
+			// キューに登録
+			tryAttachElement(false);
+
+		};
+
+		// --------------------------------------------------------------------------------
 		// リダイレクト先 URL をロード
 		// --------------------------------------------------------------------------------
 		_this.loadFinalURL = function(){
@@ -50102,15 +51066,15 @@ function PageExpand(page_expand_arguments){
 
 			// バックグラウンドへ通信要求
 			if(1){
-				var responseText = "";
+				var responseText = [];
 				extension_message.sendRequest({command:"loadXMLHttpRequest",request:_request,single:_single_type}, function(receive) {
 					if(receive.type == "data"){
-						responseText += receive.data;
+						responseText.push(receive.data);
 						return;
 					}
 
 					var xhr = receive.data;
-					xhr.responseText = responseText;
+					xhr.responseText = responseText.join("");
 					switch(xhr.readyState){
 					case 4:
 						xhr.getAllResponseHeaders = function(){
@@ -50210,15 +51174,15 @@ function PageExpand(page_expand_arguments){
 
 			// バックグラウンドへ通信要求
 			if(1){
-				var dataUriScheme = "";
+				var dataUriScheme = [];
 				extension_message.sendRequest({command:"loadDataUriScheme",request:_request,single:_single_type}, function(receive) {
 					if(receive.type == "data"){
-						dataUriScheme += receive.data;
+						dataUriScheme.push(receive.data);
 						return;
 					}
 
 					var xhr = receive.data;
-					xhr.dataUriScheme = dataUriScheme;
+					xhr.dataUriScheme = dataUriScheme.join("");
 					switch(xhr.readyState){
 					case 4:
 						xhr.getAllResponseHeaders = function(){
@@ -50370,7 +51334,8 @@ function PageExpand(page_expand_arguments){
 				headers:new Object(),
 				method:"GET",
 				url:"",
-				data:null
+				data:null,
+				timeout:project.getLoadTimeout()
 			};
 			_count = 0;
 			_single_count = 0;
@@ -50379,9 +51344,9 @@ function PageExpand(page_expand_arguments){
 	}
 
 	// --------------------------------------------------------------------------------
-	// ダウンロードキュー
+	// ダウンローダーキュー
 	// --------------------------------------------------------------------------------
-	function DownloadQueue(){
+	function DownloaderQueue(){
 		var _this = this;
 
 		// --------------------------------------------------------------------------------
@@ -50391,47 +51356,32 @@ function PageExpand(page_expand_arguments){
 			var _element = new Object();
 
 			// --------------------------------------------------------------------------------
-			// 要素を外す（内部用）
+			// 開始イベント
 			// --------------------------------------------------------------------------------
-			function remove(){
-				var _prev = _element._prev;
-				var _next = _element._next;
-				_prev._next = _next;
-				_next._prev = _prev;
-				_element._prev = _element;
-				_element._next = _element;
-			}
+			_element.onstart = function(){};
+
+			// --------------------------------------------------------------------------------
+			// 完了を通知
+			// --------------------------------------------------------------------------------
+			_element.complete = function(){
+				_thread_count -= 1;
+				dequeue();
+			};
 
 			// --------------------------------------------------------------------------------
 			// 要素を破棄
 			// --------------------------------------------------------------------------------
 			_element.release = function(){
-				if(_element._prev == _element) return;
-
-				remove();
-
+				ElementRemove(_element);
 				_queue_count -= 1;
-			};
-
-			// --------------------------------------------------------------------------------
-			// URL をセット
-			// --------------------------------------------------------------------------------
-			_element.setURL = function(url){
-				_element._url = url;
-			};
-
-			// --------------------------------------------------------------------------------
-			// 名前をセット
-			// --------------------------------------------------------------------------------
-			_element.setName = function(name){
-				_element._name = name;
+				dequeue();
 			};
 
 			// --------------------------------------------------------------------------------
 			// 通常最前列に処理を追加
 			// --------------------------------------------------------------------------------
 			_element.attachFirst = function(){
-				remove();
+				ElementRemove(_element);
 
 				var _prev = _this.queue;
 				var _next = _prev._next;
@@ -50447,9 +51397,25 @@ function PageExpand(page_expand_arguments){
 			// 通常最後尾に追加
 			// --------------------------------------------------------------------------------
 			_element.attachLast = function(){
-				remove();
+				ElementRemove(_element);
 
 				var _next = _this.queue;
+				var _prev = _next._prev;
+				_prev._next = _element;
+				_next._prev = _element;
+				_element._prev = _prev;
+				_element._next = _next;
+
+				dequeue();
+			};
+
+			// --------------------------------------------------------------------------------
+			// シングル最後尾に追加
+			// --------------------------------------------------------------------------------
+			_element.attachSingle = function(){
+				ElementRemove(_element);
+
+				var _next = _this.queue_single;
 				var _prev = _next._prev;
 				_prev._next = _element;
 				_next._prev = _element;
@@ -50473,30 +51439,49 @@ function PageExpand(page_expand_arguments){
 		};
 
 		// --------------------------------------------------------------------------------
+		// 要素のロード開始（内部用）
+		// --------------------------------------------------------------------------------
+		function ElementLoadStart(element){
+			ElementRemove(element);
+			_thread_count += 1;
+			element.onstart();
+		}
+
+		// --------------------------------------------------------------------------------
+		// 要素を外す（内部用）
+		// --------------------------------------------------------------------------------
+		function ElementRemove(element){
+			var _prev = element._prev;
+			var _next = element._next;
+			_prev._next = _next;
+			_next._prev = _prev;
+			element._prev = element;
+			element._next = element;
+		}
+
+		// --------------------------------------------------------------------------------
 		// デキュー（内部用）
 		// --------------------------------------------------------------------------------
 		function dequeue(){
-			var element = _this.queue._next;
+			// 通常キュー
+			while(_thread_count < _thread_max){
+				var element = _this.queue._next;
 
-			if(_time_handle !== null) return;
-			if(element == _this.queue) return;
-
-			try{
-				var anchor = document.createElement("a");
-				anchor.href = element._url;
-				anchor.target = "_blank";
-				anchor.download = element._name;
-				document.body.appendChild(anchor);
-				anchor.click();
-				anchor.parentNode.removeChild(anchor);
-				element.release();
-			}catch(e){
+				// キューが空
+				if(element == _this.queue){
+					break;
+				}
+				ElementLoadStart(element);
 			}
 
-			_time_handle = setTimeout(function (){
-				_time_handle = null;
-				dequeue();
-			},_execute_interval);
+			// シングルキュー
+			if(_thread_count <= 0){
+				var element = _this.queue_single._next;
+
+				if(element != _this.queue_single){
+					ElementLoadStart(element);
+				}
+			}
 		}
 
 		// --------------------------------------------------------------------------------
@@ -50507,19 +51492,56 @@ function PageExpand(page_expand_arguments){
 		};
 
 		// --------------------------------------------------------------------------------
+		// スレッドの数を取得
+		// --------------------------------------------------------------------------------
+		_this.getCountThread = function(){
+			return _thread_count;
+		};
+
+		// --------------------------------------------------------------------------------
+		// エラー数を取得
+		// --------------------------------------------------------------------------------
+		_this.getCountError = function(){
+			return _error_count;
+		};
+
+		// --------------------------------------------------------------------------------
+		// エラー数を加算
+		// --------------------------------------------------------------------------------
+		_this.addCountError = function(){
+			_error_count += 1;
+		};
+
+		// --------------------------------------------------------------------------------
+		// スレッドの最大数を取得
+		// --------------------------------------------------------------------------------
+		_this.getMaxThread = function(){
+			return _thread_max;
+		};
+
+		// --------------------------------------------------------------------------------
+		// ロードスレッドの最大数をセット
+		// --------------------------------------------------------------------------------
+		_this.setMaxThread = function(v){
+			_thread_max = v;
+		};
+
+		// --------------------------------------------------------------------------------
 		// プライベート変数
 		// --------------------------------------------------------------------------------
 		var _queue_count;
-		var _execute_interval;
-		var _time_handle;
+		var _thread_count;
+		var _thread_max;
+		var _error_count;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------------------
 		(function(){
 			_queue_count = 0;
-			_execute_interval = 500;
-			_time_handle = null;
+			_thread_count = 0;
+			_this.setMaxThread(10);
+			_error_count = 0;
 
 			var queue = new Object();
 			queue._prev = queue;
@@ -50531,7 +51553,6 @@ function PageExpand(page_expand_arguments){
 			queue_single._next = queue_single;
 			_this.queue_single = queue_single;
 		})();
-
 	}
 
 	// --------------------------------------------------------------------------------
@@ -50541,57 +51562,911 @@ function PageExpand(page_expand_arguments){
 		var _this = this;
 
 		// --------------------------------------------------------------------------------
-		// ソースをセット
+		// URL をセット
 		// --------------------------------------------------------------------------------
-		_this.setURL = function(){
-			
+		_this.setURL = function(url){
+			_this._url = url;
 		};
 
 		// --------------------------------------------------------------------------------
-		// 保存場所をセット
+		// 保存ファイル名をセット
 		// --------------------------------------------------------------------------------
-		_this.setFileName = function(){
-			
+		_this.setFileName = function(file_name){
+			file_name = file_name.replace(new RegExp("[/\\\\]+","ig"),"/");
+			file_name = file_name.replace(new RegExp("[\":*?<>|]","ig"),"-");
+			_this._file_name = file_name;
 		};
 
 		// --------------------------------------------------------------------------------
 		// 保存タイアログを使用する
 		// --------------------------------------------------------------------------------
-		_this.setSaveAs = function(){
-			
+		_this.setSaveAs = function(use){
+			_this._save_as = use;
 		};
 
 		// --------------------------------------------------------------------------------
-		// 開始する
+		// ダウンロード開始
 		// --------------------------------------------------------------------------------
 		_this.start = function(){
-			
+			var queue_element = downloader_queue.createElement();
+			queue_element.onstart = function(){
+				download(function(result){
+					if(!result){
+						downloader_queue.addCountError();
+					}
+					// ロード完了を通知
+					queue_element.complete();
+					queue_element.release();
+					
+					if(_this.oncomplete){
+						_this.oncomplete(result);
+					}
+				});
+
+			};
+			queue_element.attachLast();
+		};
+
+		// --------------------------------------------------------------------------------
+		// 完了イベント
+		// --------------------------------------------------------------------------------
+		_this.oncomplete = function(){};
+
+		// --------------------------------------------------------------------------------
+		// ダウンロード（内部用）
+		// --------------------------------------------------------------------------------
+		function download(callback){
+
+			if(address_collection.hasAddress("download",_this._url)){
+				callback(true);
+				return;
+			}
+			// アドレスを登録
+			address_collection.addAddress("download",_this._url);
+
+			if(0){
+				extension_message.sendRequest({command:"download",url:_this._url,file_name:_this._file_name,save_as:_this._save_as}, function(response) {
+					callback(response.result);
+				});
+				return;
+
+			}else{
+				var anchor = DocumentCreateElement("a");
+				if(anchor.download !== undefined){
+
+					var anchor_download = function (url){
+						anchor.target = "PageExpandDownload";
+						anchor.href = str;
+						anchor.download = _this._file_name;
+						document.body.appendChild(anchor);
+						anchor.click();
+						DomNodeRemove(anchor);
+						anchor.href = "";
+						anchor.download = "";
+						callback(true);
+					};
+
+					if(_this._url.search(new RegExp("(data|blob):",i)) >= 0){
+						anchor_download(_this._url);
+						return;
+					}else{
+						// ローダーオブジェクトを作成
+						var loader = new Loader();
+
+						// 成功
+						loader.onload = anchor_download;
+
+						// 失敗
+						loader.onerror = function(){
+							callback(false);
+						};
+
+						// DataURIScheme の読み込み
+						loader.setMethod("GET");
+						loader.setURL(_this._url);
+						loader.loadDataUriScheme();
+						return;
+					}
+				}
+			}
+
+			callback(false);
+		}
+
+	}
+
+	// --------------------------------------------------------------------------------
+	// ダウンロードリスト
+	// --------------------------------------------------------------------------------
+	function DownloadList(){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// アイテム生成
+		// --------------------------------------------------------------------------------
+		_this.createItem = function(){
+			var _item = new Object();
+
+			// --------------------------------------------------------------------------------
+			// 開放
+			// --------------------------------------------------------------------------------
+			_item.release = function(){
+				var _prev = _item._prev;
+				var _next = _item._next;
+				_prev._next = _next;
+				_next._prev = _prev;
+				_item._prev = _item;
+				_item._next = _item;
+			};
+
+			// --------------------------------------------------------------------------------
+			// URL をセット
+			// --------------------------------------------------------------------------------
+			_item.setURL = function(url){
+				_item._url = url;
+			};
+
+			// --------------------------------------------------------------------------------
+			// ファイル名をセット
+			// --------------------------------------------------------------------------------
+			_item.setFileName = function(file_name){
+				file_name = file_name.replace(new RegExp("[/\\\\]+","ig"),"/");
+				file_name = file_name.replace(new RegExp("[\":*?<>|]","ig"),"-");
+				_item._file_name = file_name;
+			};
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				var _next = _queue;
+				var _prev = _next._prev;
+				_prev._next = _item;
+				_next._prev = _item;
+				_item._prev = _prev;
+				_item._next = _next;
+			})();
+
+			return _item;
+		};
+
+		// --------------------------------------------------------------------------------
+		// アーカイブを作成
+		// --------------------------------------------------------------------------------
+		_this.createArchive = function(){
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			var crc32 = new CRC32();
+			var progress = new DownloadProgress(document.body);
+			var blob_url;
+			var closed = false;
+			var event_dispatcher = new EventDispatcher();
+
+			// --------------------------------------------------------------------------------
+			// 終了
+			// --------------------------------------------------------------------------------
+			function close(){
+				if(blob_url){
+					BlobURLRevoke(blob_url);
+					blob_url = null;
+				}
+
+				// イベントを発火
+				event_dispatcher.dispatchEvent("close",_this);
+				event_dispatcher.removeAll();
+			}
+
+			// --------------------------------------------------------------------------------
+			// 中断イベント
+			// --------------------------------------------------------------------------------
+			progress.onclose = function (){
+				closed = true;
+				close();
+			};
+
+			// --------------------------------------------------------------------------------
+			// 開く
+			// --------------------------------------------------------------------------------
+			progress.open(function (){
+
+				// --------------------------------------------------------------------------------
+				// バイナリを読み込み
+				// --------------------------------------------------------------------------------
+				function loadBinary(url,callback){
+					var loader = new Loader();
+					loader.onload = function(str){
+						callback(str);
+					};
+					loader.onerror = function(){
+						callback(null);
+					};
+					loader.setMethod("GET");
+					loader.setURL(url);
+					loader.overrideMimeType("text/plain; charset=x-user-defined");
+					loader.loadText();
+				}
+
+
+				// --------------------------------------------------------------------------------
+				// ファイル名変換
+				// --------------------------------------------------------------------------------
+				function phaseConvertFileName(items,callback){
+
+					progress.setMessage("Converting ...",0);
+					progress.setMessage("",1);
+					progress.setValueProgress(0.0,0);
+					progress.setValueProgress(0.0,1);
+
+					var dic = new Object();
+					var ary = new Array();
+					var pos = 0;
+					var num = items.length;
+					(function callee(){
+						if(closed) return;
+						if(pos >= num){
+							callback(ary);
+							return;
+						}
+
+						var d = 1.0;
+						if(num > 1) d = pos / (num - 1);
+
+						item = items[pos];
+						pos ++;
+
+						progress.setValueProgress(d,1);
+						progress.setMessage(item._url,1);
+
+						if(dic[item._url] === undefined){
+							var name = String_To_ArrayBuffer_As_UTF8(item._file_name);
+							if(name){
+								ary.push({
+									file_name:name,
+									item:item
+								});
+							}
+							dic[item._url] = true;
+						}else{
+							item.release();
+						}
+
+						execute_queue.attachFirst(callee,null);
+					})();
+				}
+
+				// --------------------------------------------------------------------------------
+				// 読み込み
+				// --------------------------------------------------------------------------------
+				function phaseDownload(items,callback){
+
+					progress.setMessage("Downloading ...",0);
+					progress.setMessage("",1);
+					progress.setValueProgress(0.0,0);
+					progress.setValueProgress(0.0,1);
+
+					var ary = new Array();
+					var ref = 0;
+					var i;
+					var num = items.length;
+					var total_byte = 0;
+					for(i=0;i<num;i++){
+						(function (){
+							var item = items[i];
+							loadBinary(item.item._url,function (binary){
+								if(closed) return;
+								if(binary){
+									ary.push(item);
+									item.binary = binary;
+									item.file_size = binary.length;
+									total_byte += item.file_size;
+								}
+
+								ref ++;
+								if(num <= ref){
+									callback(ary);
+								}
+
+								var d = 1.0;
+								if(num > 1) d = ref / (num - 1);
+
+								progress.setMessage(total_byte + " Byte (" + ref + "/" + num + ")",1);
+								progress.setValueProgress(d,1);
+							});
+						})();
+					}
+					if(!num){
+						callback(ary);
+					}
+				}
+
+				// --------------------------------------------------------------------------------
+				// CRC32 計算
+				// --------------------------------------------------------------------------------
+				function phaseCalculateCRC(items,callback){
+					var increment = 1024 * 10;
+
+					progress.setMessage("Calculate CRC ...",0);
+					progress.setMessage("",1);
+					progress.setValueProgress(0.0,0);
+					progress.setValueProgress(0.0,1);
+
+					var pos = 0;
+					var num = items.length;
+					(function callee(){
+						if(closed) return;
+						if(pos >= num){
+							callback(items);
+							return;
+						}
+
+						var upper = 1.0;
+						if(num > 1) upper = pos / (num);
+
+						item = items[pos];
+						pos ++;
+
+						progress.setValueProgress(upper * 0.5,0);
+						progress.setValueProgress(0.0,1);
+						progress.setMessage(item.item._url,1);
+
+						var p = 0;
+						var s = increment;
+						var n = item.file_size;
+						crc32.initialize();
+						execute_queue.attachLastForInterrupt(function f(){
+							if(n - p < s){
+								s = n - p;
+							}
+							if(s <= 0){
+								execute_queue.attachLastForInterrupt(callee,null);
+								return;
+							}
+							p += s;
+
+							var loawer = 1.0;
+							if(n > 0) loawer = p / n;
+							progress.setValueProgress((upper + (loawer / num)) * 0.5,0);
+							progress.setValueProgress(loawer,1);
+
+							item.crc32 = crc32.getFromStringOfBinaryData(item.binary,s);
+							execute_queue.attachFirst(f,null);
+						},null);
+
+					})();
+				}
+
+				// --------------------------------------------------------------------------------
+				// アーカイブの作成
+				// --------------------------------------------------------------------------------
+				function phaseCreateArchive(items,callback){
+
+					// --------------------------------------------------------------------------------
+					// 初期化
+					// --------------------------------------------------------------------------------
+					var pos = 0;
+					var total = 0;
+					var central_directory_pos = 0;
+					var central_directory_size = 0;
+					var ary_buffer;
+					var data_view;
+					var little_endian = true;
+
+					// --------------------------------------------------------------------------------
+					// local file header のサイズを取得
+					// --------------------------------------------------------------------------------
+					function getSize_LocalFileHeader(item){
+						var file_name_size = item.file_name.byteLength;
+						var extra_size = 0;
+						return (30 + file_name_size + extra_size);
+					}
+
+					// --------------------------------------------------------------------------------
+					// file data のサイズを取得
+					// --------------------------------------------------------------------------------
+					function getSize_LocalFileData(item){
+						return (item.file_size);
+					}
+
+					// --------------------------------------------------------------------------------
+					// file header のサイズを取得
+					// --------------------------------------------------------------------------------
+					function getSize_FileHeader(item){
+						var file_name_size = item.file_name.byteLength;
+						var extra_size = 0;
+						var comment_size = 0;
+						return (46 + file_name_size + extra_size + comment_size);
+					}
+
+					// --------------------------------------------------------------------------------
+					// End of central dir record のサイズを取得
+					// --------------------------------------------------------------------------------
+					function getSize_EndOfCentralDirRecord(){
+						return 22;
+					}
+
+					// --------------------------------------------------------------------------------
+					// 日付を出力
+					// --------------------------------------------------------------------------------
+					function writeLastModFileTime(item){
+						var date_obj = item.date;
+						var v = 
+							((date_obj.getHours()        & 0x1f) << 11) |
+							((date_obj.getMinutes()      & 0x2f) <<  5) |
+							(Math.round(date_obj.getSeconds() / 2) & 0x1f);
+						data_view.setUint16(pos , v , little_endian);
+						pos += 2;
+					}
+
+					// --------------------------------------------------------------------------------
+					// 時刻を出力
+					// --------------------------------------------------------------------------------
+					function writeLastModFileDate(item){
+						var date_obj = item.date;
+						var v = 
+							(((date_obj.getFullYear() - 1980)   & 0x7f) <<  9) |
+							((date_obj.getMonth() & 0x0f) <<  5) |
+							( date_obj.getDate()  & 0x1f);
+						data_view.setUint16(pos , v , little_endian);
+						pos += 2;
+					}
+
+					// --------------------------------------------------------------------------------
+					// local file header を出力
+					// --------------------------------------------------------------------------------
+					function writeLocalFileHeader(item){
+						var name = item.file_name;
+						var name_u8 = new Uint8Array(name);
+						var name_size = name.byteLength;
+						var file_size = item.file_size;
+						var extra_size = 0;
+
+						// シグネチャ
+						data_view.setUint32(pos , 0x04034b50 , little_endian);
+						pos += 4;
+
+						// バージョン
+						data_view.setUint16(pos , 10 , little_endian);
+						pos += 2;
+
+						// オプション
+						data_view.setUint16(pos , 0x80 , little_endian);
+						pos += 2;
+
+						// 圧縮アルゴリズム
+						data_view.setUint16(pos , 0 , little_endian);
+						pos += 2;
+
+						// タイムスタンプ（時刻）
+						writeLastModFileTime(item);
+
+						// タイムスタンプ（日付）
+						writeLastModFileDate(item);
+
+						// CRC32
+						data_view.setUint32(pos , item.crc32 , little_endian);
+						pos += 4;
+
+						// ファイルサイズ
+						data_view.setUint32(pos , file_size , little_endian);
+						pos += 4;
+
+						// 圧縮サイズ
+						data_view.setUint32(pos , file_size , little_endian);
+						pos += 4;
+
+						// ファイル名のサイズ
+						data_view.setUint16(pos , name_size , little_endian);
+						pos += 2;
+
+						// 拡張フィールドサイズ
+						data_view.setUint16(pos , extra_size , little_endian);
+						pos += 2;
+
+						// ファイル名
+						for(i=0;i<name_size;i++){
+							data_view.setUint8(pos , name_u8[i] , little_endian);
+							pos += 1;
+						}
+					}
+
+					// --------------------------------------------------------------------------------
+					// file header を出力
+					// --------------------------------------------------------------------------------
+					function writeFileHeader(item){
+						var name = item.file_name;
+						var name_u8 = new Uint8Array(name);
+						var name_size = name.byteLength;
+						var file_size = item.file_size;
+						var extra_size = 0;
+						var comment_size = 0;
+
+						// シグネチャ
+						data_view.setUint32(pos , 0x02014b50 , little_endian);
+						pos += 4;
+
+						// バージョン
+						data_view.setUint16(pos , 10 , little_endian);
+						pos += 2;
+
+						// OS
+						data_view.setUint16(pos , 0 , little_endian);
+						pos += 2;
+
+						// オプション
+						data_view.setUint16(pos , 0x80 , little_endian);
+						pos += 2;
+
+						// 圧縮アルゴリズム
+						data_view.setUint16(pos , 0 , little_endian);
+						pos += 2;
+
+						// タイムスタンプ（時刻）
+						writeLastModFileTime(item);
+
+						// タイムスタンプ（日付）
+						writeLastModFileDate(item);
+
+						// CRC32
+						data_view.setUint32(pos , item.crc32 , little_endian);
+						pos += 4;
+
+						// ファイルサイズ
+						data_view.setUint32(pos , file_size , little_endian);
+						pos += 4;
+
+						// 圧縮サイズ
+						data_view.setUint32(pos , file_size , little_endian);
+						pos += 4;
+
+						// ファイル名のサイズ
+						data_view.setUint16(pos , name_size , little_endian);
+						pos += 2;
+
+						// 拡張フィールドサイズ
+						data_view.setUint16(pos , extra_size , little_endian);
+						pos += 2;
+
+						// コメントサイズ
+						data_view.setUint16(pos , comment_size , little_endian);
+						pos += 2;
+
+						// ファイルヘッダのディスク位置
+						data_view.setUint16(pos , 0 , little_endian);
+						pos += 2;
+
+						// 内部ファイル属性
+						data_view.setUint16(pos , 0 , little_endian);
+						pos += 2;
+
+						// 外部ファイル属性
+						data_view.setUint32(pos , 0 , little_endian);
+						pos += 4;
+
+						// Local file header 開始オフセット（先頭から）
+						data_view.setUint32(pos , item.offset , little_endian);
+						pos += 4;
+
+						// ファイル名
+						for(i=0;i<name_size;i++){
+							data_view.setUint8(pos , name_u8[i] , little_endian);
+							pos += 1;
+						}
+					}
+
+					// --------------------------------------------------------------------------------
+					// End of central dir record を出力
+					// --------------------------------------------------------------------------------
+					function writeEndOfCentralDirRecord(){
+						var file_num = items.length;
+
+						// シグネチャ
+						data_view.setUint32(pos , 0x06054b50 , little_endian);
+						pos += 4;
+
+						// 同ディスク位置
+						data_view.setUint16(pos , 0 , little_endian);
+						pos += 2;
+
+						// ファイル開始ディスク位置
+						data_view.setUint16(pos , 0 , little_endian);
+						pos += 2;
+
+						// 同ディスク内ファイル総数
+						data_view.setUint16(pos , file_num , little_endian);
+						pos += 2;
+
+						// ファイル総数
+						data_view.setUint16(pos , file_num , little_endian);
+						pos += 2;
+
+						// Central directory 総サイズ
+						data_view.setUint32(pos , central_directory_size , little_endian);
+						pos += 4;
+
+						// File header 開始オフセット
+						data_view.setUint32(pos , central_directory_pos , little_endian);
+						pos += 4;
+
+						// コメントサイズ
+						data_view.setUint16(pos , 0 , little_endian);
+						pos += 2;
+					}
+
+					// --------------------------------------------------------------------------------
+					// ファイルデータ出力
+					// --------------------------------------------------------------------------------
+					function phaseWriteFileData(items,callback){
+
+						var increment = 1024 * 10;
+
+						progress.setMessage("Write File Data ...",0);
+						progress.setMessage("",1);
+						progress.setValueProgress(0.5,0);
+						progress.setValueProgress(0.0,1);
+
+						var i = 0;
+						var num = items.length;
+						(function callee(){
+							if(closed) return;
+							if(i >= num){
+								callback(items);
+								return;
+							}
+
+							var upper = 1.0;
+							if(num > 1) upper = i / (num);
+
+							item = items[i];
+							i ++;
+
+							progress.setValueProgress(upper * 0.5 + 0.5,0);
+							progress.setValueProgress(0.0,1);
+							progress.setMessage(item.item._url,1);
+
+							writeLocalFileHeader(item);
+
+							var p = 0;
+							var s = increment;
+							var n = item.file_size;
+							var e;
+							var binary = item.binary;
+							delete item.binary;
+							crc32.initialize();
+							execute_queue.attachLastForInterrupt(function f(){
+								if(n - p < s){
+									s = n - p;
+								}
+								if(s <= 0){
+									execute_queue.attachLastForInterrupt(callee,null);
+									return;
+								}
+
+								e = p + s;
+								while(p < e){
+									data_view.setUint8(pos , (binary.charCodeAt(p) & 0xff) , little_endian);
+									pos += 1;
+									p ++;
+								}
+
+								var loawer = 1.0;
+								if(n > 0) loawer = p / n;
+								progress.setValueProgress(loawer,1);
+								progress.setValueProgress((upper + (loawer / num)) * 0.5 + 0.5,0);
+
+								execute_queue.attachFirst(f,null);
+							},null);
+
+						})();
+					}
+
+					// --------------------------------------------------------------------------------
+					// 中央ディレクトリ出力
+					// --------------------------------------------------------------------------------
+					function phaseWriteCentralDirectory(items,callback){
+
+						var increment = 1024 * 10;
+
+						progress.setMessage("Write Central Directory ...",0);
+						progress.setMessage("",1);
+						progress.setValueProgress(1.0,0);
+						progress.setValueProgress(0.0,1);
+
+						var i = 0;
+						var num = items.length;
+						(function callee(){
+							if(closed) return;
+							if(i >= num){
+								writeEndOfCentralDirRecord();
+								callback(items);
+								return;
+							}
+
+							item = items[i];
+							i ++;
+
+							var lower = 1.0;
+							if(num > 1) lower = i / (num);
+
+							progress.setValueProgress(lower,1);
+							progress.setMessage(item.item._url,1);
+
+							writeFileHeader(item);
+							execute_queue.attachLastForInterrupt(callee,null);
+						})();
+					}
+
+					(function(){
+						var date_obj = new Date();
+
+						// 総サイズ
+						var i;
+						var num = items.length;
+						for(i=0;i<num;i++){
+							var item = items[i];
+							item.offset = total;
+							total += getSize_LocalFileHeader(item);
+							total += getSize_LocalFileData(item);
+							item.index = i;
+							item.date = date_obj;
+						}
+						central_directory_pos = total;
+
+						for(i=0;i<num;i++){
+							var item = items[i];
+							central_directory_size += getSize_FileHeader(item);
+						}
+						total += central_directory_size;
+						total += getSize_EndOfCentralDirRecord();
+
+						// バイナリ生成
+						ary_buffer = new ArrayBuffer(total);
+						data_view = new DataView(ary_buffer);
+
+						// 出力
+						phaseWriteFileData(items,function(items){
+							phaseWriteCentralDirectory(items,function(items){
+
+								var download_file_name = "PageExpand_" + date_obj.getTime() + ".zip";
+
+								// クローズイベント
+								function close_event(){
+									var event_handler = event_dispatcher.createEventHandler("close");
+									event_handler.setFunction(function(){
+										var i = 0;
+										var num = items.length;
+										for(i=0;i<num;i++){
+											var item = items[i];
+											item.item.release();
+										}
+									});
+								}
+
+								// 成功
+								function success(){
+									if(closed) return;
+									close_event();
+									progress.close();
+									close();
+								}
+
+								// 失敗
+								function failure(src){
+									if(closed) return;
+
+									close_event();
+									progress.setMessage("Complete",0);
+									progress.setMessage("Save Zip File As ...",1);
+									progress.setAnchor({href:src,download:download_file_name});
+								}
+
+								progress.setMessage("",1);
+								progress.setValueProgress(1.0,0);
+								progress.setValueProgress(1.0,1);
+
+								if(0){
+									progress.setMessage("Create Blob URL ...",0);
+									setTimeout(function(){
+										var blob = new Blob([ary_buffer],{type:"application/zip"});
+										blob_url = BlobURLCreate(blob);
+
+										progress.setMessage("Wait ...",0);
+										setTimeout(function(){
+											var downloader = new Downloader();
+											downloader.setURL(blob_url);
+											downloader.setFileName(download_file_name);
+											downloader.setSaveAs(true);
+											downloader.oncomplete = function(result){
+												progress.setMessage("Complete",0);
+												if(result){
+													success();
+												}else{
+													failure(blob_url);
+												}
+											}
+											downloader.start();
+										},1);
+									},1);
+								}else{
+									progress.setMessage("Create Blob URL ...",0);
+									setTimeout(function(){
+										try{
+											var blob = new Blob([ary_buffer],{type:"application/zip"});
+											blob_url = BlobURLCreate(blob);
+										}catch(e){
+										}
+
+										if(blob_url){
+											failure(blob_url);
+										}else{
+											progress.setMessage("Create Data URI Scheme ...",0);
+											Base64_From_ArrayBuffer_Async(ary_buffer,function(base64){
+												progress.setMessage("Wait ...",0);
+												progress.setMessage("",1);
+												progress.setValueProgress(1.0,1);
+												setTimeout(function(){
+													window.location.assign("data:application/zip;base64," + base64);
+													success();
+												},1);
+											},{
+												onprogress:function(e){
+													progress.setMessage(e.loaded + "/" + e.total + " Byte",1);
+													progress.setValueProgress(e.loaded/e.total,1);
+												}
+											});
+										}
+									},1)
+								}
+
+							});
+						});
+					})();
+				}
+
+				(function(){
+					// 配列に格納
+					var items = new Array();
+					var item = _queue._next;
+					while(_queue != item){
+						items.push(item);
+						item = item._next;
+					}
+
+					phaseConvertFileName(items,function(items){
+						phaseDownload(items,function(items){
+							phaseCalculateCRC(items,function(items){
+								phaseCreateArchive(items,function(items){
+									progress.close();
+								});
+							});
+						});
+					});
+				})();
+			});
+
+		};
+
+		// --------------------------------------------------------------------------------
+		// クリア
+		// --------------------------------------------------------------------------------
+		_this.clear = function(){
+			_queue._prev = _queue;
+			_queue._next = _queue;
 		};
 
 		// --------------------------------------------------------------------------------
 		// プライベート変数
 		// --------------------------------------------------------------------------------
-		var _queue_count;
-		var _execute_interval;
-		var _time_handle;
+		var _queue;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------------------
 		(function(){
-			_queue_count = 0;
-			_execute_interval = 500;
-			_time_handle = null;
-
-			var queue = new Object();
-			queue._prev = queue;
-			queue._next = queue;
-			_this.queue = queue;
-
-			var queue_single = new Object();
-			queue_single._prev = queue_single;
-			queue_single._next = queue_single;
-			_this.queue_single = queue_single;
+			_queue = new Object();
+			_queue._prev = _queue;
+			_queue._next = _queue;
 		})();
 
 	}
@@ -57274,65 +59149,76 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// ArrayBuffer から Base64 文字列に変換する関数 (非同期実行)
 	// --------------------------------------------------------------------------------
-	function Base64_From_ArrayBuffer_Async(ary_buffer,callback,increment){
+	function Base64_From_ArrayBuffer_Async(ary_buffer,callback,options){
 		var dic = [
 			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
 			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
 			'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
 			'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
 		];
-		var base64 = "";
+		var base64 = [];
 		var ary_u8 = new Uint8Array( ary_buffer );
 		var num = ary_u8.length;
 		var n = 0;
 		var b = 0;
 
-		if(increment === undefined){
-			increment = 1024;
+		var increment = 1024;
+		var onprogress;
+		if(options){
+			if(options.increment){
+				increment = options.increment;
+			}
+			onprogress = options.onprogress;
 		}
 
 		var i = 0;
 		var j = 0;
 		function f(){
+			var s = "";
 			while(i < num){
 				b = ary_u8[i];
-				base64 += dic[(b >> 2)];
+				s += dic[(b >> 2)];
 				n = (b & 0x03) << 4;
 				i ++;
 				if(i >= num) break;
 
 				b = ary_u8[i];
-				base64 += dic[n | (b >> 4)];
+				s += dic[n | (b >> 4)];
 				n = (b & 0x0f) << 2;
 				i ++;
 				if(i >= num) break;
 
 				b = ary_u8[i];
-				base64 += dic[n | (b >> 6)];
-				base64 += dic[(b & 0x3f)];
+				s += dic[n | (b >> 6)];
+				s += dic[(b & 0x3f)];
 				i ++;
 
 				j += 3;
 				if(j > increment){
 					j = 0;
-					execute_queue.attachLast(f,null);
+					base64.push(s);
+					if(onprogress){
+						onprogress({loaded:i,total:num});
+					}
+					execute_queue.attachFirst(f,null);
 					return;
 				}
 			}
 
 			var m = num % 3;
 			if(m){
-				base64 += dic[n];
+				s += dic[n];
 			}
 			if(m == 1){
-				base64 += "==";
+				s += "==";
 			}else if(m == 2){
-				base64 += "=";
+				s += "=";
 			}
-			callback(base64);
+			base64.push(s);
+			callback(base64.join(""));
 		}
 
-		execute_queue.attachLast(f,null);
+		execute_queue.attachFirst(f,null);
 	}
 
 	// --------------------------------------------------------------------------------
@@ -57345,7 +59231,7 @@ function PageExpand(page_expand_arguments){
 			'g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v',
 			'w','x','y','z','0','1','2','3','4','5','6','7','8','9','+','/'
 		];
-		var base64 = "";
+		var base64 = [];
 		var num = x_user_defined.length;
 		var n = 0;
 		var b = 0;
@@ -57357,27 +59243,29 @@ function PageExpand(page_expand_arguments){
 		var i = 0;
 		var j = 0;
 		function f(){
+			var s = "";
 			while(i < num){
 				b = x_user_defined.charCodeAt(i) & 0xff;
-				base64 += dic[(b >> 2)];
+				s += dic[(b >> 2)];
 				n = (b & 0x03) << 4;
 				i ++;
 				if(i >= num) break;
 
 				b = x_user_defined.charCodeAt(i) & 0xff;
-				base64 += dic[n | (b >> 4)];
+				s += dic[n | (b >> 4)];
 				n = (b & 0x0f) << 2;
 				i ++;
 				if(i >= num) break;
 
 				b = x_user_defined.charCodeAt(i) & 0xff;
-				base64 += dic[n | (b >> 6)];
-				base64 += dic[(b & 0x3f)];
+				s += dic[n | (b >> 6)];
+				s += dic[(b & 0x3f)];
 				i ++;
 
 				j += 3;
 				if(j > increment){
 					j = 0;
+					base64.push(s);
 					execute_queue.attachFirst(f,null);
 					return;
 				}
@@ -57385,17 +59273,214 @@ function PageExpand(page_expand_arguments){
 
 			var m = num % 3;
 			if(m){
-				base64 += dic[n];
+				s += dic[n];
 			}
 			if(m == 1){
-				base64 += "==";
+				s += "==";
 			}else if(m == 2){
-				base64 += "=";
+				s += "=";
 			}
-			callback(base64);
+			base64.push(s);
+			callback(base64.join(""));
 		}
 
 		execute_queue.attachFirst(f,null);
+	}
+
+	// --------------------------------------------------------------------------------
+	// Blob URL を生成
+	// --------------------------------------------------------------------------------
+	function BlobURLCreate (src){
+		var winow_url = window.URL || window.webkitURL;
+		if(winow_url){
+			return winow_url.createObjectURL(src);
+		}
+		return null;
+	}
+
+	// --------------------------------------------------------------------------------
+	// Blob URL を破棄
+	// --------------------------------------------------------------------------------
+	function BlobURLRevoke (blob_url){
+		var winow_url = window.URL || window.webkitURL;
+		if(winow_url){
+			return winow_url.revokeObjectURL(blob_url);
+		}
+	}
+
+	// --------------------------------------------------------------------------------
+	// CRC32
+	// --------------------------------------------------------------------------------
+	function CRC32 (){
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		this.initialize = function (){
+			_crc32 = 0xffffffff;
+			_pos = 0;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 位置をセット
+		// --------------------------------------------------------------------------------
+		this.setPosition = function (v){
+			_pos = v;
+		};
+
+		// --------------------------------------------------------------------------------
+		// ArrayBuffer から CRC32 を取得
+		// --------------------------------------------------------------------------------
+		this.getFromArrayBuffer = function (buffer,size){
+			var ary_u8 = new Uint8Array(buffer,_pos,size);
+			var i;
+			for (i=0;i<size;i++) {
+				_crc32 = _table[(_crc32 ^ ary_u8[i]) & 0xff] ^ (_crc32 >>> 8);
+			}
+			_pos += size;
+			return (_crc32 ^ 0xffffffff) >>> 0;
+		};
+
+		// --------------------------------------------------------------------------------
+		// バイナリ文字列から CRC32 を取得
+		// --------------------------------------------------------------------------------
+		this.getFromStringOfBinaryData = function (buffer,size){
+			size += _pos;
+			while(_pos<size){
+				_crc32 = _table[(_crc32 ^ (buffer.charCodeAt(_pos) & 0xff)) & 0xff] ^ (_crc32 >>> 8);
+				_pos ++;
+			}
+			return (_crc32 ^ 0xffffffff) >>> 0;
+		};
+
+		// --------------------------------------------------------------------------------
+		// プライベート変数
+		// --------------------------------------------------------------------------------
+		var _crc32;
+		var _pos;
+		var _table = [
+			0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f, 0xe963a535, 0x9e6495a3,
+			0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988, 0x09b64c2b, 0x7eb17cbd, 0xe7b82d07, 0x90bf1d91,
+			0x1db71064, 0x6ab020f2, 0xf3b97148, 0x84be41de, 0x1adad47d, 0x6ddde4eb, 0xf4d4b551, 0x83d385c7,
+			0x136c9856, 0x646ba8c0, 0xfd62f97a, 0x8a65c9ec, 0x14015c4f, 0x63066cd9, 0xfa0f3d63, 0x8d080df5,
+			0x3b6e20c8, 0x4c69105e, 0xd56041e4, 0xa2677172, 0x3c03e4d1, 0x4b04d447, 0xd20d85fd, 0xa50ab56b,
+			0x35b5a8fa, 0x42b2986c, 0xdbbbc9d6, 0xacbcf940, 0x32d86ce3, 0x45df5c75, 0xdcd60dcf, 0xabd13d59,
+			0x26d930ac, 0x51de003a, 0xc8d75180, 0xbfd06116, 0x21b4f4b5, 0x56b3c423, 0xcfba9599, 0xb8bda50f,
+			0x2802b89e, 0x5f058808, 0xc60cd9b2, 0xb10be924, 0x2f6f7c87, 0x58684c11, 0xc1611dab, 0xb6662d3d,
+			0x76dc4190, 0x01db7106, 0x98d220bc, 0xefd5102a, 0x71b18589, 0x06b6b51f, 0x9fbfe4a5, 0xe8b8d433,
+			0x7807c9a2, 0x0f00f934, 0x9609a88e, 0xe10e9818, 0x7f6a0dbb, 0x086d3d2d, 0x91646c97, 0xe6635c01,
+			0x6b6b51f4, 0x1c6c6162, 0x856530d8, 0xf262004e, 0x6c0695ed, 0x1b01a57b, 0x8208f4c1, 0xf50fc457,
+			0x65b0d9c6, 0x12b7e950, 0x8bbeb8ea, 0xfcb9887c, 0x62dd1ddf, 0x15da2d49, 0x8cd37cf3, 0xfbd44c65,
+			0x4db26158, 0x3ab551ce, 0xa3bc0074, 0xd4bb30e2, 0x4adfa541, 0x3dd895d7, 0xa4d1c46d, 0xd3d6f4fb,
+			0x4369e96a, 0x346ed9fc, 0xad678846, 0xda60b8d0, 0x44042d73, 0x33031de5, 0xaa0a4c5f, 0xdd0d7cc9,
+			0x5005713c, 0x270241aa, 0xbe0b1010, 0xc90c2086, 0x5768b525, 0x206f85b3, 0xb966d409, 0xce61e49f,
+			0x5edef90e, 0x29d9c998, 0xb0d09822, 0xc7d7a8b4, 0x59b33d17, 0x2eb40d81, 0xb7bd5c3b, 0xc0ba6cad,
+			0xedb88320, 0x9abfb3b6, 0x03b6e20c, 0x74b1d29a, 0xead54739, 0x9dd277af, 0x04db2615, 0x73dc1683,
+			0xe3630b12, 0x94643b84, 0x0d6d6a3e, 0x7a6a5aa8, 0xe40ecf0b, 0x9309ff9d, 0x0a00ae27, 0x7d079eb1,
+			0xf00f9344, 0x8708a3d2, 0x1e01f268, 0x6906c2fe, 0xf762575d, 0x806567cb, 0x196c3671, 0x6e6b06e7,
+			0xfed41b76, 0x89d32be0, 0x10da7a5a, 0x67dd4acc, 0xf9b9df6f, 0x8ebeeff9, 0x17b7be43, 0x60b08ed5,
+			0xd6d6a3e8, 0xa1d1937e, 0x38d8c2c4, 0x4fdff252, 0xd1bb67f1, 0xa6bc5767, 0x3fb506dd, 0x48b2364b,
+			0xd80d2bda, 0xaf0a1b4c, 0x36034af6, 0x41047a60, 0xdf60efc3, 0xa867df55, 0x316e8eef, 0x4669be79,
+			0xcb61b38c, 0xbc66831a, 0x256fd2a0, 0x5268e236, 0xcc0c7795, 0xbb0b4703, 0x220216b9, 0x5505262f,
+			0xc5ba3bbe, 0xb2bd0b28, 0x2bb45a92, 0x5cb36a04, 0xc2d7ffa7, 0xb5d0cf31, 0x2cd99e8b, 0x5bdeae1d,
+			0x9b64c2b0, 0xec63f226, 0x756aa39c, 0x026d930a, 0x9c0906a9, 0xeb0e363f, 0x72076785, 0x05005713,
+			0x95bf4a82, 0xe2b87a14, 0x7bb12bae, 0x0cb61b38, 0x92d28e9b, 0xe5d5be0d, 0x7cdcefb7, 0x0bdbdf21,
+			0x86d3d2d4, 0xf1d4e242, 0x68ddb3f8, 0x1fda836e, 0x81be16cd, 0xf6b9265b, 0x6fb077e1, 0x18b74777,
+			0x88085ae6, 0xff0f6a70, 0x66063bca, 0x11010b5c, 0x8f659eff, 0xf862ae69, 0x616bffd3, 0x166ccf45,
+			0xa00ae278, 0xd70dd2ee, 0x4e048354, 0x3903b3c2, 0xa7672661, 0xd06016f7, 0x4969474d, 0x3e6e77db,
+			0xaed16a4a, 0xd9d65adc, 0x40df0b66, 0x37d83bf0, 0xa9bcae53, 0xdebb9ec5, 0x47b2cf7f, 0x30b5ffe9,
+			0xbdbdf21c, 0xcabac28a, 0x53b39330, 0x24b4a3a6, 0xbad03605, 0xcdd70693, 0x54de5729, 0x23d967bf,
+			0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94, 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
+		];
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		this.initialize();
+
+	}
+
+	// --------------------------------------------------------------------------------
+	// 文字列から ArrayBuffer に変換（UTF-8）
+	// --------------------------------------------------------------------------------
+	function String_To_ArrayBuffer_As_UTF8(str){
+		var i;
+		var c;
+		var size = 0;
+		var num = str.length;
+		for(i=0;i<num;i++){
+			c = str.charCodeAt(i);
+			if(c < 0x80){
+				size += 1;
+			}else if(c < 0x800){
+				size += 2;
+			}else if(c < 0x10000){
+				size += 3;
+			}else if(c < 0x200000){
+				size += 4;
+			}else if(c < 0x4000000){
+				size += 5;
+			}else{
+				size += 6;
+			}
+		}
+
+		var p = 0;
+		var a = new Uint8Array(size);
+		for(i=0;i<num;i++){
+			c = str.charCodeAt(i);
+			if(c < 0x80){
+				a[p] = (c & 0x7f) >>> 0;
+				p += 1;
+			}else if(c < 0x800){
+				a[p] = ((c & 0x000007c0) >>> 6) | 0xc0;
+				p += 1;
+				a[p] = ((c & 0x0000003f) >>> 0) | 0x80;
+				p += 1;
+			}else if(c < 0x10000){
+				a[p] = ((c & 0x0000f000) >>> 12) | 0xe0;
+				p += 1;
+				a[p] = ((c & 0x00000fc0) >>>  6) | 0x80;
+				p += 1;
+				a[p] = ((c & 0x0000003f) >>>  0) | 0x80;
+				p += 1;
+			}else if(c < 0x200000){
+				a[p] = ((c & 0x001c0000) >>> 18) | 0xf0;
+				p += 1;
+				a[p] = ((c & 0x0003f000) >>> 12) | 0x80;
+				p += 1;
+				a[p] = ((c & 0x00000fc0) >>>  6) | 0x80;
+				p += 1;
+				a[p] = ((c & 0x0000003f) >>>  0) | 0x80;
+				p += 1;
+			}else if(c < 0x4000000){
+				a[p] = ((c & 0x03000000) >>> 24) | 0xf8;
+				p += 1;
+				a[p] = ((c & 0x00fc0000) >>> 18) | 0x80;
+				p += 1;
+				a[p] = ((c & 0x0003f000) >>> 12) | 0x80;
+				p += 1;
+				a[p] = ((c & 0x00000fc0) >>>  6) | 0x80;
+				p += 1;
+				a[p] = ((c & 0x0000003f) >>>  0) | 0x80;
+				p += 1;
+			}else{
+				a[p] = ((c & 0x40000000) >>> 30) | 0xfc;
+				p += 1;
+				a[p] = ((c & 0x3f000000) >>> 24) | 0x80;
+				p += 1;
+				a[p] = ((c & 0x00fc0000) >>> 18) | 0x80;
+				p += 1;
+				a[p] = ((c & 0x0003f000) >>> 12) | 0x80;
+				p += 1;
+				a[p] = ((c & 0x00000fc0) >>>  6) | 0x80;
+				p += 1;
+				a[p] = ((c & 0x0000003f) >>>  0) | 0x80;
+				p += 1;
+			}
+		}
+
+		return a.buffer;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -59248,12 +61333,6 @@ function PageExpand(page_expand_arguments){
 	// クリップボードにテキストをコピー
 	// --------------------------------------------------------------------------------
 	function ClipboardSetText(str){
-	}
-
-	// --------------------------------------------------------------------------------
-	// ファイルダウンロード
-	// --------------------------------------------------------------------------------
-	function FileDownload(options,callback){
 	}
 
 	// --------------------------------------------------------------------------------
@@ -61228,6 +63307,20 @@ function PageExpand(page_expand_arguments){
 							page_expand_debug.setVisible(true);
 							break;
 
+						case "batchDownloadImage":
+							if (WindowIsChild(window)){
+							}else{
+								download_list_image.createArchive();
+							}
+							break;
+
+						case "batchDownloadUser":
+							if (WindowIsChild(window)){
+							}else{
+								download_list_user.createArchive();
+							}
+							break;
+
 						// 未知の要求
 						default:
 							break;
@@ -61328,6 +63421,9 @@ function PageExpand(page_expand_arguments){
 
 			// ローダーキュー
 			loader_queue = new LoaderQueue();
+
+			// ダウンローダーキュー
+			downloader_queue = new DownloaderQueue();
 		}
 
 		PageExpandBackGroundForSafari();

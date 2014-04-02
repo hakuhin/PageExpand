@@ -68,11 +68,8 @@ function PageExpand(page_expand_arguments){
 			case "configCurrentBbs":
 				extension_message.sendRequest({command: "configCurrentBbs"});
 				break;
-			case "executePageExpand":
-				extension_message.sendRequest({command: "executePageExpand"});
-				break;
-			case "executeDebug":
-				extension_message.sendRequest({command: "executeDebug"});
+			default:
+				extension_message.sendRequest({command: command});
 				break;
 			}
 		}
@@ -97,17 +94,15 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			function normal(){
 				_style.color = "#222";
-				_style.marginLeft = _style.marginRight = "1px";
-				_style.background = "#f8f8f8";
+				_style.background = "none";
 			}
 
 			// --------------------------------------------------------------------------------
 			// マウスオーバー状態（内部用）
 			// --------------------------------------------------------------------------------
 			function mouse_over(){
-				_style.color = "#000";
-				_style.marginLeft = _style.marginRight = "0px";
-				_style.background = "#fff";
+				_style.color = "#fff";
+				_style.background = "#4281F4";
 			}
 
 			// --------------------------------------------------------------------------------
@@ -115,8 +110,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			function mouse_down(){
 				_style.color = "#fff";
-				_style.marginLeft = _style.marginRight = "0px";
-				_style.background = "#888";
+				_style.background = "#4281F4";
 			}
 
 			// --------------------------------------------------------------------------------
@@ -134,9 +128,11 @@ function PageExpand(page_expand_arguments){
 			// 初期化
 			// --------------------------------------------------------------------------------
 			(function(){
-				_item = DocumentCreateElement("div");
+				_item = DocumentCreateElement("a");
+				_item.href = "javascript:void(0);";
 				_style = _item.style;
-				ElementSetStyle(_item,"font-size:13px; color:#000; margin:0px 0px 4px; padding:10px 20px; border-radius:5px; -webkit-border-radius:5px; -moz-border-radius:5px; -webkit-box-shadow:0px 0px 2px #888; -moz-box-shadow:0px 0px 2px #888; box-shadow:0px 0px 2px #888;");
+//				ElementSetStyle(_item,"font-size:12px; color:#000; margin:0px 0px 2px; padding:2px 20px; border-radius:5px; box-shadow:0px 0px 2px #888;");
+				ElementSetStyle(_item,"display:block; text-decoration: none; font-size:13px; color:#000; margin:0px 0px 2px; padding:4px 20px; border-radius:5px;");
 				ElementSetTextContent(_item,label);
 				parent.appendChild(_item);
 
@@ -160,6 +156,28 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
+		// セパレータ（内部用）
+		// --------------------------------------------------------------------------------
+		function UI_Separator(parent){
+			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _item;
+			var _style;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_item = DocumentCreateElement("div");
+				ElementSetStyle(_item,"height: 0px; border-top:1px solid #ddd; margin:2px 0px;");
+				parent.appendChild(_item);
+			})();
+		}
+
+		// --------------------------------------------------------------------------------
 		// 初期化（内部用）
 		// --------------------------------------------------------------------------------
 		function initialize(){
@@ -169,18 +187,23 @@ function PageExpand(page_expand_arguments){
 
 			// ボディ
 			var body = document.body;
-			ElementSetStyle(body,'background-color:#CCC; font-family:"メイリオ"; margin:0px; padding:0px; width:300px;');
+			ElementSetStyle(body,'background-color:#ccc; font-family:"Meiryo"; margin:0px; padding:0px; width:300px; border:0px solid #000;');
 
 			// ヘッダ
 			var head_window = DocumentCreateElement("div");
-			ElementSetStyle(head_window,"background-color:#000; color:#fff; font-size:12px; font-weight:bold; padding:2px 5px; margin:0px 0px 20px;");
+			ElementSetStyle(head_window,"background-color:#000; color:#fff; font-size:12px; font-weight:bold; padding:2px 5px; margin:0px;");
 			ElementSetTextContent(head_window,_i18n.getMessage("page_expand_popup_menu"));
 			body.appendChild(head_window);
 
+			// ボディ
+			var body_window = DocumentCreateElement("div");
+			ElementSetStyle(body_window,"border:2px inset #f0f0f0; background-color:#fcfcfc;");
+			body.appendChild(body_window);
+
 			// 外周
 			var out_window = DocumentCreateElement("div");
-			ElementSetStyle(out_window,"margin:0px 5px 0px 5px;");
-			body.appendChild(out_window);
+			ElementSetStyle(out_window,"margin:5px 5px 5px 5px;");
+			body_window.appendChild(out_window);
 
 			// 外周
 			var out_table = DocumentCreateElement("div");
@@ -192,7 +215,21 @@ function PageExpand(page_expand_arguments){
 			ElementSetStyle(_menu_window,"display:table-cell; vertical-align:top; user-select:none; -webkit-user-select:none; -moz-user-select:none; -khtml-user-select:none; margin:0px;");
 			out_table.appendChild(_menu_window);
 
-			// PageExpand の設定
+			// 一括ダウンロード（画像）
+			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_batch_download_image"));
+			button_config.onclick = function(){
+				click("batchDownloadImage");
+			};
+
+			// 一括ダウンロード（ユーザー）
+			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_batch_download_user"));
+			button_config.onclick = function(){
+				click("batchDownloadUser");
+			};
+
+			new UI_Separator(_menu_window);
+
+			// 現在のページの設定を編集
 			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_page"));
 			button_config.onclick = function(){
 				click("configCurrentPage");
@@ -205,6 +242,8 @@ function PageExpand(page_expand_arguments){
 					click("configCurrentBbs");
 				};
 			}
+
+			new UI_Separator(_menu_window);
 
 			// PageExpand の実行
 			if(!(project.getEnableStartup())){

@@ -33,6 +33,7 @@ function PageExpand(page_expand_arguments){
 
 				// 設定更新
 				loader_queue.setMaxThread(project.getLoadThreadMax());
+				downloader_queue.setMaxThread(project.getDownloadThreadMax());
 				execute_queue.setOccupancyTime(project.getExecuteQueueOccupancyTime());
 				execute_queue.setSleepTime(project.getExecuteQueueSleepTime());
 
@@ -89,6 +90,35 @@ function PageExpand(page_expand_arguments){
 				});
 				context_menu.addItem(item_folder);
 
+				// 一括ダウンロード（画像）
+				item_folder.addItem(context_menu.createItem({
+					title: _i18n.getMessage("context_menu_batch_download_image"),
+					onclick: function (e) {
+						var tab = OperaExtensionGetSelectedTab();
+						if(tab){
+							extension_message.sendRequestToContent(tab, {command: "batchDownloadImage"});
+						}
+					}
+				}));
+				_context_menu_items[0] = true;
+
+				// 一括ダウンロード（ユーザー）
+				item_folder.addItem(context_menu.createItem({
+					title: _i18n.getMessage("context_menu_batch_download_user"),
+					onclick: function (e) {
+						var tab = OperaExtensionGetSelectedTab();
+						if(tab){
+							extension_message.sendRequestToContent(tab, {command: "batchDownloadUser"});
+						}
+					}
+				}));
+				_context_menu_items[1] = true;
+
+				item_folder.addItem(context_menu.createItem({
+					type: "line"
+				}));
+
+				// 現在のページの設定を編集
 				item_folder.addItem(context_menu.createItem({
 					title: _i18n.getMessage("context_menu_pageexpand_config_current_page"),
 					onclick: function (e) {
@@ -103,8 +133,9 @@ function PageExpand(page_expand_arguments){
 						OperaExtensionOpenPageExpandConfig(query);
 					}
 				}));
-				_context_menu_items[0] = true;
+				_context_menu_items[2] = true;
 
+				// 現在の掲示板の設定を編集
 				if(project.getEnableExpandBbs()){
 					item_folder.addItem(context_menu.createItem({
 						title: _i18n.getMessage("context_menu_pageexpand_config_current_bbs"),
@@ -120,9 +151,14 @@ function PageExpand(page_expand_arguments){
 							OperaExtensionOpenPageExpandConfig(query);
 						}
 					}));
-					_context_menu_items[1] = true;
+					_context_menu_items[3] = true;
 				}
 
+				item_folder.addItem(context_menu.createItem({
+					type: "line"
+				}));
+
+				// PageExpand の実行
 				if(!(project.getEnableStartup())){
 					item_folder.addItem(context_menu.createItem({
 						title: _i18n.getMessage("context_menu_pageexpand_execute"),
@@ -133,9 +169,10 @@ function PageExpand(page_expand_arguments){
 							}
 						}
 					}));
-					_context_menu_items[2] = true;
+					_context_menu_items[4] = true;
 				}
 
+				// PageExpand デバッグ
 				item_folder.addItem(context_menu.createItem({
 					title: _i18n.getMessage("context_menu_pageexpand_debug"),
 					onclick: function (e) {
@@ -145,7 +182,7 @@ function PageExpand(page_expand_arguments){
 						}
 					}
 				}));
-				_context_menu_items[3] = true;
+				_context_menu_items[5] = true;
 
 			}
 		}
@@ -160,13 +197,15 @@ function PageExpand(page_expand_arguments){
 			}else if(!(project.getEnableContextMenu())){
 			}else{
 				items[0] = true;
+				items[1] = true;
+				items[2] = true;
 				if(project.getEnableExpandBbs()){
-					items[1] = true;
+					items[3] = true;
 				}
 				if(!(project.getEnableStartup())){
-					items[2] = true;
+					items[4] = true;
 				}
-				items[3] = true;
+				items[5] = true;
 			}
 
 			var i;
@@ -503,19 +542,14 @@ function PageExpand(page_expand_arguments){
 				OperaExtensionOpenPageExpandConfig(query);
 			};
 
-			// PageExpand の実行
-			command_dictionary["executePageExpand"] = function(param,sender,sendResponse){
+			// コマンド
+			command_dictionary["executePageExpand"] =
+			command_dictionary["executeDebug"] =
+			command_dictionary["batchDownloadImage"] =
+			command_dictionary["batchDownloadUser"] = function(param,sender,sendResponse){
 				var tab = OperaExtensionGetSelectedTab();
 				if(tab){
-					extension_message.sendRequestToContent(tab, {command: "executePageExpand"});
-				}
-			};
-
-			// PageExpand デバッグ
-			command_dictionary["executeDebug"] = function(param,sender,sendResponse){
-				var tab = OperaExtensionGetSelectedTab();
-				if(tab){
-					extension_message.sendRequestToContent(tab, {command: "executeDebug"});
+					extension_message.sendRequestToContent(tab, {command: param.command});
 				}
 			};
 
@@ -588,6 +622,9 @@ function PageExpand(page_expand_arguments){
 
 			// ローダーキュー
 			loader_queue = new LoaderQueue();
+
+			// ダウンローダーキュー
+			downloader_queue = new DownloaderQueue();
 		}
 
 		PageExpandBackGroundForOpera();
