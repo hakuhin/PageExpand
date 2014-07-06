@@ -11,6 +11,124 @@
 function PageExpand(page_expand_arguments){
 
 	// --------------------------------------------------------------------------------
+	// PageExpand 初期化
+	// --------------------------------------------------------------------------------
+	function PageExpandInitialize(){
+
+		if(initialized)	return;
+		initialized = true;
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		{
+			// PageExpand ノード
+			page_expand_node = new PageExpandNode();
+			if(page_expand_arguments.page_expand_parent){
+				page_expand_arguments.page_expand_parent.attachChild(page_expand_node);
+			}
+			page_expand_root = page_expand_node.getPageExpandRoot();
+
+			// イベントディスパッチャー
+			page_expand_event_dispatcher = new EventDispatcher();
+
+			// マウス入力
+			input_mouse = new InputMouse();
+
+			// 実行キュー
+			execute_queue = new ExecuteQueue();
+
+			// ローダーキュー
+			loader_queue = new LoaderQueue();
+
+			// ダウンローダーキュー
+			downloader_queue = new DownloaderQueue();
+
+			// アドレスコレクション
+			address_collection = new AddressCollection();
+
+			// ダウンロードリスト
+			download_list_image = new DownloadList();
+			download_list_user = new DownloadList();
+
+			// タスクコンテナを生成
+			task_container = new TaskContainer();
+			task_execute_level = 0xffffffff;
+
+			// デバッグ
+			page_expand_debug = new PageExpandDebug();
+
+			// DOMノードが外れたか監視
+			document_observer_remove_node = new DocumentObserverRemoveDomNode();
+
+			// プロパティ変更を監視
+			document_observer_modify_node = new DocumentObserverModifyProperty();
+
+			// スクロール監視
+			document_observer_scroll = new DocumentObserverScroll();
+
+			// 進捗通知
+			notify_progress = new NotifyProgress();
+
+			// イメージ管理
+			element_limitter_image = new ElementLimiterByByteSize();
+			popup_image_container = new PopupImageContainer();
+
+			// サウンド管理
+			element_limitter_sound = new ElementLimiterByCount();
+
+			// ビデオ管理
+			element_limitter_video = new ElementLimiterByCount();
+
+			// リダイレクト辞書
+			redirect_url_dictionary = new RedirectUrlDictionary();
+
+			// 掲示板辞書
+			bbs_dictionary = new BbsDictionary();
+
+			// 解析辞書
+			analyze_work_dictionary = new AnalyzeWorkDictionary();
+
+			// ウィンドウ管理
+			window_manager = new WindowManager(window);
+
+			// 掲示板拡張
+			expand_bbs = {
+				enable:false,
+				initialized:false,
+				node_queue:new Array(),
+				work:new Object()
+			};
+
+		}
+
+		// --------------------------------------------------------------------------------
+		// 実行ループ
+		// --------------------------------------------------------------------------------
+		(function(){
+			var time_handle;
+
+			// タスクを毎サイクル実行
+			function TaskContainerExecute(){
+				task_container.execute(task_execute_level);
+			}
+
+			// 開始関数をセット
+			task_container.setStartFunc(function(){
+				time_handle = setInterval(TaskContainerExecute, 1000 / 60);
+			});
+
+			// 終了関数をセット
+			task_container.setEndFunc(function(){
+				clearInterval(time_handle);
+				time_handle = undefined;
+			});
+		})();
+
+	}
+
+
+	// --------------------------------------------------------------------------------
 	// PageExpand 実行開始
 	// --------------------------------------------------------------------------------
 	function PageExpandStart(){
@@ -1688,8 +1806,10 @@ function PageExpand(page_expand_arguments){
 									// ポップアップイメージ
 									popup_image = new PopupImage(image_clone);
 									popup_image.setElementParent(document.body);
+									popup_image.setElementAnchor(thumbnail_image);
 									popup_image.setElementHitArea(thumbnail_image);
 									popup_image.setElementBeginArea(thumbnail_image);
+									popup_image.setOriginalURL(thumbnail_url);
 									AnalyzeWorkSetPopupImage(work,popup_image);
 								});
 							}
@@ -1902,6 +2022,7 @@ function PageExpand(page_expand_arguments){
 					popup_image.setElementAnchor(element);
 					popup_image.setElementHitArea(element);
 					popup_image.setElementBeginArea(begin_area);
+					popup_image.setOriginalURL(url);
 					AnalyzeWorkSetPopupImage(work,popup_image);
 
 					// 成功通知
@@ -5365,7 +5486,7 @@ function PageExpand(page_expand_arguments){
 			var window_obj = element.contentWindow;
 			if(element.src){
 			}else if(window_obj.document.URL.match(new RegExp("^(blob|data|about):","i"))){
-				PageExpand({execute_type:page_expand_arguments.execute_type,admin:admin,window:window_obj});
+				PageExpand({execute_type:page_expand_arguments.execute_type,admin:admin,window:window_obj,page_expand_parent:page_expand_node});
 			}
 		}catch(e){
 		}
@@ -5480,11 +5601,6 @@ function PageExpand(page_expand_arguments){
 				// ポップアップイメージ
 				var image = ImageClone(element);
 
-				// 絶対パスに変換
-				if(window_manager.existWindowRoot()){
-					image.src = element.src;
-				}
-
 				// ロード完了
 				ImageGetLoaded(image,function(){
 					if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
@@ -5494,6 +5610,7 @@ function PageExpand(page_expand_arguments){
 					popup_image.setElementAnchor(element);
 					popup_image.setElementHitArea(element);
 					popup_image.setElementBeginArea(element);
+					popup_image.setOriginalURL(image.src);
 					popup_image.ontrim = function (){
 						var trim_check = false;
 						var trim_rect = new Object();

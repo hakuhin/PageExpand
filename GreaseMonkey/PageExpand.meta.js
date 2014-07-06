@@ -10,7 +10,7 @@
 // --------------------------------------------------------------------------------
 // ==UserScript==
 // @name           PageExpand
-// @version        1.3.8
+// @version        1.3.9
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @include        http://*
@@ -25,6 +25,7 @@
 // @grant          GM_deleteValue
 // @grant          GM_log
 // @grant          GM_registerMenuCommand
+// @grant          GM_info
 // ==/UserScript==
 
 

@@ -10,7 +10,7 @@
 // --------------------------------------------------------------------------------
 // ==UserScript==
 // @name           PageExpand
-// @version        1.3.8
+// @version        1.3.9
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @include        http://*
@@ -25,6 +25,7 @@
 // @grant          GM_deleteValue
 // @grant          GM_log
 // @grant          GM_registerMenuCommand
+// @grant          GM_info
 // ==/UserScript==
 
 
@@ -61,6 +62,10 @@
 	// プロジェクト
 	var project;
 
+	// PageExpand ノード
+	var page_expand_root;
+	var page_expand_node;
+
 	// イベントディスパッチャー
 	var page_expand_event_dispatcher;
 
@@ -88,6 +93,7 @@
 
 	// タスク関連
 	var task_container;
+	var task_execute_level;
 
 	// デバッグ関連
 	var page_expand_debug;
@@ -106,6 +112,7 @@
 
 	// イメージ管理
 	var element_limitter_image;
+	var popup_image_container;
 
 	// サウンド管理
 	var element_limitter_sound;
@@ -142,6 +149,13 @@
 
 
 	// --------------------------------------------------------------------------------
+	// 定数
+	// --------------------------------------------------------------------------------
+	// タスクレベル
+	var TASK_EXECUTE_LEVEL_POPUP = 0x00000001;
+
+
+	// --------------------------------------------------------------------------------
 	// PageExpand 初期化
 	// --------------------------------------------------------------------------------
 	function PageExpandInitialize(){
@@ -153,6 +167,13 @@
 		// 初期化
 		// --------------------------------------------------------------------------------
 		{
+			// PageExpand ノード
+			page_expand_node = new PageExpandNode();
+			if(page_expand_arguments.page_expand_parent){
+				page_expand_arguments.page_expand_parent.attachChild(page_expand_node);
+			}
+			page_expand_root = page_expand_node.getPageExpandRoot();
+
 			// イベントディスパッチャー
 			page_expand_event_dispatcher = new EventDispatcher();
 
@@ -177,6 +198,7 @@
 
 			// タスクコンテナを生成
 			task_container = new TaskContainer();
+			task_execute_level = 0xffffffff;
 
 			// デバッグ
 			page_expand_debug = new PageExpandDebug();
@@ -195,6 +217,7 @@
 
 			// イメージ管理
 			element_limitter_image = new ElementLimiterByByteSize();
+			popup_image_container = new PopupImageContainer();
 
 			// サウンド管理
 			element_limitter_sound = new ElementLimiterByCount();
@@ -232,7 +255,7 @@
 
 			// タスクを毎サイクル実行
 			function TaskContainerExecute(){
-				task_container.execute(0xffffffff);
+				task_container.execute(task_execute_level);
 			}
 
 			// 開始関数をセット
@@ -643,6 +666,10 @@
 		// プロジェクトオブジェクトを取得
 		// --------------------------------------------------------------------------------
 		_this.getProject = function (url){
+			var i;
+			var j;
+			var k;
+			
 			if(!url){
 				return _project_unknown.getInstance();
 			}
@@ -670,8 +697,6 @@
 					if(proj_obj.enable){
 						var expand_bbs;
 						var urlmap;
-						var i;
-						var j;
 
 						var expand_bbs_num = _dictionary_expand_bbs.length;
 						for(i=0;i<expand_bbs_num;i++){
@@ -34118,7 +34143,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.3.8");
+				new UI_Text(parent,"PageExpand ver.1.3.9");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -42550,8 +42575,10 @@
 									// ポップアップイメージ
 									popup_image = new PopupImage(image_clone);
 									popup_image.setElementParent(document.body);
+									popup_image.setElementAnchor(thumbnail_image);
 									popup_image.setElementHitArea(thumbnail_image);
 									popup_image.setElementBeginArea(thumbnail_image);
+									popup_image.setOriginalURL(thumbnail_url);
 									AnalyzeWorkSetPopupImage(work,popup_image);
 								});
 							}
@@ -42764,6 +42791,7 @@
 					popup_image.setElementAnchor(element);
 					popup_image.setElementHitArea(element);
 					popup_image.setElementBeginArea(begin_area);
+					popup_image.setOriginalURL(url);
 					AnalyzeWorkSetPopupImage(work,popup_image);
 
 					// 成功通知
@@ -46227,7 +46255,7 @@
 			var window_obj = element.contentWindow;
 			if(element.src){
 			}else if(window_obj.document.URL.match(new RegExp("^(blob|data|about):","i"))){
-				PageExpand({execute_type:page_expand_arguments.execute_type,admin:admin,window:window_obj});
+				PageExpand({execute_type:page_expand_arguments.execute_type,admin:admin,window:window_obj,page_expand_parent:page_expand_node});
 			}
 		}catch(e){
 		}
@@ -46342,11 +46370,6 @@
 				// ポップアップイメージ
 				var image = ImageClone(element);
 
-				// 絶対パスに変換
-				if(window_manager.existWindowRoot()){
-					image.src = element.src;
-				}
-
 				// ロード完了
 				ImageGetLoaded(image,function(){
 					if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
@@ -46356,6 +46379,7 @@
 					popup_image.setElementAnchor(element);
 					popup_image.setElementHitArea(element);
 					popup_image.setElementBeginArea(element);
+					popup_image.setOriginalURL(image.src);
 					popup_image.ontrim = function (){
 						var trim_check = false;
 						var trim_rect = new Object();
@@ -46568,6 +46592,77 @@
 
 
 	// --------------------------------------------------------------------------------
+	// PageExpand ノード
+	// --------------------------------------------------------------------------------
+	function PageExpandNode(){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// 子を登録
+		// --------------------------------------------------------------------------------
+		_this.attachChild = function(child){
+			child.remove();
+
+			var _next = _this._child_list;
+			var _prev = _next._prev;
+			_prev._next = child;
+			_next._prev = child;
+			child._prev = _prev;
+			child._next = _next;
+			child._parent = _this;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 除外
+		// --------------------------------------------------------------------------------
+		_this.remove = function(){
+			var _prev = _this._prev;
+			var _next = _this._next;
+			_prev._next = _next;
+			_next._prev = _prev;
+		};
+
+		// --------------------------------------------------------------------------------
+		// PageExpand ルートを取得
+		// --------------------------------------------------------------------------------
+		_this.getPageExpandRoot = function(){
+			var node = _this;
+			while(node._parent){
+				node = node._parent;
+			}
+			return node;
+		};
+
+		// --------------------------------------------------------------------------------
+		// ウィンドウを取得
+		// --------------------------------------------------------------------------------
+		_this.getWindow = function(){
+			return window;
+		};
+
+		// --------------------------------------------------------------------------------
+		// InputMouse オブジェクトを取得
+		// --------------------------------------------------------------------------------
+		_this.getInputMouse = function(){
+			return input_mouse;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		(function(){
+			_this._prev = _this;
+			_this._next = _this;
+
+			var child_list = new Object();
+			child_list._prev = child_list;
+			child_list._next = child_list;
+			_this._child_list = child_list;
+			_this._parent = null;
+		})();
+	}
+
+	// --------------------------------------------------------------------------------
 	// PageExpand の解析が有効であるか
 	// --------------------------------------------------------------------------------
 	function PageExpandSetEnableAnalyze(type){
@@ -46684,6 +46779,9 @@
 			// 解析辞書除外
 			analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
 
+			// コンテナから除外
+			popup_image_container.remove(_this);
+
 			_image = null;
 		};
 
@@ -46714,7 +46812,17 @@
 		// リンクをセット
 		// --------------------------------------------------------------------------------
 		_this.setElementAnchor = function(element){
-			_element_anchor = element;
+			_this._element_anchor = element;
+
+			// コンテナに登録
+			popup_image_container.attach(_this);
+		};
+
+		// --------------------------------------------------------------------------------
+		// リンクを取得
+		// --------------------------------------------------------------------------------
+		_this.getElementAnchor = function(){
+			return _this._element_anchor;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -46770,6 +46878,27 @@
 			_trim_rect = ObjectCopy(rect);
 			_trim_rect.width  = _trim_rect.right - _trim_rect.left;
 			_trim_rect.height = _trim_rect.bottom - _trim_rect.top;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 元のアドレスをセット
+		// --------------------------------------------------------------------------------
+		_this.setOriginalURL = function(url){
+			_original_url = url;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 元のアドレスを取得
+		// --------------------------------------------------------------------------------
+		_this.getOriginalURL = function(url){
+			return _original_url;
+		};
+
+		// --------------------------------------------------------------------------------
+		// イメージを取得
+		// --------------------------------------------------------------------------------
+		_this.getImage = function(){
+			return _image;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -46838,9 +46967,11 @@
 			removeEventClick();
 
 			if(_element_current.addEventListener){
-				_element_current.addEventListener("click",_this.release,false);
+				_element_current.addEventListener("mousedown",mouseDown,false);
+				_element_current.addEventListener("click",mouseClick,false);
 			}else if(_element_current.attachEvent){
-				_element_current.attachEvent("onclick",_this.release);
+				_element_current.attachEvent("onmousedown",mouseDown);
+				_element_current.attachEvent("onclick",mouseClick);
 			}
 		}
 
@@ -46849,9 +46980,11 @@
 		// --------------------------------------------------------------------------------
 		function removeEventClick(){
 			if(_element_current.removeEventListener){
-				_element_current.removeEventListener("click",_this.release,false);
+				_element_current.removeEventListener("mousedown",mouseDown,false);
+				_element_current.removeEventListener("click",mouseClick,false);
 			}else if(_element_current.detachEvent){
-				_element_current.detachEvent("onclick",_this.release);
+				_element_current.detachEvent("onmousedown",mouseDown);
+				_element_current.detachEvent("onclick",mouseClick);
 			}
 		}
 
@@ -46902,6 +47035,31 @@
 		}
 
 		// --------------------------------------------------------------------------------
+		// マウスダウンイベント（内部用）
+		// --------------------------------------------------------------------------------
+		function mouseDown(e){
+			// マウス入力を更新
+			_input_mouse_current.setMouseEvent(e);
+
+			if(
+				(_input_mouse_current.getButtonCenter()) ||
+				(_input_mouse_current.getButtonLeft() && _input_mouse_current.getButtonRight())
+			){
+				var image_viewer = new ImageViewer(_this);
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// マウスクリックイベント（内部用）
+		// --------------------------------------------------------------------------------
+		function mouseClick(e){
+			// マウス入力を更新
+			_input_mouse_current.setMouseEvent(e);
+
+			_this.release();
+		}
+
+		// --------------------------------------------------------------------------------
 		// タスク生成（内部用）
 		// --------------------------------------------------------------------------------
 		function createTask(){
@@ -46928,6 +47086,7 @@
 				removeEventTouchStart();
 
 				_task = task_container.createTask();
+				_task.setLevel(TASK_EXECUTE_LEVEL_POPUP);
 				_task.setDestructorFunc(PopupImageDestructor);
 				_task.setExecuteFunc(PopupImageInitialize);
 				_task.execute(0xffffffff);
@@ -47103,106 +47262,7 @@
 			work.type = "open";
 
 			// デフォルトのスタイル
-			ElementSetStyle(_image,
-				"background:rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box;" +
-				"border:0px none rgb(0, 0, 0);" +
-				"box-shadow:none;" +
-				"box-sizing:content-box;" +
-				"caption-side:top;" +
-				"clear:none;" +
-				"clip:auto;" +
-				"color:rgb(0, 0, 0);" +
-				"cursor:auto;" +
-				"direction:ltr;" +
-				"display:inline;" +
-				"empty-cells:show;" +
-				"float:none;" +
-				"height:0px;" +
-				"image-rendering:auto;" +
-				"left:auto;" +
-				"letter-spacing:normal;" +
-				"line-height:normal;" +
-				"list-style-image:none;" +
-				"list-style-position:outside;" +
-				"list-style-type:disc;" +
-				"margin:0px;" +
-				"max-height:none;" +
-				"max-width:none;" +
-				"min-height:0px;" +
-				"min-width:0px;" +
-				"opacity:1;" +
-				"orphans:auto;" +
-				"outline:rgb(0, 0, 0) none 0px;" +
-				"overflow:visible;" +
-				"padding:0px;" +
-				"page-break-after:auto;" +
-				"page-break-before:auto;" +
-				"page-break-inside:auto;" +
-				"position:static;" +
-				"resize:none;" +
-				"right:auto;" +
-				"speak:normal;" +
-				"table-layout:auto;" +
-				"tab-size:8;" +
-				"text-align:start;" +
-				"text-decoration:none;" +
-				"text-indent:0px;" +
-				"text-rendering:auto;" +
-				"text-shadow:none;" +
-				"text-overflow:clip;" +
-				"text-transform:none;" +
-				"top:auto;" +
-				"transition:all 0s ease 0s;" +
-				"unicode-bidi:normal;" +
-				"vertical-align:baseline;" +
-				"visibility:visible;" +
-				"white-space:normal;" +
-				"widows:auto;" +
-				"width:0px;" +
-				"word-break:normal;" +
-				"word-spacing:0px;" +
-				"word-wrap:normal;" +
-				"z-index:auto;" +
-				"zoom:1;" +
-				"buffered-rendering:auto;" +
-				"clip-path:none;" +
-				"clip-rule:nonzero;" +
-				"mask:none;" +
-				"filter:none;" +
-				"flood-color:rgb(0, 0, 0);" +
-				"flood-opacity:1;" +
-				"lighting-color:rgb(255, 255, 255);" +
-				"stop-color:rgb(0, 0, 0);" +
-				"stop-opacity:1;" +
-				"color-interpolation:srgb;" +
-				"color-interpolation-filters:linearrgb;" +
-				"color-rendering:auto;" +
-				"fill:#000000;" +
-				"fill-opacity:1;" +
-				"fill-rule:nonzero;" +
-				"marker-end:none;" +
-				"marker-mid:none;" +
-				"marker-start:none;" +
-				"mask-type:luminance;" +
-				"shape-rendering:auto;" +
-				"stroke:none;" +
-				"stroke-dasharray:none;" +
-				"stroke-dashoffset:0;" +
-				"stroke-linecap:butt;" +
-				"stroke-linejoin:miter;" +
-				"stroke-miterlimit:4;" +
-				"stroke-opacity:1;" +
-				"stroke-width:1;" +
-				"alignment-baseline:auto;" +
-				"baseline-shift:baseline;" +
-				"dominant-baseline:auto;" +
-				"kerning:0;" +
-				"text-anchor:start;" +
-				"writing-mode:lr-tb;" +
-				"glyph-orientation-horizontal:0deg;" +
-				"glyph-orientation-vertical:auto;" +
-				"vector-effect:none;"
-			);
+			ElementSetStyle(_image,CSSTextGetInitialImageElement());
 
 			// スタイルを追加
 			ElementAddStyle(_element_current,project.getStyleSheetExpandImagePopup());
@@ -47274,11 +47334,9 @@
 			begin_rect.bottom += offset.y;
 
 			// 拡大縮小補正
-			var pixel_ratio = 1.0;
-			if(window.devicePixelRatio !== undefined){
-				pixel_ratio = 1 / window.devicePixelRatio;
-				if(pixel_ratio < 1.0) pixel_ratio = 1.0;
-			}
+			var pixel_ratio = WindowGetDevicePixelRatio(window);
+			pixel_ratio = 1 / pixel_ratio;
+			if(pixel_ratio < 1.0) pixel_ratio = 1.0;
 
 			// 終了サイズ
 			var scale = project.getScalePercentPopupImage() / 100 * pixel_ratio;
@@ -47668,7 +47726,6 @@
 		// プライベート変数
 		// --------------------------------------------------------------------------------
 		var _element_parent;
-		var _element_anchor;
 		var _element_hit_area;
 		var _element_begin_area;
 		var _element_current;
@@ -47681,6 +47738,8 @@
 		var _analyze_work;
 		var _observer_remove;
 		var _event_handler_revise_scroll;
+		var _input_mouse_current;
+		var _original_url;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
@@ -47693,7 +47752,12 @@
 			_element_current = _image;
 			_suicide = false;
 			_element_rects_tree = null;
+			_input_mouse_current = page_expand_root.getInputMouse();
+			_original_url = "";
 			image = null;
+
+			// リスト
+			popup_image_container.initializePopupImage(_this);
 
 			// 解析ワーク作成
 			_analyze_work = AnalyzeWorkCreate(_image);
@@ -47713,6 +47777,1565 @@
 			addEventClick();
 		})();
 	}
+
+	// --------------------------------------------------------------------------------
+	// ポップアップイメージコンテナ
+	// --------------------------------------------------------------------------------
+	function PopupImageContainer(){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// 登録
+		// --------------------------------------------------------------------------------
+		_this.attach = function(popup_image){
+			_this.remove(popup_image);
+
+			var element = popup_image._element_anchor;
+			var list = _this._prev;
+
+			if(element.compareDocumentPosition){
+				while(list != _this){
+					var doc_pos = element.compareDocumentPosition(list._element_anchor);
+					if(doc_pos & document.DOCUMENT_POSITION_PRECEDING){
+						break;
+					}
+					list = list._prev;
+				}
+			}
+
+			var _prev = list;
+			var _next = _prev._next;
+			_prev._next = popup_image;
+			_next._prev = popup_image;
+			popup_image._prev = _prev;
+			popup_image._next = _next;
+			_count += 1;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 除外
+		// --------------------------------------------------------------------------------
+		_this.remove = function(popup_image){
+			if(popup_image != popup_image._next){
+				var _prev = popup_image._prev;
+				var _next = popup_image._next;
+				_prev._next = _next;
+				_next._prev = _prev;
+				popup_image._prev = popup_image;
+				popup_image._next = popup_image;
+
+				_count -= 1;
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// ポップアップイメージを初期化
+		// --------------------------------------------------------------------------------
+		_this.initializePopupImage = function(popup_image){
+			popup_image._prev = popup_image;
+			popup_image._next = popup_image;
+		};
+
+		// --------------------------------------------------------------------------------
+		// １つ前のポップアップイメージを取得
+		// --------------------------------------------------------------------------------
+		_this.getPrev = function(popup_image){
+			var list = popup_image._prev;
+			if(list == popup_image) return null;
+			if(list == _this) return null;
+			return list;
+		};
+
+		// --------------------------------------------------------------------------------
+		// １つ後のポップアップイメージを取得
+		// --------------------------------------------------------------------------------
+		_this.getNext = function(popup_image){
+			var list = popup_image._next;
+			if(list == popup_image) return null;
+			if(list == _this) return null;
+			return list;
+		};
+
+		// --------------------------------------------------------------------------------
+		// ポップアップイメージの位置を取得
+		// --------------------------------------------------------------------------------
+		_this.getIndex = function(popup_image){
+			var id = 0;
+			var list = _this._next;
+			while(list != _this){
+				if(list == popup_image){
+					break;
+				}
+				id += 1;
+				list = list._next;
+			}
+			return id;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 総数を取得
+		// --------------------------------------------------------------------------------
+		_this.getCount = function(){
+			return _count;
+		};
+
+		// --------------------------------------------------------------------------------
+		// プライベート変数
+		// --------------------------------------------------------------------------------
+		var _count;
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		(function(){
+			_this._prev = _this;
+			_this._next = _this;
+			_count = 0;
+		})();
+	}
+
+	// --------------------------------------------------------------------------------
+	// イメージビューワ
+	// --------------------------------------------------------------------------------
+	function ImageViewer(popup_image){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// 開放
+		// --------------------------------------------------------------------------------
+		_this.release = function(){
+			release_0();
+			release_1();
+		};
+
+		// --------------------------------------------------------------------------------
+		// 自殺（内部用）
+		// --------------------------------------------------------------------------------
+		function suicide(){
+			release_0();
+
+			(function(){
+				if(_fade_task){
+					_fade_task.release();
+					_fade_task = null;
+				}
+				_fade_task = task_container.createTask();
+				_fade_task.setDestructorFunc(function(){
+					_fade_task = null;
+				});
+				_fade_task.setExecuteFunc(function(){
+					_fade_alpha -= 0.2;
+					if(_fade_alpha < 0.0){
+						_fade_alpha = 0.0;
+						_fade_task.release();
+						release_1();
+					}
+					_element_viewer.style.opacity = _fade_alpha;
+				});
+				_fade_task.execute(0xffffffff);
+			})();
+
+			task_execute_level |= TASK_EXECUTE_LEVEL_POPUP;
+		}
+
+		// --------------------------------------------------------------------------------
+		// 開放 0（内部用）
+		// --------------------------------------------------------------------------------
+		function release_0 (){
+			removeEvent();
+
+			// マウスイベント無効化
+			_element_viewer.style.pointerEvents = "none";
+
+			// スタイルを戻す
+			var i;
+			var num = _style_overflow_list.length;
+			for(i=0;i<num;i++){
+				var item = _style_overflow_list.pop();
+				var style = item.element.style;
+				if(item.value === undefined){
+				}else if(item.value){
+					StyleDeclarationSetProperty(style,"overflow",item.value);
+				}else{
+					StyleDeclarationRemoveProperty(style,"overflow");
+				}
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// 開放 1（内部用）
+		// --------------------------------------------------------------------------------
+		function release_1 (){
+			removeImage();
+			DomNodeRemove(_element_viewer);
+
+			// リムーブ監視を破棄
+			if(_observer_remove){
+				_observer_remove.release();
+				_observer_remove = null;
+			}
+
+			// 解析辞書除外
+			if(_analyze_work_viewer){
+				analyze_work_dictionary.removeAnalyzeWork(_analyze_work_viewer);
+				_analyze_work_viewer = null;
+			}
+
+			// タスク破棄
+			if(_parent_task){
+				_parent_task.releaseChild();
+				_parent_task.release();
+				_parent_task = null;
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// イベントを追加（内部用）
+		// --------------------------------------------------------------------------------
+		function addEvent(){
+			removeEvent();
+
+			var window_root = page_expand_root.getWindow();
+			if(_element_viewer.addEventListener){
+				_element_container.addEventListener("mousedown",mouseDown,false);
+				_element_viewer.addEventListener("mousemove",mouseMove,false);
+				_element_viewer.addEventListener("mouseup",mouseUp,false);
+				_element_viewer.addEventListener("contextmenu",mouseContextMenu,false);
+				_element_window.addEventListener("scroll",scroll,false);
+				if(window.MouseScrollEvent){
+					_element_window.addEventListener("DOMMouseScroll",mouseScroll,false);
+				}else{
+					_element_window.addEventListener("mousewheel",mouseWheel,false);
+				}
+				_element_window.addEventListener("dragstart",dragStart,false);
+				window_root.addEventListener("resize",resize,false);
+			}else if(_element_viewer.attachEvent){
+				_element_container.attachEvent("onmousedown",mouseDown);
+				_element_viewer.attachEvent("onmousemove",mouseMove);
+				_element_viewer.attachEvent("onmouseup",mouseUp);
+				_element_viewer.attachEvent("oncontextmenu",mouseContextMenu);
+				_element_window.attachEvent("onscroll",scroll);
+				_element_window.attachEvent("onmousewheel",mouseWheel);
+				_element_window.attachEvent("ondragstart",dragStart);
+				window_root.attachEvent("onresize",resize);
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// イベントを破棄（内部用）
+		// --------------------------------------------------------------------------------
+		function removeEvent(){
+			var window_root = page_expand_root.getWindow();
+			if(_element_viewer.removeEventListener){
+				_element_container.removeEventListener("mousedown",mouseDown,false);
+				_element_viewer.removeEventListener("mousemove",mouseMove,false);
+				_element_viewer.removeEventListener("mouseup",mouseUp,false);
+				_element_viewer.removeEventListener("contextmenu",mouseContextMenu,false);
+				_element_window.removeEventListener("scroll",scroll,false);
+				if(window.MouseScrollEvent){
+					_element_window.removeEventListener("DOMMouseScroll",mouseScroll,false);
+				}else{
+					_element_window.removeEventListener("mousewheel",mouseWheel,false);
+				}
+				_element_window.removeEventListener("dragstart",dragStart,false);
+				window_root.removeEventListener("resize",resize,false);
+			}else if(_element_viewer.detachEvent){
+				_element_container.detachEvent("onmousedown",mouseDown);
+				_element_viewer.detachEvent("onmousemove",mouseMove);
+				_element_viewer.detachEvent("onmouseup",mouseUp);
+				_element_viewer.detachEvent("oncontextmenu",mouseContextMenu);
+				_element_window.detachEvent("onscroll",scroll);
+				_element_window.detachEvent("onmousewheel",mouseWheel);
+				_element_window.detachEvent("ondragstart",dragStart);
+				window_root.detachEvent("onresize",resize);
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// マウスダウンイベント（内部用）
+		// --------------------------------------------------------------------------------
+		function mouseDown(e){
+			// マウス入力を更新
+			_input_mouse.setMouseEvent(e);
+
+			if(_input_mouse.getButtonLeft()){
+				if(_mouse_buttons & 0x01){
+				}else{
+					_mouse_buttons |= 0x01;
+					_translate_work.working = false;
+					_translate_work.pos_old = _input_mouse.getPositionClient();
+				}
+			}
+			if(_input_mouse.getButtonRight()){
+				if(_mouse_buttons & 0x02){
+				}else{
+					_mouse_buttons |= 0x02;
+					_transform_work.working = false;
+					_transform_work.mouse_start = _input_mouse.getPositionClient();
+					_transform_work.origin = ObjectCopy(_image_origin);
+					_transform_work.scale = ObjectCopy(_image_scale);
+					_transform_work.zoom = ObjectCopy(_image_zoom);
+					_transform_work.rotate = ObjectCopy(_image_rotate);
+					_transform_work.pos = ObjectCopy(_image_pos);
+					_transform_work.center = ObjectCopy(_image_center);
+				}
+			}
+
+			if(
+				(_input_mouse.getButtonCenter()) ||
+				(_input_mouse.getButtonLeft() && _input_mouse.getButtonRight())
+			){
+				suicide();
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// マウスダウンイベント（内部用）
+		// --------------------------------------------------------------------------------
+		function mouseMove(e){
+			// マウス入力を更新
+			_input_mouse.setMouseEvent(e);
+
+			if(_mouse_buttons & 0x01){
+				var pos = _input_mouse.getPositionClient();
+				var old = _translate_work.pos_old;
+				var vec_x = pos.x - old.x;
+				var vec_y = pos.y - old.y;
+
+				if(Math.sqrt(vec_x * vec_x + vec_y * vec_y) >= 3.0){
+					_translate_work.working = true;
+					_prevent_click = true;
+				}
+				if(_translate_work.working){
+					if(vec_x || vec_y){
+						_element_window.scrollLeft -= vec_x;
+						_element_window.scrollTop  -= vec_y;
+						_translate_work.pos_old = pos;
+					}
+				}
+			}
+
+			if(_mouse_buttons & 0x02){
+				updateTransform();
+			}
+
+			if(_translate_work.working){
+				setCursor("move");
+			}else if(_transform_work.working){
+				setCursor("crosshair");
+			}else{
+				initCursor();
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// マウスアップイベント（内部用）
+		// --------------------------------------------------------------------------------
+		function mouseUp(e){
+			// マウス入力を更新
+			_input_mouse.setMouseEvent(e);
+
+			if(_mouse_buttons & 0x01){
+				if(!_input_mouse.getButtonLeft()){
+					_mouse_buttons &= ~0x01;
+					_translate_work.working = false;
+					if(!_prevent_click){
+						gotoScaleMode(1);
+					}
+					_prevent_click = false;
+				}
+			}
+			if(_mouse_buttons & 0x02){
+				if(!_input_mouse.getButtonRight()){
+					_mouse_buttons &= ~0x02;
+					_transform_work.working = false;
+					DomNodeRemove(_element_transform);
+				}
+			}
+
+			if(_prevent_click){
+			}else{
+				initCursor();
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// マウスコンテキストメニューイベント（内部用）
+		// --------------------------------------------------------------------------------
+		function mouseContextMenu(e){
+			// マウス入力を更新
+			_input_mouse.setMouseEvent(e);
+
+			_prevent_context_menu = true;
+
+			// 装飾キー押下で無視
+			if(_input_mouse.getKeyShift() || _input_mouse.getKeyCtrl()){
+				_prevent_context_menu = false;
+			}
+
+			// デフォルトの動作を無効化
+			if(_prevent_context_menu){
+				_prevent_context_menu = false;
+
+				if(e.preventDefault){
+					e.preventDefault();
+				}else{
+					return false;
+				}
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// マウススクロールイベント（内部用）
+		// --------------------------------------------------------------------------------
+		function mouseScroll(e){
+			wheel(e,e.detail);
+		}
+
+		// --------------------------------------------------------------------------------
+		// マウスホイールイベント（内部用）
+		// --------------------------------------------------------------------------------
+		function mouseWheel(e){
+			wheel(e,-(e.wheelDelta / 40));
+		}
+
+		// --------------------------------------------------------------------------------
+		// ホイール回転（内部用）
+		// --------------------------------------------------------------------------------
+		function wheel(e,delta){
+			// マウス入力を更新
+			_input_mouse.setMouseEvent(e);
+
+			var cancel = false;
+			if(_input_mouse.getButtonRight()){
+				_prevent_context_menu = true;
+
+				gotoImage(delta);
+
+				_transform_work.working = false;
+				DomNodeRemove(_element_transform);
+				_transform_work.mouse_start = _input_mouse.getPositionClient();
+
+				cancel = true;
+			}
+
+			if(_input_mouse.getButtonLeft()){
+				if(delta > 0){
+					setCursor("zoom-out");
+				}else{
+					setCursor("zoom-in");
+				}
+				addScale(-delta);
+
+				_prevent_click = true;
+				cancel = true;
+			}
+
+			if(cancel){
+				_prevent_context_menu = true;
+
+				// デフォルトの動作を無効化
+				if(e.preventDefault){
+					e.preventDefault();
+				}else{
+					return false;
+				}
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// スクロールイベント（内部用）
+		// --------------------------------------------------------------------------------
+		function scroll(e){
+			if(_prevent_scroll){
+				_prevent_scroll = false;
+				return;
+			}
+
+			if(WindowGetDevicePixelRatio(window) != _pixel_ratio){
+				return;
+			}
+
+			var pos_x = _element_window.scrollLeft;
+			var pos_y = _element_window.scrollTop;
+			var max_x = _element_window.scrollWidth  - _element_window.clientWidth;
+			var max_y = _element_window.scrollHeight - _element_window.clientHeight;
+			var client_w = _element_window.clientWidth;
+			var client_h = _element_window.clientHeight;
+
+			var mtx = new Matrix32();
+			mtx.translate(-_image_origin.x,-_image_origin.y);
+			mtx.scale(_image_scale.x,_image_scale.y);
+			mtx.rotate(_image_rotate * Math.PI / 180);
+			mtx.translate(_image_pos.x,_image_pos.y);
+			mtx.invert();
+			_image_center = mtx.transformPosition({x:pos_x + client_w * 0.5,y:pos_y + client_h * 0.5});
+
+			var r = 1;
+			if(pos_x <= r){
+			}else if(pos_y <= r){
+			}else if(pos_x >= max_x - r){
+			}else if(pos_y >= max_y - r){
+			}else{
+				return;
+			}
+
+			suicide();
+		}
+
+		// --------------------------------------------------------------------------------
+		// リサイズイベント（内部用）
+		// --------------------------------------------------------------------------------
+		function resize(e){
+			var window_root = page_expand_root.getWindow();
+			var client_size = DocumentGetClientSize(window_root.document);
+			var style = _element_viewer.style;
+			style.width  = (client_size.width)  + "px";
+			style.height = (client_size.height) + "px";
+
+			_pixel_ratio = WindowGetDevicePixelRatio(window);
+			_image_scale.y = _image_scale.x = _image_zoom / _pixel_ratio;
+
+			var mtx = new Matrix32();
+			mtx.translate(-_image_origin.x,-_image_origin.y);
+			mtx.scale(_image_scale.x,_image_scale.y);
+			mtx.rotate(_image_rotate * Math.PI / 180);
+
+			var vtx = new Array();
+			vtx.push(mtx.transformPosition({x:-_image_origin.x , y:-_image_origin.y}));
+			vtx.push(mtx.transformPosition({x:-_image_origin.x , y: _image_origin.y}));
+			vtx.push(mtx.transformPosition({x: _image_origin.x , y:-_image_origin.y}));
+			vtx.push(mtx.transformPosition({x: _image_origin.x , y: _image_origin.y}));
+
+			var min_x = vtx[0].x;
+			var max_x = vtx[0].x;
+			var min_y = vtx[0].y;
+			var max_y = vtx[0].y;
+
+			var i;
+			var num = vtx.length;
+			for(i=1;i<num;i++){
+				var p = vtx[i];
+				if(min_x > p.x) min_x = p.x;
+				if(max_x < p.x) max_x = p.x;
+				if(min_y > p.y) min_y = p.y;
+				if(max_y < p.y) max_y = p.y;
+			}
+
+			var client_w = _element_window.clientWidth;
+			var client_h = _element_window.clientHeight;
+			var background_w = (client_w * 2) + (max_x - min_x);
+			var background_h = (client_h * 2) + (max_y - min_y);
+
+			_prevent_scroll = true;
+
+			var style = _element_background.style;
+			style.width  = (background_w) + "px";
+			style.height = (background_h) + "px";
+
+			_image_pos = {x:background_w * 0.5,y:background_h * 0.5};
+			mtx.translate(_image_pos.x,_image_pos.y);
+			StyleDeclarationSetTransform(_element_image.style,mtx.toString());
+
+			var vec = mtx.transformPosition(_image_center);
+			_element_window.scrollLeft = vec.x - client_w * 0.5;
+			_element_window.scrollTop  = vec.y - client_h * 0.5;
+		}
+
+		// --------------------------------------------------------------------------------
+		// ドラッグ開始イベント（内部用）
+		// --------------------------------------------------------------------------------
+		function dragStart(e){
+			// デフォルトの動作を無効化する
+			if(e.preventDefault){
+				e.preventDefault();
+			}else{
+				return false;
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// 画像更新（内部用）
+		// --------------------------------------------------------------------------------
+		function updateImage(popup_image){
+			var image = popup_image.getImage();
+			var image_size = ImageGetNaturalSize(image);
+
+			removeImage();
+
+			_element_image = DocumentCreateElement("img");
+			ElementSetStyle(_element_image,CSSTextGetInitialImageElement());
+			ElementAddStyle(_element_image,"position:absolute; left:0px; top:0px; border:5px solid #666; cursor:inherit;");
+
+			var style = _element_image.style;
+			style.width  = (image_size.width)  + "px";
+			style.height = (image_size.height) + "px";
+
+			_element_image.src = image.src;
+
+			// 解析ワーク作成
+			_analyze_work_image = AnalyzeWorkCreate(_element_image);
+
+			// 解析済み
+			AnalyzeWorkSetInvalid(_analyze_work_image);
+
+			// 解析辞書登録オプション
+			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+			attach_options.SetOutsider();
+			if(window_manager.existWindowRoot()) attach_options.SetGuest();
+			analyze_work_dictionary.attachAnalyzeWork(_analyze_work_image,attach_options);
+
+			_element_container.appendChild(_element_image);
+
+			updateScaleMode();
+		}
+
+		// --------------------------------------------------------------------------------
+		// 画像除外（内部用）
+		// --------------------------------------------------------------------------------
+		function removeImage(){
+			if(_analyze_work_image){
+				analyze_work_dictionary.removeAnalyzeWork(_analyze_work_image);
+				_analyze_work_image = null;
+			}
+			if(_element_image){
+				DomNodeRemove(_element_image);
+				_element_image = null;
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// スケールモード更新（内部用）
+		// --------------------------------------------------------------------------------
+		function updateScaleMode(){
+			var image = _popup_image.getImage();
+			var image_size = ImageGetNaturalSize(image);
+			var border_width = 5;
+
+			var actual_w = (image_size.width  + border_width * 2) / _pixel_ratio;
+			var actual_h = (image_size.height + border_width * 2) / _pixel_ratio;
+			var client_w = _element_window.clientWidth;
+			var client_h = _element_window.clientHeight;
+
+			var scale_mode = _scale_mode;
+			if(scale_mode == ImageViewer.SCALE_MODE_AUTO){
+				if((actual_w < client_w) && (actual_h < client_h)){
+					scale_mode = ImageViewer.SCALE_MODE_NO_SCALE;
+				}else{
+					var scale_x = 1.0 / _pixel_ratio;
+					if(actual_w > client_w){
+						scale_x *= client_w / actual_w;
+					}
+					if(actual_h * scale_x * 0.75 > client_h){
+						scale_mode = ImageViewer.SCALE_MODE_LONG_VERTICAL;
+					}else{
+						scale_mode = ImageViewer.SCALE_MODE_SHOW_ALL;
+					}
+				}
+			}
+			if(scale_mode == ImageViewer.SCALE_MODE_LONG_VERTICAL){
+				if((actual_w < client_w) && (actual_h < client_h)){
+					scale_mode = ImageViewer.SCALE_MODE_NO_SCALE;
+				}else if(actual_w > client_w){
+					var scale_y = client_w / actual_w;
+					if(actual_h * scale_y < client_h){
+						scale_mode = ImageViewer.SCALE_MODE_SHOW_ALL;
+					}
+				}
+			}
+
+			var scale_x = 1.0 / _pixel_ratio;
+			var scale_y = 1.0 / _pixel_ratio;
+			switch(scale_mode){
+			case ImageViewer.SCALE_MODE_LONG_VERTICAL:
+				if(actual_w > client_w){
+					scale_x *= client_w / actual_w;
+					scale_y = scale_x;
+				}
+				break;
+			case ImageViewer.SCALE_MODE_SHOW_ALL:
+				if(actual_w > client_w){
+					scale_x *= client_w / actual_w;
+				}
+				if(actual_h > client_h){
+					scale_y *= client_h / actual_h;
+				}
+				if(scale_x > scale_y){
+					scale_x = scale_y;
+				}else{
+					scale_y = scale_x;
+				}
+				break;
+			case ImageViewer.SCALE_MODE_SHOW_FULL:
+				scale_x *= client_w / actual_w;
+				scale_y *= client_h / actual_h;
+				if(scale_x > scale_y){
+					scale_x = scale_y;
+				}else{
+					scale_y = scale_x;
+				}
+				break;
+			}
+			_image_zoom = scale_x * _pixel_ratio;
+
+			var background_w = (client_w * 2) + actual_w * scale_x;
+			var background_h = (client_h * 2) + actual_h * scale_y;
+
+			_image_origin = {x:image_size.width  * 0.5 + border_width , y:image_size.height * 0.5 + border_width};
+			_image_scale = {x:scale_x,y:scale_y};
+			_image_rotate = 0.0;
+			_image_pos = {x:background_w * 0.5,y:background_h * 0.5};
+
+			var pos_x = background_w * 0.5 - client_w * 0.5;
+			var pos_y;
+			switch(scale_mode){
+			case ImageViewer.SCALE_MODE_LONG_VERTICAL:
+				pos_y = background_h * 0.5 - (image_size.height + border_width * 2) * scale_y * 0.5;
+				break;
+			default:
+				pos_y = background_h * 0.5 - client_h * 0.5;
+				break;
+			}
+
+			_prevent_scroll = true;
+
+			var style = _element_background.style;
+			style.width  = (background_w) + "px";
+			style.height = (background_h) + "px";
+
+			var mtx = new Matrix32();
+			mtx.translate(-_image_origin.x,-_image_origin.y);
+			mtx.scale(_image_scale.x,_image_scale.y);
+			mtx.rotate(_image_rotate * Math.PI / 180);
+			mtx.translate(_image_pos.x,_image_pos.y);
+			StyleDeclarationSetTransformOrigin(_element_image.style,"0% 0%");
+			StyleDeclarationSetTransform(_element_image.style,mtx.toString());
+			mtx.invert();
+			_image_center = mtx.transformPosition({x:pos_x + client_w * 0.5,y:pos_y + client_h * 0.5});
+
+			_element_window.scrollLeft = pos_x;
+			_element_window.scrollTop  = pos_y;
+		}
+
+		// --------------------------------------------------------------------------------
+		// 回転拡大更新（内部用）
+		// --------------------------------------------------------------------------------
+		function updateTransform(){
+			var cx = _element_window.clientWidth  * 0.5;
+			var cy = _element_window.clientHeight * 0.5;
+			var p0 = _transform_work.mouse_start;
+			var p1 = _input_mouse.getPositionClient();
+			var sx = p1.x - p0.x;
+			var sy = p1.y - p0.y;
+			var v0_x = p0.x - cx;
+			var v0_y = p0.y - cy;
+			var v1_x = p1.x - cx;
+			var v1_y = p1.y - cy;
+			var len0 = Math.sqrt(v0_x * v0_x + v0_y * v0_y);
+			var len1 = Math.sqrt(v1_x * v1_x + v1_y * v1_y);
+			var rad0 = Math.atan2(v0_y,v0_x);
+			var rad1 = Math.atan2(v1_y,v1_x);
+
+			if(!(_transform_work.working)){
+				if(len1 < 100){
+				}else if(Math.sqrt(sx * sx + sy * sy) < 3){
+				}else{
+					_prevent_context_menu = true;
+					_transform_work.working = true;
+					_transform_work.mouse_start = _input_mouse.getPositionClient();
+					_transform_work.origin = ObjectCopy(_image_origin);
+					_transform_work.scale = ObjectCopy(_image_scale);
+					_transform_work.zoom = ObjectCopy(_image_zoom);
+					_transform_work.rotate = ObjectCopy(_image_rotate);
+					_transform_work.pos = ObjectCopy(_image_pos);
+					_transform_work.center = ObjectCopy(_image_center);
+				}
+				return;
+			}
+
+			_image_zoom = _transform_work.zoom;
+			_image_rotate = _transform_work.rotate;
+
+			var r = Math.atan2(v1_y,v1_x) - Math.atan2(v0_y,v0_x);
+			r *= 180 / Math.PI;
+			_image_rotate += r;
+			if(_image_rotate < -180) _image_rotate += 360;
+			if(_image_rotate >  180) _image_rotate -= 360;
+
+			var s = len1 / len0;
+			_image_zoom *= s;
+
+
+			setMessage("Zoom: " + (_image_zoom * 100).toFixed(2) + " % , Rotate: " + _image_rotate.toFixed(2));
+
+			_image_scale.y = _image_scale.x = _image_zoom / _pixel_ratio;
+			var mtx = new Matrix32();
+			mtx.translate(-_image_origin.x,-_image_origin.y);
+			mtx.scale(_image_scale.x,_image_scale.y);
+			mtx.rotate(_image_rotate * Math.PI / 180);
+
+			var vtx = new Array();
+			vtx.push(mtx.transformPosition({x:-_image_origin.x , y:-_image_origin.y}));
+			vtx.push(mtx.transformPosition({x:-_image_origin.x , y: _image_origin.y}));
+			vtx.push(mtx.transformPosition({x: _image_origin.x , y:-_image_origin.y}));
+			vtx.push(mtx.transformPosition({x: _image_origin.x , y: _image_origin.y}));
+
+			var min_x = vtx[0].x;
+			var max_x = vtx[0].x;
+			var min_y = vtx[0].y;
+			var max_y = vtx[0].y;
+
+			var i;
+			var num = vtx.length;
+			for(i=1;i<num;i++){
+				var p = vtx[i];
+				if(min_x > p.x) min_x = p.x;
+				if(max_x < p.x) max_x = p.x;
+				if(min_y > p.y) min_y = p.y;
+				if(max_y < p.y) max_y = p.y;
+			}
+
+			var client_w = _element_window.clientWidth;
+			var client_h = _element_window.clientHeight;
+			var background_w = (client_w * 2) + (max_x - min_x);
+			var background_h = (client_h * 2) + (max_y - min_y);
+
+			_prevent_scroll = true;
+
+			var style = _element_background.style;
+			style.width  = (background_w) + "px";
+			style.height = (background_h) + "px";
+
+			_image_pos = {x:background_w * 0.5,y:background_h * 0.5};
+			mtx.translate(_image_pos.x,_image_pos.y);
+			StyleDeclarationSetTransform(_element_image.style,mtx.toString());
+
+			var vec = mtx.transformPosition(_image_center);
+			_element_window.scrollLeft = vec.x - client_w * 0.5;
+			_element_window.scrollTop  = vec.y - client_h * 0.5;
+
+			var mtx = new Matrix32();
+			mtx.translate(-len0 - 5.0 , -len0 - 5.0);
+			mtx.translate(vec.x,vec.y);
+			StyleDeclarationSetTransform(_element_transform_circle_before.style,mtx.toString());
+			_element_transform_circle_before.style.width  = (len0 * 2.0) + "px";
+			_element_transform_circle_before.style.height = (len0 * 2.0) + "px";
+
+
+			var mtx = new Matrix32();
+			mtx.translate(-2.5 , -2.5);
+			mtx.rotate(rad0);
+			mtx.translate(vec.x,vec.y);
+			StyleDeclarationSetTransform(_element_transform_vector_before.style,mtx.toString());
+			_element_transform_vector_before.style.width  = (len0 + 5.0) + "px";
+
+			var mtx = new Matrix32();
+			mtx.translate(-2.5 , -2.5);
+			mtx.rotate(rad1);
+			mtx.translate(vec.x,vec.y);
+			StyleDeclarationSetTransform(_element_transform_vector_after.style,mtx.toString());
+			_element_transform_vector_after.style.width  = (len1 + 5.0) + "px";
+
+			_element_container.appendChild(_element_transform);
+		}
+
+		// --------------------------------------------------------------------------------
+		// リサイズイベント（内部用）
+		// --------------------------------------------------------------------------------
+		function addScale(delta){
+			var ZOOM_MUL = 0.01;
+			var zoom_old = _image_zoom;
+			if(delta > 0){
+				_image_zoom = (1.0 + delta * ZOOM_MUL) * _image_zoom;
+			}else{
+				_image_zoom = (1.0 / (1.0 - delta * ZOOM_MUL)) * _image_zoom;
+			}
+
+			if(delta > 0){
+				var next = 1.0;
+				while(zoom_old >= 1.0){
+					zoom_old /= 2.0;
+					next *= 2.0;
+				}
+				if(next < _image_zoom){
+					_image_zoom = next;
+				}
+			}else{
+				var next = 0.0;
+				if(zoom_old > 1.0) next = 1.0;
+				while(zoom_old > 2.0){
+					zoom_old /= 2.0;
+					next *= 2.0;
+				}
+				if(next > _image_zoom){
+					_image_zoom = next;
+				}
+			}
+			setMessage("Zoom: " + (_image_zoom * 100).toFixed(2) + " %");
+
+			_image_scale.y = _image_scale.x = _image_zoom / _pixel_ratio;
+			var mtx = new Matrix32();
+			mtx.translate(-_image_origin.x,-_image_origin.y);
+			mtx.scale(_image_scale.x,_image_scale.y);
+			mtx.rotate(_image_rotate * Math.PI / 180);
+
+			var vtx = new Array();
+			vtx.push(mtx.transformPosition({x:-_image_origin.x , y:-_image_origin.y}));
+			vtx.push(mtx.transformPosition({x:-_image_origin.x , y: _image_origin.y}));
+			vtx.push(mtx.transformPosition({x: _image_origin.x , y:-_image_origin.y}));
+			vtx.push(mtx.transformPosition({x: _image_origin.x , y: _image_origin.y}));
+
+			var min_x = vtx[0].x;
+			var max_x = vtx[0].x;
+			var min_y = vtx[0].y;
+			var max_y = vtx[0].y;
+
+			var i;
+			var num = vtx.length;
+			for(i=1;i<num;i++){
+				var p = vtx[i];
+				if(min_x > p.x) min_x = p.x;
+				if(max_x < p.x) max_x = p.x;
+				if(min_y > p.y) min_y = p.y;
+				if(max_y < p.y) max_y = p.y;
+			}
+
+			var client_w = _element_window.clientWidth;
+			var client_h = _element_window.clientHeight;
+			var background_w = (client_w * 2) + (max_x - min_x);
+			var background_h = (client_h * 2) + (max_y - min_y);
+
+			_prevent_scroll = true;
+
+			var style = _element_background.style;
+			style.width  = (background_w) + "px";
+			style.height = (background_h) + "px";
+
+			_image_pos = {x:background_w * 0.5,y:background_h * 0.5};
+			mtx.translate(_image_pos.x,_image_pos.y);
+			StyleDeclarationSetTransform(_element_image.style,mtx.toString());
+
+			var vec = mtx.transformPosition(_image_center);
+			_element_window.scrollLeft = vec.x - client_w * 0.5;
+			_element_window.scrollTop  = vec.y - client_h * 0.5;
+		}
+
+		// --------------------------------------------------------------------------------
+		// メッセージをセット（内部用）
+		// --------------------------------------------------------------------------------
+		function setMessage(str){
+			if(!_parent_task) return;
+
+			if(_message_task){
+				_message_task.release();
+			}
+
+			_textnode_message.nodeValue = str;
+			_element_viewer.appendChild(_element_message);
+
+			// フェードタスク
+			var frame = 60 * 3;
+			_message_task = task_container.createTask(_parent_task);
+			_message_task.setDestructorFunc(function(){
+				_message_task = null;
+			});
+			_message_task.setExecuteFunc(function(){
+				var alpha = _message_alpha;
+				frame -= 1;
+				if(frame < 0){
+					_message_alpha -= 0.1;
+					if(_message_alpha < 0.0){
+						_message_alpha = 0.0;
+						_message_task.release();
+						DomNodeRemove(_element_message);
+					}
+				}else{
+					_message_alpha += 0.2;
+					if(_message_alpha > 1.0){
+						_message_alpha = 1.0;
+					}
+				}
+				if(alpha != _message_alpha){
+					_element_message.style.opacity = _message_alpha;
+				}
+			});
+			_message_task.execute(0xffffffff);
+		}
+
+		// --------------------------------------------------------------------------------
+		// カーソルを初期化（内部用）
+		// --------------------------------------------------------------------------------
+		function initCursor(){
+			_element_container.style.cursor = "default";
+			if(_cursor_task){
+				_cursor_task.release();
+			}
+
+			if(_parent_task){
+				var frame = 60 * 1;
+				_cursor_task = task_container.createTask(_parent_task);
+				_cursor_task.setDestructorFunc(function(){
+					_cursor_task = null;
+				});
+				_cursor_task.setExecuteFunc(function(){
+					frame -= 1;
+					if(frame < 0){
+						_element_container.style.cursor = "none";
+						_cursor_task.release();
+					}
+				});
+				_cursor_task.execute(0xffffffff);
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// カーソルを変更（内部用）
+		// --------------------------------------------------------------------------------
+		function setCursor(value){
+			_element_container.style.cursor = value;
+			if(_cursor_task){
+				_cursor_task.release();
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// 画像移動（内部用）
+		// --------------------------------------------------------------------------------
+		function gotoImage(delta){
+			var popup_image = null;
+			if(delta > 0) popup_image = popup_image_container.getNext(_popup_image);
+			if(delta < 0) popup_image = popup_image_container.getPrev(_popup_image);
+			if(popup_image){
+				_popup_image = popup_image;
+				updateImage(_popup_image);
+			}
+
+			setMessage((popup_image_container.getIndex(_popup_image) + 1) + " / " + popup_image_container.getCount());
+		}
+
+		// --------------------------------------------------------------------------------
+		// スケールモード移動（内部用）
+		// --------------------------------------------------------------------------------
+		function gotoScaleMode(delta){
+			_scale_mode += delta;
+			if(_scale_mode < 0){
+				_scale_mode += ImageViewer.SCALE_MODE_MAX;
+			}
+			if(_scale_mode >= ImageViewer.SCALE_MODE_MAX){
+				_scale_mode -= ImageViewer.SCALE_MODE_MAX;
+			}
+
+			setMessage("ScaleMode: " + [
+				"\"AUTO\"",
+				"\"NO SCALE\"",
+				"\"LONG VERTICAL\"",
+				"\"SHOW ALL\"",
+				"\"SHOW FULL\""
+			][_scale_mode]);
+
+			updateScaleMode();
+		}
+
+		// --------------------------------------------------------------------------------
+		// プライベート変数
+		// --------------------------------------------------------------------------------
+		var _element_root;
+		var _element_viewer;
+		var _element_menu;
+		var _element_window;
+		var _element_message;
+		var _element_container;
+		var _element_background;
+		var _element_image;
+		var _element_transform;
+		var _element_transform_circle_before;
+		var _element_transform_vector_before;
+		var _element_transform_vector_after;
+		var _textnode_url;
+		var _textnode_message;
+		var _popup_image;
+		var _style_overflow_list;
+		var _prevent_context_menu;
+		var _prevent_click;
+		var _prevent_scroll;
+		var _parent_task;
+		var _fade_task;
+		var _fade_alpha;
+		var _message_task;
+		var _message_alpha;
+		var _cursor_task;
+		var _observer_remove;
+		var _analyze_work_viewer;
+		var _analyze_work_image;
+		var _input_mouse;
+		var _scale_mode;
+		var _image_origin;
+		var _image_scale;
+		var _image_zoom;
+		var _image_rotate;
+		var _image_pos;
+		var _image_center;
+		var _mouse_buttons;
+		var _translate_work;
+		var _transform_work;
+		var _pixel_ratio;
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		(function(){
+			var document_root = page_expand_root.getWindow().document;
+			var element_html = document_root.documentElement;
+			_element_root = document_root.body;
+			_prevent_context_menu = input_mouse.getButtonRight();
+			_prevent_click = input_mouse.getButtonLeft();
+			_prevent_scroll = false;
+			_input_mouse = page_expand_root.getInputMouse();
+			_scale_mode = ImageViewer.SCALE_MODE_AUTO;
+			_image_origin = {x:0.0,y:0.0};
+			_image_scale = {x:1.0,y:1.0};
+			_image_zoom = 1.0;
+			_image_rotate = 0.0;
+			_image_pos = {x:0.0,y:0.0};
+			_image_center = {x:0.0,y:0.0};
+			_mouse_buttons = 0x00;
+			_translate_work = new Object();
+			_transform_work = new Object();
+			_pixel_ratio = WindowGetDevicePixelRatio(window);
+
+			_popup_image = popup_image;
+			popup_image = null;
+
+			// スクロールバー無効化
+			_style_overflow_list = new Array();
+			var list = [
+				{
+					element:element_html,
+					value_list:["hidden","initial"]
+				},{
+					element:_element_root,
+					value_list:["hidden"]
+				}
+			];
+			var i;
+			var num = list.length;
+			for(i=0;i<num;i++){
+				var item = list[i];
+				var value_list = item.value_list;
+				var element = item.element;
+				var style = element.style;
+
+				_style_overflow_list.push({
+					element:element,
+					value:StyleDeclarationGetPropertyValue(style,"overflow")
+				});
+
+				var j;
+				var value_num = value_list.length;
+				for(j=0;j<value_num;j++){
+					style.overflow = value_list[j];
+				}
+			}
+
+			_element_viewer = DocumentCreateElement("div");
+			ElementSetStyle(_element_viewer,CSSTextGetInitialDivElement());
+			ElementAddStyle(_element_viewer,"position:fixed; left:0px; top:0px; z-index:2147483646; line-height:0;");
+			var client_size = DocumentGetClientSize(document_root);
+			var style = _element_viewer.style;
+			style.width  = (client_size.width)  + "px";
+			style.height = (client_size.height) + "px";
+
+				_element_menu = DocumentCreateElement("div");
+				ElementSetStyle(_element_menu,CSSTextGetInitialDivElement());
+				ElementAddStyle(_element_menu,"background:#fcfcfc; color:#000; font-size:14px; top:10px; right:30px; line-height:1; position:absolute; border-radius:10px; box-shadow:0px 0px 5px #c0c0c0;");
+
+					var style_button = "margin:0px; padding:0px; font-size:12px; font-weight:bold; text-align:center; width:24px; height:24px; display:inline-block;";
+					var style_button_image = "vertical-align:top; margin:0px -6px;";
+
+					var button_prev = DocumentCreateElement("button");
+					button_prev.title = "prev image";
+					ElementSetStyle(button_prev,CSSTextGetInitialButtonElement());
+					ElementAddStyle(button_prev,style_button);
+					button_prev.onclick = function(){
+						gotoImage(-1);
+					};
+					var image_prev = DocumentCreateElement("img");
+					ElementSetStyle(image_prev,CSSTextGetInitialImageElement());
+					ElementAddStyle(image_prev,style_button_image);
+					image_prev.src = "data:image/gif;base64,R0lGODlhEAAQAIAAACAgIP///yH5BAUUAAEALAAAAAAQABAAAAIjjI+py50AVzwQvIqwqXpHzmXgKI4h9ZklenpW+bpS7NT2HRQAOw==";
+					button_prev.appendChild(image_prev);
+
+					var button_next = DocumentCreateElement("button");
+					button_next.title = "next image";
+					ElementSetStyle(button_next,CSSTextGetInitialButtonElement());
+					ElementAddStyle(button_next,style_button);
+					button_next.onclick = function(){
+						gotoImage(1);
+					};
+					var image_next = DocumentCreateElement("img");
+					ElementSetStyle(image_next,CSSTextGetInitialImageElement());
+					ElementAddStyle(image_next,style_button_image);
+					image_next.src = "data:image/gif;base64,R0lGODlhEAAQAIAAACAgIP///yH5BAUUAAEALAAAAAAQABAAAAIljI+py50AFoxn0gqRzWbqnXkYaH2k2JEBum6jeaUx99DOjedBAQA7";
+					button_next.appendChild(image_next);
+
+					var button_zoom_out = DocumentCreateElement("button");
+					button_zoom_out.title = "zoom out";
+					ElementSetStyle(button_zoom_out,CSSTextGetInitialButtonElement());
+					ElementAddStyle(button_zoom_out,style_button);
+					button_zoom_out.onclick = function(){
+						addScale(-10.0);
+					};
+					var image_zoom_out = DocumentCreateElement("img");
+					ElementSetStyle(image_zoom_out,CSSTextGetInitialImageElement());
+					ElementAddStyle(image_zoom_out,style_button_image);
+					image_zoom_out.src = "data:image/gif;base64,R0lGODlhEAAQAIAAACAgIP///yH5BAUUAAEALAAAAAAQABAAAAIXjI+py+0P4wK0WoquBnnb7mHSSJZmWQAAOw==";
+					button_zoom_out.appendChild(image_zoom_out);
+
+					var button_zoom_in = DocumentCreateElement("button");
+					button_zoom_in.title = "zoom in";
+					ElementSetStyle(button_zoom_in,CSSTextGetInitialButtonElement());
+					ElementAddStyle(button_zoom_in,style_button);
+					button_zoom_in.onclick = function(){
+						addScale( 10.0);
+					};
+					var image_zoom_in = DocumentCreateElement("img");
+					ElementSetStyle(image_zoom_in,CSSTextGetInitialImageElement());
+					ElementAddStyle(image_zoom_in,style_button_image);
+					image_zoom_in.src = "data:image/gif;base64,R0lGODlhEAAQAIAAACAgIP///yH5BAUUAAEALAAAAAAQABAAAAIfjI+pywYP2oFRBmovZLTv6XVIKILkw30SZrGrmsVSAQA7";
+					button_zoom_in.appendChild(image_zoom_in);
+
+					var button_scale_mode = DocumentCreateElement("button");
+					button_scale_mode.title = "change scale mode";
+					ElementSetStyle(button_scale_mode,CSSTextGetInitialButtonElement());
+					ElementAddStyle(button_scale_mode,style_button);
+					button_scale_mode.onclick = function(){
+						gotoScaleMode(1);
+					};
+					var image_scale_mode = DocumentCreateElement("img");
+					ElementSetStyle(image_scale_mode,CSSTextGetInitialImageElement());
+					ElementAddStyle(image_scale_mode,style_button_image);
+					image_scale_mode.src = "data:image/gif;base64,R0lGODlhEAAQAIAAACAgIP///yH5BAUUAAEALAAAAAAQABAAAAIshI9pwe2+EDwhrkftZTLWm33Q2GzPaZ4Tya3A98KVKJXZS2EWHHO3qlIIEQUAOw==";
+					button_scale_mode.appendChild(image_scale_mode);
+
+					var button_download = DocumentCreateElement("button");
+					button_download.title = "download";
+					ElementSetStyle(button_download,CSSTextGetInitialButtonElement());
+					ElementAddStyle(button_download,style_button);
+					button_download.onclick = function(){
+						setMessage("Loading...");
+						var image = _popup_image.getImage();
+						var downloader = new Downloader();
+						downloader.setURL(_popup_image.getOriginalURL());
+						downloader.setFileName(_popup_image.getOriginalURL());
+						downloader.setSaveAs(false);
+						downloader.oncomplete = function(result){
+							if(result){
+								setMessage("Download: \"success\"");
+							}else{
+								setMessage("Download: \"failure\"");
+							}
+						}
+						downloader.start();
+					};
+					var image_download = DocumentCreateElement("img");
+					ElementSetStyle(image_download,CSSTextGetInitialImageElement());
+					ElementAddStyle(image_download,style_button_image);
+					image_download.src = "data:image/gif;base64,R0lGODlhEAAQAIAAACAgIP///yH5BAUUAAEALAAAAAAQABAAAAIgjA8Jx63b4otSUWcvyjpM+oScIX6YqKGduULdW8ZyXAAAOw==";
+					button_download.appendChild(image_download);
+
+					var button_scroll = DocumentCreateElement("button");
+					button_scroll.title = "close and scroll";
+					ElementSetStyle(button_scroll,CSSTextGetInitialButtonElement());
+					ElementAddStyle(button_scroll,style_button);
+					button_scroll.onclick = function(){
+						suicide();
+						var anchor = _popup_image.getElementAnchor();
+						anchor.scrollIntoView();
+					};
+					var image_scroll = DocumentCreateElement("img");
+					ElementSetStyle(image_scroll,CSSTextGetInitialImageElement());
+					ElementAddStyle(image_scroll,style_button_image);
+					image_scroll.src = "data:image/gif;base64,R0lGODlhEAAQAIAAACAgIP///yH5BAUUAAEALAAAAAAQABAAAAIwRBypatDr4HnJxTpPtbc9zmkRMl0iVZKetpmrajEZ7M5MjI1p+LZ475PpbpLholgAADs=";
+					button_scroll.appendChild(image_scroll);
+
+					var button_close = DocumentCreateElement("button");
+					button_close.title = "close";
+					ElementSetStyle(button_close,CSSTextGetInitialButtonElement());
+					ElementAddStyle(button_close,style_button);
+					button_close.onclick = function(){
+						suicide();
+					};
+					var image_close = DocumentCreateElement("img");
+					ElementSetStyle(image_close,CSSTextGetInitialImageElement());
+					ElementAddStyle(image_close,style_button_image);
+					image_close.src = "data:image/gif;base64,R0lGODlhEAAQAIAAACAgIP///yH5BAUUAAEALAAAAAAQABAAAAIgjI+py50AFQQvnrlw0Hna5jlG6HifZHGIqm7n+Iry3BQAOw==";
+					button_close.appendChild(image_close);
+
+				_element_window = DocumentCreateElement("div");
+				ElementSetStyle(_element_window,CSSTextGetInitialDivElement());
+				ElementAddStyle(_element_window,"position:absolute; left:0px; top:0px; right:0px; bottom:0px; overflow:scroll; line-height:0; user-select:none; -webkit-user-select:none; -moz-user-select:none; -khtml-user-select:none;");
+
+					_element_container = DocumentCreateElement("div");
+					ElementSetStyle(_element_container,CSSTextGetInitialDivElement());
+					initCursor();
+
+						_element_background = DocumentCreateElement("div");
+						ElementSetStyle(_element_background,CSSTextGetInitialDivElement());
+						ElementAddStyle(_element_background,"background:#000; opacity:0.9; width:0px; height:0px; position:absolute; cursor:inherit;");
+
+				_element_message = DocumentCreateElement("div");
+				ElementSetStyle(_element_message,CSSTextGetInitialDivElement());
+				ElementAddStyle(_element_message,"background:#fcfcfc; color:#000; font-size:14px; top:10px; left:10px; line-height:1; position:absolute; padding:5px 10px; border-radius:10px; box-shadow:0px 0px 5px #c0c0c0;");
+				_textnode_message = document.createTextNode("");
+				_element_message.appendChild(_textnode_message);
+				_message_alpha = 0.0;
+
+			// リムーブ監視
+			_observer_remove = new DomNodeObserverRemoveFromDocument(_element_viewer);
+			_observer_remove.setFunction(_this.release);
+
+			// 解析ワーク作成
+			_analyze_work_viewer = AnalyzeWorkCreate(_element_viewer);
+
+			// 解析済み
+			AnalyzeWorkSetInvalid(_analyze_work_viewer);
+
+			// 解析辞書登録オプション
+			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+			attach_options.SetOutsider();
+			if(window_manager.existWindowRoot()) attach_options.SetGuest();
+			analyze_work_dictionary.attachAnalyzeWork(_analyze_work_viewer,attach_options);
+
+			// ノードリスト登録
+			_element_viewer.appendChild(_element_window);
+			_element_window.appendChild(_element_container);
+			_element_container.appendChild(_element_background);
+			_element_root.appendChild(_element_viewer);
+
+			addEvent();
+
+			_element_transform = DocumentCreateElement("div");
+			ElementSetStyle(_element_transform,CSSTextGetInitialDivElement());
+			ElementAddStyle(_element_transform,"cursor:inherit; opacity:0.25;");
+
+			_element_transform_circle_before = DocumentCreateElement("div");
+			ElementSetStyle(_element_transform_circle_before,CSSTextGetInitialDivElement());
+			ElementAddStyle(_element_transform_circle_before,"position:absolute; left:0px; top:0px; cursor:inherit; background:#FFF; border-radius:50%; border:5px dotted #444;");
+			StyleDeclarationSetTransformOrigin(_element_transform_circle_before.style,"0% 0%");
+
+			_element_transform_vector_before = DocumentCreateElement("div");
+			ElementSetStyle(_element_transform_vector_before,CSSTextGetInitialDivElement());
+			ElementAddStyle(_element_transform_vector_before,"position:absolute; left:0px; top:0px; cursor:inherit; height:3px; background:#F88; border:1px solid #800; border-radius:2.5px;");
+			StyleDeclarationSetTransformOrigin(_element_transform_vector_before.style,"0% 0%");
+
+			_element_transform_vector_after = DocumentCreateElement("div");
+			ElementSetStyle(_element_transform_vector_after,CSSTextGetInitialDivElement());
+			ElementAddStyle(_element_transform_vector_after,"position:absolute; left:0px; top:0px; cursor:inherit; height:3px; background:#88F; border:1px solid #008; border-radius:2.5px;");
+			StyleDeclarationSetTransformOrigin(_element_transform_vector_after.style,"0% 0%");
+
+			_element_transform.appendChild(_element_transform_circle_before);
+			_element_transform.appendChild(_element_transform_vector_before);
+			_element_transform.appendChild(_element_transform_vector_after);
+
+			// 画像更新
+			updateImage(_popup_image);
+
+			(function(){
+
+				// メニュー更新
+				function updateMenu(type){
+					menu_type = type;
+					var style = _element_menu.style;
+					var list;
+					switch(menu_type){
+					case ImageViewer.MENU_TYPE_HORIZONTAL:
+						list = menu_horizontal_list;
+						style.width = "auto";
+						style.padding = "4px 10px";
+						break;
+					case ImageViewer.MENU_TYPE_VERTICAL:
+						list = menu_vertical_list;
+						style.width = "24px";
+						style.padding = "10px 4px";
+						break;
+					}
+
+					var i;
+					var num = list.length;
+					for(i=0;i<num;i++){
+						_element_menu.appendChild(list[i]);
+					}
+				}
+
+				function MenuTaskHideInit(task){
+					DomNodeRemove(_element_menu);
+					task.setExecuteFunc(MenuTaskHideExec);
+					task.execute(0xffffffff);
+				}
+				function MenuTaskHideExec(task){
+					var client_w = _element_window.clientWidth;
+					var pos = _input_mouse.getPositionClient();
+					if(pos.y <= MENU_WIDTH){
+						updateMenu(ImageViewer.MENU_TYPE_HORIZONTAL);
+						task.setExecuteFunc(MenuTaskFadeInInit);
+					}else if(pos.x >= client_w - MENU_WIDTH){
+						updateMenu(ImageViewer.MENU_TYPE_VERTICAL);
+						task.setExecuteFunc(MenuTaskFadeInInit);
+					}
+				}
+
+				function MenuTaskFadeInInit(task){
+					_element_viewer.appendChild(_element_menu);
+					task.setExecuteFunc(MenuTaskFadeInExec);
+					task.execute(0xffffffff);
+				}
+				function MenuTaskFadeInExec(task){
+					menu_alpha += 0.2;
+					if(menu_alpha > 1.0){
+						menu_alpha = 1.0;
+						task.setExecuteFunc(MenuTaskShowInit);
+					}
+					_element_menu.style.opacity = menu_alpha;
+				}
+
+				function MenuTaskShowInit(task){
+					task.setExecuteFunc(MenuTaskShowExec);
+					task.execute(0xffffffff);
+				}
+				function MenuTaskShowExec(task){
+					var client_w = _element_window.clientWidth;
+					var pos = _input_mouse.getPositionClient();
+					if(menu_type == ImageViewer.MENU_TYPE_HORIZONTAL){
+						if(pos.y > MENU_WIDTH){
+							task.setExecuteFunc(MenuTaskWaitInit);
+						}
+					}
+					if(menu_type == ImageViewer.MENU_TYPE_VERTICAL){
+						if(pos.x < client_w - MENU_WIDTH){
+							task.setExecuteFunc(MenuTaskWaitInit);
+						}
+					}
+				};
+
+				function MenuTaskWaitInit(task){
+					var work = task.getUserWork();
+					work.frame = 60 * 0;
+					task.setExecuteFunc(MenuTaskWaitExec);
+					task.execute(0xffffffff);
+				}
+				function MenuTaskWaitExec(task){
+					var work = task.getUserWork();
+					work.frame -= 1;
+					if(work.frame < 0){
+						task.setExecuteFunc(MenuTaskFadeOutInit);
+					}
+				}
+
+				function MenuTaskFadeOutInit(task){
+					task.setExecuteFunc(MenuTaskFadeOutExec);
+					task.execute(0xffffffff);
+				}
+				function MenuTaskFadeOutExec(task){
+					menu_alpha -= 0.1;
+					if(menu_alpha < 0.0){
+						menu_alpha = 0.0;
+						task.setExecuteFunc(MenuTaskHideInit);
+					}
+					_element_menu.style.opacity = menu_alpha;
+				}
+
+				var MENU_WIDTH = 50;
+				var menu_type;
+				var menu_alpha = 1.0;
+
+				var menu_horizontal_list = [
+					button_prev,
+					button_next,
+					button_zoom_out,
+					button_zoom_in,
+					button_scale_mode,
+					button_download,
+					button_scroll,
+					button_close
+				];
+				var menu_vertical_list = [
+					button_close,
+					button_scroll,
+					button_download,
+					button_scale_mode,
+					button_zoom_in,
+					button_zoom_out,
+					button_prev,
+					button_next
+				];
+
+				updateMenu(ImageViewer.MENU_TYPE_HORIZONTAL);
+				_element_viewer.appendChild(_element_menu);
+
+				function mouseOver(){
+					if(_element_menu.removeEventListener){
+						_element_menu.removeEventListener("mouseover",mouseOver,false);
+					}else if(_element_menu.detachEvent){
+						_element_menu.detachEvent("onmouseover",mouseOver);
+					}
+
+					if(_parent_task){
+						var menu_task = task_container.createTask(_parent_task);
+						menu_task.setDestructorFunc(function(){
+							menu_task = null;
+						});
+						menu_task.setExecuteFunc(MenuTaskFadeInInit);
+						menu_task.execute(0xffffffff);
+					}
+				}
+
+				if(_element_menu.addEventListener){
+					_element_menu.addEventListener("mouseover",mouseOver,false);
+				}else if(_element_menu.attachEvent){
+					_element_menu.attachEvent("onmouseover",mouseOver);
+				}
+			})();
+
+			(function(){
+				// 親タスク
+				_parent_task = task_container.createTask();
+				_parent_task.setDestructorFunc(function(){
+					_parent_task = null;
+				});
+
+				// フェードインタスク
+				_fade_alpha = 0.0;
+				_fade_task = task_container.createTask(_parent_task);
+				_fade_task.setDestructorFunc(function(){
+					_fade_task = null;
+				});
+				_fade_task.setExecuteFunc(function(){
+					_fade_alpha += 0.2;
+					if(_fade_alpha > 1.0){
+						_fade_alpha = 1.0;
+						_fade_task.release();
+					}
+					_element_viewer.style.opacity = _fade_alpha;
+				});
+				_fade_task.execute(0xffffffff);
+
+				task_execute_level &= ~TASK_EXECUTE_LEVEL_POPUP;
+			})();
+		})();
+	}
+
+	// --------------------------------------------------------------------------------
+	// イメージビューワ定数
+	// --------------------------------------------------------------------------------
+	ImageViewer.SCALE_MODE_AUTO			 = 0;
+	ImageViewer.SCALE_MODE_NO_SCALE		 = 1;
+	ImageViewer.SCALE_MODE_LONG_VERTICAL = 2;
+	ImageViewer.SCALE_MODE_SHOW_ALL		 = 3;
+	ImageViewer.SCALE_MODE_SHOW_FULL	 = 4;
+	ImageViewer.SCALE_MODE_MAX			 = 5;
+	ImageViewer.MENU_TYPE_HORIZONTAL	 = 0;
+	ImageViewer.MENU_TYPE_VERTICAL		 = 1;
+
 
 	// --------------------------------------------------------------------------------
 	// ダウンロード進捗
@@ -48213,7 +49836,7 @@
 				message: "インポートを行う前に、エクスポート機能でバックアップを取ることをお勧めします。"
 			},
 			menu_setting_standard_import_dialog_explanation_2: {
-				message: "信頼の無い人物が作成した設定データを、絶対にインポートしないで下さい。悪意のあるコードが含まれる恐れがあります。"
+				message: "信頼の無い人物が作成した設定データを、絶対にインポートしないで下さい。悪意のあるスクリプトが含まれる恐れがあります。"
 			},
 			menu_setting_standard_import_dialog_import: {
 				message: "インポート"
@@ -48443,7 +50066,7 @@
 				message: "インポートを行う前に、基本設定のエクスポート機能でバックアップを取ることをお勧めします。"
 			},
 			menu_setting_expand_bbs_import_dialog_explanation_2: {
-				message: "信頼の無い人物が作成した設定データを、絶対にインポートしないで下さい。悪意のあるコードが含まれる恐れがあります。"
+				message: "信頼の無い人物が作成した設定データを、絶対にインポートしないで下さい。悪意のあるスクリプトが含まれる恐れがあります。"
 			},
 			menu_setting_expand_bbs_import_dialog_import: {
 				message: "インポート"
@@ -49316,7 +50939,7 @@
 				message: "インポートを行う前に、基本設定のエクスポート機能でバックアップを取ることをお勧めします。"
 			},
 			menu_setting_define_import_dialog_explanation_2: {
-				message: "信頼の無い人物が作成した設定データを、絶対にインポートしないで下さい。悪意のあるコードが含まれる恐れがあります。"
+				message: "信頼の無い人物が作成した設定データを、絶対にインポートしないで下さい。悪意のあるスクリプトが含まれる恐れがあります。"
 			},
 			menu_setting_define_import_dialog_import: {
 				message: "インポート"
@@ -49406,7 +51029,7 @@
 				message: "インポートを行う前に、基本設定のエクスポート機能でバックアップを取ることをお勧めします。"
 			},
 			menu_setting_filter_import_dialog_explanation_2: {
-				message: "信頼の無い人物が作成した設定データを、絶対にインポートしないで下さい。悪意のあるコードが含まれる恐れがあります。"
+				message: "信頼の無い人物が作成した設定データを、絶対にインポートしないで下さい。悪意のあるスクリプトが含まれる恐れがあります。"
 			},
 			menu_setting_filter_import_dialog_import: {
 				message: "インポート"
@@ -49436,7 +51059,7 @@
 				message: "キャンセル"
 			},
 			menu_scriptarea_hint: {
-				message: "配列に格納して匿名関数を記述します。信頼の無い人物が作成したスクリプトを、絶対に書き込まないで下さい。悪意のあるコードが含まれる恐れがあります。"
+				message: "配列に格納して匿名関数を記述します。信頼の無い人物が作成したスクリプトを、絶対に書き込まないで下さい。悪意のあるスクリプトが含まれる恐れがあります。"
 			},
 			menu_text_regexp_hint: {
 				message: "正規表現文字列を記述。[オプション] g…繰り返し処理、i…小文字と大文字を区別しない"
@@ -49481,7 +51104,10 @@
 				message: "現在の掲示板の設定を編集"
 			},
 			context_menu_pageexpand_config_current_page_confirm: {
-				message: "PageExpand 設定は規定のページ内でしか動作しません。（Web ページ側から悪意のあるコードが埋め込まれるのを防ぐため）\n以下の規定ページを開きますか？\n\n"
+				message: "PageExpand 設定は、規定のページ内でしか動作しません。\n（Web ページ側から悪意のあるスクリプトが注入されるのを防ぐためです）\n\n以下のページを開きますか？\n"
+			},
+			context_menu_pageexpand_config_auto_run_confirm: {
+				message: "このページ内で PageExpand 設定を実行しますか？\n（もしこのページが汚染されている場合、悪意のあるスクリプトが注入されます）\n\n"
 			},
 			context_menu_pageexpand_execute: {
 				message: "PageExpand の実行"
@@ -50853,7 +52479,10 @@
 				message: "PageExpand Setting Current BBS"
 			},
 			context_menu_pageexpand_config_current_page_confirm: {
-				message: "PageExpand Setting will only work in the page of the provision. (for security)\nDo you want to open page?\n\n"
+				message: "PageExpand Setting will run only in the following page. \n(The purpose is to prevent from being injected the malicious script)\n\nDo you want to open the following page?\n"
+			},
+			context_menu_pageexpand_config_auto_run_confirm: {
+				message: "Do you want to run the PageExpand Setting in this page?\n(If this page is contaminated, then the malicious script will be injected)"
 			},
 			context_menu_pageexpand_execute: {
 				message: "Execute PageExpand"
@@ -52942,9 +54571,9 @@
 				var anchor = DocumentCreateElement("a");
 				if(anchor.download !== undefined){
 
-					var anchor_download = function (url){
+					var anchor_download = function (data_url){
 						anchor.target = "PageExpandDownload";
-						anchor.href = str;
+						anchor.href = data_url;
 						anchor.download = _this._file_name;
 						document.body.appendChild(anchor);
 						anchor.click();
@@ -52954,7 +54583,7 @@
 						callback(true);
 					};
 
-					if(_this._url.search(new RegExp("(data|blob):",i)) >= 0){
+					if(_this._url.search(new RegExp("^(data|blob):","i")) >= 0){
 						anchor_download(_this._url);
 						return;
 					}else{
@@ -53295,26 +54924,26 @@
 					}
 
 					// --------------------------------------------------------------------------------
-					// 日付を出力
+					// 時刻を出力
 					// --------------------------------------------------------------------------------
 					function writeLastModFileTime(item){
 						var date_obj = item.date;
 						var v = 
 							((date_obj.getHours()        & 0x1f) << 11) |
-							((date_obj.getMinutes()      & 0x2f) <<  5) |
+							((date_obj.getMinutes()      & 0x3f) <<  5) |
 							(Math.round(date_obj.getSeconds() / 2) & 0x1f);
 						data_view.setUint16(pos , v , little_endian);
 						pos += 2;
 					}
 
 					// --------------------------------------------------------------------------------
-					// 時刻を出力
+					// 日付を出力
 					// --------------------------------------------------------------------------------
 					function writeLastModFileDate(item){
 						var date_obj = item.date;
 						var v = 
 							(((date_obj.getFullYear() - 1980)   & 0x7f) <<  9) |
-							((date_obj.getMonth() & 0x0f) <<  5) |
+							(((date_obj.getMonth() + 1) & 0x0f) <<  5) |
 							( date_obj.getDate()  & 0x1f);
 						data_view.setUint16(pos , v , little_endian);
 						pos += 2;
@@ -55659,7 +57288,7 @@
 		// --------------------------------------------------------------------------------
 		_this.setInputTouch = function(input_touch){
 			if(!input_touch.getEnableTouch()){
-				_button = false;
+				_buttons = 0x00;
 			}
 
 			_pos_client = input_touch.getPositionAverage();
@@ -55675,15 +57304,43 @@
 		// --------------------------------------------------------------------------------
 		// ボタンの押下状態を取得
 		// --------------------------------------------------------------------------------
-		_this.getButtonLeft = function(){
-			return _button;
+		_this.getButtons = function(){
+			return _buttons;
 		};
 
 		// --------------------------------------------------------------------------------
-		// シフトキーの押下状態を取得
+		// 左ボタンの押下状態を取得
+		// --------------------------------------------------------------------------------
+		_this.getButtonLeft = function(){
+			return (_buttons & 0x01) ? true:false;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 右ボタンの押下状態を取得
+		// --------------------------------------------------------------------------------
+		_this.getButtonRight = function(){
+			return (_buttons & 0x02) ? true:false;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 中央ボタンの押下状態を取得
+		// --------------------------------------------------------------------------------
+		_this.getButtonCenter = function(){
+			return (_buttons & 0x04) ? true:false;
+		};
+
+		// --------------------------------------------------------------------------------
+		// Shift キーの押下状態を取得
 		// --------------------------------------------------------------------------------
 		_this.getKeyShift = function(){
 			return _key_shift;
+		};
+
+		// --------------------------------------------------------------------------------
+		// Ctrl キーの押下状態を取得
+		// --------------------------------------------------------------------------------
+		_this.getKeyCtrl = function(){
+			return _key_ctrl;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -55694,23 +57351,11 @@
 		};
 
 		// --------------------------------------------------------------------------------
-		// マウス入力移動（内部用）
-		// --------------------------------------------------------------------------------
-		function mouse_input_func(e){
-			if(e.buttons !== undefined){
-				_button = (e.buttons > 0);
-			}
-			_pos_client.x = e.clientX;
-			_pos_client.y = e.clientY;
-			_key_shift = e.shiftKey;
-		}
-
-		// --------------------------------------------------------------------------------
 		// マウス移動（内部用）
 		// --------------------------------------------------------------------------------
 		function mouse_move_func(e){
 			_enable_mouse = true;
-			mouse_input_func(e);
+			_mouse_input_func(e,false);
 		}
 
 		// --------------------------------------------------------------------------------
@@ -55723,47 +57368,42 @@
 			if(e.clientY < 0) _enable_mouse = false;
 			if(e.clientX >= client_size.width ) _enable_mouse = false;
 			if(e.clientY >= client_size.height) _enable_mouse = false;
-			mouse_input_func(e);
+			_mouse_input_func(e,false);
 		}
 
 		// --------------------------------------------------------------------------------
 		// マウスボタンダウン（内部用）
 		// --------------------------------------------------------------------------------
 		function mouse_down_func(e){
-			var enable = false;
-
-			enable = true;
-
-			if(enable){
-				_button = true;
-			}
-			mouse_input_func(e);
+			_mouse_input_func(e,false);
 		}
 
 		// --------------------------------------------------------------------------------
 		// マウスボタンアップ（内部用）
 		// --------------------------------------------------------------------------------
 		function mouse_up_func(e){
-			_button = false;
-			mouse_input_func(e);
+			_mouse_input_func(e,true);
 		}
 
 		// --------------------------------------------------------------------------------
 		// 非アクティブ（内部用）
 		// --------------------------------------------------------------------------------
 		function blur_func(e){
-			_button = false;
+			_buttons = 0x00;
 			_key_shift = false;
-			_enable_mouse = false;
+			_key_ctrl = false;
+			//_enable_mouse = false;
 		}
 
 		// --------------------------------------------------------------------------------
 		// プライベート変数
 		// --------------------------------------------------------------------------------
 		var _pos_client;
-		var _button;
+		var _buttons;
 		var _key_shift;
+		var _key_ctrl;
 		var _enable_mouse;
+		var _mouse_input_func;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
@@ -55772,7 +57412,9 @@
 			_pos_client = new Object();
 			_pos_client.x = -1;
 			_pos_client.y = -1;
-			_button = false;
+			_buttons = 0x00;
+			_key_shift = false;
+			_key_ctrl = false;
 			_enable_mouse = false;
 
 			if(document.addEventListener){
@@ -55781,12 +57423,42 @@
 				document.addEventListener("mousedown",mouse_down_func,true);
 				document.addEventListener("mouseup",mouse_up_func,true);
 				window.addEventListener("blur",blur_func);
+				_mouse_input_func = function(e,r){
+					if(e.buttons !== undefined){
+						_buttons = e.buttons;
+					}
+					if(e.type == "mousedown"){
+						if(e.button == 0) _buttons |=  0x01;
+						if(e.button == 1) _buttons |=  0x04;
+						if(e.button == 2) _buttons |=  0x02;
+					}else if(e.type == "mouseup"){
+						if(e.button == 0) _buttons &= ~0x01;
+						if(e.button == 1) _buttons &= ~0x04;
+						if(e.button == 2) _buttons &= ~0x02;
+					}
+
+					_pos_client.x = e.clientX;
+					_pos_client.y = e.clientY;
+					_key_shift = e.shiftKey;
+					_key_ctrl = e.ctrlKey;
+				};
 			}else if(document.attachEvent){
 				document.attachEvent("onmousemove",mouse_move_func);
 				document.attachEvent("onmouseout",mouse_out_func,true);
 				document.attachEvent("onmousedown",mouse_down_func);
 				document.attachEvent("onmouseup",mouse_up_func);
 				window.attachEvent("onblur",blur_func);
+				_mouse_input_func = function(e,r){
+					if(e.type == "mouseup"){
+						_buttons &= ~(e.button);
+					}else{
+						_buttons  =  (e.button);
+					}
+					_pos_client.x = e.clientX;
+					_pos_client.y = e.clientY;
+					_key_shift = e.shiftKey;
+					_key_ctrl = e.ctrlKey;
+				};
 			}
 		})();
 	}
@@ -57720,6 +59392,7 @@
 			// タスクを生成
 			if(!_task){
 				_task = task_container.createTask();
+				_task.setLevel(TASK_EXECUTE_LEVEL_POPUP);
 				_task.setDestructorFunc(ResponseDialogDestructor);
 				_task.setExecuteFunc(ResponseDialogInitialize);
 				_task.execute(0xffffffff);
@@ -60160,6 +61833,10 @@
 					_param.timeout = _this.timeout;
 				}
 
+//				if(_this.responseType){
+//					_param.responseType = _this.responseType;
+//				}
+
 				try{
 					GM_xmlhttpRequest(_param);
 				}catch(e){
@@ -60187,6 +61864,37 @@
 			_this.readyState = 0;
 			_this.status = 0;
 			_this.responseHeaders = null;
+//			if(GM_infoVersionCompare("2.0") >= 0){
+//				_this.responseType = "";
+//			}
+	}
+
+	// --------------------------------------------------------------------------------
+	// GM_infoVersion 比較
+	// --------------------------------------------------------------------------------
+	function GM_infoVersionCompare(ver){
+		try{
+			var list0 = GM_info.version.split(".");
+			var list1 = ver.split(".");
+
+			var i;
+			var num = list0.length;
+			if(num < list1.length) num = list1.length;
+			for(i=0;i<num;i++){
+				if(list0[i])	list0[i] = Number(list0[i]);
+				else		list0[i] = 0;
+				if(list1[i])	list1[i] = Number(list1[i]);
+				else		list1[i] = 0;
+			}
+			for(i=0;i<num;i++){
+				if(list0[i] > list1[i]) return  1;
+				if(list0[i] < list1[i]) return -1;
+			}
+
+			return 0;
+		}catch(e){
+		}
+		return -1;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -62873,6 +64581,16 @@
 		}
 	}
 
+
+	// --------------------------------------------------------------------------------
+	// ブラウザの拡大縮小率を取得
+	// --------------------------------------------------------------------------------
+	function WindowGetDevicePixelRatio(window_obj){
+		if(window_obj.devicePixelRatio === undefined) return 1.0;
+		return window_obj.devicePixelRatio;
+	}
+
+
 	// --------------------------------------------------------------------------------
 	// エレメント作成
 	// --------------------------------------------------------------------------------
@@ -64137,6 +65855,219 @@
 	}
 
 	// --------------------------------------------------------------------------------
+	// スタイルの transform を設定
+	// --------------------------------------------------------------------------------
+	function StyleDeclarationSetTransform(style,value){
+		var list = [
+			"transform",
+			"webkitTransform",
+			"MozTransform",
+			"msTransform",
+			"OTransform"
+		];
+		var i;
+		var num = list.length;
+		for(i=0;i<num;i++){
+			if(style[list[i]] !== undefined){
+				style[list[i]] = value;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// --------------------------------------------------------------------------------
+	// スタイルの transform-origin を設定
+	// --------------------------------------------------------------------------------
+	function StyleDeclarationSetTransformOrigin(style,value){
+		var list = [
+			"transformOrigin",
+			"webkitTransformOrigin",
+			"MozTransformOrigin",
+			"msTransformOrigin",
+			"OTransformOrigin"
+		];
+		var i;
+		var num = list.length;
+		for(i=0;i<num;i++){
+			if(style[list[i]] !== undefined){
+				style[list[i]] = value;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// --------------------------------------------------------------------------------
+	// ２Ｄ用の行列を計算するクラス
+	// --------------------------------------------------------------------------------
+	function Matrix32 (a,b,c,d,tx,ty) {
+		this.a  = ((a  === undefined) ? 1.0 : a );
+		this.b  = ((b  === undefined) ? 0.0 : b );
+		this.c  = ((c  === undefined) ? 0.0 : c );
+		this.d  = ((d  === undefined) ? 1.0 : d );
+		this.tx = ((tx === undefined) ? 0.0 : tx);
+		this.ty = ((ty === undefined) ? 0.0 : ty);
+	}
+	Matrix32.prototype = {
+
+		// --------------------------------------------------------------------------------
+		// 単位行列化
+		// --------------------------------------------------------------------------------
+		identity:function(){
+			this.a  = 1.0; this.b  = 0.0;
+			this.c  = 0.0; this.d  = 1.0;
+			this.tx = 0.0; this.ty = 0.0;
+		},
+
+		// --------------------------------------------------------------------------------
+		// 移動成分を乗算
+		// --------------------------------------------------------------------------------
+		translate:function(tx,ty){
+			this.tx += tx;
+			this.ty += ty;
+		},
+
+		// --------------------------------------------------------------------------------
+		// 回転成分を乗算（ラジアン）
+		// --------------------------------------------------------------------------------
+		rotate:function(angle){
+			var cos = Math.cos(angle);
+			var sin = Math.sin(angle);
+			var a  = this.a;
+			var c  = this.c;
+			var tx = this.tx;
+			this.a  = a  * cos + this.b  * -sin;
+			this.b  = a  * sin + this.b  *  cos;
+			this.c  = c  * cos + this.d  * -sin;
+			this.d  = c  * sin + this.d  *  cos;
+			this.tx = tx * cos + this.ty * -sin;
+			this.ty = tx * sin + this.ty *  cos;
+		},
+
+		// --------------------------------------------------------------------------------
+		// 拡大縮小成分を乗算
+		// --------------------------------------------------------------------------------
+		scale:function(sx,sy){
+			this.a  = this.a  * sx;
+			this.b  = this.b  * sy;
+			this.c  = this.c  * sx;
+			this.d  = this.d  * sy;
+			this.tx = this.tx * sx;
+			this.ty = this.ty * sy;
+		},
+
+		// --------------------------------------------------------------------------------
+		// 行列を乗算 (this * m)
+		// --------------------------------------------------------------------------------
+		multiply:function(m){
+			var a  = this.a;
+			var c  = this.c;
+			var tx = this.tx;
+			this.a  = a  * m.a + this.b  * m.c;
+			this.b  = a  * m.b + this.b  * m.d;
+			this.c  = c  * m.a + this.d  * m.c;
+			this.d  = c  * m.b + this.d  * m.d;
+			this.tx = tx * m.a + this.ty * m.c + m.tx;
+			this.ty = tx * m.b + this.ty * m.d + m.ty;
+		},
+
+		// --------------------------------------------------------------------------------
+		// 座標を変換
+		// --------------------------------------------------------------------------------
+		transformPosition:function(pos){
+			return {
+				x:pos.x * this.a + pos.y * this.c + this.tx,
+				y:pos.x * this.b + pos.y * this.d + this.ty
+			};
+		},
+
+		// --------------------------------------------------------------------------------
+		// ベクトルを変換
+		// --------------------------------------------------------------------------------
+		transformVector:function(vec){
+			return {
+				x:vec.x * this.a + vec.y * this.c,
+				y:vec.x * this.b + vec.y * this.d
+			};
+		},
+
+		// --------------------------------------------------------------------------------
+		// 逆行列化
+		// --------------------------------------------------------------------------------
+		invert: function(){
+			var a  = this.a;
+			var b  = this.b;
+			var c  = this.c;
+			var d  = this.d;
+			var tx = this.tx;
+			var ty = this.ty;
+			this.a  = 1.0; this.b  = 0.0;
+			this.c  = 0.0; this.d  = 1.0;
+			this.tx = 0.0; this.ty = 0.0;
+
+			var b_  = b;
+			var d_  = d;
+			var ty_ = ty;
+
+			if(a){
+				this.a  /= a;
+				     b_ /= a;
+			}
+			     d_  -= c  *      b_;
+			this.c   -= c  * this.a;
+			     ty_ -= tx *      b_;
+			this.tx  -= tx * this.a;
+
+			if(d_){
+				this.c /= d_;
+			}
+			this.tx -= ty_ * this.c;
+			this.a  -= b_  * this.c;
+
+			if(a){
+				this.b /= a;
+				     b /= a;
+			}
+			     d  -= c  *      b;
+			this.d  -= c  * this.b;
+			     ty -= tx *      b;
+			this.ty -= tx * this.b;
+
+			if(d){
+				this.d /= d;
+			}
+			this.ty -= ty * this.d;
+			this.b  -= b  * this.d;
+		},
+
+		// --------------------------------------------------------------------------------
+		// 複製
+		// --------------------------------------------------------------------------------
+		clone:function(){
+			return new Matrix32(
+				this.a,  this.b,
+				this.c,  this.d,
+				this.tx, this.ty
+			);
+		},
+
+		// --------------------------------------------------------------------------------
+		// 文字列を取得
+		// --------------------------------------------------------------------------------
+		toString:function(){
+			return "matrix(" +
+				this.a.toFixed(20)  + "," +
+				this.b.toFixed(20)  + "," +
+				this.c.toFixed(20)  + "," +
+				this.d.toFixed(20)  + "," +
+				this.tx.toFixed(20) + "," +
+				this.ty.toFixed(20) + 
+			")";
+		}
+	};
+
+	// --------------------------------------------------------------------------------
 	// DOM ノードの直前に DOM ノードを登録（削除予定）
 	// --------------------------------------------------------------------------------
 	function DomNodeInsertBefore(node_new,node_ref){
@@ -64414,6 +66345,20 @@
 	}
 
 	// --------------------------------------------------------------------------------
+	// スタイルの値を取得する関数
+	// --------------------------------------------------------------------------------
+	function StyleDeclarationGetPropertyValue(style,property_name){
+		if(style.getPropertyValue !== undefined){
+			return style.getPropertyValue(property_name);
+		}
+		try{
+			return style[property_name.replace(/([a-z]+)-([a-z])/g , function (str,p1,p2){ return p1 + p2.toUpperCase(); })];
+		}catch(e){
+		}
+		return null;
+	}
+
+	// --------------------------------------------------------------------------------
 	// スタイルからプロパティを削除
 	// --------------------------------------------------------------------------------
 	function StyleDeclarationRemoveProperty(style,name){
@@ -64430,11 +66375,490 @@
 	}
 
 	// --------------------------------------------------------------------------------
+	// DivElement 用初期スタイル文字列を取得
+	// --------------------------------------------------------------------------------
+	function CSSTextGetInitialDivElement(){
+		return	"" +
+			"background-attachment: scroll;" +
+			"background-blend-mode: normal;" +
+			"background-clip: border-box;" +
+			"background-color: rgba(0, 0, 0, 0);" +
+			"background-image: none;" +
+			"background-origin: padding-box;" +
+			"background-position: 0% 0%;" +
+			"background-repeat: repeat;" +
+			"background-size: auto;" +
+			"border-bottom-color: rgb(0, 0, 0);" +
+			"border-bottom-left-radius: 0px;" +
+			"border-bottom-right-radius: 0px;" +
+			"border-bottom-style: none;" +
+			"border-bottom-width: 0px;" +
+			"border-collapse: separate;" +
+			"border-image-outset: 0px;" +
+			"border-image-repeat: stretch;" +
+			"border-image-slice: 100%;" +
+			"border-image-source: none;" +
+			"border-image-width: 1;" +
+			"border-left-color: rgb(0, 0, 0);" +
+			"border-left-style: none;" +
+			"border-left-width: 0px;" +
+			"border-right-color: rgb(0, 0, 0);" +
+			"border-right-style: none;" +
+			"border-right-width: 0px;" +
+			"border-top-color: rgb(0, 0, 0);" +
+			"border-top-left-radius: 0px;" +
+			"border-top-right-radius: 0px;" +
+			"border-top-style: none;" +
+			"border-top-width: 0px;" +
+			"bottom: auto;" +
+			"box-shadow: none;" +
+			"box-sizing: content-box;" +
+			"caption-side: top;" +
+			"clear: none;" +
+			"clip: auto;" +
+			"color: rgb(0, 0, 0);" +
+			"cursor: auto;" +
+			"direction: ltr;" +
+			"display: block;" +
+			"empty-cells: show;" +
+			"float: none;" +
+			"font-family: 'MS PGothic';" +
+			"font-kerning: auto;" +
+			"font-size: 16px;" +
+			"font-style: normal;" +
+			"font-variant: normal;" +
+			"font-variant-ligatures: normal;" +
+			"font-weight: normal;" +
+			"height: auto;" +
+			"image-rendering: auto;" +
+			"left: auto;" +
+			"letter-spacing: normal;" +
+			"line-height: normal;" +
+			"list-style-image: none;" +
+			"list-style-position: outside;" +
+			"list-style-type: disc;" +
+			"margin-bottom: 0px;" +
+			"margin-left: 0px;" +
+			"margin-right: 0px;" +
+			"margin-top: 0px;" +
+			"max-height: none;" +
+			"max-width: none;" +
+			"min-height: 0px;" +
+			"min-width: 0px;" +
+			"object-fit: fill;" +
+			"object-position: 50% 50%;" +
+			"opacity: 1;" +
+			"orphans: auto;" +
+			"outline-color: rgb(0, 0, 0);" +
+			"outline-offset: 0px;" +
+			"outline-style: none;" +
+			"outline-width: 0px;" +
+			"overflow-wrap: normal;" +
+			"overflow-x: visible;" +
+			"overflow-y: visible;" +
+			"padding-bottom: 0px;" +
+			"padding-left: 0px;" +
+			"padding-right: 0px;" +
+			"padding-top: 0px;" +
+			"page-break-after: auto;" +
+			"page-break-before: auto;" +
+			"page-break-inside: auto;" +
+			"pointer-events: auto;" +
+			"position: static;" +
+			"resize: none;" +
+			"right: auto;" +
+			"speak: normal;" +
+			"table-layout: auto;" +
+			"tab-size: 8;" +
+			"text-align: start;" +
+			"text-decoration: none solid rgb(0, 0, 0);" +
+			"text-indent: 0px;" +
+			"text-rendering: auto;" +
+			"text-shadow: none;" +
+			"text-overflow: clip;" +
+			"text-transform: none;" +
+			"top: auto;" +
+			"transition-delay: 0s;" +
+			"transition-duration: 0s;" +
+			"transition-property: all;" +
+			"transition-timing-function: ease;" +
+			"unicode-bidi: normal;" +
+			"vertical-align: baseline;" +
+			"visibility: visible;" +
+			"white-space: normal;" +
+			"widows: auto;" +
+			"width: auto;" +
+			"word-break: normal;" +
+			"word-spacing: 0px;" +
+			"word-wrap: normal;" +
+			"z-index: auto;" +
+			"zoom: 1;" +
+			"align-content: stretch;" +
+			"align-items: stretch;" +
+			"align-self: stretch;" +
+			"flex-basis: auto;" +
+			"flex-grow: 0;" +
+			"flex-shrink: 1;" +
+			"flex-direction: row;" +
+			"flex-wrap: nowrap;" +
+			"justify-content: flex-start;" +
+			"order: 0;" +
+			"buffered-rendering: auto;" +
+			"clip-path: none;" +
+			"clip-rule: nonzero;" +
+			"mask: none;" +
+			"filter: none;" +
+			"flood-color: rgb(0, 0, 0);" +
+			"flood-opacity: 1;" +
+			"lighting-color: rgb(255, 255, 255);" +
+			"stop-color: rgb(0, 0, 0);" +
+			"stop-opacity: 1;" +
+			"color-interpolation: srgb;" +
+			"color-interpolation-filters: linearrgb;" +
+			"color-rendering: auto;" +
+			"fill: rgb(0, 0, 0);" +
+			"fill-opacity: 1;" +
+			"fill-rule: nonzero;" +
+			"marker-end: none;" +
+			"marker-mid: none;" +
+			"marker-start: none;" +
+			"mask-type: luminance;" +
+			"shape-rendering: auto;" +
+			"stroke: none;" +
+			"stroke-dasharray: none;" +
+			"stroke-dashoffset: 0;" +
+			"stroke-linecap: butt;" +
+			"stroke-linejoin: miter;" +
+			"stroke-miterlimit: 4;" +
+			"stroke-opacity: 1;" +
+			"stroke-width: 1;" +
+			"alignment-baseline: auto;" +
+			"baseline-shift: baseline;" +
+			"dominant-baseline: auto;" +
+			"kerning: 0;" +
+			"text-anchor: start;" +
+			"writing-mode: lr-tb;" +
+			"glyph-orientation-horizontal: 0deg;" +
+			"glyph-orientation-vertical: auto;" +
+			"vector-effect: none;" +
+			"paint-order: fill stroke markers;";
+	}
+
+	// --------------------------------------------------------------------------------
+	// ImageElement 用初期スタイル文字列を取得
+	// --------------------------------------------------------------------------------
+	function CSSTextGetInitialImageElement(){
+		return	"" +
+			"background-attachment: scroll;" +
+			"background-blend-mode: normal;" +
+			"background-clip: border-box;" +
+			"background-color: rgba(0, 0, 0, 0);" +
+			"background-image: none;" +
+			"background-origin: padding-box;" +
+			"background-position: 0% 0%;" +
+			"background-repeat: repeat;" +
+			"background-size: auto;" +
+			"border-bottom-color: rgb(0, 0, 0);" +
+			"border-bottom-left-radius: 0px;" +
+			"border-bottom-right-radius: 0px;" +
+			"border-bottom-style: none;" +
+			"border-bottom-width: 0px;" +
+			"border-collapse: separate;" +
+			"border-image-outset: 0px;" +
+			"border-image-repeat: stretch;" +
+			"border-image-slice: 100%;" +
+			"border-image-source: none;" +
+			"border-image-width: 1;" +
+			"border-left-color: rgb(0, 0, 0);" +
+			"border-left-style: none;" +
+			"border-left-width: 0px;" +
+			"border-right-color: rgb(0, 0, 0);" +
+			"border-right-style: none;" +
+			"border-right-width: 0px;" +
+			"border-top-color: rgb(0, 0, 0);" +
+			"border-top-left-radius: 0px;" +
+			"border-top-right-radius: 0px;" +
+			"border-top-style: none;" +
+			"border-top-width: 0px;" +
+			"bottom: auto;" +
+			"box-shadow: none;" +
+			"box-sizing: content-box;" +
+			"caption-side: top;" +
+			"clear: none;" +
+			"clip: auto;" +
+			"color: rgb(0, 0, 0);" +
+			"cursor: auto;" +
+			"direction: ltr;" +
+			"display: inline;" +
+			"empty-cells: show;" +
+			"float: none;" +
+			"font-family: 'MS PGothic';" +
+			"font-kerning: auto;" +
+			"font-size: 16px;" +
+			"font-style: normal;" +
+			"font-variant: normal;" +
+			"font-variant-ligatures: normal;" +
+			"font-weight: normal;" +
+			"height: auto;" +
+			"image-rendering: auto;" +
+			"left: auto;" +
+			"letter-spacing: normal;" +
+			"line-height: normal;" +
+			"list-style-image: none;" +
+			"list-style-position: outside;" +
+			"list-style-type: disc;" +
+			"margin-bottom: 0px;" +
+			"margin-left: 0px;" +
+			"margin-right: 0px;" +
+			"margin-top: 0px;" +
+			"max-height: none;" +
+			"max-width: none;" +
+			"min-height: 0px;" +
+			"min-width: 0px;" +
+			"object-fit: fill;" +
+			"object-position: 50% 50%;" +
+			"opacity: 1;" +
+			"orphans: auto;" +
+			"outline-color: rgb(0, 0, 0);" +
+			"outline-offset: 0px;" +
+			"outline-style: none;" +
+			"outline-width: 0px;" +
+			"overflow-wrap: normal;" +
+			"overflow-x: visible;" +
+			"overflow-y: visible;" +
+			"padding-bottom: 0px;" +
+			"padding-left: 0px;" +
+			"padding-right: 0px;" +
+			"padding-top: 0px;" +
+			"page-break-after: auto;" +
+			"page-break-before: auto;" +
+			"page-break-inside: auto;" +
+			"pointer-events: auto;" +
+			"position: static;" +
+			"resize: none;" +
+			"right: auto;" +
+			"speak: normal;" +
+			"table-layout: auto;" +
+			"tab-size: 8;" +
+			"text-align: start;" +
+			"text-decoration: none solid rgb(0, 0, 0);" +
+			"text-indent: 0px;" +
+			"text-rendering: auto;" +
+			"text-shadow: none;" +
+			"text-overflow: clip;" +
+			"text-transform: none;" +
+			"top: auto;" +
+			"transition-delay: 0s;" +
+			"transition-duration: 0s;" +
+			"transition-property: all;" +
+			"transition-timing-function: ease;" +
+			"unicode-bidi: normal;" +
+			"vertical-align: baseline;" +
+			"visibility: visible;" +
+			"white-space: normal;" +
+			"widows: auto;" +
+			"width: auto;" +
+			"word-break: normal;" +
+			"word-spacing: 0px;" +
+			"word-wrap: normal;" +
+			"z-index: auto;" +
+			"zoom: 1;" +
+			"align-content: stretch;" +
+			"align-items: stretch;" +
+			"align-self: stretch;" +
+			"flex-basis: auto;" +
+			"flex-grow: 0;" +
+			"flex-shrink: 1;" +
+			"flex-direction: row;" +
+			"flex-wrap: nowrap;" +
+			"justify-content: flex-start;" +
+			"order: 0;" +
+			"buffered-rendering: auto;" +
+			"clip-path: none;" +
+			"clip-rule: nonzero;" +
+			"mask: none;" +
+			"filter: none;" +
+			"flood-color: rgb(0, 0, 0);" +
+			"flood-opacity: 1;" +
+			"lighting-color: rgb(255, 255, 255);" +
+			"stop-color: rgb(0, 0, 0);" +
+			"stop-opacity: 1;" +
+			"color-interpolation: srgb;" +
+			"color-interpolation-filters: linearrgb;" +
+			"color-rendering: auto;" +
+			"fill: rgb(0, 0, 0);" +
+			"fill-opacity: 1;" +
+			"fill-rule: nonzero;" +
+			"marker-end: none;" +
+			"marker-mid: none;" +
+			"marker-start: none;" +
+			"mask-type: luminance;" +
+			"shape-rendering: auto;" +
+			"stroke: none;" +
+			"stroke-dasharray: none;" +
+			"stroke-dashoffset: 0;" +
+			"stroke-linecap: butt;" +
+			"stroke-linejoin: miter;" +
+			"stroke-miterlimit: 4;" +
+			"stroke-opacity: 1;" +
+			"stroke-width: 1;" +
+			"alignment-baseline: auto;" +
+			"baseline-shift: baseline;" +
+			"dominant-baseline: auto;" +
+			"kerning: 0;" +
+			"text-anchor: start;" +
+			"writing-mode: lr-tb;" +
+			"glyph-orientation-horizontal: 0deg;" +
+			"glyph-orientation-vertical: auto;" +
+			"vector-effect: none;" +
+			"paint-order: fill stroke markers;";
+	}
+
+	// --------------------------------------------------------------------------------
+	// ButtonElement 用初期スタイル文字列を取得
+	// --------------------------------------------------------------------------------
+	function CSSTextGetInitialButtonElement(){
+		return	"" +
+			"bottom: auto;" +
+			"box-shadow: none;" +
+			"box-sizing: border-box;" +
+			"caption-side: top;" +
+			"clear: none;" +
+			"clip: auto;" +
+			"color: rgb(0, 0, 0);" +
+			"cursor: default;" +
+			"direction: ltr;" +
+			"display: inline-block;" +
+			"empty-cells: show;" +
+			"float: none;" +
+			"height: auto;" +
+			"font-family: Arial;" +
+			"font-kerning: auto;" +
+			"font-size: 13.142857551574707px;" +
+			"font-style: normal;" +
+			"font-variant: normal;" +
+			"font-variant-ligatures: normal;" +
+			"font-weight: normal;" +
+			"image-rendering: auto;" +
+			"left: auto;" +
+			"letter-spacing: normal;" +
+			"line-height: normal;" +
+			"list-style-image: none;" +
+			"list-style-position: outside;" +
+			"list-style-type: disc;" +
+			"margin-bottom: 1.7142857313156128px;" +
+			"margin-left: 1.7142857313156128px;" +
+			"margin-right: 1.7142857313156128px;" +
+			"margin-top: 1.7142857313156128px;" +
+			"max-height: none;" +
+			"max-width: none;" +
+			"min-height: 0px;" +
+			"min-width: 0px;" +
+			"object-fit: fill;" +
+			"object-position: 50% 50%;" +
+			"opacity: 1;" +
+			"orphans: auto;" +
+			"outline-color: rgb(0, 0, 0);" +
+			"outline-offset: 0px;" +
+			"outline-style: none;" +
+			"outline-width: 0px;" +
+			"overflow-wrap: normal;" +
+			"overflow-x: visible;" +
+			"overflow-y: visible;" +
+			"padding-bottom: 1px;" +
+			"padding-left: 6px;" +
+			"padding-right: 6px;" +
+			"padding-top: 1px;" +
+			"page-break-after: auto;" +
+			"page-break-before: auto;" +
+			"page-break-inside: auto;" +
+			"pointer-events: auto;" +
+			"position: static;" +
+			"resize: none;" +
+			"right: auto;" +
+			"speak: normal;" +
+			"table-layout: auto;" +
+			"tab-size: 8;" +
+			"text-align: center;" +
+			"text-decoration: none solid rgb(0, 0, 0);" +
+			"text-indent: 0px;" +
+			"text-rendering: auto;" +
+			"text-shadow: none;" +
+			"text-overflow: clip;" +
+			"text-transform: none;" +
+			"top: auto;" +
+			"transition-delay: 0s;" +
+			"transition-duration: 0s;" +
+			"transition-property: all;" +
+			"transition-timing-function: ease;" +
+			"unicode-bidi: normal;" +
+			"vertical-align: baseline;" +
+			"visibility: visible;" +
+			"white-space: normal;" +
+			"widows: auto;" +
+			"width: auto;" +
+			"word-break: normal;" +
+			"word-spacing: 0px;" +
+			"word-wrap: normal;" +
+			"z-index: auto;" +
+			"zoom: 1;" +
+			"align-content: stretch;" +
+			"align-items: flex-start;" +
+			"align-self: stretch;" +
+			"flex-basis: auto;" +
+			"flex-grow: 0;" +
+			"flex-shrink: 1;" +
+			"flex-direction: row;" +
+			"flex-wrap: nowrap;" +
+			"justify-content: flex-start;" +
+			"order: 0;" +
+			"buffered-rendering: auto;" +
+			"clip-path: none;" +
+			"clip-rule: nonzero;" +
+			"mask: none;" +
+			"filter: none;" +
+			"flood-color: rgb(0, 0, 0);" +
+			"flood-opacity: 1;" +
+			"lighting-color: rgb(255, 255, 255);" +
+			"stop-color: rgb(0, 0, 0);" +
+			"stop-opacity: 1;" +
+			"color-interpolation: srgb;" +
+			"color-interpolation-filters: linearrgb;" +
+			"color-rendering: auto;" +
+			"fill: rgb(0, 0, 0);" +
+			"fill-opacity: 1;" +
+			"fill-rule: nonzero;" +
+			"marker-end: none;" +
+			"marker-mid: none;" +
+			"marker-start: none;" +
+			"mask-type: luminance;" +
+			"shape-rendering: auto;" +
+			"stroke: none;" +
+			"stroke-dasharray: none;" +
+			"stroke-dashoffset: 0;" +
+			"stroke-linecap: butt;" +
+			"stroke-linejoin: miter;" +
+			"stroke-miterlimit: 4;" +
+			"stroke-opacity: 1;" +
+			"stroke-width: 1;" +
+			"alignment-baseline: auto;" +
+			"baseline-shift: baseline;" +
+			"dominant-baseline: auto;" +
+			"kerning: 0;" +
+			"text-anchor: start;" +
+			"writing-mode: lr-tb;" +
+			"glyph-orientation-horizontal: 0deg;" +
+			"glyph-orientation-vertical: auto;" +
+			"vector-effect: none;" +
+			"paint-order: fill stroke markers;";
+	}
+
+	// --------------------------------------------------------------------------------
 	// イメージを複製
 	// --------------------------------------------------------------------------------
 	function ImageClone(image){
 		var c = ElementCloneNode(image,false);
-
+		c.src = image.src;
 		return c;
 	}
 
@@ -64560,12 +66984,12 @@
 					}
 				},"u");
 
-				GM_registerMenuCommand(_i18n.getMessage("context_menu_pageexpand_config"), function(){
+				(function(){
 
 					// PageExpand 設定の動作を許すアドレス
 					var config_allow_filter = "https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/options";
 
-					if(StringUrlMatchAsteriskWord(document.URL,config_allow_filter + "*")){
+					function start(){
 						// PageExpand 初期化
 						PageExpandInitialize();
 
@@ -64576,12 +67000,25 @@
 						config.initialize(function(result){
 							config.MenuItemSelect(PageExpandConfig.MENU_TYPE_SETTING_STANDARD);
 						});
-					}else{
-						if(confirm(_i18n.getMessage("context_menu_pageexpand_config_current_page_confirm") + config_allow_filter)){
-							window.open(config_allow_filter,"_blank");
+					}
+
+					if(StringUrlMatchAsteriskWord(document.URL,config_allow_filter + "*")){
+						if(confirm(_i18n.getMessage("context_menu_pageexpand_config_auto_run_confirm"))){
+							start();
 						}
 					}
-				},"c");
+
+					GM_registerMenuCommand(_i18n.getMessage("context_menu_pageexpand_config"), function(){
+						if(StringUrlMatchAsteriskWord(document.URL,config_allow_filter + "*")){
+							start();
+						}else{
+							if(confirm(_i18n.getMessage("context_menu_pageexpand_config_current_page_confirm") + config_allow_filter)){
+								window.open(config_allow_filter,"_blank");
+							}
+						}
+					},"c");
+
+			 	})();
 
 			}
 

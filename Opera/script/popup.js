@@ -11,6 +11,124 @@
 function PageExpand(page_expand_arguments){
 
 	// --------------------------------------------------------------------------------
+	// PageExpand 初期化
+	// --------------------------------------------------------------------------------
+	function PageExpandInitialize(){
+
+		if(initialized)	return;
+		initialized = true;
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		{
+			// PageExpand ノード
+			page_expand_node = new PageExpandNode();
+			if(page_expand_arguments.page_expand_parent){
+				page_expand_arguments.page_expand_parent.attachChild(page_expand_node);
+			}
+			page_expand_root = page_expand_node.getPageExpandRoot();
+
+			// イベントディスパッチャー
+			page_expand_event_dispatcher = new EventDispatcher();
+
+			// マウス入力
+			input_mouse = new InputMouse();
+
+			// 実行キュー
+			execute_queue = new ExecuteQueue();
+
+			// ローダーキュー
+			loader_queue = new LoaderQueue();
+
+			// ダウンローダーキュー
+			downloader_queue = new DownloaderQueue();
+
+			// アドレスコレクション
+			address_collection = new AddressCollection();
+
+			// ダウンロードリスト
+			download_list_image = new DownloadList();
+			download_list_user = new DownloadList();
+
+			// タスクコンテナを生成
+			task_container = new TaskContainer();
+			task_execute_level = 0xffffffff;
+
+			// デバッグ
+			page_expand_debug = new PageExpandDebug();
+
+			// DOMノードが外れたか監視
+			document_observer_remove_node = new DocumentObserverRemoveDomNode();
+
+			// プロパティ変更を監視
+			document_observer_modify_node = new DocumentObserverModifyProperty();
+
+			// スクロール監視
+			document_observer_scroll = new DocumentObserverScroll();
+
+			// 進捗通知
+			notify_progress = new NotifyProgress();
+
+			// イメージ管理
+			element_limitter_image = new ElementLimiterByByteSize();
+			popup_image_container = new PopupImageContainer();
+
+			// サウンド管理
+			element_limitter_sound = new ElementLimiterByCount();
+
+			// ビデオ管理
+			element_limitter_video = new ElementLimiterByCount();
+
+			// リダイレクト辞書
+			redirect_url_dictionary = new RedirectUrlDictionary();
+
+			// 掲示板辞書
+			bbs_dictionary = new BbsDictionary();
+
+			// 解析辞書
+			analyze_work_dictionary = new AnalyzeWorkDictionary();
+
+			// ウィンドウ管理
+			window_manager = new WindowManager(window);
+
+			// 掲示板拡張
+			expand_bbs = {
+				enable:false,
+				initialized:false,
+				node_queue:new Array(),
+				work:new Object()
+			};
+
+		}
+
+		// --------------------------------------------------------------------------------
+		// 実行ループ
+		// --------------------------------------------------------------------------------
+		(function(){
+			var time_handle;
+
+			// タスクを毎サイクル実行
+			function TaskContainerExecute(){
+				task_container.execute(task_execute_level);
+			}
+
+			// 開始関数をセット
+			task_container.setStartFunc(function(){
+				time_handle = setInterval(TaskContainerExecute, 1000 / 60);
+			});
+
+			// 終了関数をセット
+			task_container.setEndFunc(function(){
+				clearInterval(time_handle);
+				time_handle = undefined;
+			});
+		})();
+
+	}
+
+
+	// --------------------------------------------------------------------------------
 	// ポップアップメニュー
 	// --------------------------------------------------------------------------------
 	function PageExpandPopupMenu(){
