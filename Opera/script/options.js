@@ -15,116 +15,183 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function PageExpandInitialize(){
 
-		if(initialized)	return;
-		initialized = true;
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		{
-			// PageExpand ノード
+		// PageExpand ノード
+		if(!page_expand_node){
 			page_expand_node = new PageExpandNode();
 			if(page_expand_arguments.page_expand_parent){
 				page_expand_arguments.page_expand_parent.attachChild(page_expand_node);
 			}
 			page_expand_root = page_expand_node.getPageExpandRoot();
+		}
 
-			// イベントディスパッチャー
+		// イベントディスパッチャー
+		if(!page_expand_event_dispatcher){
 			page_expand_event_dispatcher = new EventDispatcher();
 
-			// マウス入力
-			input_mouse = new InputMouse();
+			// アンロード監視
+			if(WindowIsChild(window)){
+				PageExpandObserverUnload();
+			}
+		}
 
-			// 実行キュー
+	}
+
+	// --------------------------------------------------------------------------------
+	// PageExpand コンストラクタ
+	// --------------------------------------------------------------------------------
+	function PageExpandConstructor(){
+
+		// マウス入力
+		if(!input_mouse){
+			input_mouse = new InputMouse(window);
+		}
+
+		// 実行キュー
+		if(!execute_queue){
 			execute_queue = new ExecuteQueue();
+		}
 
-			// ローダーキュー
+		// ローダーキュー
+		if(!loader_queue){
 			loader_queue = new LoaderQueue();
+		}
 
-			// ダウンローダーキュー
+		// ダウンローダーキュー
+		if(!downloader_queue){
 			downloader_queue = new DownloaderQueue();
+		}
 
-			// アドレスコレクション
+		// アドレスコレクション
+		if(!address_collection){
 			address_collection = new AddressCollection();
+		}
 
-			// ダウンロードリスト
+		// ダウンロードリスト
+		if(!download_list_image){
 			download_list_image = new DownloadList();
+		}
+		if(!download_list_user){
 			download_list_user = new DownloadList();
+		}
 
-			// タスクコンテナを生成
+		// タスクコンテナを生成
+		if(!task_container){
 			task_container = new TaskContainer();
 			task_execute_level = 0xffffffff;
 
-			// デバッグ
+			// --------------------------------------------------------------------------------
+			// 実行ループ
+			// --------------------------------------------------------------------------------
+			(function(){
+				var time_handle;
+
+				// タスクを毎サイクル実行
+				function TaskContainerExecute(){
+					task_container.execute(task_execute_level);
+				}
+
+				// 開始関数をセット
+				task_container.setStartFunc(function(){
+					time_handle = setInterval(TaskContainerExecute, 1000 / 60);
+				});
+
+				// 終了関数をセット
+				task_container.setEndFunc(function(){
+					clearInterval(time_handle);
+					time_handle = undefined;
+				});
+			})();
+		}
+
+		// デバッグ
+		if(!page_expand_debug){
 			page_expand_debug = new PageExpandDebug();
+		}
 
-			// DOMノードが外れたか監視
+		// DOMノードが外れたか監視
+		if(!document_observer_remove_node){
 			document_observer_remove_node = new DocumentObserverRemoveDomNode();
+		}
 
-			// プロパティ変更を監視
+		// プロパティ変更を監視
+		if(!document_observer_modify_node){
 			document_observer_modify_node = new DocumentObserverModifyProperty();
+		}
 
-			// スクロール監視
+		// スクロール監視
+		if(!document_observer_scroll){
 			document_observer_scroll = new DocumentObserverScroll();
+		}
 
-			// 進捗通知
+		// 進捗通知
+		if(!notify_progress){
 			notify_progress = new NotifyProgress();
+		}
 
-			// イメージ管理
+		// イメージ管理
+		if(!element_limitter_image){
 			element_limitter_image = new ElementLimiterByByteSize();
+		}
+		if(!popup_image_container){
 			popup_image_container = new PopupImageContainer();
+		}
 
-			// サウンド管理
+		// サウンド管理
+		if(!element_limitter_sound){
 			element_limitter_sound = new ElementLimiterByCount();
+		}
 
-			// ビデオ管理
+		// ビデオ管理
+		if(!element_limitter_video){
 			element_limitter_video = new ElementLimiterByCount();
+		}
 
-			// リダイレクト辞書
+		// リダイレクト辞書
+		if(!redirect_url_dictionary){
 			redirect_url_dictionary = new RedirectUrlDictionary();
+		}
 
-			// 掲示板辞書
-			bbs_dictionary = new BbsDictionary();
-
-			// 解析辞書
+		// 解析辞書
+		if(!analyze_work_dictionary){
 			analyze_work_dictionary = new AnalyzeWorkDictionary();
+		}
 
-			// ウィンドウ管理
+		// 掲示板辞書
+		if(!bbs_dictionary){
+			bbs_dictionary = new BbsDictionary();
+		}
+
+		// ウィンドウ管理
+		if(!window_manager){
 			window_manager = new WindowManager(window);
+		}
 
-			// 掲示板拡張
+		// 掲示板拡張
+		if(!expand_bbs){
 			expand_bbs = {
 				enable:false,
 				initialized:false,
 				node_queue:new Array(),
 				work:new Object()
 			};
-
 		}
 
-		// --------------------------------------------------------------------------------
-		// 実行ループ
-		// --------------------------------------------------------------------------------
-		(function(){
-			var time_handle;
+	}
 
-			// タスクを毎サイクル実行
-			function TaskContainerExecute(){
-				task_container.execute(task_execute_level);
+	// --------------------------------------------------------------------------------
+	// PageExpand から実行されるか調べる
+	// --------------------------------------------------------------------------------
+	function WindowIsExecutedByPageExpand(window_obj){
+		try{
+			var re = new RegExp("^(data|blob|about):","i");
+			if(window_obj.location.href){}
+			if(window_obj.document.URL.match(re)){
+				return true;
 			}
+		}catch(e){
+		}
 
-			// 開始関数をセット
-			task_container.setStartFunc(function(){
-				time_handle = setInterval(TaskContainerExecute, 1000 / 60);
-			});
-
-			// 終了関数をセット
-			task_container.setEndFunc(function(){
-				clearInterval(time_handle);
-				time_handle = undefined;
-			});
-		})();
-
+		return false;
 	}
 
 
@@ -4863,7 +4930,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.3.9");
+				new UI_Text(parent,"PageExpand ver.1.4.0");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -5164,10 +5231,13 @@ function PageExpand(page_expand_arguments){
 				_window.style.left = (client_size.width  / 2 - w / 2 + scroll_pos.x) + "px";
 				if(client_size.height > h){
 					_window.style.top  = (client_size.height / 2 - h / 2 + scroll_pos.y) + "px";
+					_fitted_top = false;
 				}else{
-					_window.style.top  = "0px";
+					if(!_fitted_top){
+						_window.style.top  = (scroll_pos.y) + "px";
+						_fitted_top = true;
+					}
 				}
-
 			}
 
 			// --------------------------------------------------------------------------------
@@ -5214,6 +5284,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			var _background;
 			var _window;
+			var _fitted_top;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -11592,11 +11663,14 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	case "OperaExtensionOption":
 
+		// PageExpand 初期化
+		PageExpandInitialize();
+
 		// Opera拡張機能通信
 		extension_message = new OperaExtensionMessageForContent();
 
-		// PageExpand 初期化
-		PageExpandInitialize();
+		// PageExpand コンストラクタ
+		PageExpandConstructor();
 
 		var config = new PageExpandConfig();
 		config.initialize(function(result){
