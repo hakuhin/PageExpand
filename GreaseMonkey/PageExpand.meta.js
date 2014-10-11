@@ -10,9 +10,10 @@
 // --------------------------------------------------------------------------------
 // ==UserScript==
 // @name           PageExpand
-// @version        1.4.0
+// @version        1.4.1
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
+// @description:ja 画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、掲示板の拡張表示など...
 // @include        http://*
 // @include        https://*
 // @include        ftp://*

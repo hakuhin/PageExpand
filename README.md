@@ -48,20 +48,20 @@ for Greasemonkey|[install](https://raw.githubusercontent.com/hakuhin/PageExpand/
  - By setting the URL, Can blocking web access.
 
 ##Extend display BBS
- - support (2ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, kakiko.com, logsoku.com, mimizun.com, unkar.org, 2chan.net, 4chan.org, dic.nicovideo.jp)
+ - support (2ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, kakiko.com, logsoku.com, mimizun.com, 2chan.net, 4chan.org, dic.nicovideo.jp, open2ch.net)
  - Hovering the mouse cursor in URL of the "response number", Display popup.
  - Hovering the mouse cursor in URL of the "ID", Display popup. (Remove by click.)
  - Display the follower count. (Remove by click.)
 
 ##Change into Direct Link
- - BBS sites (google, yahoo.co.jp)
- - Search sites (2ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, kakiko.com, logsoku.com, atchs.jp)
+ - Search sites (google, yahoo.co.jp)
+ - BBS sites (2ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, kakiko.com, logsoku.com, atchs.jp)
  - Other sites (twitter.com, facebook.com)
 
 ##Redirect to Image Link
  - (In the initial setting, Particular site only.)
- - SNS sites (instagr.am, flickr.com, twitpic.com, pic.twitter.com, facebook.com, plus.google.com, picasaweb.google.com, tumblr.com, yfrog.com, campl.us, giphy.com, gyazo.com, photozou.jp, twipple.jp, blog.fc2.com, seiga.nicovideo.jp[login must], pixiv.net[change referer must], Miiverse)
- - search sites (google, yahoo.co.jp, *.yahoo.com, yahoo.cn, bing.com, *.ask.com, aol.com, aol.jp, yandex.ru, goo.ne.jp, baidu.com, naver.com, ocn.ne.jp, biglobe.ne.jp)
+ - SNS sites (instagr.am, flickr.com, twitpic.com, pic.twitter.com, facebook.com, plus.google.com, picasaweb.google.com, tumblr.com, yfrog.com, campl.us, giphy.com, gyazo.com, photozou.jp, twipple.jp, blog.fc2.com, deviantART, seiga.nicovideo.jp, pixiv.net[change referer must], Miiverse)
+ - search sites (google, yahoo.co.jp, *.yahoo.com, bing.com, *.ask.com, aol.com, aol.jp, yandex.ru, goo.ne.jp, baidu.com, naver.com, ocn.ne.jp, biglobe.ne.jp)
  - Other sites (Wikipedia)
 
 ##Specification

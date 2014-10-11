@@ -8975,11 +8975,6 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// アンカー置換定義
 			// --------------------------------------------------------------------------------
-			// 2ch.net 用
-			updatePreset(proj.replacement_to_anchor,"direct_link_bbs",function(obj){
-				obj.script = PresetScript_ReplacementToAnchor_DirectLinkBbs();
-			});
-
 			// リアルタイム検索用
 			updatePreset(proj.replacement_to_anchor,"direct_link_realtime_search",function(obj){
 				obj.script = PresetScript_ReplacementToAnchor_DirectLinkRealtimeSearch();
@@ -9262,11 +9257,6 @@ function PageExpand(page_expand_arguments){
 				script:PresetScript_ReplacementToElement_AssistNicoSeiga()
 			};
 
-			// 展開アシスト（ピクシブ用）
-			updatePreset(proj.replacement_to_element,"assist_pixiv",function(obj){
-				obj.script = PresetScript_ReplacementToElement_AssistPixiv();
-			});
-
 			// --------------------------------------------------------------------------------
 			// ハイパーリンク置換定義
 			// --------------------------------------------------------------------------------
@@ -9445,9 +9435,6 @@ function PageExpand(page_expand_arguments){
 					enable_cache:true,
 					script:PresetScript_ReplacementToLink_DirectLinkGeneric_NicoSeigaManga()
 				});
-
-				// ピクシブ
-				filter[20].script = PresetScript_ReplacementToLink_DirectLinkGeneric_PixivNet();
 
 				// Miiverse
 				filter[21].script = PresetScript_ReplacementToLink_DirectLinkGeneric_Miiverse();
@@ -9672,6 +9659,52 @@ function PageExpand(page_expand_arguments){
 				style_sheet:{enable:true,id:"default"},
 				experimental:{enable:false,id:""}
 			};
+
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.20
+		// --------------------------------------------------------------------------------
+		if(proj.version < 20){
+			// バージョン値
+			proj.version = 20;
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義
+			// --------------------------------------------------------------------------------
+			// 展開アシスト（ピクシブ用）
+			updatePreset(proj.replacement_to_element,"assist_pixiv",function(obj){
+				obj.script = PresetScript_ReplacementToElement_AssistPixiv();
+			});
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義
+			// --------------------------------------------------------------------------------
+			// 2ch.net 用
+			updatePreset(proj.replacement_to_anchor,"direct_link_bbs",function(obj){
+				obj.script = PresetScript_ReplacementToAnchor_DirectLinkBbs();
+			});
+
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義
+			// --------------------------------------------------------------------------------
+			// 直リンク（汎用）
+			updatePreset(proj.replacement_to_link,"direct_link_generic",function(obj){
+				var filter = obj.filter;
+
+				// ピクシブ
+				filter[20].script = PresetScript_ReplacementToLink_DirectLinkGeneric_PixivNet();
+			});
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// ２ちゃんねる掲示板
+			var obj = addPreset(proj.expand_bbs,"2ch",null);
+			var preset = obj.preset;
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2ch();
 
 		}
 		if(exit())	return proj;
@@ -9961,6 +9994,35 @@ function PageExpand(page_expand_arguments){
 		var element = info.element;
 		var result = (function(){
 
+			// DIV 要素
+			if(element.tagName != "DIV"){
+				return false;
+			}
+
+			if(element.className != "_layout-thumbnail"){
+				return false;
+			}
+
+			return true;
+		})();
+
+		if(result){
+			while(element){
+				if(element.tagName == "A"){
+					response({url:element.href});
+					return true;
+				}
+				element = element.parentNode;
+			}
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		var element = info.element;
+		var result = (function(){
+
 			if(element.className.indexOf("user-icon") >= 0) return false;
 
 			// イメージ要素
@@ -9981,6 +10043,7 @@ function PageExpand(page_expand_arguments){
 
 		if(result){
 			while(element){
+				if(element.className == "_layout-thumbnail") break;
 				if(element.tagName == "A"){
 					response({url:element.href});
 					return true;
@@ -10682,6 +10745,7 @@ function PageExpand(page_expand_arguments){
 			// 2ちゃんねる
 			{search:"^http://ime\\.nu/",replace:"http://"},
 			{search:"^http://jump\\.2ch\\.net/[?]",replace:"http://"},
+			{search:"^http://2ch\\.io/",replace:"http://"},
 			// まちBBS
 			{search:"^http://machi\\.to/bbs/link\\.cgi[?]URL=",replace:""},
 			// PINKちゃんねる
@@ -12042,7 +12106,7 @@ function PageExpand(page_expand_arguments){
 			loader.onload = function(str){
 
 				// ログイン時
-				var m = str.match(new RegExp("<body><img src=\"([^\"]+)\"","i"));
+				var m = str.match(new RegExp("<body><img[^>]+src=\"([^\"]+)\"","i"));
 				if(m){
 					response({result:true,url:m[1],content_type:["image"]});
 					return;
@@ -12076,7 +12140,7 @@ function PageExpand(page_expand_arguments){
 				if(!image_url){
 					var m = str.match(new RegExp("<div class=\"(img-container|front-centered|works_display)\">.*","i"));
 					if(m){
-						m = m[0].match(new RegExp('<a href="([^"]+)".*</a>',"i"));
+						m = m[0].match(new RegExp('<a[^>]+href="([^"]+)".*</a>',"i"));
 						if(m){
 							var link_url = m[1];
 
@@ -12086,9 +12150,69 @@ function PageExpand(page_expand_arguments){
 
 								// マンガ以外
 								if(link_url.indexOf("mode=manga") == -1){
+
+									// 2014/10/01 以前
 									var m = image_url.match(new RegExp("^(.*)_m(\\.[a-z]+)$","i"));
 									if(m){
 										image_url = m[1] + m[2];
+									}
+
+									// 2014/10/01 以降
+									var m = image_url.match(new RegExp("^(http://[^/]+/).*(/img/.*)_master1200(\\.[a-z]+)$","i"));
+									if(m){
+										var path = m[1] + "img-original" + m[2] + ".";
+
+										(function(){
+											var ext_list = [
+												"gif",
+												"png",
+												"jpg"
+											];
+
+											var success = function(url){
+												response({result:true,url:url,content_type:["image"]});
+											};
+											var failure = function(){
+												response({result:false});
+											};
+
+											var load = function(){
+												var ext = ext_list.pop();
+												if(!ext){
+													success(image_url);
+													return;
+												}
+												var url = path + ext;
+
+												// ローダーオブジェクトを作成
+												var loader = new Loader();
+
+												// 成功
+												loader.onload = function(header){
+													var content_type = header["Content-Type"];
+													if(!content_type) content_type = "";
+													if(content_type.match("image")){
+														success(url);
+													}else{
+														load();
+													}
+												};
+
+												// 失敗
+												loader.onerror = function(){
+													load();
+												};
+
+												// レスポンスヘッダを読み込み
+												loader.setMethod("GET");
+												loader.setURL(url);
+												loader.loadResponseHeader();
+											};
+
+											load();
+										})();
+
+										return;
 									}
 								}
 							}
@@ -12097,13 +12221,13 @@ function PageExpand(page_expand_arguments){
 				}
 
 				// うごイラ用 高解像度サムネイル
-				if(!image_url){
+				/*if(!image_url){
 					var m = str.match(new RegExp("<meta[^>]+?(property|name)[ \n\r\t]*=[ \n\r\t]*\"og:image\"[^>]*>","i"));
 					if(m){
 						m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
 						if(m) image_url = m[1].replace(new RegExp("^(.*)_s\\.(.*)$"),"$1_master1200.jpg");
 					}
-				}
+				}*/
 
 				if(image_url){
 					response({result:true,url:image_url,content_type:["image"]});
@@ -29274,6 +29398,8 @@ function PageExpand(page_expand_arguments){
 				if(dl.tagName != "DL")	return false;
 
 				switch(work.bbs_name){
+				case "2ch":
+					break;
 				case "shitaraba":
 				case "machi":
 					if(dl.parentNode.parentNode != document.body)	return false;
@@ -30739,6 +30865,7 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 				new UI_TextHint(parent,_i18n.getMessage("menu_setting_standard_execute_queue_hint"));
+
 
 				// 設定のエクスポート / インポート
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_setting_standard_export_import"));
@@ -35126,7 +35253,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.4.0");
+				new UI_Text(parent,"PageExpand ver.1.4.1");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -36410,7 +36537,7 @@ function PageExpand(page_expand_arguments){
 			_this.onclick = function(){};
 
 			// --------------------------------------------------------------------------------
-			// クリックイベント
+			// 有無の設定
 			// --------------------------------------------------------------------------------
 			_this.setEnable = function(type){
 				input_ok.disabled = ((!type) ? true : false);
@@ -36536,10 +36663,24 @@ function PageExpand(page_expand_arguments){
 			};
 
 			// --------------------------------------------------------------------------------
+			// 有無の設定
+			// --------------------------------------------------------------------------------
+			_this.setEnable = function(type){
+				_list.disabled = ((!type) ? true : false);
+			};
+
+			// --------------------------------------------------------------------------------
 			// 複数選択設定
 			// --------------------------------------------------------------------------------
 			_this.setMultiple = function(type){
 				_list.multiple = type;
+			};
+
+			// --------------------------------------------------------------------------------
+			// リストサイズをセット
+			// --------------------------------------------------------------------------------
+			_this.setListSize = function(v){
+				_list.size = v;
 			};
 
 			// --------------------------------------------------------------------------------
@@ -51938,6 +52079,24 @@ function PageExpand(page_expand_arguments){
 			menu_setting_standard_enable_double_touch_assist: {
 				message: "ダブルタッチ補助線を表示"
 			},
+			menu_setting_standard_command: {
+				message: "メニューの実行（モバイル用）"
+			},
+			menu_setting_standard_command_execute_button: {
+				message: "実行する"
+			},
+			menu_setting_standard_command_execute_dialog: {
+				message: "メニューの実行"
+			},
+			menu_setting_standard_command_execute_dialog_tab_list: {
+				message: "実行対象となるタブを選択"
+			},
+			menu_setting_standard_command_execute_dialog_command_list: {
+				message: "実行するコマンドを選択"
+			},
+			menu_setting_standard_command_execute_dialog_confirm: {
+				message: "選択したメニューを実行しますか？"
+			},
 			menu_setting_standard_export_import: {
 				message: "設定のエクスポート / インポート"
 			},
@@ -53315,6 +53474,24 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_setting_standard_enable_double_touch_assist: {
 				message: "Display the double touch assist."
+			},
+			menu_setting_standard_command: {
+				message: "Execute Menu (for mobile)"
+			},
+			menu_setting_standard_command_execute_button: {
+				message: "Execute"
+			},
+			menu_setting_standard_command_execute_dialog: {
+				message: "Execute Menu"
+			},
+			menu_setting_standard_command_execute_dialog_tab_list: {
+				message: "select the tab"
+			},
+			menu_setting_standard_command_execute_dialog_command_list: {
+				message: "select the command"
+			},
+			menu_setting_standard_command_execute_dialog_confirm: {
+				message: "Do you want to execute?"
 			},
 			menu_setting_standard_export_import: {
 				message: "Setting Export / Import"

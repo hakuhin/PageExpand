@@ -544,6 +544,7 @@ function PageExpand(page_expand_arguments){
 				};
 				new UI_TextHint(parent,_i18n.getMessage("menu_setting_standard_execute_queue_hint"));
 
+
 				// 設定のエクスポート / インポート
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_setting_standard_export_import"));
 				var parent = container.getElement();
@@ -4930,7 +4931,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.4.0");
+				new UI_Text(parent,"PageExpand ver.1.4.1");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -6226,7 +6227,7 @@ function PageExpand(page_expand_arguments){
 			_this.onclick = function(){};
 
 			// --------------------------------------------------------------------------------
-			// クリックイベント
+			// 有無の設定
 			// --------------------------------------------------------------------------------
 			_this.setEnable = function(type){
 				input_ok.disabled = ((!type) ? true : false);
@@ -6352,10 +6353,24 @@ function PageExpand(page_expand_arguments){
 			};
 
 			// --------------------------------------------------------------------------------
+			// 有無の設定
+			// --------------------------------------------------------------------------------
+			_this.setEnable = function(type){
+				_list.disabled = ((!type) ? true : false);
+			};
+
+			// --------------------------------------------------------------------------------
 			// 複数選択設定
 			// --------------------------------------------------------------------------------
 			_this.setMultiple = function(type){
 				_list.multiple = type;
+			};
+
+			// --------------------------------------------------------------------------------
+			// リストサイズをセット
+			// --------------------------------------------------------------------------------
+			_this.setListSize = function(v){
+				_list.size = v;
 			};
 
 			// --------------------------------------------------------------------------------
