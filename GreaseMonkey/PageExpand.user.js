@@ -10,7 +10,7 @@
 // --------------------------------------------------------------------------------
 // ==UserScript==
 // @name           PageExpand
-// @version        1.4.1
+// @version        1.4.2
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @description:ja 画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、掲示板の拡張表示など...
@@ -7609,8 +7609,8 @@
 						enable_popup_mouseover:true,
 						disable_same_image:false,
 						load_type:"preload",
-						script_allow:PresetScript_ExpandImage_ThumbnailScriptAllow_ImageBbs(),
-						script_insert:"[]"
+						script_allow:"",
+						script_insert:""
 					},
 				popup:{
 					origin_type:"center",
@@ -9742,6 +9742,78 @@
 			var preset = obj.preset;
 			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2ch();
 
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.21
+		// --------------------------------------------------------------------------------
+		if(proj.version < 21){
+			// バージョン値
+			proj.version = 21;
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// 8chan.co
+			var obj = addPreset(proj.expand_bbs,"8chan","4chan");
+			obj.preset = {
+				name:{
+					standard:"8chan.co",
+					locales:{
+						ja:"8chan",
+						en:"8chan.co"
+					}
+				},
+				filter:{
+					type:"regexp",
+					asterisk:{
+						filter:[]
+					},
+					regexp:{
+						filter:[
+							{
+								pattern:"^(http|https)://([^.]+\\.|)8chan\\.co/[^/]+/.*$",
+								flags:{i:true,g:false}
+							},{
+								pattern:"^(http|https)://([^.]+\\.|)8ch\\.net/[^/]+/.*$",
+								flags:{i:true,g:false}
+							}
+						]
+					}
+				},
+				enable:true,
+				script_initialize:PresetScript_ExpandBbs_ScriptInitialize(),
+				script_callback:PresetScript_ExpandBbs_ScriptCallback_8chan(),
+				popup:{
+					origin_type:"adsorb_top_bottom",
+					position_type:"absolute",
+					enable_animation:true,
+					percent:{x:75,y:90},
+					time_wait_open:0,
+					time_wait_close:250,
+					style_sheet:"padding:20px 10px; margin:0px; border:1px solid #000; overflow-y:auto; word-wrap:break-word; word-break:break-all; display:block;"
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義
+			// --------------------------------------------------------------------------------
+			// 画像掲示板用
+			updatePreset(proj.expand_image,"image_bbs",function(obj){
+				obj.thumbnail.script_allow = PresetScript_ExpandImage_ThumbnailScriptAllow_ImageBbs();
+			});
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			// 画像掲示板
+			updatePreset(proj.urlmap,"image_bbs",function(obj){
+				var filter = obj.filter.asterisk.filter;
+				filter.push("*://8ch.net/*");
+				filter.push("*://8chan.co/*");
+				filter.push("*://*.8chan.co/*");
+			});
 		}
 		if(exit())	return proj;
 
@@ -14051,6 +14123,9 @@
 			if(node.tagName == "BLOCKQUOTE"){
 					return false;
 			}
+			if(node.className == "body"){
+					return false;
+			}
 		}
 
 		response({result:false});
@@ -16299,6 +16374,918 @@
 					dt:dt,
 					dd:dd,
 					parent:dt.parentNode
+				},
+				null,
+				null
+			);
+
+			return true;
+		})();
+
+		response({useful:useful});
+		return true;
+	}.toString() +
+"\n]";
+	}
+
+	// --------------------------------------------------------------------------------
+	// 掲示板設定「8chan.co」
+	// --------------------------------------------------------------------------------
+	function PresetScript_ExpandBbs_ScriptCallback_8chan(){
+		return "" +
+"[\n\t" + 
+	function(info,response){
+		var element = info.element;
+
+		// --------------------------------------------------------------------------------
+		// レスポンスダイアログを登録
+		// --------------------------------------------------------------------------------
+		function attachBbsResponseDialog(response,node,parent_dialog,type){
+
+			// --------------------------------------------------------------------------------
+			// レスアンカー
+			// --------------------------------------------------------------------------------
+			function forResponseAnchor(target){
+				if(BbsControlResponseAnchorExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlResponseAnchor を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var i;
+					var nodes = ElementGetElementsByTagName(target,"a");
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						var node = nodes[i];
+						var numbers = StringCreateResponseAnchorNumbers(ElementGetTextContent(node));
+						if(numbers.getCount()){
+							var control_res_anchor = new BbsControlResponseAnchor(node,false);
+							control_res_anchor.setResponseAnchorNumbers(numbers);
+						}
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlResponseAnchor を検索
+				// --------------------------------------------------------------------------------
+				BbsControlResponseAnchorSearch(target,function(control_res_anchor){
+
+					var element_res_anchor = control_res_anchor.getElement();
+					var numbers = control_res_anchor.getResponseAnchorNumbers();
+
+					// ダイアログを作成
+					var response_dialog = new BbsResponseDialog();
+					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+					response_dialog.setElementParent(node.parent);
+					response_dialog.setElementHitArea(element_res_anchor);
+					response_dialog.oncreate = function(_window,callback){
+
+						_window.className = "post reply";
+
+						var created = false;
+						var i = 0;
+						var number_list = numbers.getNumberList();
+						var num = number_list.length;
+						if(!num) return false;
+
+						function f(){
+							var following = bbs_dictionary.getResponse(number_list[i]);
+							var clone = following.getCloneElements();
+
+							var j;
+							var clone_num = clone.length;
+							if(clone_num){
+								var container = DocumentCreateElement("table");
+								container.style.margin = "0px 0px 20px";
+								_window.appendChild(container);
+
+								var param = new Object();
+								param.parent = node.parent;
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									param[obj.name] = obj.element;
+									container.appendChild(obj.element);
+								}
+
+								// レスポンスダイアログを登録
+								attachBbsResponseDialog(following,param,response_dialog,"response");
+
+								created = true;
+							}
+
+							i += 1;
+							if(i < num){
+								execute_queue.attachFirst(f,null);
+							}else{
+								callback({result:created});
+							}
+						}
+						execute_queue.attachFirst(f,null);
+					};
+
+					return null;
+				});
+			}
+
+			// --------------------------------------------------------------------------------
+			// ID
+			// --------------------------------------------------------------------------------
+			function forId(target){
+				if(BbsControlIdExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlId を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var p;
+					var n;
+					var q;
+					var ignore_dictionary = {"A":1,"SCRIPT":1};
+					var queue = new Object();
+					q = {p:queue,n:queue,node:target};
+					queue.p = q;
+					queue.n = q;
+
+					while(queue.n != queue){
+						q = queue.n;
+						p = q.p;
+						n = q.n;
+						p.n = n;
+						n.p = p;
+						var node = q.node;
+						switch(node.nodeType){
+						case 1:
+							if(!(ignore_dictionary[node.tagName])){
+								var i;
+								var nodes = node.childNodes;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									n = queue;
+									p = n.p;
+									q = {p:p,n:n,node:nodes[i]};
+									p.n = q;
+									n.p = q;
+								}
+							}
+
+							// 名前欄
+							if(node.tagName == "SPAN"){
+								if(node.className == "poster_id"){
+									var m = ElementGetTextContent(node).match(new RegExp("^([a-zA-Z0-9+/.]{6,8})$","i"));
+									if(m){
+										// BbsControlId を生成
+										var control_id = new BbsControlId(node,false);
+										control_id.setId(m[1]);
+										var element_id = control_id.getElement();
+										DomNode_InsertAfter(node,element_id);
+									}
+								}
+							}
+
+							break;
+						case 3:
+							while(node){
+
+								// 本文
+								var m = DomNodeGetNodeValue(node).match(new RegExp("ID:(|[ ])([a-zA-Z0-9+/.]{6,8})","i"));
+								if(!m)	break;
+
+								// 元のテキストノード
+								DomNodeSetNodeValue(node,RegExp.leftContext);
+
+								// BbsControlId を生成
+								var control_id = new BbsControlId(null,false);
+								control_id.setId(m[2]);
+								var element_id = control_id.getElement();
+								ElementSetTextContent(element_id,m[0]);
+								DomNode_InsertAfter(node,element_id);
+
+								// 直後テキスト
+								node = DocumentCreateText(RegExp.rightContext);
+								DomNode_InsertAfter(element_id,node);
+							}
+							break;
+						}
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlId を検索
+				// --------------------------------------------------------------------------------
+				BbsControlIdSearch(target,function(control_id){
+
+					control_id.setResponse(response);
+
+					var id = control_id.getId();
+					var element_id = control_id.getElement();
+					var textnode_id = DocumentCreateText("");
+
+					element_id.appendChild(textnode_id);
+
+					// --------------------------------------------------------------------------------
+					// 変化があったときに実行されるイベント
+					// --------------------------------------------------------------------------------
+					control_id.onchange = function(count){
+						if(count > 1){
+							DomNodeSetNodeValue(textnode_id,"(" + count + ")");
+						}else{
+							DomNodeSetNodeValue(textnode_id,"");
+						}
+
+						var style = element_id.style;
+						if(count >= 5){
+							StyleDeclarationSetProperty(style,"color","#e80000");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else if(count >= 2){
+							StyleDeclarationRemoveProperty(style,"color");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else{
+							StyleDeclarationSetProperty(style,"color","#707070");
+							StyleDeclarationSetProperty(style,"font-size","small");
+						}
+						if(count > 1){
+							StyleDeclarationSetProperty(style,"margin-right","5px");
+						}else{
+							StyleDeclarationRemoveProperty(style,"margin-right");
+						}
+					};
+					control_id.update();
+
+					// --------------------------------------------------------------------------------
+					// ポップアップ化
+					// --------------------------------------------------------------------------------
+					if(type == "id"){
+						if(response.getId() == id)	return null;
+					}
+
+					// ダイアログを作成
+					var response_dialog = new BbsResponseDialog();
+					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+					response_dialog.setElementParent(node.parent);
+					response_dialog.setElementHitArea(element_id);
+					response_dialog.oncreate = function(_window,callback){
+
+						_window.className = "post reply";
+
+						var responses = bbs_dictionary.getResponsesFromId(id);
+						var i = 0;
+						var num = responses.length;
+						if(num <= 1) return false;
+
+						function f(){
+							var response_id = responses[i];
+							var clone = response_id.getCloneElements();
+
+							var j;
+							var clone_num = clone.length;
+							if(clone_num){
+								var container = DocumentCreateElement("table");
+								container.style.margin = "0px 0px 20px";
+								_window.appendChild(container);
+
+								var param = new Object();
+								param.parent = node.parent;
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									param[obj.name] = obj.element;
+									container.appendChild(obj.element);
+								}
+
+								// レスポンスダイアログを登録
+								attachBbsResponseDialog(response_id,param,response_dialog,"id");
+							}
+
+							i += 1;
+							if(i < num){
+								execute_queue.attachFirst(f,null);
+							}else{
+								callback({result:true});
+							}
+						}
+						execute_queue.attachFirst(f,null);
+					};
+
+					return null;
+				});
+			}
+
+			// --------------------------------------------------------------------------------
+			// トリップ
+			// --------------------------------------------------------------------------------
+			function forName(target){
+				if(BbsControlNameExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlName を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var p;
+					var n;
+					var q;
+					var ignore_dictionary = {"SCRIPT":1};
+					var queue = new Object();
+					q = {p:queue,n:queue,node:target};
+					queue.p = q;
+					queue.n = q;
+
+					while(queue.n != queue){
+						q = queue.n;
+						p = q.p;
+						n = q.n;
+						p.n = n;
+						n.p = p;
+						var node = q.node;
+						switch(node.nodeType){
+						case 1:
+							if(!(ignore_dictionary[node.tagName])){
+								var i;
+								var nodes = node.childNodes;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									n = queue;
+									p = n.p;
+									q = {p:p,n:n,node:nodes[i]};
+									p.n = q;
+									n.p = q;
+								}
+							}
+							break;
+						case 3:
+							while(node){
+
+								// 本文
+								var m = DomNodeGetNodeValue(node).match(new RegExp("(!|!!)([a-zA-Z0-9+/.]{10})","i"));
+								if(!m)	break;
+
+								// 元のテキストノード
+								DomNodeSetNodeValue(node,RegExp.leftContext);
+
+								// BbsControlName を生成
+								var control_name = new BbsControlName(null,false);
+								control_name.setName(m[0]);
+								var element_name = control_name.getElement();
+								ElementSetTextContent(element_name,m[0]);
+								DomNode_InsertAfter(node,element_name);
+
+								// 直後テキスト
+								node = DocumentCreateText(RegExp.rightContext);
+								DomNode_InsertAfter(element_name,node);
+							}
+							break;
+						}
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlName を検索
+				// --------------------------------------------------------------------------------
+				BbsControlNameSearch(target,function(control_name){
+
+					control_name.setResponse(response);
+
+					var name = control_name.getName();
+					var element_name = control_name.getElement();
+					var textnode_name = DocumentCreateText("");
+
+
+					// --------------------------------------------------------------------------------
+					// 変化があったときに実行されるイベント
+					// --------------------------------------------------------------------------------
+					control_name.onchange = function(count){
+						if(count > 1){
+							DomNodeSetNodeValue(textnode_name,"(" + count + ")");
+						}else{
+							DomNodeSetNodeValue(textnode_name,"");
+						}
+
+						var style = element_name.style;
+						if(count >= 5){
+							StyleDeclarationSetProperty(style,"color","#e80000");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else if(count >= 2){
+							StyleDeclarationRemoveProperty(style,"color");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else{
+							StyleDeclarationSetProperty(style,"color","#707070");
+							StyleDeclarationSetProperty(style,"font-size","small");
+						}
+					};
+					control_name.update();
+					element_name.appendChild(textnode_name);
+
+					// --------------------------------------------------------------------------------
+					// ポップアップ化
+					// --------------------------------------------------------------------------------
+					if(type == "name"){
+						if(response.getName() == name)	return null;
+					}
+
+					// ダイアログを作成
+					var response_dialog = new BbsResponseDialog();
+					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+					response_dialog.setElementParent(node.parent);
+					response_dialog.setElementHitArea(element_name);
+					response_dialog.oncreate = function(_window,callback){
+
+						_window.className = "post reply";
+
+						var responses = bbs_dictionary.getResponsesFromName(name);
+						var i = 0;
+						var num = responses.length;
+						if(num <= 1) return false;
+
+						function f(){
+							var response_name = responses[i];
+							var clone = response_name.getCloneElements();
+
+							var j;
+							var clone_num = clone.length;
+							if(clone_num){
+								var container = DocumentCreateElement("table");
+								container.style.margin = "0px 0px 20px";
+								_window.appendChild(container);
+
+								var param = new Object();
+								param.parent = node.parent;
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									param[obj.name] = obj.element;
+									container.appendChild(obj.element);
+								}
+
+								// レスポンスダイアログを登録
+								attachBbsResponseDialog(response_name,param,response_dialog,"name");
+							}
+
+							i += 1;
+							if(i < num){
+								execute_queue.attachFirst(f,null);
+							}else{
+								callback({result:true});
+							}
+						}
+						execute_queue.attachFirst(f,null);
+					};
+
+					return null;
+				});
+			}
+
+			// --------------------------------------------------------------------------------
+			// フォロワー
+			// --------------------------------------------------------------------------------
+			function forFollower(target){
+				if(BbsControlFollowerExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlFollower を生成
+				// --------------------------------------------------------------------------------
+				var control_follower = new BbsControlFollower(null,true);
+				control_follower.setResponse(response);
+
+				var element_follower = control_follower.getElement();
+				var textnode_follower = DocumentCreateText("");
+
+				element_follower.appendChild(textnode_follower);
+
+				// --------------------------------------------------------------------------------
+				// 変化があったときに実行されるイベント
+				// --------------------------------------------------------------------------------
+				control_follower.onchange = function(count){
+					if(count){
+						textnode_follower.nodeValue = " follower(" + count + ")";
+					}else{
+						textnode_follower.nodeValue = "";
+					}
+
+					var style = element_follower.style;
+					if(count >= 3){
+						StyleDeclarationSetProperty(style,"color","#e80000");
+						StyleDeclarationRemoveProperty(style,"font-size");
+
+					}else{
+						StyleDeclarationSetProperty(style,"color","#707070");
+						StyleDeclarationSetProperty(style,"font-size","small");
+					}
+					if(count){
+						StyleDeclarationSetProperty(style,"margin","0px 4px 0px 0px");
+					}else{
+						StyleDeclarationRemoveProperty(style,"margin");
+					}
+				};
+				control_follower.update();
+				target.appendChild(element_follower);
+
+
+				// --------------------------------------------------------------------------------
+				// ポップアップ化
+				// --------------------------------------------------------------------------------
+				// ダイアログを作成
+				var response_dialog = new BbsResponseDialog();
+				if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+				response_dialog.setElementParent(node.parent);
+				response_dialog.setElementHitArea(element_follower);
+				response_dialog.oncreate = function(_window,callback){
+
+					_window.className = "post reply";
+
+					var ary = response.getFollower();
+					var i = 0;
+					var num = ary.length;
+					if(num <= 0) return false;
+
+					function f(){
+						var follower = bbs_dictionary.getResponse(ary[i].getNumber());
+						var clone = follower.getCloneElements();
+
+						var j;
+						var clone_num = clone.length;
+						if(clone_num){
+							var container = DocumentCreateElement("table");
+							container.style.margin = "0px 0px 20px";
+							_window.appendChild(container);
+
+							var param = new Object();
+							param.parent = node.parent;
+							for(j=0;j<clone_num;j++){
+								var obj = clone[j];
+								param[obj.name] = obj.element;
+								container.appendChild(obj.element);
+							}
+
+							// レスポンスダイアログを登録
+							attachBbsResponseDialog(follower,param,response_dialog,"response");
+						}
+
+						i += 1;
+						if(i < num){
+							execute_queue.attachFirst(f,null);
+						}else{
+							callback({result:true});
+						}
+					}
+					execute_queue.attachFirst(f,null);
+				};
+			}
+
+			if(node.post_intro){
+				forResponseAnchor(node.post_intro);
+				forId(node.post_intro);
+				forName(node.post_intro);
+				forFollower(node.post_intro);
+			}
+			if(node.post_body){
+				forResponseAnchor(node.post_body);
+				forId(node.post_body);
+				forName(node.post_body);
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// 文字列からレスポンス番号を取得
+		// --------------------------------------------------------------------------------
+		function StringCreateResponseAnchorNumbers(str){
+			var numbers = new ResponseAnchorNumbers();
+
+			var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞)([0-9０-９]+)","i");
+			var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("^([0-9０-９]+)","i");
+
+			var m = str.match(re_search);
+			if(m){
+				var p = m[1].length;
+				while(true){
+					// 番号-番号
+					m = str.substr(p).match(re_range);
+					if(m){
+						var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+						var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+						if(min < 1) min = 1;
+						if(max < 1) max = 1;
+						if(min > 0x7fffffff) min = 0x7fffffff;
+						if(max > 0x7fffffff) max = 0x7fffffff;
+						if(max < min){
+							var tmp = min;
+							min = max;
+							max = tmp;
+						}
+						if(max - min > 10000) max = min + 10000;
+						p += m[0].length;
+						numbers.addNumbers(min,max);
+					}else{
+						// 番号
+						m = str.substr(p).match(re_number);
+						if(m){
+							p += m[0].length;
+							var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							if(id < 1) id = 1;
+							if(id > 0x7fffffff) id = 0x7fffffff;
+							numbers.addNumber(id);
+						}
+					}
+
+					if(m){
+						// カンマ
+						if(RegExp.rightContext.search(",") == 0){
+							p += 1;
+							continue;
+						}
+					}
+					break;
+				}
+			}
+			return numbers;
+		}
+
+		// --------------------------------------------------------------------------------
+		// エレメントを解析
+		// --------------------------------------------------------------------------------
+		var useful = (function(){
+			var post_container = element;
+			var post_intro;
+			var post_files;
+			var post_body;
+
+			try{
+				if(post_container.tagName != "DIV")	return false;
+				if(!(post_container.className.match(new RegExp("^post","i"))))	return false;
+			}catch(e){
+				return false;
+			}
+
+			try{
+				var node = post_container.previousSibling.previousSibling;
+				if(node.tagName == "DIV"){
+					if(node.className == "files"){
+						post_files = node;
+					}
+				}
+			}catch(e){
+			}
+
+			try{
+				var nodes = post_container.childNodes;
+				var i;
+				var num = nodes.length;
+				for(i=0;i<num;i++){
+					var node = nodes[i];
+					switch(node.className){
+					case "intro":
+						post_intro = node;
+						break;
+					case "files":
+						post_files = node;
+						break;
+					case "body":
+						post_body = node;
+						break;
+					}
+				}
+			}catch(e){
+			}
+
+			try{
+				if(!post_intro) return false;
+				if(!post_body) return false;
+			}catch(e){
+			}
+
+			// document に未登録
+			if(!DomNodeGetAttachedDocument(post_intro))	return false;
+
+			// ポップアップを除外
+			var board = false;
+			var node = post_intro;
+			while(node){
+				if(node.id.match(new RegExp("^thread","i"))){
+					board = true;
+					break;
+				}
+				node = node.parentNode;
+			}
+			if(!board)	return false;
+
+			// --------------------------------------------------------------------------------
+			// クリーンアップ
+			// --------------------------------------------------------------------------------
+			(function(){
+				function cleanupInfo(target){
+					var nodes = ElementGetElementsByTagName(post_intro,"span");
+					var i;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						var node = nodes[i];
+						if(node.className == "postertrip"){
+							// トリップ
+							var m = ElementGetTextContent(element).match(new RegExp("(!|!!)([a-zA-Z0-9+/.]{10})","i"));
+							if(m){
+								ElementSetTextContent(node,m[0]);
+							}
+							break;
+						}
+					}
+				}
+
+				function cleanupMessage(target){
+					BbsControlSearchTrash(target,function(element){
+						var node = element.firstChild;
+						if(!node)	return null;
+						if(node.nodeType != 3)	return null;
+
+						// ID
+						var m = node.nodeValue.match(new RegExp("^ID:(|[ ])([a-zA-Z0-9+/.]{6,8})","i"));
+						if(m){
+							// 直後テキスト
+							var node = DocumentCreateText(m[0]);
+							DomNode_InsertAfter(element,node);
+							DomNodeRemove(element);
+							return null;
+						}
+
+						// トリップ
+						var m = node.nodeValue.match(new RegExp("^(!|!!)([a-zA-Z0-9+/.]{10})","i"));
+						if(m){
+							// 直後テキスト
+							var node = DocumentCreateText(m[0]);
+							DomNode_InsertAfter(element,node);
+							DomNodeRemove(element);
+							return null;
+						}
+
+						return null;
+					});
+				}
+
+				function cleanupAnchor(target){
+					var p;
+					var n;
+					var q;
+					var queue = new Object();
+					q = {p:queue,n:queue,node:target};
+					queue.p = q;
+					queue.n = q;
+
+					while(queue.n != queue){
+						q = queue.n;
+						p = q.p;
+						n = q.n;
+						p.n = n;
+						n.p = p;
+						var node = q.node;
+						switch(node.nodeType){
+						case 1:
+							if(node.tagName == "A"){
+								var clone = node.cloneNode(true);
+								DomNode_InsertAfter(node,clone);
+								DomNodeRemove(node);
+							}else{
+								var i;
+								var nodes = node.childNodes;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									n = queue;
+									p = n.p;
+									q = {p:p,n:n,node:nodes[i]};
+									p.n = q;
+									n.p = q;
+								}
+							}
+							break;
+						}
+					}
+				}
+
+				function removeResponseAnchor(target){
+					var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
+					var p;
+					var n;
+					var q;
+					var queue = new Object();
+					q = {p:queue,n:queue,node:target};
+					queue.p = q;
+					queue.n = q;
+
+					while(queue.n != queue){
+						q = queue.n;
+						p = q.p;
+						n = q.n;
+						p.n = n;
+						n.p = p;
+						var node = q.node;
+						switch(node.nodeType){
+						case 1:
+							if(node.tagName == "A"){
+								var text = ElementGetTextContent(node);
+								if(text.match(re_search)){
+									DomNodeRemove(node);
+								}
+							}else{
+								var i;
+								var nodes = node.childNodes;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									n = queue;
+									p = n.p;
+									q = {p:p,n:n,node:nodes[i]};
+									p.n = q;
+									n.p = q;
+								}
+							}
+							break;
+						}
+					}
+				}
+
+				if(post_intro){
+					cleanupInfo(post_intro);
+					removeResponseAnchor(post_intro);
+				}
+				if(post_body){
+					cleanupMessage(post_body);
+					cleanupAnchor(post_body);
+				}
+			})();
+
+			// ナンバーを取得
+			var info_text = ElementGetTextContent(post_intro);
+			if(!(info_text.match(new RegExp("No\\.([0-9]+)","i"))))	return false;
+
+			// ナンバーからレスポンスオブジェクトを取得
+			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
+
+			// レスポンス解析
+			if(!response.getAnalyzed()){
+
+				// IDの取得
+				if(info_text.match(new RegExp("ID:(|[ ])([a-zA-Z0-9+/.]+)","i"))){
+					response.setId(RegExp.$2);
+				}
+
+				// 名前の取得
+				(function(){
+					var nodes = ElementGetElementsByTagName(post_intro,"span");
+					var i;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						var node = nodes[i];
+						if(node.className == "trip"){
+							response.setName(ElementGetTextContent(node));
+							break;
+						}
+					}
+				})();
+
+				// フォロー解析
+				var dictionary = new Object();
+				(function(){
+					var nodes = ElementGetElementsByTagName(post_body,"a");
+					var i;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						var numbers = StringCreateResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
+						numbers.getNumbers(function(n){
+							if(!dictionary[n]){
+								var following = bbs_dictionary.getResponse(n);
+								following.addFollower(response);
+								dictionary[n] = true;
+							}
+						});
+					}
+				})();
+
+				// オリジナルエレメントをセット
+				if(post_intro)		response.addOriginalElements("post_intro",post_intro);
+				if(post_files)		response.addOriginalElements("post_files",post_files);
+				if(post_body)		response.addOriginalElements("post_body",post_body);
+
+				// 消去時に実行されるイベント
+				response.onerase = function(){
+					var original = response.getOriginalElements();
+					if(original.length){
+						var node = original[0].element;
+						while(node){
+							if(node.className.match(new RegExp("^post","i"))){
+								var revise_scroll = new DocumentReviseScroll();
+								revise_scroll.executeRemoveElementBefore(node);
+								node.style.display = "none";
+								revise_scroll.executeRemoveElementAfter(node);
+								break;
+							}
+							node = node.parentNode;
+						}
+					}
+				};
+
+				response.setAnalyzed();
+			}
+
+			// レスポンスダイアログを登録（ルート）
+			attachBbsResponseDialog(
+				response,
+				{
+					post_intro:post_intro,
+					post_body:post_body,
+					parent:document.body
 				},
 				null,
 				null
@@ -34825,7 +35812,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.4.1");
+				new UI_Text(parent,"PageExpand ver.1.4.2");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
