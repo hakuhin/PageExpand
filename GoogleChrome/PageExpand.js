@@ -7303,14 +7303,6 @@ function PageExpand(page_expand_arguments){
 			proj.version = 9;
 
 			// --------------------------------------------------------------------------------
-			// アンカー置換定義
-			// --------------------------------------------------------------------------------
-			// ソーシャルサービスのカウント数を表示
-			updatePreset(proj.replacement_to_anchor,"attach_sns_counter",function(obj){
-				obj.script = PresetScript_ReplacementToAnchor_AttachSnsCounter();
-			});
-
-			// --------------------------------------------------------------------------------
 			// ハイパーリンク置換定義
 			// --------------------------------------------------------------------------------
 			// 直リンク（汎用）
@@ -9063,12 +9055,6 @@ function PageExpand(page_expand_arguments){
 			preset.script_initialize = "";
 			preset.script_callback = "";
 
-			// chaika
-			var obj = addPreset(proj.expand_bbs,"chaika","atchs");
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Chaika();
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Chaika();
-
 			// ニコニコ大百科
 			var obj = addPreset(proj.expand_bbs,"nicovideo_dictionary",null);
 			var preset = obj.preset;
@@ -9489,7 +9475,7 @@ function PageExpand(page_expand_arguments){
 				flags:{i:true,g:false}
 			});
 			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_2ch();
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2ch();
+			preset.script_callback = "";
 
 			// unkar.org
 			removePreset("expand_bbs","unkar");
@@ -9691,15 +9677,6 @@ function PageExpand(page_expand_arguments){
 			});
 
 			// --------------------------------------------------------------------------------
-			// アンカー置換定義
-			// --------------------------------------------------------------------------------
-			// 2ch.net 用
-			updatePreset(proj.replacement_to_anchor,"direct_link_bbs",function(obj){
-				obj.script = PresetScript_ReplacementToAnchor_DirectLinkBbs();
-			});
-
-
-			// --------------------------------------------------------------------------------
 			// ハイパーリンク置換定義
 			// --------------------------------------------------------------------------------
 			// 直リンク（汎用）
@@ -9709,14 +9686,6 @@ function PageExpand(page_expand_arguments){
 				// ピクシブ
 				filter[20].script = PresetScript_ReplacementToLink_DirectLinkGeneric_PixivNet();
 			});
-
-			// --------------------------------------------------------------------------------
-			// 掲示板設定
-			// --------------------------------------------------------------------------------
-			// ２ちゃんねる掲示板
-			var obj = addPreset(proj.expand_bbs,"2ch",null);
-			var preset = obj.preset;
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2ch();
 
 		}
 		if(exit())	return proj;
@@ -9790,6 +9759,86 @@ function PageExpand(page_expand_arguments){
 				filter.push("*://8chan.co/*");
 				filter.push("*://*.8chan.co/*");
 			});
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.22
+		// --------------------------------------------------------------------------------
+		if(proj.version < 22){
+			// バージョン値
+			proj.version = 22;
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義
+			// --------------------------------------------------------------------------------
+			// 2ch.net 用
+			updatePreset(proj.replacement_to_anchor,"direct_link_bbs",function(obj){
+				obj.script = PresetScript_ReplacementToAnchor_DirectLinkBbs();
+			});
+
+			// ソーシャルサービスのカウント数を表示
+			updatePreset(proj.replacement_to_anchor,"attach_sns_counter",function(obj){
+				obj.script = PresetScript_ReplacementToAnchor_AttachSnsCounter();
+			});
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義
+			// --------------------------------------------------------------------------------
+			// 直リンク（HTML 内の画像を検索）
+			var obj = addPreset(proj.replacement_to_link,"direct_link_find_image_in_html",null);
+			obj.preset = {
+				name:{
+					standard:"Direct Link (Find an image in HTML)",
+					locales:{
+						ja:"直リンク（HTML 内の画像を検索）",
+						en:"Direct Link (Find an image in HTML)"
+					}
+				},
+				filter:[
+					{
+						name:{
+							standard:"Image of the largest byte",
+							locales:{
+								ja:"最大バイトの画像",
+								en:"Image of the largest byte"
+							}
+						},
+						filter:{
+							type:"regexp",
+							asterisk:{
+								filter:[]
+							},
+							regexp:{
+								filter:[
+									{
+										pattern:"^(http|https)://.*\\.(bmp|gif|jpg|jpe|jpeg|png)([^#?/]*)([#?].*|$)",
+										flags:{i:true,g:false}
+									}
+								]
+							}
+						},
+						enable_reflect_to_anchor:false,
+						enable_cache:true,
+						script:PresetScript_ReplacementToLink_DirectLinkFindImageInHTML_ImageOfTheLargestByte()
+					}
+				]
+			};
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// ２ちゃんねる掲示板
+			var obj = addPreset(proj.expand_bbs,"2ch",null);
+			var preset = obj.preset;
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2ch();
+
+			// chaika
+			var obj = addPreset(proj.expand_bbs,"chaika","atchs");
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Chaika();
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Chaika();
+
 		}
 		if(exit())	return proj;
 
@@ -10835,7 +10884,7 @@ function PageExpand(page_expand_arguments){
 			// PINKちゃんねる
 			{search:"^http://pinktower\\.com/",replace:"http://"},
 			// したらば掲示板
-			{search:"^http://jbbs\\.shitaraba\\.net/bbs/link\\.cgi[?]url=",replace:""},
+			{search:"^http://jbbs\\.shitaraba\\.net/bbs/link\\.cgi[?]url=",replace:"",decode_uri:true},
 			// ログ速
 			{search:"^http://l\\.moapi\\.net/",replace:""},
 			// かきこ
@@ -10848,10 +10897,13 @@ function PageExpand(page_expand_arguments){
 		var i;
 		var num = list.length;
 		for(i=0;i<num;i++){
-			r = new RegExp(list[i].search,"i");
+			var item = list[i];
+			r = new RegExp(item.search,"i");
 			if(url.match(r)){
-				anchor_element.href = url.replace(r,list[i].replace);
-				return false;
+				url = url.replace(r,item.replace);
+				if(item.decode_uri) url = decodeURIComponent(url);
+				anchor_element.href = url;
+				break;
 			}
 		}
 
@@ -10934,8 +10986,16 @@ function PageExpand(page_expand_arguments){
 				loader.onload = function(v){
 					try{
 						var param = JsonParse(v);
-						if(param.count){
-							result.push("t:" + param.count);
+						var count = param.count;
+						if(count){
+							result.push(createItem({
+								label:"t",
+								value:count,
+								tooltip:"twitter Retweet",
+								color:"#fff",
+								background:"#33CCFF",
+								borderColor:"#33CCFF"
+							}));
 						}
 					}catch(e){}
 					execute();
@@ -10950,8 +11010,16 @@ function PageExpand(page_expand_arguments){
 				loader.onload = function(v){
 					try{
 						var param = JsonParse(v);
-						if(param[0].total_count){
-							result.push("f:" + param[0].total_count);
+						var count = param[0].total_count;
+						if(count){
+							result.push(createItem({
+								label:"f",
+								value:count,
+								tooltip:"Facebook Like",
+								color:"#fff",
+								background:"#3B5999",
+								borderColor:"#233774"
+							}));
 						}
 					}catch(e){}
 					execute();
@@ -10969,7 +11037,14 @@ function PageExpand(page_expand_arguments){
 					if(v.match(/window\.__SSR = [{]c: ([0-9]+)/i)){
 						var count = parseInt(RegExp.$1);
 						if(count){
-							result.push("g+:" + count);
+							result.push(createItem({
+								label:"g+",
+								value:count,
+								tooltip:"Google +1",
+								color:"#fff",
+								background:"#CD4131",
+								borderColor:"#A5281A"
+							}));
 						}
 					}
 					execute();
@@ -10982,62 +11057,116 @@ function PageExpand(page_expand_arguments){
 				var loader = new Loader();
 				loader.onerror = error;
 				loader.onload = function(v){
-					if(v){
-						result.push("B!:" + v);
-					}
+					try{
+						if(v){
+							result.push(createItem({
+								label:"B!",
+								value:v,
+								tooltip:"Hatena Bookmark",
+								color:"#fff",
+								background:"#2B65A9",
+								borderColor:"#2B65A9"
+							}));
+						}
+					}catch(e){}
 					execute();
 				};
 				loader.setURL("http://api.b.st-hatena.com/entry.count?url=" + escape(url));
 				loader.loadText();
 			},
-			// Yahoo!ブックマーク
+			// Pinterest
 			function(){
 				var loader = new Loader();
 				loader.onerror = error;
 				loader.onload = function(v){
-					if(v.match(/ct="([0-9]+)"/i)){
-						var count = parseInt(RegExp.$1);
+					try{
+						var param = JsonParse(v.match(/\((.*)\)/i)[1]);
+						var count = param.count;
 						if(count){
-							result.push("Y:" + count);
+							result.push(createItem({
+								label:"Pi",
+								value:count,
+								tooltip:"Pinterest Pin Count",
+								color:"#fff",
+								background:"#DF2532",
+								borderColor:"#8C1B22"
+							}));
 						}
-					}
+					}catch(e){}
 					execute();
 				};
-				loader.setURL("http://num.bookmarks.yahoo.co.jp/yjnostb.php?urls=" + url);
+				loader.setURL("http://widgets.pinterest.com/v1/urls/count.json?source=6&url=" + encodeURIComponent(url));
 				loader.loadText();
 			},
-			// livedoorクリップ
+			// reddit score
 			function(){
 				var loader = new Loader();
 				loader.onerror = error;
 				loader.onload = function(v){
 					try{
 						var param = JsonParse(v);
-						if(param.total_clip_count){
-							result.push("l:" + param.total_clip_count);
+						var score = param.data.children[0].data.score;
+						if(score){
+							result.push(createItem({
+								label:"r",
+								value:score,
+								tooltip:"reddit Score",
+								color:"#30659A",
+								background:"#C7DEF7",
+								borderColor:"#C7DEF7"
+							}));
 						}
 					}catch(e){}
 					execute();
 				};
-				loader.setURL("http://api.clip.livedoor.com/json/comments?link=" + encodeURIComponent(url));
+				loader.setURL("http://buttons.reddit.com/button_info.json?url=" + encodeURIComponent(url));
+				loader.loadText();
+			},
+			// StumbleUpon views
+			function(){
+				var loader = new Loader();
+				loader.onerror = error;
+				loader.onload = function(v){
+					try{
+						var param = JsonParse(v);
+						var views = param.result.views;
+						if(views){
+							result.push(createItem({
+								label:"SU",
+								value:views,
+								tooltip:"StumbleUpon Views",
+								color:"#fff",
+								background:"#E6492E",
+								borderColor:"#E6492E"
+							}));
+						}
+					}catch(e){}
+					execute();
+				};
+				loader.setURL("http://www.stumbleupon.com/services/1.01/badge.getinfo?url=" + encodeURIComponent(url));
 				loader.loadText();
 			},
 			// 出力
 			function(){
 				var num = result.length;
 				if(num){
-					var str = "(";
-					var i;
-					for(i=0;i<num;i++){
-						if(i)	str += " ";
-						str += result[i];
-					}
-					str += ")";
-
 					// span を生成
 					var span = DocumentCreateElement("span");
-					ElementSetStyle(span,"font-weight:bold; font-size:12px; background:#FFF; color:#000; padding:1px; margin:1px; display:inline-block; line-height:1.0;");
-					ElementSetTextContent(span,str);
+					ElementSetStyle(span,"all:initial; line-height:1.0;");
+
+					var i;
+					for(i=0;i<num;i++){
+						span.appendChild(result[i]);
+					}
+
+					var click_func = function(e){
+						DomNodeRemove(span);
+					};
+					if(span.addEventListener){
+						span.addEventListener("click",click_func,true);
+					}else if(span.attachEvent){
+						span.attachEvent("onclick",click_func);
+					}
 
 					// 直後に登録
 					DomNodeInsertAfter(span,anchor_element);
@@ -11058,8 +11187,52 @@ function PageExpand(page_expand_arguments){
 			execute();
 		}
 
+		// アイテム作成
+		function createItem(param){
+			var table = DocumentCreateElement("table");
+			var tbody = DocumentCreateElement("tbody");
+			table.appendChild(tbody);
+			var tr = DocumentCreateElement("tr");
+			var td0 = DocumentCreateElement("td");
+			var td1 = DocumentCreateElement("td");
+			tbody.appendChild(tr);
+			tr.appendChild(td0);
+			tr.appendChild(td1);
+			td0.appendChild(DocumentCreateText(param.label));
+			td1.appendChild(DocumentCreateText(param.value));
+
+			table.cellspacing = "0";
+			var style = table.style;
+			style.cssText = "border:1px solid #888; border-spacing:0; margin;0; margin-right:2px; padding:0; line-height:1.0; border-radius:2px; display:inline-block; font-size:14px; width:auto; heigh:auto;";
+			if(param.tooltip){
+				table.title = param.tooltip;
+			}
+			if(param.borderColor){
+				style.borderColor = param.borderColor;
+			}
+
+			var style = tr.style;
+			style.cssText = "margin:0; padding:0; width:auto; height:auto;";
+
+			var style = td0.style;
+			style.cssText = "margin:0; padding:1px 2px; background:#fff; text-align:center; width:auto; height:auto; color:#000;";
+			if(param.color){
+				style.color = param.color;
+			}
+			if(param.background){
+				style.background = param.background;
+			}
+
+			var style = td1.style;
+			style.cssText = "padding:1px 2px; background:#fff; text-align:center; width:auto; height:auto;";
+
+			return table;
+		}
+
 		// 初回実行開始
-		execute();
+		if(url.match(new RegExp("^(http|https)://","i"))){
+			execute();
+		}
 
 		return false;
 	}.toString() +
@@ -12890,6 +13063,145 @@ function PageExpand(page_expand_arguments){
 "\n]";
 	}
 
+	// --------------------------------------------------------------------------------
+	// ハイパーリンク置換定義「HTML 内の画像を検索」「最大バイトの画像」
+	// --------------------------------------------------------------------------------
+	function PresetScript_ReplacementToLink_DirectLinkFindImageInHTML_ImageOfTheLargestByte(){
+		return "" +
+"[\n\t" + 
+	function(info,response){
+		var anchor_element = info.anchor_element;
+		var url = anchor_element.href;
+
+		// ローダーオブジェクトを作成
+		var loader = new Loader();
+
+		// 成功
+		loader.onload = function(header){
+
+			if((function(){
+				if(!header["Content-Type"]) return false;
+				if(!header["Content-Type"].match("text")) return false;
+				return true;
+			})()){
+			}else{
+				response({result:false});
+			}
+
+			// ローダーオブジェクトを作成
+			var loader = new Loader();
+
+			// 成功
+			loader.onload = function(str){
+				var image_link_list = new Array();
+
+				// ベース
+				var base;
+				var m = str.match(new RegExp("<base[^>]+href[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
+				if(m) base = m[0];
+
+				// 画像要素
+				str.replace(new RegExp("<img[^>]+src[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","ig"),function (m,p1,index,str){
+					image_link_list.push(StringUrl_To_Absolute(p1,url,base));
+				});
+
+				// 画像直リンク
+				var re_image = new RegExp("\\.(bmp|gif|jpg|jpe|jpeg|png)([#?]|$)","i");
+				str.replace(new RegExp("<a[^>]+href[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","ig"),function (m,p1,index,str){
+					if(p1.match(re_image)){
+						image_link_list.push(StringUrl_To_Absolute(p1,url,base));
+					}
+				});
+
+				var image_list = new Array();
+				(function callee(){
+					var image_url = image_link_list.pop();
+					if(!image_url){
+						var byte_size_max = 0;
+						var image_item;
+						var i;
+						var num = image_list.length;
+						for(i=0;i<num;i++){
+							var item = image_list[i];
+							if(item.byte_size > byte_size_max){
+								byte_size_max = item.byte_size;
+								image_item = item;
+							}
+						}
+						if(image_item){
+							response({result:true,url:image_item.url,content_type:["image"]});
+						}else{
+							response({result:false});
+						}
+						return;
+					}
+
+					if(!image_url.match(new RegExp("^(http|https)://","i"))){
+						callee();
+						return;
+					}
+
+					// ローダーオブジェクトを作成
+					var loader = new Loader();
+
+					// 成功
+					loader.onload = function(header){
+						if((function(){
+							if(!header["Content-Type"]) return false;
+							if(!header["Content-Length"]) return false;
+							if(!header["Content-Type"].match("image")) return false;
+							return true;
+						})()){
+							image_list.push({
+								url:image_url,
+								byte_size:parseInt(header["Content-Length"])
+							});
+						}
+
+						callee();
+					};
+
+					// 失敗
+					loader.onerror = function(){
+						callee();
+					};
+
+					// レスポンスヘッダを読み込み
+					loader.setURL(image_url);
+					loader.loadResponseHeader();
+				})();
+			};
+
+			// 失敗
+			loader.onerror = function(){
+				response({result:false});
+			};
+
+			// テキストの読み込み
+			loader.setMethod("GET");
+			loader.setURL(url);
+			loader.loadText();
+
+		};
+
+		// 失敗
+		loader.onerror = function(){
+			response({result:false});
+		};
+
+		// レスポンスヘッダを読み込み
+		loader.setURL(url);
+		loader.loadResponseHeader();
+
+		return true;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		response({result:false});
+		return true;
+	}.toString() +
+"\n]";
+	}
 
 	// --------------------------------------------------------------------------------
 	// ハイパーリンク化定義「簡易」
@@ -20413,7 +20725,8 @@ function PageExpand(page_expand_arguments){
 			var re_date;
 			var re_id;
 			var re_be;
-			var re_gen_id = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
+			var re_gen_id0 = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
+			var re_gen_id1 = new RegExp("([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
 			var re_gen_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
 			switch(work.bbs_name){
 			case "2ch":
@@ -20478,15 +20791,10 @@ function PageExpand(page_expand_arguments){
 								}
 
 								var nodes = StringHtmlCreateDomNodesSafe(generate_html_func(obj));
-								var dt = ElementGetElementsByTagName(nodes[0],"dt")[0];
-								var dd = ElementGetElementsByTagName(nodes[0],"dd")[0];
-
-								try{
-									if(dt.tagName != "DT")	return;
-									if(dd.tagName != "DD")	return;
-								}catch(e){
-									return;
-								}
+								var dt = ElementGetElementsByClassName(nodes[0],"resHeader")[0];
+								var dd = ElementGetElementsByClassName(nodes[0],"resBody")[0];
+								if(!dt) return;
+								if(!dd) return;
 
 								var dt_text = ElementGetTextContent(dt);
 
@@ -20494,8 +20802,15 @@ function PageExpand(page_expand_arguments){
 								work.extendResponseAnchor(dd);
 
 								// IDの取得
-								if(dt_text.match(re_gen_id)){
-									response.setId(RegExp.$1);
+								var nodes = ElementGetElementsByClassName(dt,"resID");
+								if(nodes.length){
+									if(ElementGetTextContent(nodes[0]).match(re_gen_id1)){
+										response.setId(RegExp.$1);
+									}
+								}else{
+									if(dt_text.match(re_gen_id0)){
+										response.setId(RegExp.$1);
+									}
 								}
 
 								// 名前の取得
@@ -20712,7 +21027,8 @@ function PageExpand(page_expand_arguments){
 			var re_id = new RegExp("ID:([^ ]+)","i");
 			var re_be = new RegExp("BE:([^ ]+)","i");
 			var re_icon = new RegExp("^sssp://img.2ch.net/ico/(.*?)( <br> .*)$","i");
-			var re_gen_id = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
+			var re_gen_id0 = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
+			var re_gen_id1 = new RegExp("([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
 			var re_gen_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
 
 			var p = 0;
@@ -20751,15 +21067,10 @@ function PageExpand(page_expand_arguments){
 							}
 
 							var nodes = StringHtmlCreateDomNodesSafe(generate_html_func(obj));
-							var dt = ElementGetElementsByTagName(nodes[0],"dt")[0];
-							var dd = ElementGetElementsByTagName(nodes[0],"dd")[0];
-
-							try{
-								if(dt.tagName != "DT")	return;
-								if(dd.tagName != "DD")	return;
-							}catch(e){
-								return;
-							}
+							var dt = ElementGetElementsByClassName(nodes[0],"resHeader")[0];
+							var dd = ElementGetElementsByClassName(nodes[0],"resBody")[0];
+							if(!dt) return;
+							if(!dd) return;
 
 							var dt_text = ElementGetTextContent(dt);
 
@@ -20767,8 +21078,15 @@ function PageExpand(page_expand_arguments){
 							work.extendResponseAnchor(dd);
 
 							// IDの取得
-							if(dt_text.match(re_gen_id)){
-								response.setId(RegExp.$1);
+							var nodes = ElementGetElementsByClassName(dt,"resID");
+							if(nodes.length){
+								if(ElementGetTextContent(nodes[0]).match(re_gen_id1)){
+									response.setId(RegExp.$1);
+								}
+							}else{
+								if(dt_text.match(re_gen_id0)){
+									response.setId(RegExp.$1);
+								}
 							}
 
 							// 名前の取得
@@ -20984,24 +21302,29 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// フッダ要素
 		// --------------------------------------------------------------------------------
-		element_footer = document.getElementById("footer");
+		if(!element_footer){
+			var nodes = document.getElementsByTagName("footer");
+			if(nodes.length){
+				element_footer = nodes[nodes.length - 1];
+			}
+		}
+		if(!element_footer){
+			element_footer = document.getElementById("footer");
+		}
 
 		// --------------------------------------------------------------------------------
 		// Default スタイル
 		// --------------------------------------------------------------------------------
 		if(!generate_html_func){
 			(function(){
-				var nodes = ElementGetElementsByTagName(document.body,"dl");
+				var nodes = ElementGetElementsByClassName(document.body,"resNumber");
 				var node_num = nodes.length;
 				var i;
-				if(node_num){
-					if(nodes[0].parentNode != document.body) return;
-				}
 
 				// --------------------------------------------------------------------------------
 				// 範囲取得
 				// --------------------------------------------------------------------------------
-				var re_number = new RegExp("^([0-9]+)","i");
+				var re_number = new RegExp("([0-9]+)","i");
 				for(i=node_num-1;i>=0;i--){
 					var node = nodes[i];
 					if(ElementGetTextContent(node).match(re_number)){
@@ -21011,6 +21334,15 @@ function PageExpand(page_expand_arguments){
 						break;
 					}
 				}
+
+				var rg_id = new RegExp("^res[0-9]+$","i");
+				while(element_last){
+					if(element_last.id.match(rg_id)){
+						break;
+					}
+					element_last = element_last.parentNode;
+				}
+
 				if(!element_last) return;
 				for(i=0;i<node_num;i++){
 					var node = nodes[i];
@@ -21026,25 +21358,45 @@ function PageExpand(page_expand_arguments){
 				// --------------------------------------------------------------------------------
 				// コード生成コールバック
 				// --------------------------------------------------------------------------------
-				generate_html_func = function(param){
-					return '<dl id="res' + param.number + '" class="resContainer" resid="' + param.id + '" collapsed="false" isabone="false">' +
-						'<dt class="resHeader">' +
-							'<span class="resNumber">' + param.number + ' </span>' +
-							'<span class="resHeaderContent">' +
-								'<span class="resName"><span class="resSystem">' + param.name + '</span></span> ' +
-								'[<span class="resMail">' + param.mail + '</span>] ' +
-								'<span class="resDate">' + param.date + ' </span> ' +
-								((param.id) ? ('ID:' + param.id + ' ') : ('')) +
-								((param.be) ? ('Be:<span class="resBeID">' + param.be + '</span>') : ('')) +
-							'</span>' +
-							'<span class="resHeaderAboneContent"></span>' +
-							'<span style="color: rgb(136, 136, 136); font-size: small;"></span>' +
-						'</dt>' +
-						'<dd class="resBody"> ' + param.message + ' </dd>' +
-					'</dl>';
+				if(element_last.tagName.toUpperCase() == "ARTICLE"){
+					generate_html_func = function(param){
+						return '<article id="res' + param.number + '" class="resContainer" data-id="' + param.id + '   0" data-number="' + param.number + '" data-aboned="false">' +
+							'    <h2 class="resHeader">' +
+							'        <span class="resNumber">' + param.number + '</span>' +
+							'        <span class="resHeaderContent">' +
+							'            <span class="resName">' + param.name + '</span>' +
+							'            <span class="resMail">' + param.mail + '</span>' +
+							'            <span class="resDate">' + param.date + '</span>' +
+							'            <span class="resID" data-id="' + param.id + '">' + param.id + '</span><span style="color: rgb(136, 136, 136); font-size: small;"></span>' +
+							'            <span class="resIP" data-id=""></span>' +
+							'            <span class="resHost" data-id=""></span>' +
+							'            <span class="resBeID" data-id="0">' + param.be + '</span>' +
+							'        </span>' +
+							'        <span class="resHeaderAboneContent"></span>' +
+							'    <span style="color: rgb(136, 136, 136); font-size: small;"></span></h2>' +
+							'    <p class="resBody"> ' + param.message + ' </p></article>';
+					}
+					work.skin_type = "default";
+				}else{
+					generate_html_func = function(param){
+						return '<dl id="res' + param.number + '" class="resContainer" resid="' + param.id + '" collapsed="false" isabone="false">' +
+							'<dt class="resHeader">' +
+								'<span class="resNumber">' + param.number + ' </span>' +
+								'<span class="resHeaderContent">' +
+									'<span class="resName"><span class="resSystem">' + param.name + '</span></span> ' +
+									'[<span class="resMail">' + param.mail + '</span>] ' +
+									'<span class="resDate">' + param.date + ' </span> ' +
+									((param.id) ? ('ID:' + param.id + ' ') : ('')) +
+									((param.be) ? ('Be:<span class="resBeID">' + param.be + '</span>') : ('')) +
+								'</span>' +
+								'<span class="resHeaderAboneContent"></span>' +
+								'<span style="color: rgb(136, 136, 136); font-size: small;"></span>' +
+							'</dt>' +
+							'<dd class="resBody"> ' + param.message + ' </dd>' +
+						'</dl>';
+					}
+					work.skin_type = "default";
 				}
-
-				work.skin_type = "default";
 			})();
 		}
 
@@ -21117,6 +21469,17 @@ function PageExpand(page_expand_arguments){
 				break;
 			}
 			loader.loadText();
+		})();
+
+		// --------------------------------------------------------------------------------
+		// 擬似要素無効化
+		// --------------------------------------------------------------------------------
+		(function(){
+			var element = DocumentCreateElement("style");
+			document.body.appendChild(element);
+			var style_sheet = ElementGetStyleSheet(element);
+			CSSStyleSheetInsertRule(style_sheet,"[data-id-posts-all]:after","content: none !important;",0);
+			CSSStyleSheetInsertRule(style_sheet,".resNumber[data-referred]:after","content: none !important;",1);
 		})();
 
 		response({result:true});
@@ -21256,7 +21619,22 @@ function PageExpand(page_expand_arguments){
 						var node = q.node;
 						switch(node.nodeType){
 						case 1:
-							if(!(ignore_dictionary[node.tagName])){
+
+							// 名前欄
+							if(node.className == "resID"){
+								var m = ElementGetTextContent(node).match(new RegExp("(ID:|)([-a-zA-Z0-9+/.]+)[●!]{0,2}$","i"));
+								if(m){
+									// BbsControlId を生成
+									var control_id = new BbsControlId(null,true);
+									control_id.setId(m[2]);
+									var element_id = control_id.getElement();
+									DomNode_InsertAfter(node,element_id);
+									var textnode_id = DocumentCreateText("");
+									element_id.appendChild(textnode_id);
+									control_id.setTextNode(textnode_id);
+								}
+
+							}else if(!(ignore_dictionary[node.tagName])){
 								var i;
 								var nodes = node.childNodes;
 								var num = nodes.length;
@@ -21266,21 +21644,6 @@ function PageExpand(page_expand_arguments){
 									q = {p:p,n:n,node:nodes[i]};
 									p.n = q;
 									n.p = q;
-								}
-							}
-
-							// 名前欄
-							if(node.className == "resID"){
-								var m = ElementGetTextContent(node).match(new RegExp("([-a-zA-Z0-9+/.]+)[●!]{0,2}$","i"));
-								if(m){
-									// BbsControlId を生成
-									var control_id = new BbsControlId(null,true);
-									control_id.setId(m[1]);
-									var element_id = control_id.getElement();
-									DomNode_InsertAfter(node,element_id);
-									var textnode_id = DocumentCreateText("");
-									element_id.appendChild(textnode_id);
-									control_id.setTextNode(textnode_id);
 								}
 							}
 
@@ -21889,28 +22252,31 @@ function PageExpand(page_expand_arguments){
 			var dd;
 
 			try{
-				if(dt.tagName != "DT")	return false;
+				var i;
+				var nodes = dt.childNodes;
+				var num = nodes.length;
+				for(i=0;i<num;i++){
+					if(nodes[i].className == "resNumber") break;
+				}
+				if(i >= num) return false;
 			}catch(e){
 				return false;
 			}
 
-			dd = dt.nextSibling;
 			try{
-				if(dd.tagName != "DD")	return false;
+				dd = DomNodeGetNextElementSibling(dt);
+				if(!dd) return false;
 			}catch(e){
 				return false;
 			}
 
 			try{
 				var dl = dt.parentNode;
-				if(dl.tagName != "DL")	return false;
-				if(dl.parentNode != document.body)	return false;
+				if(!dl.id.match(new RegExp("^res[0-9]+$","i"))) return false;
+				if(!DomNodeGetAttachedDocument(dl)) return false;
 			}catch(e){
 				return false;
 			}
-
-			// document に未登録
-			if(!DomNodeGetAttachedDocument(dt))	return false;
 
 			// --------------------------------------------------------------------------------
 			// レスアンカー拡張
@@ -22044,7 +22410,7 @@ function PageExpand(page_expand_arguments){
 
 			// ナンバーを取得
 			var dt_text = ElementGetTextContent(dt);
-			if(!(dt_text.match(new RegExp("([0-9]+)[ ]","i"))))	return false;
+			if(!(dt_text.match(new RegExp("([0-9]+)","i"))))	return false;
 
 			// ナンバーからレスポンスオブジェクトを取得
 			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
@@ -22053,8 +22419,15 @@ function PageExpand(page_expand_arguments){
 			if(!response.getAnalyzed()){
 
 				// IDの取得
-				if(dt_text.match(new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i"))){
-					response.setId(RegExp.$1);
+				var nodes = ElementGetElementsByClassName(dt,"resID");
+				if(nodes.length){
+					if(ElementGetTextContent(nodes[0]).match(new RegExp("(ID:|)([-a-zA-Z0-9+/.]+)[●!]{0,2}","i"))){
+						response.setId(RegExp.$2);
+					}
+				}else{
+					if(dt_text.match(new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i"))){
+						response.setId(RegExp.$1);
+					}
 				}
 
 				// 名前の取得
@@ -30398,6 +30771,7 @@ function PageExpand(page_expand_arguments){
 
 				switch(work.bbs_name){
 				case "2ch":
+				case "pink":
 					break;
 				case "shitaraba":
 				case "machi":
@@ -36766,7 +37140,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.4.2");
+				new UI_Text(parent,"PageExpand ver.1.4.3");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -47136,7 +47510,7 @@ function PageExpand(page_expand_arguments){
 								embed.type = "application/x-shockwave-flash";
 								embed.width = "100%";
 								embed.height = "100%";
-								embed.setAttribute("allowScriptAccess","always");
+								embed.setAttribute("allowScriptAccess","sameDomain");
 								embed.setAttribute("bgcolor","#000000");
 								embed.setAttribute("quality","high");
 								embed.setAttribute("flashVars",flashvars);
@@ -50283,17 +50657,16 @@ function PageExpand(page_expand_arguments){
 			var work = _task.getUserWork();
 			var mouse_pos = ObjectCopy(input_mouse.getPositionClient());
 
-			var hit = false;
-			if(_element_hit_area){
-				hit = ElementHitTestPosition(_element_hit_area,mouse_pos,true);
-			}
+			var hit = ElementHitTestPosition(_element_hit_area,mouse_pos,true);
 			if(!hit){
 				if(_element_rects_tree){
-					if(DomNodeGetAttachedDocument(_element_hit_area)){
-						var scroll_pos = getScrollPositionTotal(_element_hit_area);
-						_scroll_pos_offset.x += scroll_pos.x - _scroll_pos_begin.x;
-						_scroll_pos_offset.y += scroll_pos.y - _scroll_pos_begin.y;
-						_scroll_pos_begin = scroll_pos;
+					if(_element_hit_area){
+						if(DomNodeGetAttachedDocument(_element_hit_area)){
+							var scroll_pos = getScrollPositionTotal(_element_hit_area);
+							_scroll_pos_offset.x += scroll_pos.x - _scroll_pos_begin.x;
+							_scroll_pos_offset.y += scroll_pos.y - _scroll_pos_begin.y;
+							_scroll_pos_begin = scroll_pos;
+						}
 					}
 
 					mouse_pos.x += _scroll_pos_offset.x;
@@ -50522,18 +50895,22 @@ function PageExpand(page_expand_arguments){
 			}
 
 			// 開始矩形
-			var begin_rect = new Object();
+			var begin_rect;
 			if(_element_begin_area){
-				if(_trim_rect){
-					begin_rect = ElementGetViewClientRect(_element_begin_area);
-				}else{
-					begin_rect = DomTreeGetContentClientRect(_element_begin_area);
+				if(DomNodeGetAttachedDocument(_element_begin_area)){
+					if(_trim_rect){
+						begin_rect = ElementGetViewClientRect(_element_begin_area);
+					}else{
+						begin_rect = DomTreeGetContentClientRect(_element_begin_area);
+					}
 				}
-			}else{
+			}
+			if(!begin_rect){
 				// マウス座標をセット
 				var w = work.style_w * 0.5;
 				var h = work.style_h * 0.5;
 				var mouse_pos = input_mouse.getPositionClient();
+				begin_rect = new Object();
 				begin_rect.left   = mouse_pos.x - w;
 				begin_rect.right  = mouse_pos.x + w;
 				begin_rect.top    = mouse_pos.y - h;
@@ -57387,7 +57764,7 @@ function PageExpand(page_expand_arguments){
 			// 通常リトライ回数
 			_count = 1;
 			// シングルリトライ回数
-			_single_count = 1;
+			_single_count = 0;
 			// 開始関数をセット
 			_queue_element.onstart = function(){
 
@@ -57476,7 +57853,7 @@ function PageExpand(page_expand_arguments){
 			// 通常リトライ回数
 			_count = 1;
 			// シングルリトライ回数
-			_single_count = 1;
+			_single_count = 0;
 			// 開始関数をセット
 			_queue_element.onstart = function(){
 
@@ -57552,7 +57929,7 @@ function PageExpand(page_expand_arguments){
 			// 通常リトライ回数
 			_count = 1;
 			// シングルリトライ回数
-			_single_count = 1;
+			_single_count = 0;
 			// 開始関数をセット
 			_queue_element.onstart = function(){
 
@@ -57691,7 +58068,7 @@ function PageExpand(page_expand_arguments){
 				// 通常リトライ回数
 				_count = 1;
 				// シングルリトライ回数
-				_single_count = 1;
+				_single_count = 0;
 			}
 
 			// リダイレクト回数
@@ -57897,7 +58274,7 @@ function PageExpand(page_expand_arguments){
 			// 通常リトライ回数
 			_count = 1;
 			// シングルリトライ回数
-			_single_count = 1;
+			_single_count = 0;
 			// 開始関数をセット
 			_queue_element.onstart = function(){
 
@@ -59470,7 +59847,13 @@ function PageExpand(page_expand_arguments){
 				if(!_task._alive)	return;
 				if(_task._execute_func){
 					if(level & _task._level){
-						_task._execute_func(_task);
+						try{
+							_task._execute_func(_task);
+						}catch(e){
+							if(project.getEnableDebugMode()){
+								ConsoleError(e.stack);
+							}
+						}
 					}
 				}
 			};
@@ -61396,6 +61779,9 @@ function PageExpand(page_expand_arguments){
 				_document_obj.removeEventListener("mouseout",mouse_out_func,true);
 				_document_obj.removeEventListener("mousedown",mouse_down_func,true);
 				_document_obj.removeEventListener("mouseup",mouse_up_func,true);
+				_document_obj.removeEventListener("dragstart",mouse_down_func,true);
+				_document_obj.removeEventListener("drag",mouse_move_func,true);
+				_document_obj.removeEventListener("dragend",mouse_up_func,true);
 				window_obj.removeEventListener("blur",blur_func);
 			}
 
@@ -61557,21 +61943,28 @@ function PageExpand(page_expand_arguments){
 			_key_ctrl = false;
 			_enable_mouse = false;
 
+			var event_type_down = { "mousedown":true , "dragstart":true };
+			var event_type_move = { "mousemove":true , "drag":true      };
+			var event_type_up   = { "mouseup":true   , "dragend":true   };
+
 			if(_document_obj.addEventListener){
 				_document_obj.addEventListener("mousemove",mouse_move_func,true);
 				_document_obj.addEventListener("mouseout",mouse_out_func,true);
 				_document_obj.addEventListener("mousedown",mouse_down_func,true);
 				_document_obj.addEventListener("mouseup",mouse_up_func,true);
+				_document_obj.addEventListener("dragstart",mouse_down_func,true);
+				_document_obj.addEventListener("drag",mouse_move_func,true);
+				_document_obj.addEventListener("dragend",mouse_up_func,true);
 				window_obj.addEventListener("blur",blur_func);
 				_mouse_input_func = function(e,r){
 					if(e.buttons !== undefined){
 						_buttons = e.buttons;
 					}
-					if(e.type == "mousedown"){
+					if(event_type_down[e.type]){
 						if(e.button == 0) _buttons |=  0x01;
 						if(e.button == 1) _buttons |=  0x04;
 						if(e.button == 2) _buttons |=  0x02;
-					}else if(e.type == "mouseup"){
+					}else if(event_type_up[e.type]){
 						if(e.button == 0) _buttons &= ~0x01;
 						if(e.button == 1) _buttons &= ~0x04;
 						if(e.button == 2) _buttons &= ~0x02;
@@ -64191,11 +64584,25 @@ function PageExpand(page_expand_arguments){
 				}
 
 				// バウンディングサイズ
-				var hit_bounding_size = ElementGetBoundingClientRect(_element_hit_area);
-				hit_bounding_size.left   = Math.floor(hit_bounding_size.left);
-				hit_bounding_size.top    = Math.floor(hit_bounding_size.top);
-				hit_bounding_size.right  = Math.ceil(hit_bounding_size.right);
-				hit_bounding_size.bottom = Math.ceil(hit_bounding_size.bottom);
+				var hit_bounding_size;
+				if(_element_hit_area){
+					if(DomNodeGetAttachedDocument(_element_hit_area)){
+						hit_bounding_size = ElementGetBoundingClientRect(_element_hit_area);
+					}
+				}
+				if(!hit_bounding_size){
+					var mouse_pos = ObjectCopy(input_mouse.getPositionClient());
+					hit_bounding_size = {
+						left  :mouse_pos.x,
+						right :mouse_pos.x,
+						top   :mouse_pos.y,
+						bottom:mouse_pos.y
+					};
+				}
+				hit_bounding_size.left   = Math.ceil(hit_bounding_size.left);
+				hit_bounding_size.top    = Math.ceil(hit_bounding_size.top);
+				hit_bounding_size.right  = Math.floor(hit_bounding_size.right);
+				hit_bounding_size.bottom = Math.floor(hit_bounding_size.bottom);
 
 				// バウンディングサイズ
 				var window_bounding_size = ElementGetBoundingClientRect(_window);
@@ -67620,6 +68027,50 @@ function PageExpand(page_expand_arguments){
 	}
 
 	// --------------------------------------------------------------------------------
+	// URL アドレスを絶対 URL に変換
+	// --------------------------------------------------------------------------------
+	function StringUrl_To_Absolute(src,url,base){
+		if(!src) src = "";
+		if(!url) url = "";
+		if(!base) base = "";
+
+		var m = url.match(new RegExp("^.*/","i"));
+		if(!m) return "";
+		var path = m[0];
+
+		var m = url.match(new RegExp("^[^:]+://[^/]+/","i"));
+		if(!m) return "";
+		var root = m[0];
+
+		var m = url.match(new RegExp("^[^:]+:","i"));
+		if(!m) return "";
+		var protocol = m[0];
+
+		var m = base.match(new RegExp(".*/","i"));
+		if(m) base = m[0];
+
+		if(base.indexOf("//") == 0){
+			base = protocol + base;
+		}else if(base.indexOf("/") == 0){
+			base = root + base.substr(1);
+		}else{
+			base = path + base;
+		}
+
+		if(src.indexOf("//") == 0){
+			return protocol + src;
+		}else if(src.indexOf("/") == 0){
+			return root + src.substr(1);
+		}else if(src.match(new RegExp("^[a-z]+:[^/]","i"))){
+			return src;
+		}else if(src.match(new RegExp("://","i"))){
+			return src;
+		}
+
+		return base + src;
+	}
+
+	// --------------------------------------------------------------------------------
 	// 属性辞書 HTML5
 	// --------------------------------------------------------------------------------
 	var DICTIONARY_ATTRIBUTE_HTML5 = {
@@ -70163,6 +70614,47 @@ function PageExpand(page_expand_arguments){
 	}
 
 	// --------------------------------------------------------------------------------
+	// エレメントからクラス名を指定してエレメントを取得する
+	// --------------------------------------------------------------------------------
+	function ElementGetElementsByClassName(node,class_name){
+		var node_list = new Array();
+		if(!class_name) return node_list;
+
+		var re = new RegExp("[ \t\r\n]*([^ \t\r\n]+)[ \t\r\n]*","g");
+
+		var class_list = new Object();
+		class_name.replace(re,function (m,k){ class_list[k] = true; });
+
+		var f = function (node){
+			if(node.nodeType != 1) return;
+
+			var a = new Object();
+			node.className.replace(re,function (m,k){ a[k] = true; });
+
+			var m;
+			for (var k in class_list){
+				m = a[k];
+				if(!m) break;
+			}
+			if(m) node_list.push(node);
+
+			var nodes = node.childNodes;
+			var i;
+			var num = nodes.length;
+			for(i=0;i<num;i++){
+				f(nodes[i]);
+			}
+		}
+
+		if(node.documentElement){
+			node = node.documentElement;
+		}
+		f(node);
+
+		return node_list;
+	}
+
+	// --------------------------------------------------------------------------------
 	// エレメントのスタイルシートを取得
 	// --------------------------------------------------------------------------------
 	function ElementGetStyle(element){
@@ -70432,6 +70924,7 @@ function PageExpand(page_expand_arguments){
 	// エレメントとクライアント座標との当たり判定を取得
 	// --------------------------------------------------------------------------------
 	function ElementHitTestPosition(element,pos,child_type){
+		if(!element) return false;
 
 		var overflow_hidden = {"scroll":1,"hidden":1,"auto":1};
 		var display_inline = {"inline":1,"none":1,"table-column":1,"table-column-group":1};
@@ -70871,6 +71364,56 @@ function PageExpand(page_expand_arguments){
 	};
 
 	// --------------------------------------------------------------------------------
+	// 自身から直前方向へと順番に調べ、最初に見つかる要素を取得する
+	// --------------------------------------------------------------------------------
+	function DomNodeGetPreviousElementSibling(node){
+		node = node.previousSibling;
+		while(node){
+			if(node.nodeType == 1) break;
+			node = node.previousSibling;
+		}
+		return node;
+	}
+
+	// --------------------------------------------------------------------------------
+	// 自身から直後方向へと順番に調べ、最初に見つかる要素を取得する
+	// --------------------------------------------------------------------------------
+	function DomNodeGetNextElementSibling(node){
+		node = node.nextSibling;
+		while(node){
+			if(node.nodeType == 1) break;
+			node = node.nextSibling;
+		}
+		return node;
+	}
+
+	// --------------------------------------------------------------------------------
+	// ノードリストの最先頭から順番に調べ、最初に見つかる要素を取得する
+	// --------------------------------------------------------------------------------
+	function DomNodeGetFirstElementChild(node){
+		var nodes = node.childNodes;
+		var i;
+		var num = nodes.length;
+		for(i=0;i<num;i++){
+			if(nodes[i].nodeType == 1) return nodes[i];
+		}
+		return null;
+	}
+
+	// --------------------------------------------------------------------------------
+	// ノードリストの最後尾から順番に調べ、最初に見つかる要素を取得する
+	// --------------------------------------------------------------------------------
+	function DomNodeGetLastElementChild(node){
+		var nodes = node.childNodes;
+		var i;
+		var num = nodes.length;
+		for(i=num-1;i>=0;i--){
+			if(nodes[i].nodeType == 1) return nodes[i];
+		}
+		return null;
+	}
+
+	// --------------------------------------------------------------------------------
 	// DOM ノードの直前に DOM ノードを登録（削除予定）
 	// --------------------------------------------------------------------------------
 	function DomNodeInsertBefore(node_new,node_ref){
@@ -71235,6 +71778,30 @@ function PageExpand(page_expand_arguments){
 			}
 		}
 		return false;
+	}
+
+	// --------------------------------------------------------------------------------
+	// エレメントから StyleSheet オブジェクトを取得する関数
+	// --------------------------------------------------------------------------------
+	function ElementGetStyleSheet(style_sheet){
+		if(style_sheet.sheet !== undefined){
+			return style_sheet.sheet;
+		}else if(style_sheet.styleSheet !== undefined){
+			return style_sheet.styleSheet;
+		}
+		return null;
+	}
+
+	// --------------------------------------------------------------------------------
+	// スタイルシートにルールを追加する関数
+	// --------------------------------------------------------------------------------
+	function CSSStyleSheetInsertRule(style_sheet,selector,style,index){
+		if(style_sheet.insertRule !== undefined){
+			style_sheet.insertRule(selector + "{" + style + "}",index);
+		}else if(style_sheet.addRule !== undefined){
+			style_sheet.addRule(selector,style,index);
+		}
+		return index;
 	}
 
 	// --------------------------------------------------------------------------------

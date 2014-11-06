@@ -4032,7 +4032,7 @@ function PageExpand(page_expand_arguments){
 								embed.type = "application/x-shockwave-flash";
 								embed.width = "100%";
 								embed.height = "100%";
-								embed.setAttribute("allowScriptAccess","always");
+								embed.setAttribute("allowScriptAccess","sameDomain");
 								embed.setAttribute("bgcolor","#000000");
 								embed.setAttribute("quality","high");
 								embed.setAttribute("flashVars",flashvars);
