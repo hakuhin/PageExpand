@@ -1546,6 +1546,7 @@ function PageExpand(page_expand_arguments){
 
 					// オーバーライド済み
 					AnalyzeWorkSetOverrodeAnchorElement(work);
+					AnalyzeWorkSetOverrodeUrl(work);
 				}
 
 				// --------------------------------------------------------------------------------
@@ -1566,7 +1567,10 @@ function PageExpand(page_expand_arguments){
 		AnalyzeWorkSetAnalyzedReplacementToElement(work);
 
 		// コールバック関数を実行
-		project.executeScriptReplacementToElement(element,response);
+		var request = {
+			element:element
+		};
+		project.executeScriptReplacementToElement(request,response);
 	}
 
 	// --------------------------------------------------------------------------------
@@ -2226,7 +2230,13 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// コールバック関数を実行
-		project.executeScriptAllowThumbnailImage(element,url,content_type,response_allow);
+		var request = {
+			element:element,
+			url:url,
+			content_type:content_type,
+			is_overridden_url:AnalyzeWorkGetOverrodeUrl(work)
+		};
+		project.executeScriptAllowThumbnailImage(request,response_allow);
 	}
 
 	// --------------------------------------------------------------------------------
@@ -2452,7 +2462,13 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// コールバック関数を実行
-		project.executeScriptAllowPopupImage(element,url,content_type,response_allow);
+		var request = {
+			element:element,
+			url:url,
+			content_type:content_type,
+			is_overridden_url:AnalyzeWorkGetOverrodeUrl(work)
+		};
+		project.executeScriptAllowPopupImage(request,response_allow);
 
 	}
 
@@ -3632,7 +3648,27 @@ function PageExpand(page_expand_arguments){
 			var h = getHashQuery(url);
 			var start = q["t"] || h["t"];
 			if(start){
-				if(!start.match(/[0-9]+/)){
+				var t = 0;
+				var m;
+				m = start.match(/([0-9]+)h/i);
+				if(m){
+					t += parseInt(m[1]) * 60 * 60;
+				}
+				m = start.match(/([0-9]+)m/i);
+				if(m){
+					t += parseInt(m[1]) * 60;
+				}
+				m = start.match(/([0-9]+)s/i);
+				if(m){
+					t += parseInt(m[1]);
+				}
+				if(t){
+					start = t + "";
+				}
+				m = start.match(/([0-9]+)/i);
+				if(m){
+					start = m[1];
+				}else{
 					start = "";
 				}
 			}

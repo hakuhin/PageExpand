@@ -2039,11 +2039,11 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// エレメントの置換用関数を実行
 		// --------------------------------------------------------------------------------
-		_this.executeScriptReplacementToElement = function(element,response){
+		_this.executeScriptReplacementToElement = function(request,response){
 			var defines = _proj_ins.replacement_to_element;
 			var count = 0;
 			var define_num = defines.length;
-			var info = {element:element};
+			var info = {element:request.element};
 			var result = {};
 
 			function func(param){
@@ -2750,8 +2750,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// イメージのサムネイル展開を許可するかコールバック関数
 		// --------------------------------------------------------------------------------
-		_this.executeScriptAllowThumbnailImage = function(element,url,content_type,response){
-			var info = {anchor_element:element,current_element:element,url:url,content_type:content_type};
+		_this.executeScriptAllowThumbnailImage = function(request,response){
+			var info = {
+				anchor_element:request.element,
+				current_element:request.element,
+				url:request.url,
+				content_type:request.content_type,
+				is_overridden_url:request.is_overridden_url
+			};
 			var ary = _proj_ins.expand_image.thumbnail.script_allow;
 			var i;
 			var num = ary.length;
@@ -2839,8 +2845,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// イメージのポップアップ展開を許可するかコールバック関数
 		// --------------------------------------------------------------------------------
-		_this.executeScriptAllowPopupImage = function(element,url,content_type,response){
-			var info = {anchor_element:element,current_element:element,url:url,content_type:content_type};
+		_this.executeScriptAllowPopupImage = function(request,response){
+			var info = {
+				anchor_element:request.element,
+				current_element:request.element,
+				url:request.url,
+				content_type:request.content_type,
+				is_overridden_url:request.is_overridden_url
+			};
 			var ary = _proj_ins.expand_image.popup.script_allow;
 			var i;
 			var num = ary.length;
@@ -7718,7 +7730,7 @@ function PageExpand(page_expand_arguments){
 						en:"Disable Event (facebook)"
 					}
 				},
-				script:PresetScript_ReplacementToAnchor_DisableEventFacebook()
+				script:""
 			};
 
 			// --------------------------------------------------------------------------------
@@ -8069,7 +8081,7 @@ function PageExpand(page_expand_arguments){
 					enable_popup_mouseover:true,
 					disable_same_image:false,
 					load_type:"preload",
-					script_allow:PresetScript_ExpandImage_ThumbnailScriptAllow_Twitter(),
+					script_allow:"",
 					script_insert:"[]"
 				},
 				popup:{
@@ -8081,7 +8093,7 @@ function PageExpand(page_expand_arguments){
 					enable_animation_alpha:true,
 					load_type:"preload",
 					scale_percent:100,
-					script_allow:PresetScript_ExpandImage_PopupScriptAllow_Twitter()
+					script_allow:""
 				},
 				reduced_image:{
 					enable_popup:true,
@@ -8483,7 +8495,7 @@ function PageExpand(page_expand_arguments){
 					enable_popup_mouseover:true,
 					disable_same_image:false,
 					load_type:"preload",
-					script_allow:PresetScript_ExpandImage_ThumbnailScriptAllow_PopupImageInAnchor(),
+					script_allow:"",
 					script_insert:preset_thumbnail_not_include_image.thumbnail.script_insert
 				},
 				popup:{
@@ -8496,7 +8508,7 @@ function PageExpand(page_expand_arguments){
 					enable_animation_alpha:true,
 					load_type:"preload",
 					scale_percent:100,
-					script_allow:PresetScript_ExpandImage_PopupScriptAllow_PopupImageInAnchor()
+					script_allow:""
 				},
 				reduced_image:{
 					enable_popup:true,
@@ -9227,7 +9239,7 @@ function PageExpand(page_expand_arguments){
 						en:"Assist Expand (deviantART)"
 					}
 				},
-				script:PresetScript_ReplacementToElement_AssistDeviantArt()
+				script:""
 			};
 
 			// 展開アシスト（ニコニコ静画用）
@@ -9655,26 +9667,6 @@ function PageExpand(page_expand_arguments){
 		if(proj.version < 20){
 			// バージョン値
 			proj.version = 20;
-
-			// --------------------------------------------------------------------------------
-			// エレメント置換定義
-			// --------------------------------------------------------------------------------
-			// 展開アシスト（ピクシブ用）
-			updatePreset(proj.replacement_to_element,"assist_pixiv",function(obj){
-				obj.script = PresetScript_ReplacementToElement_AssistPixiv();
-			});
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義
-			// --------------------------------------------------------------------------------
-			// 直リンク（汎用）
-			updatePreset(proj.replacement_to_link,"direct_link_generic",function(obj){
-				var filter = obj.filter;
-
-				// ピクシブ
-				filter[20].script = PresetScript_ReplacementToLink_DirectLinkGeneric_PixivNet();
-			});
-
 		}
 		if(exit())	return proj;
 
@@ -9826,6 +9818,63 @@ function PageExpand(page_expand_arguments){
 			var preset = obj.preset;
 			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Chaika();
 			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Chaika();
+
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.23
+		// --------------------------------------------------------------------------------
+		if(proj.version < 23){
+			// バージョン値
+			proj.version = 23;
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義
+			// --------------------------------------------------------------------------------
+			// 展開アシスト（ピクシブ用）
+			updatePreset(proj.replacement_to_element,"assist_pixiv",function(obj){
+				obj.script = PresetScript_ReplacementToElement_AssistPixiv();
+			});
+
+			// 展開アシスト（deviantART 用）
+			updatePreset(proj.replacement_to_element,"assist_deviant_art",function(obj){
+				obj.script = PresetScript_ReplacementToElement_AssistDeviantArt();
+			});
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義
+			// --------------------------------------------------------------------------------
+			// イベントを無効化（フェイスブック用）
+			updatePreset(proj.replacement_to_anchor,"disable_event_facebook",function(obj){
+				obj.script = PresetScript_ReplacementToAnchor_DisableEventFacebook();
+			});
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義
+			// --------------------------------------------------------------------------------
+			// 直リンク（汎用）
+			updatePreset(proj.replacement_to_link,"direct_link_generic",function(obj){
+				var filter = obj.filter;
+
+				// ピクシブ
+				filter[20].script = PresetScript_ReplacementToLink_DirectLinkGeneric_PixivNet();
+			});
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義
+			// --------------------------------------------------------------------------------
+			// ポップアップ表示（アシスト要素のみ）
+			updatePreset(proj.expand_image,"popup_image_in_anchor",function(obj){
+				obj.thumbnail.script_allow = PresetScript_ExpandImage_ThumbnailScriptAllow_PopupImageInAnchor();
+				obj.popup.script_allow = PresetScript_ExpandImage_PopupScriptAllow_PopupImageInAnchor();
+			});
+
+			// ツイッター用
+			updatePreset(proj.expand_image,"twitter",function(obj){
+				obj.thumbnail.script_allow = PresetScript_ExpandImage_ThumbnailScriptAllow_Twitter();
+				obj.popup.script_allow = PresetScript_ExpandImage_PopupScriptAllow_Twitter();
+			});
 
 		}
 		if(exit())	return proj;
@@ -10055,7 +10104,7 @@ function PageExpand(page_expand_arguments){
 			}
 
 			// 小サムネイル
-			if(element.className.search(new RegExp("tinythumb","i")) >= 0){
+			if(ElementGetClassName(element).search(new RegExp("tinythumb","i")) >= 0){
 				return true;
 			}
 
@@ -10120,7 +10169,7 @@ function PageExpand(page_expand_arguments){
 				return false;
 			}
 
-			if(element.className != "_layout-thumbnail"){
+			if(!ElementGetClassName(element).match(new RegExp("(^| )_layout-thumbnail( |$)"))){
 				return false;
 			}
 
@@ -10144,7 +10193,7 @@ function PageExpand(page_expand_arguments){
 		var element = info.element;
 		var result = (function(){
 
-			if(element.className.indexOf("user-icon") >= 0) return false;
+			if(ElementGetClassName(element).indexOf("user-icon") >= 0) return false;
 
 			// イメージ要素
 			if(element.tagName == "IMG"){
@@ -10686,7 +10735,7 @@ function PageExpand(page_expand_arguments){
 		var anchor_element = info.anchor_element;
 		var parent = anchor_element.parentNode;
 		if(parent){
-			var m = parent.className.match(new RegExp("(^| )userContent( |$)","i"));
+			var m = ElementGetClassName(parent).match(new RegExp("(^| )userContent( |$)","i"));
 			if(m){
 				anchor_element.removeAttribute("onmouseover");
 				anchor_element.removeAttribute("onclick");
@@ -12381,6 +12430,17 @@ function PageExpand(page_expand_arguments){
 			loader.onload = function(str){
 				var image_url;
 
+				// 2014/11/27 以降
+				if(!image_url){
+					var m = str.match(new RegExp("<img[^>]+class=\"original-image\"[^>]*>","i"));
+					if(m){
+						m = m[0].match(new RegExp('src="([^"]+)"',"i"));
+						if(m){
+							image_url = m[1];
+						}
+					}
+				}
+
 				// 高解像度画像
 				if(!image_url){
 					var m = str.match(new RegExp("<div class=\"(img-container|front-centered|works_display)\">.*","i"));
@@ -14045,7 +14105,7 @@ function PageExpand(page_expand_arguments){
 "[\n\t" + 
 	function(info,response){
 		var current_element = info.current_element;
-		if(current_element.tagName == "A"){
+		if(!info.is_overridden_url){
 			response({result:false});
 			return true;
 		}
@@ -14124,7 +14184,7 @@ function PageExpand(page_expand_arguments){
 "[\n\t" + 
 	function(info,response){
 		var current_element = info.current_element;
-		if(current_element.tagName == "A"){
+		if(!info.is_overridden_url){
 			response({result:false});
 			return true;
 		}
@@ -14572,7 +14632,7 @@ function PageExpand(page_expand_arguments){
 			if(!node) return false;
 			if(node.tagName != "P") return false;
 
-			var m = node.className.match(new RegExp("(^| )tweet-text( |$)","i"));
+			var m = ElementGetClassName(node).match(new RegExp("(^| )tweet-text( |$)","i"));
 			if(!m) return false;
 
 			var anchor_count = 0;
@@ -14589,7 +14649,7 @@ function PageExpand(page_expand_arguments){
 			node = node.nextSibling;
 			while(node){
 				if(node.nodeType == 1){
-					var m = node.className.match(new RegExp("(^| )(cards-media-container|permalink-footer)( |$)","i"));
+					var m = ElementGetClassName(node).match(new RegExp("(^| )(cards-media-container|permalink-footer)( |$)","i"));
 					if(m){
 						var nodes = ElementGetElementsByTagName(node,"img");
 						if(nodes.length){
@@ -14722,9 +14782,8 @@ function PageExpand(page_expand_arguments){
 		var result = (function(){
 			var node = current_element.parentNode;
 			while(node){
-				if(!(node.className)) break;
-
-				var m = node.className.match(new RegExp("(^| )stream-media-grid-items( |$)","i"));
+				if(node.nodeType != 1) break;
+				var m = ElementGetClassName(node).match(new RegExp("(^| )stream-media-grid-items( |$)","i"));
 				if(m){
 					return true;
 				}
@@ -17540,7 +17599,8 @@ function PageExpand(page_expand_arguments){
 					if(original.length){
 						var node = original[0].element;
 						while(node){
-							if(node.className.match(new RegExp("^post","i"))){
+							if(node.nodeType != 1) break;
+							if(ElementGetClassName(node).match(new RegExp("^post","i"))){
 								var revise_scroll = new DocumentReviseScroll();
 								revise_scroll.executeRemoveElementBefore(node);
 								node.style.display = "none";
@@ -18362,7 +18422,8 @@ function PageExpand(page_expand_arguments){
 					if(original.length){
 						var node = original[0].element;
 						while(node){
-							if(node.className.match(new RegExp("^postContainer","i"))){
+							if(node.nodeType != 1) break;
+							if(ElementGetClassName(node).match(new RegExp("^postContainer","i"))){
 								var revise_scroll = new DocumentReviseScroll();
 								revise_scroll.executeRemoveElementBefore(node);
 								DomNodeRemove(node);
@@ -18710,7 +18771,7 @@ function PageExpand(page_expand_arguments){
 			loader.onload = function(str){
 				var re_number = new RegExp("Name[ ].*?No\\.([0-9]+)","i");
 				var re_result = new RegExp("<span id=\"contdisp\">(.*?)<\\\\/span>","i");
-				var element_last;
+				var element_last = null;
 
 				var p = 0;
 				var n = str.length;
@@ -18778,6 +18839,12 @@ function PageExpand(page_expand_arguments){
 				var nodes = ElementGetElementsByTagName(element_parent,"table");
 				if(nodes.length){
 					element_last = nodes[nodes.length-1];
+				}
+				if(!element_last){
+					var nodes = ElementGetElementsByTagName(element_parent,"blockquote");
+					if(nodes.length){
+						element_last = nodes[nodes.length-1];
+					}
 				}
 
 				execute_queue.attachFirst(f,null);
@@ -19237,7 +19304,8 @@ function PageExpand(page_expand_arguments){
 									var control_quote = new BbsControlQuote(null,true);
 									var element_quote = control_quote.getElement();
 									element_quote.style.cssText = "font-size:small; text-decoration:underline; margin-left:10px;";
-									var textnode_quote = DocumentCreateText(" >>" + numbers_new.join(","));
+									//var textnode_quote = DocumentCreateText(" >>" + numbers_new.join(","));
+									var textnode_quote = DocumentCreateText(" >>" + numbers_new.length);
 									element_quote.appendChild(textnode_quote);
 									DomNode_InsertLastChild(node,element_quote);
 									control_quote.setResponseAnchorNumbers(numbers);
@@ -36614,7 +36682,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.4.3");
+				new UI_Text(parent,"PageExpand ver.1.4.4");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -42508,6 +42576,7 @@ function PageExpand(page_expand_arguments){
 		// current_element:HTMLElement オブジェクト
 		// url:String 型（展開先のアドレス）
 		// content_type:Array 型（コンテンツタイプ）
+		// is_overridden_url:Boolean 型（URL がオーバーライドされているか）
 		// --------------------------------------------------------------------------------
 		var current_element = info.current_element;
 		var url = info.url;
@@ -42578,6 +42647,7 @@ function PageExpand(page_expand_arguments){
 		// current_element:HTMLElement オブジェクト
 		// url:String 型（展開先のアドレス）
 		// content_type:Array 型（コンテンツタイプ）
+		// is_overridden_url:Boolean 型（URL がオーバーライドされているか）
 		// --------------------------------------------------------------------------------
 		var current_element = info.current_element;
 		var url = info.url;
@@ -44503,6 +44573,7 @@ function PageExpand(page_expand_arguments){
 
 					// オーバーライド済み
 					AnalyzeWorkSetOverrodeAnchorElement(work);
+					AnalyzeWorkSetOverrodeUrl(work);
 				}
 
 				// --------------------------------------------------------------------------------
@@ -44523,7 +44594,10 @@ function PageExpand(page_expand_arguments){
 		AnalyzeWorkSetAnalyzedReplacementToElement(work);
 
 		// コールバック関数を実行
-		project.executeScriptReplacementToElement(element,response);
+		var request = {
+			element:element
+		};
+		project.executeScriptReplacementToElement(request,response);
 	}
 
 	// --------------------------------------------------------------------------------
@@ -45183,7 +45257,13 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// コールバック関数を実行
-		project.executeScriptAllowThumbnailImage(element,url,content_type,response_allow);
+		var request = {
+			element:element,
+			url:url,
+			content_type:content_type,
+			is_overridden_url:AnalyzeWorkGetOverrodeUrl(work)
+		};
+		project.executeScriptAllowThumbnailImage(request,response_allow);
 	}
 
 	// --------------------------------------------------------------------------------
@@ -45409,7 +45489,13 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// コールバック関数を実行
-		project.executeScriptAllowPopupImage(element,url,content_type,response_allow);
+		var request = {
+			element:element,
+			url:url,
+			content_type:content_type,
+			is_overridden_url:AnalyzeWorkGetOverrodeUrl(work)
+		};
+		project.executeScriptAllowPopupImage(request,response_allow);
 
 	}
 
@@ -46589,7 +46675,27 @@ function PageExpand(page_expand_arguments){
 			var h = getHashQuery(url);
 			var start = q["t"] || h["t"];
 			if(start){
-				if(!start.match(/[0-9]+/)){
+				var t = 0;
+				var m;
+				m = start.match(/([0-9]+)h/i);
+				if(m){
+					t += parseInt(m[1]) * 60 * 60;
+				}
+				m = start.match(/([0-9]+)m/i);
+				if(m){
+					t += parseInt(m[1]) * 60;
+				}
+				m = start.match(/([0-9]+)s/i);
+				if(m){
+					t += parseInt(m[1]);
+				}
+				if(t){
+					start = t + "";
+				}
+				m = start.match(/([0-9]+)/i);
+				if(m){
+					start = m[1];
+				}else{
 					start = "";
 				}
 			}
@@ -62216,42 +62322,49 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearInitializedObserverElement(work){ ObjectDeleteProperty(work,"i_obs"); }
 	function AnalyzeWorkSetInitializedObserverElement(work){ work.i_obs = true; }
-	function AnalyzeWorkGetInitializedObserverElement(work){ return work.i_obs; }
+	function AnalyzeWorkGetInitializedObserverElement(work){ return Boolean(work.i_obs); }
 
 	// --------------------------------------------------------------------------------
 	// アンカーオーバーライド状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearOverrodeAnchorElement(work){ ObjectDeleteProperty(work,"o_anc"); }
 	function AnalyzeWorkSetOverrodeAnchorElement(work){ work.o_anc = true; }
-	function AnalyzeWorkGetOverrodeAnchorElement(work){ return work.o_anc; }
+	function AnalyzeWorkGetOverrodeAnchorElement(work){ return Boolean(work.o_anc); }
+
+	// --------------------------------------------------------------------------------
+	// URL オーバーライド状況
+	// --------------------------------------------------------------------------------
+	function AnalyzeWorkClearOverrodeUrl(work){ ObjectDeleteProperty(work,"o_url"); }
+	function AnalyzeWorkSetOverrodeUrl(work){ work.o_anc = true; }
+	function AnalyzeWorkGetOverrodeUrl(work){ return Boolean(work.o_anc); }
 
 	// --------------------------------------------------------------------------------
 	// 「エレメントの置換」の解析状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedReplacementToElement(work){ ObjectDeleteProperty(work,"a_rte"); }
 	function AnalyzeWorkSetAnalyzedReplacementToElement(work){ work.a_rte = true; }
-	function AnalyzeWorkGetAnalyzedReplacementToElement(work){ return work.a_rte; }
+	function AnalyzeWorkGetAnalyzedReplacementToElement(work){ return Boolean(work.a_rte); }
 
 	// --------------------------------------------------------------------------------
 	// 「テキストの置換」の解析状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedReplacementToText(work){ ObjectDeleteProperty(work,"a_rtt"); }
 	function AnalyzeWorkSetAnalyzedReplacementToText(work){ work.a_rtt = true; }
-	function AnalyzeWorkGetAnalyzedReplacementToText(work){ return work.a_rtt; }
+	function AnalyzeWorkGetAnalyzedReplacementToText(work){ return Boolean(work.a_rtt); }
 
 	// --------------------------------------------------------------------------------
 	// 「アンカーの置換」の解析状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedReplacementToAnchor(work){ ObjectDeleteProperty(work,"a_rta"); }
 	function AnalyzeWorkSetAnalyzedReplacementToAnchor(work){ work.a_rta = true; }
-	function AnalyzeWorkGetAnalyzedReplacementToAnchor(work){ return work.a_rta; }
+	function AnalyzeWorkGetAnalyzedReplacementToAnchor(work){ return Boolean(work.a_rta); }
 
 	// --------------------------------------------------------------------------------
 	// 「ハイパーリンクの置換」の解析状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedReplacementToLink(work){ ObjectDeleteProperty(work,"a_rtl"); }
 	function AnalyzeWorkSetAnalyzedReplacementToLink(work){ work.a_rtl = true; }
-	function AnalyzeWorkGetAnalyzedReplacementToLink(work){ return work.a_rtl; }
+	function AnalyzeWorkGetAnalyzedReplacementToLink(work){ return Boolean(work.a_rtl); }
 
 	// --------------------------------------------------------------------------------
 	// 展開 URL 先を設定
@@ -62272,35 +62385,35 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedMakeLinkToText(work){ ObjectDeleteProperty(work,"a_mlt"); }
 	function AnalyzeWorkSetAnalyzedMakeLinkToText(work){ work.a_mlt = true; }
-	function AnalyzeWorkGetAnalyzedMakeLinkToText(work){ return work.a_mlt; }
+	function AnalyzeWorkGetAnalyzedMakeLinkToText(work){ return Boolean(work.a_mlt); }
 
 	// --------------------------------------------------------------------------------
 	// 「短縮 URL の展開」の解析状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedExpandShortUrl(work){ ObjectDeleteProperty(work,"a_esu"); }
 	function AnalyzeWorkSetAnalyzedExpandShortUrl(work){ work.a_esu = true; }
-	function AnalyzeWorkGetAnalyzedExpandShortUrl(work){ return work.a_esu; }
+	function AnalyzeWorkGetAnalyzedExpandShortUrl(work){ return Boolean(work.a_esu); }
 
 	// --------------------------------------------------------------------------------
 	// 「テキストの展開」の解析状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedExpandInlineText(work){ ObjectDeleteProperty(work,"a_eit"); }
 	function AnalyzeWorkSetAnalyzedExpandInlineText(work){ work.a_eit = true; }
-	function AnalyzeWorkGetAnalyzedExpandInlineText(work){ return work.a_eit; }
+	function AnalyzeWorkGetAnalyzedExpandInlineText(work){ return Boolean(work.a_eit); }
 
 	// --------------------------------------------------------------------------------
 	// 「イメージのサムネイル展開」の解析状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedExpandThumbnailImage(work){ ObjectDeleteProperty(work,"a_eti"); }
 	function AnalyzeWorkSetAnalyzedExpandThumbnailImage(work){ work.a_eti = true; }
-	function AnalyzeWorkGetAnalyzedExpandThumbnailImage(work){ return work.a_eti; }
+	function AnalyzeWorkGetAnalyzedExpandThumbnailImage(work){ return Boolean(work.a_eti); }
 
 	// --------------------------------------------------------------------------------
 	// 「イメージのポップアップ展開」の解析状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedExpandPopupImage(work){ ObjectDeleteProperty(work,"a_epi"); }
 	function AnalyzeWorkSetAnalyzedExpandPopupImage(work){ work.a_epi = true; }
-	function AnalyzeWorkGetAnalyzedExpandPopupImage(work){ return work.a_epi; }
+	function AnalyzeWorkGetAnalyzedExpandPopupImage(work){ return Boolean(work.a_epi); }
 
 	// --------------------------------------------------------------------------------
 	// 「ポップアップ」のワーク埋め込み
@@ -62314,49 +62427,49 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedExpandInlineSound(work){ ObjectDeleteProperty(work,"a_eis"); }
 	function AnalyzeWorkSetAnalyzedExpandInlineSound(work){ work.a_eis = true; }
-	function AnalyzeWorkGetAnalyzedExpandInlineSound(work){ return work.a_eis; }
+	function AnalyzeWorkGetAnalyzedExpandInlineSound(work){ return Boolean(work.a_eis); }
 
 	// --------------------------------------------------------------------------------
 	// 「ビデオのインライン展開」の解析状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedExpandInlineVideo(work){ ObjectDeleteProperty(work,"a_eiv"); }
 	function AnalyzeWorkSetAnalyzedExpandInlineVideo(work){ work.a_eiv = true; }
-	function AnalyzeWorkGetAnalyzedExpandInlineVideo(work){ return work.a_eiv; }
+	function AnalyzeWorkGetAnalyzedExpandInlineVideo(work){ return Boolean(work.a_eiv); }
 
 	// --------------------------------------------------------------------------------
 	// 「インラインの展開」の解析状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedExpandInlineIframe(work){ ObjectDeleteProperty(work,"a_eif"); }
 	function AnalyzeWorkSetAnalyzedExpandInlineIframe(work){ work.a_eif = true; }
-	function AnalyzeWorkGetAnalyzedExpandInlineIframe(work){ return work.a_eif; }
+	function AnalyzeWorkGetAnalyzedExpandInlineIframe(work){ return Boolean(work.a_eif); }
 
 	// --------------------------------------------------------------------------------
 	// 「インラインフレーム内コンテンツ展開」の解析状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedExpandIframeContent(work){ ObjectDeleteProperty(work,"a_eic"); }
 	function AnalyzeWorkSetAnalyzedExpandIframeContent(work){ work.a_eic = true; }
-	function AnalyzeWorkGetAnalyzedExpandIframeContent(work){ return work.a_eic; }
+	function AnalyzeWorkGetAnalyzedExpandIframeContent(work){ return Boolean(work.a_eic); }
 
 	// --------------------------------------------------------------------------------
 	// 「縮小画像のポップアップ」の解析状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedPopupReducedImage(work){ ObjectDeleteProperty(work,"a_pri"); }
 	function AnalyzeWorkSetAnalyzedPopupReducedImage(work){ work.a_pri = true; }
-	function AnalyzeWorkGetAnalyzedPopupReducedImage(work){ return work.a_pri; }
+	function AnalyzeWorkGetAnalyzedPopupReducedImage(work){ return Boolean(work.a_pri); }
 
 	// --------------------------------------------------------------------------------
 	// 「掲示板拡張」の解析状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedExpandBbs(work){ ObjectDeleteProperty(work,"a_ebb"); }
 	function AnalyzeWorkSetAnalyzedExpandBbs(work){ work.a_ebb = true; }
-	function AnalyzeWorkGetAnalyzedExpandBbs(work){ return work.a_ebb; }
+	function AnalyzeWorkGetAnalyzedExpandBbs(work){ return Boolean(work.a_ebb); }
 
 	// --------------------------------------------------------------------------------
 	// 解析無効化
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearInvalid(work){ ObjectDeleteProperty(work,"a_inv"); }
 	function AnalyzeWorkSetInvalid(work){ work.a_inv = true; }
-	function AnalyzeWorkGetInvalid(work){ return work.a_inv; }
+	function AnalyzeWorkGetInvalid(work){ return Boolean(work.a_inv); }
 
 	// --------------------------------------------------------------------------------
 	// 「修正カウンタ」の解析状況
@@ -64603,6 +64716,7 @@ function PageExpand(page_expand_arguments){
 			}
 
 			if(_element){
+				removeEventClick();
 				if(outsider){
 					DomNodeRemove(_element);
 				}
@@ -64614,6 +64728,22 @@ function PageExpand(page_expand_arguments){
 		// 更新通知
 		// --------------------------------------------------------------------------------
 		_this.onchange = function(v){};
+
+		// --------------------------------------------------------------------------------
+		// マウスクリック時に実行される関数（内部用）
+		// --------------------------------------------------------------------------------
+		function mouseClick(e){
+			_this.release();
+		}
+
+		// --------------------------------------------------------------------------------
+		// クリックイベントを外す（内部用）
+		// --------------------------------------------------------------------------------
+		function removeEventClick(){
+			if(_element.removeEventListener){
+				_element.removeEventListener("click",mouseClick);
+			}
+		}
 
 		// --------------------------------------------------------------------------------
 		// プライベート変数
@@ -64636,6 +64766,10 @@ function PageExpand(page_expand_arguments){
 				element = null;
 			}else{
 				_element = DocumentCreateElement("span");
+			}
+
+			if(_element.addEventListener){
+				_element.addEventListener("click",mouseClick);
 			}
 
 			// 解析ワーク作成
@@ -69957,6 +70091,10 @@ function PageExpand(page_expand_arguments){
 	// エレメントからクラス名を指定してエレメントを取得する
 	// --------------------------------------------------------------------------------
 	function ElementGetElementsByClassName(node,class_name){
+		if(node.getElementsByClassName){
+			return node.getElementsByClassName(class_name);
+		}
+
 		var node_list = new Array();
 		if(!class_name) return node_list;
 
@@ -69969,7 +70107,7 @@ function PageExpand(page_expand_arguments){
 			if(node.nodeType != 1) return;
 
 			var a = new Object();
-			node.className.replace(re,function (m,k){ a[k] = true; });
+			(node.className.baseVal === undefined ? node.className:node.className.baseVal).replace(re,function (m,k){ a[k] = true; });
 
 			var m;
 			for (var k in class_list){
@@ -69981,7 +70119,7 @@ function PageExpand(page_expand_arguments){
 			var nodes = node.childNodes;
 			var i;
 			var num = nodes.length;
-			for(i=0;i<num;i++){
+			for(i=0;i < num;i++){
 				f(nodes[i]);
 			}
 		}
@@ -69989,9 +70127,25 @@ function PageExpand(page_expand_arguments){
 		if(node.documentElement){
 			node = node.documentElement;
 		}
-		f(node);
+
+		var nodes = node.childNodes;
+		var i;
+		var num = nodes.length;
+		for(i=0;i < num;i++){
+			f(nodes[i]);
+		}
 
 		return node_list;
+	}
+
+	// --------------------------------------------------------------------------------
+	// エレメントのクラス名を取得
+	// --------------------------------------------------------------------------------
+	function ElementGetClassName(element){
+		if(element.className.baseVal !== undefined){
+			return element.className.baseVal;
+		}
+		return element.className;
 	}
 
 	// --------------------------------------------------------------------------------
