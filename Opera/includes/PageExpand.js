@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2014  http://hakuhin.jp
+// Hakuhin 2010-2015  http://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -4068,7 +4068,7 @@ function PageExpand(page_expand_arguments){
 								embed.type = "application/x-shockwave-flash";
 								embed.width = "100%";
 								embed.height = "100%";
-								embed.setAttribute("allowScriptAccess","sameDomain");
+								embed.setAttribute("allowScriptAccess","always");
 								embed.setAttribute("bgcolor","#000000");
 								embed.setAttribute("quality","high");
 								embed.setAttribute("flashVars",flashvars);

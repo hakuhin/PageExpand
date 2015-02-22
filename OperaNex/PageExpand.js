@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2014  http://hakuhin.jp
+// Hakuhin 2010-2015  http://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -9049,16 +9049,10 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 掲示板設定
 			// --------------------------------------------------------------------------------
-			// ログ速
-			var obj = addPreset(proj.expand_bbs,"logsoku",null);
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Logsoku();
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Logsoku();
-
 			// みみずん検索
 			var obj = addPreset(proj.expand_bbs,"mimizun",null);
 			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Mimizun();
+			preset.script_initialize = "";
 			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Mimizun();
 
 			// unkar.org
@@ -9070,7 +9064,7 @@ function PageExpand(page_expand_arguments){
 			// ニコニコ大百科
 			var obj = addPreset(proj.expand_bbs,"nicovideo_dictionary",null);
 			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_NicovideoDictionary();
+			preset.script_initialize = "";
 			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_NicovideoDictionary();
 
 		}
@@ -9203,8 +9197,8 @@ function PageExpand(page_expand_arguments){
 						]
 					}
 				},
-				script_initialize: PresetScript_ExpandBbs_ScriptInitialize_Open2ch(),
-				script_callback: PresetScript_ExpandBbs_ScriptCallback_Open2ch(),
+				script_initialize: "",
+				script_callback: "",
 				popup:{
 					origin_type:"adsorb_top_bottom",
 					position_type:"absolute",
@@ -9486,8 +9480,6 @@ function PageExpand(page_expand_arguments){
 				pattern:"^http://jbbs\\.shitaraba\\.net/[^/]+/[0-9]+/storage/[0-9]+.*$",
 				flags:{i:true,g:false}
 			});
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_2ch();
-			preset.script_callback = "";
 
 			// unkar.org
 			removePreset("expand_bbs","unkar");
@@ -9495,13 +9487,13 @@ function PageExpand(page_expand_arguments){
 			// あっとちゃんねるず
 			var obj = addPreset(proj.expand_bbs,"atchs",null);
 			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Atchs();
+			preset.script_initialize = "";
 			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Atchs();
 
 			// ふたば☆ちゃんねる
 			var obj = addPreset(proj.expand_bbs,"2chan",null);
 			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_2chan();
+			preset.script_initialize = "";
 			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2chan();
 
 			// --------------------------------------------------------------------------------
@@ -9820,15 +9812,10 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 掲示板設定
 			// --------------------------------------------------------------------------------
-			// ２ちゃんねる掲示板
-			var obj = addPreset(proj.expand_bbs,"2ch",null);
-			var preset = obj.preset;
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2ch();
-
 			// chaika
 			var obj = addPreset(proj.expand_bbs,"chaika","atchs");
 			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Chaika();
+			preset.script_initialize = "";
 			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Chaika();
 
 		}
@@ -9887,6 +9874,115 @@ function PageExpand(page_expand_arguments){
 				obj.thumbnail.script_allow = PresetScript_ExpandImage_ThumbnailScriptAllow_Twitter();
 				obj.popup.script_allow = PresetScript_ExpandImage_PopupScriptAllow_Twitter();
 			});
+
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.24
+		// --------------------------------------------------------------------------------
+		if(proj.version < 24){
+			// バージョン値
+			proj.version = 24;
+
+			// --------------------------------------------------------------------------------
+			// リファラ置換定義
+			// --------------------------------------------------------------------------------
+			// スレッド掲示板用
+			var obj = addPreset(proj.replacement_to_referer,"bbs","wildcard");
+			obj.preset = {
+				name:{
+					standard:"For 2ch.net",
+					locales:{
+						ja:"スレッド掲示板用",
+						en:"For 2ch.net"
+					}
+				},
+				filter:[
+					{
+						name:{
+							standard:"shitaraba.net",
+							locales:{
+								ja:"したらば掲示板",
+								en:"shitaraba.net"
+							}
+						},
+						filter:{
+							type:"asterisk",
+							asterisk:{
+								filter:[
+									"http://jbbs.shitaraba.net/bbs/write.cgi/*"
+								]
+							},
+							regexp:{
+								filter:[]
+							}
+						},
+						send_referer:{
+							type:"default",
+							custom:"",
+							regexp:{
+								pattern:"",
+								flags:{i:false,g:false}
+							},
+							replacement:""
+						}
+					}
+				]
+			};
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			// スレッド掲示板
+			var preset = getPreset(proj.urlmap,"bbs");
+			preset.replacement_to_referer.id.unshift("bbs");
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// ２ちゃんねる掲示板
+			var obj = addPreset(proj.expand_bbs,"2ch",null);
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_2ch();
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2ch();
+
+			// ログ速
+			var obj = addPreset(proj.expand_bbs,"logsoku",null);
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Logsoku();
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Logsoku();
+
+			// みみずん検索
+			var obj = addPreset(proj.expand_bbs,"mimizun",null);
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Mimizun();
+
+			// あっとちゃんねるず
+			var obj = addPreset(proj.expand_bbs,"atchs",null);
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Atchs();
+
+			// おーぷん２ちゃんねる
+			var obj = addPreset(proj.expand_bbs,"open2ch",null);
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Open2ch();
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Open2ch();
+
+			// chaika
+			var obj = addPreset(proj.expand_bbs,"chaika",null);
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Chaika();
+
+			// ふたば☆ちゃんねる
+			var obj = addPreset(proj.expand_bbs,"2chan",null);
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_2chan();
+
+			// ニコニコ大百科
+			var obj = addPreset(proj.expand_bbs,"nicovideo_dictionary",null);
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_NicovideoDictionary();
 
 		}
 		if(exit())	return proj;
@@ -15740,95 +15836,101 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 継ぎ足し読み込み
 		// --------------------------------------------------------------------------------
-		function readMore(){
+		function readMore(callback){
+			var add_count = 0;
 
-			// ローダーオブジェクトを作成
-			var loader = new Loader();
+			var load = function (){
 
-			// 成功
-			loader.onload = function(str){
-				var re_number = new RegExp("<a name=\"([0-9]+)\"","i");
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
 
-				var p = 0;
-				var n = str.length;
-				function f(){
-					try{
-						if(p >= n) throw 0;
-						p = str.indexOf("<dt class=\"reshead\">",p);
-						if(p < 0) throw 0;
-						var e = str.indexOf("</dd>",p);
-						if(e >= 0) e += 5;
-						var s = str.substring(p,e);
-						var m = s.match(re_number);
-						if(m){
-							var id = parseInt(m[1]);
-							if(last_id < id){
-								var response = bbs_dictionary.getResponse(id);
-								response.clearAnalyzed();
-								response.clearOriginalElements();
-								response.clearFollowing();
+				// 成功
+				loader.onload = function(str){
+					var re_number = new RegExp("<a name=\"([0-9]+)\"","i");
 
-								var nodes = StringHtmlCreateDomNodesSafe(s);
-								var j;
-								var node_num = nodes.length;
-								for(j=0;j<node_num;j++){
-									element_parent.appendChild(nodes[j]);
+					var p = 0;
+					var n = str.length;
+					function f(){
+						try{
+							if(p >= n) throw 0;
+							p = str.indexOf("<dt class=\"reshead\">",p);
+							if(p < 0) throw 0;
+							var e = str.indexOf("</dd>",p);
+							if(e >= 0) e += 5;
+							var s = str.substring(p,e);
+							var m = s.match(re_number);
+							if(m){
+								var id = parseInt(m[1]);
+								if(last_id < id){
+									var response = bbs_dictionary.getResponse(id);
+									response.clearAnalyzed();
+									response.clearOriginalElements();
+									response.clearFollowing();
+
+									var nodes = StringHtmlCreateDomNodesSafe(s);
+									var j;
+									var node_num = nodes.length;
+									for(j=0;j<node_num;j++){
+										element_parent.appendChild(nodes[j]);
+									}
+									last_id = id;
+									add_count += 1;
+									resource_url_more = base_url + (last_id) + "-";
 								}
-								last_id = id;
-								resource_url_more = base_url + (last_id) + "-";
 							}
+
+							if(p < e){
+								p = e;
+								execute_queue.attachFirst(f,null);
+								return;
+							}
+						}catch(e){
 						}
 
-						if(p < e){
-							p = e;
-							execute_queue.attachFirst(f,null);
-							return;
+						var reload = false;
+						(function(){
+							if(((last_id + 1) % load_dose) != load_offset){
+								return;
+							}
+							var p = Math.floor(load_more_id / load_dose);
+							var n = Math.floor(last_id / load_dose);
+							if(p >= n){
+								return;
+							}
+							var p = Math.floor(load_more_id / load_separate);
+							var n = Math.floor(last_id / load_separate);
+							if(p < n){
+								return;
+							}
+
+							reload = true;
+						})();
+
+						var next_id = Math.floor(last_id / load_dose) * load_dose + load_offset;
+						resource_url_more = base_url + next_id + "-";
+
+						if(reload){
+							load();
+						}else{
+							callback({result:true,add_count:add_count});
 						}
-					}catch(e){
 					}
 
-					var reload = false;
-					(function(){
-						if(((last_id + 1) % load_dose) != load_offset){
-							return;
-						}
-						var p = Math.floor(load_more_id / load_dose);
-						var n = Math.floor(last_id / load_dose);
-						if(p >= n){
-							return;
-						}
-						var p = Math.floor(load_more_id / load_separate);
-						var n = Math.floor(last_id / load_separate);
-						if(p < n){
-							return;
-						}
+					load_more_id = last_id;
+					execute_queue.attachFirst(f,null);
+				};
 
-						reload = true;
-					})();
+				// 失敗
+				loader.onerror = function(){
+					callback({result:false});
+				};
 
-					var next_id = Math.floor(last_id / load_dose) * load_dose + load_offset;
-					resource_url_more = base_url + next_id + "-";
-
-					if(reload){
-						readMore();
-					}else{
-						read_more_button.init();
-					}
-				}
-
-				load_more_id = last_id;
-				execute_queue.attachFirst(f,null);
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL(resource_url_more);
+				loader.loadText();
 			};
-
-			// 失敗
-			loader.onerror = function(){
-				read_more_button.init();
-			};
-
-			// テキストの読み込み
-			loader.setMethod("GET");
-			loader.setURL(resource_url_more);
-			loader.loadText();
+			load();
 		}
 
 		// --------------------------------------------------------------------------------
@@ -18569,8 +18671,8 @@ function PageExpand(page_expand_arguments){
 					var ary = new Array();
 
 					var m = str.match(new RegExp("^([ 　]*)([>＞]*)([ 　]*)(.+?)([ 　]*)$","i"));
-					if(!m) return;
-					if(!m[4]) return;
+					if(!m) return ary;
+					if(!m[4]) return ary;
 					var depth = m[2].length;
 					str = m[4];
 
@@ -18773,7 +18875,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 継ぎ足し読み込み
 		// --------------------------------------------------------------------------------
-		function readMore(){
+		function readMore(callback){
 			var element_result = document.getElementById("contdisp");
 
 			// ローダーオブジェクトを作成
@@ -18787,6 +18889,7 @@ function PageExpand(page_expand_arguments){
 
 				var p = 0;
 				var n = str.length;
+				var add_count = 0;
 				function f(){
 					try{
 						if(p >= n) throw 0;
@@ -18821,6 +18924,7 @@ function PageExpand(page_expand_arguments){
 								// フォーム位置補正
 								revisePositionForm();
 
+								add_count += 1;
 								last_id = id;
 							}
 						}
@@ -18845,7 +18949,7 @@ function PageExpand(page_expand_arguments){
 					// フォーム位置補正
 					revisePositionForm();
 
-					read_more_button.init();
+					callback({result:true,add_count:add_count});
 				}
 
 				var nodes = ElementGetElementsByTagName(element_parent,"table");
@@ -18867,7 +18971,7 @@ function PageExpand(page_expand_arguments){
 				if(element_result){
 					ElementSetTextContent(element_result,"not found!");
 				}
-				read_more_button.init();
+				callback({result:false});
 			};
 
 			// テキストの読み込み
@@ -18914,6 +19018,21 @@ function PageExpand(page_expand_arguments){
 		// アクセス先 URL
 		// --------------------------------------------------------------------------------
 		resource_url = base_url;
+
+		// --------------------------------------------------------------------------------
+		// BbsControlDockingForm 作成
+		// --------------------------------------------------------------------------------
+		(function(){
+			var node = document.getElementById("ftbl");
+			if(node){
+				var nodes = node.getElementsByTagName("tbody");
+				var num = nodes.length;
+				if(num){
+					var docking_form = new BbsControlDockingForm(nodes[0],false);
+					docking_form.setStyle("background:#e8e8ec; background-image:linear-gradient(to bottom, #f8f8fc, #e8e8ec); padding:20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px; display:block; visibility:visible");
+				}
+			}
+		})();
 
 		// --------------------------------------------------------------------------------
 		// BbsControlReadMoreButton 作成
@@ -19090,7 +19209,7 @@ function PageExpand(page_expand_arguments){
 							popup_iframe.close();
 							setEnable(true);
 							if(timer){
-								readMore();
+								readMore(function(){});
 								clear();
 							}
 						}
@@ -20616,15 +20735,16 @@ function PageExpand(page_expand_arguments){
 		var first_id = 1;
 		var last_id = 1;
 		var dictionary_id = new Array();
-		var load_shadow_func = null;
-		var load_more_func = null;
+		var load_shadow_list;
+		var load_shadow_pos = 0;
+		var load_more_list;
+		var load_more_pos = 0;
 		var element_parent = null;
 		var element_last = null;
 		var element_footer = null;
 		var read_more_button = null;
 		var element_form = null;
 		var base_url = work.base_url;
-		var resource_url_shadow;
 		var resource_url_more;
 		var generate_html_func = null;
 
@@ -20781,6 +20901,18 @@ function PageExpand(page_expand_arguments){
 				}
 			}
 		};
+
+		// --------------------------------------------------------------------------------
+		// HTML 文書の整合性テスト
+		// --------------------------------------------------------------------------------
+		function checkValidityFromHTML(str){
+			var m = str.match(new RegExp("<dt>.*?<dd>[ ].*?[ ]<br><br>","i"));
+			if(m){
+				m = m[0].match(new RegExp("[\r\n]"));
+				if(!m) return true;
+			}
+			return false;
+		}
 
 		// --------------------------------------------------------------------------------
 		// HTML 文書をシャドウ読み込み
@@ -20983,7 +21115,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// HTML 文書を継ぎ足し読み込み
 		// --------------------------------------------------------------------------------
-		function loadMoreFromHTML(str){
+		function loadMoreFromHTML(str,callback){
 			var re_search;
 			var re_number;
 			var re_name = new RegExp("<b>(.*?)</b>","i");
@@ -21010,6 +21142,7 @@ function PageExpand(page_expand_arguments){
 
 			var p = 0;
 			var n = str.length;
+			var add_count = 0;
 			function f(){
 				try{
 					if(p >= n) throw 0;
@@ -21069,6 +21202,7 @@ function PageExpand(page_expand_arguments){
 									}
 								}
 								last_id = id;
+								add_count += 1;
 								resource_url_more = base_url + (last_id) + "-";
 							}
 						}
@@ -21080,10 +21214,26 @@ function PageExpand(page_expand_arguments){
 						return;
 					}
 				}catch(e){
+					if(e){
+						callback({result:false});
+						return;
+					}
 				}
-				read_more_button.init();
+				callback({result:true,add_count:add_count});
 			}
 			execute_queue.attachFirst(f,null);
+		}
+
+		// --------------------------------------------------------------------------------
+		// DAT 文書の整合性テスト
+		// --------------------------------------------------------------------------------
+		function checkValidityFromDAT(str){
+			var m = str.match(new RegExp("</b>.*<b>.*?<>.*?<>.*?<>.*?<>","i"));
+			if(m){
+				m = m[0].match(new RegExp("[\r\n]"));
+				if(!m) return true;
+			}
+			return false;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -21258,7 +21408,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// DAT 文書を継ぎ足し読み込み
 		// --------------------------------------------------------------------------------
-		function loadMoreFromDAT(str){
+		function loadMoreFromDAT(str,callback){
 			var re_search = new RegExp("(.*?)<>(.*?)<>(.*?)<> (.*?) <>","i");
 			var re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:| BE:)","i");
 			var re_id = new RegExp("ID:([^ ]+)","i");
@@ -21268,6 +21418,7 @@ function PageExpand(page_expand_arguments){
 			var p = 0;
 			var n = str.length;
 			var id = 1;
+			var add_count = 0;
 			function f(){
 				try{
 					if(p >= n) throw 0;
@@ -21316,6 +21467,7 @@ function PageExpand(page_expand_arguments){
 								}
 							}
 							last_id = id;
+							add_count += 1;
 						}
 					}
 
@@ -21326,8 +21478,12 @@ function PageExpand(page_expand_arguments){
 						return;
 					}
 				}catch(e){
+					if(e){
+						callback({result:false});
+						return;
+					}
 				}
-				read_more_button.init();
+				callback({result:true,add_count:add_count});
 			}
 			execute_queue.attachFirst(f,null);
 		}
@@ -21335,36 +21491,64 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 継ぎ足し読み込み
 		// --------------------------------------------------------------------------------
-		function readMore(){
+		function readMore(callback){
+			var num = load_more_list.length;
+			var pos = load_more_pos;
+			var i = 0;
 
-			// ローダーオブジェクトを作成
-			var loader = new Loader();
-
-			// 成功
-			loader.onload = function(str){
-				if(load_more_func){
-					load_more_func(str);
+			var failure = function(){
+				i += 1;
+				if(num <= i){
+					callback({result:false});
+					return;
 				}
+				pos += 1;
+				if(num <= pos) pos = 0;
+				load_more_pos = pos;
+				load();
 			};
 
-			// 失敗
-			loader.onerror = function(){
-				read_more_button.init();
-			};
+			var load = function (){
+				var param = load_more_list[pos];
 
-			// テキストの読み込み
-			loader.setMethod("GET");
-			loader.setURL(resource_url_more);
-			switch(work.bbs_name){
-			case "2ch":
-			case "pink":
-				loader.overrideMimeType("text/plain; charset=Shift_JIS");
-				break;
-			case "shitaraba":
-				loader.overrideMimeType("text/plain; charset=EUC-JP");
-				break;
-			}
-			loader.loadText();
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
+
+				// 成功
+				loader.onload = function(str){
+					if(!param.validity(str)){
+						failure();
+						return;
+					}
+					param.parse(str,function(response){
+						if(response.result){
+							callback(response);
+						}else{
+							failure();
+						}
+					});
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					failure();
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL(param.url);
+				switch(work.bbs_name){
+				case "2ch":
+				case "pink":
+					loader.overrideMimeType("text/plain; charset=Shift_JIS");
+					break;
+				case "shitaraba":
+					loader.overrideMimeType("text/plain; charset=EUC-JP");
+					break;
+				}
+				loader.loadText();
+			};
+			load();
 		}
 
 		// --------------------------------------------------------------------------------
@@ -21471,27 +21655,48 @@ function PageExpand(page_expand_arguments){
 		if(!generate_html_func) return false;
 
 		// --------------------------------------------------------------------------------
-		// 読み込み方式
+		// 読み込みリスト
 		// --------------------------------------------------------------------------------
-		load_shadow_func = loadShadowFromHTML;
-		load_more_func = loadMoreFromHTML;
+		load_shadow_pos = 0;
+		load_more_pos = 0;
+		load_shadow_list = new Array();
+		load_more_list = new Array();
 
-		if(work.bbs_name == "2ch"){
-			// DAT ファイル
-			load_shadow_func = loadShadowFromDAT;
-			load_more_func = loadMoreFromDAT;
-		}
+		load_shadow_list.push({
+			url:base_url,
+			parse:loadShadowFromHTML,
+			validity:checkValidityFromHTML
+		});
+		load_more_list.push({
+			url:base_url + last_id + "-",
+			parse:loadMoreFromHTML,
+			validity:checkValidityFromHTML
+		});
 
-		// --------------------------------------------------------------------------------
-		// アクセス先 URL
-		// --------------------------------------------------------------------------------
-		if(load_more_func == loadMoreFromHTML){
-			resource_url_shadow = base_url;
-			resource_url_more = base_url + last_id + "-";
-		}else{
-			if(base_url.match(new RegExp("http://([^.]+\\.2ch\\.net)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"))){
-				resource_url_shadow = resource_url_more = "http://" + RegExp.$1 + "/" + RegExp.$2 + "/dat/" + RegExp.$3 + ".dat";
-			}
+		switch(work.bbs_name){
+		case "2ch":
+		case "pink":
+			load_shadow_pos = 1;
+			load_more_pos = 1;
+			load_shadow_list.push({
+				url:(function(){
+					var m = base_url.match(new RegExp("http://([^/]+)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"));
+					if(!m) return "";
+					return "http://" + m[1] + "/" + m[2] + "/dat/" + m[3] + ".dat";
+				})(),
+				parse:loadShadowFromDAT,
+				validity:checkValidityFromDAT
+			});
+			load_more_list.push({
+				url:(function(){
+					var m = base_url.match(new RegExp("http://([^/]+)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"));
+					if(!m) return "";
+					return "http://" + m[1] + "/" + m[2] + "/dat/" + m[3] + ".dat";
+				})(),
+				parse:loadMoreFromDAT,
+				validity:checkValidityFromDAT
+			});
+			break;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -21510,33 +21715,54 @@ function PageExpand(page_expand_arguments){
 		// シャドウロード
 		// --------------------------------------------------------------------------------
 		(function(){
-			// ローダーオブジェクトを作成
-			var loader = new Loader();
+			var num = load_shadow_list.length;
+			var pos = load_shadow_pos;
+			var i = 0;
 
-			// 成功
-			loader.onload = function(str){
-				if(load_shadow_func){
-					load_shadow_func(str);
+			var failure = function(){
+				i += 1;
+				if(num <= i) return;
+				pos += 1;
+				if(num <= pos) pos = 0;
+				load_shadow_pos = pos;
+				load();
+			};
+
+			var load = function (){
+				var param = load_shadow_list[pos];
+
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
+
+				// 成功
+				loader.onload = function(str){
+					if(!param.validity(str)){
+						failure();
+						return;
+					}
+					param.parse(str);
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					failure();
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL(param.url);
+				switch(work.bbs_name){
+				case "2ch":
+				case "pink":
+					loader.overrideMimeType("text/plain; charset=Shift_JIS");
+					break;
+				case "shitaraba":
+					loader.overrideMimeType("text/plain; charset=EUC-JP");
+					break;
 				}
+				loader.loadText();
 			};
-
-			// 失敗
-			loader.onerror = function(){
-			};
-
-			// テキストの読み込み
-			loader.setMethod("GET");
-			loader.setURL(resource_url_shadow);
-			switch(work.bbs_name){
-			case "2ch":
-			case "pink":
-				loader.overrideMimeType("text/plain; charset=Shift_JIS");
-				break;
-			case "shitaraba":
-				loader.overrideMimeType("text/plain; charset=EUC-JP");
-				break;
-			}
-			loader.loadText();
+			load();
 		})();
 
 		// --------------------------------------------------------------------------------
@@ -22662,13 +22888,14 @@ function PageExpand(page_expand_arguments){
 		var first_id = 1;
 		var last_id = 1;
 		var dictionary_id = new Array();
-		var load_shadow_func = null;
-		var load_more_func = null;
+		var load_shadow_list;
+		var load_shadow_pos = 0;
+		var load_more_list;
+		var load_more_pos = 0;
 		var element_parent = null;
 		var read_more_button = null;
 		var element_form = null;
 		var base_url = work.base_url;
-		var resource_url_shadow;
 		var resource_url_more;
 
 		// --------------------------------------------------------------------------------
@@ -22828,6 +23055,13 @@ function PageExpand(page_expand_arguments){
 		};
 
 		// --------------------------------------------------------------------------------
+		// HTML 文書の整合性テスト
+		// --------------------------------------------------------------------------------
+		function checkValidityFromHTML(str){
+			return true;
+		}
+
+		// --------------------------------------------------------------------------------
 		// HTML 文書をシャドウ読み込み
 		// --------------------------------------------------------------------------------
 		function loadShadowFromHTML(str){
@@ -22845,7 +23079,7 @@ function PageExpand(page_expand_arguments){
 			var n = str.length;
 			function f(){
 				if(p >= n) return;
-				p = str.indexOf("<dt>",p);
+				p = str.indexOf("<dt",p);
 				if(p < 0) return;
 				var e = str.indexOf("</dt>",p);
 				var s = str.substring(p,e) + "\n" + "<br>";
@@ -22982,7 +23216,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// HTML 文書を継ぎ足し読み込み
 		// --------------------------------------------------------------------------------
-		function loadMoreFromHTML(str){
+		function loadMoreFromHTML(str,callback){
 			var re_number;
 			switch(work.bbs_name){
 			case "open2ch":
@@ -22995,7 +23229,7 @@ function PageExpand(page_expand_arguments){
 			var nodes = ElementGetElementsByTagName(element_parent,"dt");
 			var node_num = nodes.length;
 			if(node_num){
-				var re_id = new RegExp("^([0-9]+)","i");
+				var re_id = new RegExp("([0-9]+)","i");
 				if(ElementGetTextContent(nodes[node_num-1]).match(re_id)){
 					last_number = parseInt(RegExp.$1);
 				}
@@ -23009,10 +23243,11 @@ function PageExpand(page_expand_arguments){
 
 			var p = 0;
 			var n = str.length;
+			var add_count = 0;
 			function f(){
 				try{
 					if(p >= n) throw 0;
-					p = str.indexOf("<dt>",p);
+					p = str.indexOf("<dt",p);
 					if(p < 0) throw 0;
 					var e = str.indexOf("</dt>",p);
 					var s = str.substring(p,e) + "\n<BR>";
@@ -23032,6 +23267,7 @@ function PageExpand(page_expand_arguments){
 								element_parent.appendChild(nodes[j]);
 							}
 							last_id = id;
+							add_count += 1;
 							resource_url_more = base_url + (last_id) + "-";
 						}
 					}
@@ -23042,8 +23278,12 @@ function PageExpand(page_expand_arguments){
 						return;
 					}
 				}catch(e){
+					if(e){
+						callback({result:false});
+						return;
+					}
 				}
-				read_more_button.init();
+				callback({result:true,add_count:add_count});
 			}
 			execute_queue.attachFirst(f,null);
 		}
@@ -23051,27 +23291,55 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 継ぎ足し読み込み
 		// --------------------------------------------------------------------------------
-		function readMore(){
+		function readMore(callback){
+			var num = load_more_list.length;
+			var pos = load_more_pos;
+			var i = 0;
 
-			// ローダーオブジェクトを作成
-			var loader = new Loader();
-
-			// 成功
-			loader.onload = function(str){
-				if(load_more_func){
-					load_more_func(str);
+			var failure = function(){
+				i += 1;
+				if(num <= i){
+					callback({result:false});
+					return;
 				}
+				pos += 1;
+				if(num <= pos) pos = 0;
+				load_more_pos = pos;
+				load();
 			};
 
-			// 失敗
-			loader.onerror = function(){
-				read_more_button.init();
-			};
+			var load = function (){
+				var param = load_more_list[pos];
 
-			// テキストの読み込み
-			loader.setMethod("GET");
-			loader.setURL(resource_url_more);
-			loader.loadText();
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
+
+				// 成功
+				loader.onload = function(str){
+					if(!param.validity(str)){
+						failure();
+						return;
+					}
+					param.parse(str,function(response){
+						if(response.result){
+							callback(response);
+						}else{
+							failure();
+						}
+					});
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					failure();
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL(param.url);
+				loader.loadText();
+			};
+			load();
 		}
 
 		// --------------------------------------------------------------------------------
@@ -23149,28 +23417,46 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
-		// 読み込み方式
+		// 読み込みリスト
 		// --------------------------------------------------------------------------------
-		load_shadow_func = loadShadowFromHTML;
-		load_more_func = loadMoreFromHTML;
+		load_shadow_pos = 0;
+		load_more_pos = 0;
+		load_shadow_list = [
+			{
+				url:base_url,
+				parse:loadShadowFromHTML,
+				validity:checkValidityFromHTML
+			}
+		];
+		load_more_list = [
+			{
+				url:base_url + last_id + "-",
+				parse:loadMoreFromHTML,
+				validity:checkValidityFromHTML
+			}
+		];
 
 		// --------------------------------------------------------------------------------
-		// アクセス先 URL
+		// BbsControlDockingForm 作成
 		// --------------------------------------------------------------------------------
-		if(load_more_func == loadMoreFromHTML){
-			resource_url_more = base_url + last_id + "-";
-		}else{
-			if(base_url.match(new RegExp("http://(([^/]+)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"))){
-				resource_url_more = "http://" + RegExp.$1 + "/" + RegExp.$3 + "/dat/" + RegExp.$4 + ".dat";
+		(function(){
+			var node;
+
+			// フォーム
+			var nodes = ElementGetElementsByTagName(document.body,"form");
+			var i;
+			for(i=0;i<nodes.length;i++){
+				if(nodes[i].action.indexOf("/test/bbs.cgi") >= 0){
+					node = nodes[i];
+					break;
+				}
 			}
-		}
-		if(load_shadow_func == loadShadowFromHTML){
-			resource_url_shadow = base_url;
-		}else{
-			if(base_url.match(new RegExp("http://(([^/])/test/read\\.cgi/([^/]+)/([0-9]+)/","i"))){
-				resource_url_shadow = "http://" + RegExp.$1 + "/" + RegExp.$3 + "/dat/" + RegExp.$4 + ".dat";
+
+			if(node){
+				var docking_form = new BbsControlDockingForm(node,false);
+				docking_form.setStyle("background:#e8e8e8; background-image:linear-gradient(to bottom, #f8f8f8, #e8e8e8); padding:20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px;");
 			}
-		}
+		})();
 
 		// --------------------------------------------------------------------------------
 		// BbsControlReadMoreButton 作成
@@ -23184,24 +23470,48 @@ function PageExpand(page_expand_arguments){
 		// シャドウロード
 		// --------------------------------------------------------------------------------
 		(function(){
-			// ローダーオブジェクトを作成
-			var loader = new Loader();
+			var num = load_shadow_list.length;
+			var pos = load_shadow_pos;
+			var i = 0;
 
-			// 成功
-			loader.onload = function(str){
-				if(load_shadow_func){
-					load_shadow_func(str);
-				}
+			var success = function(){
+			};
+			var failure = function(){
+				i += 1;
+				if(num <= i) return;
+				pos += 1;
+				if(num <= pos) pos = 0;
+				load_shadow_pos = pos;
+				load();
 			};
 
-			// 失敗
-			loader.onerror = function(){
-			};
+			var load = function (){
+				var param = load_shadow_list[pos];
 
-			// テキストの読み込み
-			loader.setMethod("GET");
-			loader.setURL(resource_url_shadow);
-			loader.loadText();
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
+
+				// 成功
+				loader.onload = function(str){
+					if(!param.validity(str)){
+						failure();
+						return;
+					}
+					param.parse(str);
+					success();
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					failure();
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL(param.url);
+				loader.loadText();
+			};
+			load();
 		})();
 
 		response({result:true});
@@ -23356,7 +23666,7 @@ function PageExpand(page_expand_arguments){
 
 							// 名前欄
 							if(node.tagName == "A"){
-								var m = node.href.match(new RegExp("[?]ID=([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i"));
+								var m = node.href.match(new RegExp("[?]ID=([a-zA-Z0-9+/.]{3,10})[●!]{0,2}","i"));
 								if(m){
 									// BbsControlId を生成
 									var control_id = new BbsControlId(null,true);
@@ -23373,7 +23683,7 @@ function PageExpand(page_expand_arguments){
 						case 3:
 							while(node){
 
-								var m = DomNodeGetNodeValue(node).match(new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i"));
+								var m = DomNodeGetNodeValue(node).match(new RegExp("ID:([a-zA-Z0-9+/.]{3,10})[●!]{0,2}","i"));
 								if(!m)	break;
 
 								// 元のテキストノード
@@ -24052,7 +24362,7 @@ function PageExpand(page_expand_arguments){
 						if(node.nodeType != 3)	return null;
 
 						// ID
-						var m = node.nodeValue.match(new RegExp("^ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i"));
+						var m = node.nodeValue.match(new RegExp("^ID:([a-zA-Z0-9+/.]{3,10})[●!]{0,2}","i"));
 						if(m){
 							// 直後テキスト
 							var node = DocumentCreateText(m[0]);
@@ -24109,7 +24419,7 @@ function PageExpand(page_expand_arguments){
 
 			// ナンバーを取得
 			var dt_text = ElementGetTextContent(dt);
-			if(!(dt_text.match(new RegExp("^([0-9]+)[ ]","i"))))	return false;
+			if(!(dt_text.match(new RegExp("([0-9]+)[ ]","i"))))	return false;
 
 			// ナンバーからレスポンスオブジェクトを取得
 			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
@@ -24118,7 +24428,7 @@ function PageExpand(page_expand_arguments){
 			if(!response.getAnalyzed()){
 
 				// IDの取得
-				if(dt_text.match(new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i"))){
+				if(dt_text.match(new RegExp("ID:([a-zA-Z0-9+/.]{3,10})[●!]{0,2}","i"))){
 					response.setId(RegExp.$1);
 				}
 
@@ -24459,7 +24769,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 継ぎ足し読み込み
 		// --------------------------------------------------------------------------------
-		function readMore(){
+		function readMore(callback){
 
 			// ローダーオブジェクトを作成
 			var loader = new Loader();
@@ -24470,6 +24780,7 @@ function PageExpand(page_expand_arguments){
 
 				var p = 0;
 				var n = str.length;
+				var add_count = 0;
 				function f(){
 					try{
 						if(p >= n) throw 0;
@@ -24494,6 +24805,7 @@ function PageExpand(page_expand_arguments){
 									element_parent.appendChild(nodes[j]);
 								}
 								last_id = id;
+								add_count += 1;
 								resource_url_more = base_url + (last_id) + "-";
 							}
 						}
@@ -24505,14 +24817,14 @@ function PageExpand(page_expand_arguments){
 						}
 					}catch(e){
 					}
-					read_more_button.init();
+					callback({result:true,add_count:add_count});
 				}
 				execute_queue.attachFirst(f,null);
 			};
 
 			// 失敗
 			loader.onerror = function(){
-				read_more_button.init();
+				callback({result:false});
 			};
 
 			// テキストの読み込み
@@ -24566,6 +24878,28 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		resource_url_shadow = base_url;
 		resource_url_more = base_url + last_id + "-";
+
+		// --------------------------------------------------------------------------------
+		// BbsControlDockingForm 作成
+		// --------------------------------------------------------------------------------
+		(function(){
+			var node;
+
+			// フォーム
+			var nodes = ElementGetElementsByTagName(document.body,"form");
+			var i;
+			for(i=0;i<nodes.length;i++){
+				if(nodes[i].action.indexOf("/test/bbs.cgi/") >= 0){
+					node = nodes[i];
+					break;
+				}
+			}
+
+			if(node){
+				var docking_form = new BbsControlDockingForm(node,false);
+				docking_form.setStyle("background:#e8e8e8; background-image:linear-gradient(to bottom, #f8f8f8, #e8e8e8); padding:20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px;");
+			}
+		})();
 
 		// --------------------------------------------------------------------------------
 		// BbsControlReadMoreButton 作成
@@ -24731,7 +25065,7 @@ function PageExpand(page_expand_arguments){
 							popup_iframe.close();
 							setEnable(true);
 							if(timer){
-								readMore();
+								readMore(function(){});
 								clear();
 							}
 						}
@@ -26125,7 +26459,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 継ぎ足し読み込み
 		// --------------------------------------------------------------------------------
-		function readMore(){
+		function readMore(callback){
 
 			// ローダーオブジェクトを作成
 			var loader = new Loader();
@@ -26136,6 +26470,7 @@ function PageExpand(page_expand_arguments){
 
 				var p = 0;
 				var n = str.length;
+				var add_count = 0;
 				function f(){
 					try{
 						if(p >= n) throw 0;
@@ -26159,6 +26494,7 @@ function PageExpand(page_expand_arguments){
 									element_parent.appendChild(nodes[j]);
 								}
 								last_id = id;
+								add_count += 1;
 								resource_url_more = base_url + (last_id) + "-";
 							}
 						}
@@ -26170,14 +26506,14 @@ function PageExpand(page_expand_arguments){
 						}
 					}catch(e){
 					}
-					read_more_button.init();
+					callback({result:true,add_count:add_count});
 				}
 				execute_queue.attachFirst(f,null);
 			};
 
 			// 失敗
 			loader.onerror = function(){
-				read_more_button.init();
+				callback({result:false});
 			};
 
 			// テキストの読み込み
@@ -27614,7 +27950,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 継ぎ足し読み込み
 		// --------------------------------------------------------------------------------
-		function readMore(){
+		function readMore(callback){
 
 			// ローダーオブジェクトを作成
 			var loader = new Loader();
@@ -27625,6 +27961,7 @@ function PageExpand(page_expand_arguments){
 
 				var p = 0;
 				var n = str.length;
+				var add_count = 0;
 				function f(){
 					try{
 						if(p >= n) throw 0;
@@ -27652,6 +27989,7 @@ function PageExpand(page_expand_arguments){
 									element_parent.appendChild(nodes[j]);
 								}
 								last_id = id;
+								add_count += 1;
 								resource_url_more = base_url + (last_id) + "-";
 							}
 						}
@@ -27663,7 +28001,7 @@ function PageExpand(page_expand_arguments){
 						}
 					}catch(e){
 					}
-					read_more_button.init();
+					callback({result:true,add_count:add_count});
 				}
 
 				p = str.indexOf("<div id=\"comments\">",p);
@@ -27675,7 +28013,7 @@ function PageExpand(page_expand_arguments){
 
 			// 失敗
 			loader.onerror = function(){
-				read_more_button.init();
+				callback({result:false});
 			};
 
 			// テキストの読み込み
@@ -28054,8 +28392,11 @@ function PageExpand(page_expand_arguments){
 							}
 
 							// 名前欄
-							if(node.tagName == "A"){
-								var m = node.href.match(new RegExp("/ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}$","i"));
+							if(node.tagName == "SPAN"){
+								var link;
+								try{ link = node.dataset["logsokuLink"]; }catch(e){}
+								if(!link) link = "";
+								var m = link.match(new RegExp("/ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}$","i"));
 								if(m){
 									// BbsControlId を生成
 									var control_id = new BbsControlId(null,true);
@@ -29032,13 +29373,14 @@ function PageExpand(page_expand_arguments){
 		var first_id = 1;
 		var last_id = 1;
 		var dictionary_id = new Array();
-		var load_shadow_func = null;
-		var load_more_func = null;
+		var load_shadow_list;
+		var load_shadow_pos = 0;
+		var load_more_list;
+		var load_more_pos = 0;
 		var element_parent = null;
 		var read_more_button = null;
 		var element_form = null;
 		var base_url = work.base_url;
-		var resource_url_shadow;
 		var resource_url_more;
 
 		// --------------------------------------------------------------------------------
@@ -29194,6 +29536,18 @@ function PageExpand(page_expand_arguments){
 				}
 			}
 		};
+
+		// --------------------------------------------------------------------------------
+		// HTML 文書の整合性テスト
+		// --------------------------------------------------------------------------------
+		function checkValidityFromHTML(str){
+			var m = str.match(new RegExp("<dt>.*?<dd>[ ].*?[ ]<br><br>","i"));
+			if(m){
+				m = m[0].match(new RegExp("[\r\n]"));
+				if(!m) return true;
+			}
+			return false;
+		}
 
 		// --------------------------------------------------------------------------------
 		// HTML 文書をシャドウ読み込み
@@ -29355,7 +29709,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// HTML 文書を継ぎ足し読み込み
 		// --------------------------------------------------------------------------------
-		function loadMoreFromHTML(str){
+		function loadMoreFromHTML(str,callback){
 			var re_number;
 			switch(work.bbs_name){
 			case "2ch":
@@ -29373,6 +29727,7 @@ function PageExpand(page_expand_arguments){
 
 			var p = 0;
 			var n = str.length;
+			var add_count = 0;
 			function f(){
 				try{
 					if(p >= n) throw 0;
@@ -29396,6 +29751,7 @@ function PageExpand(page_expand_arguments){
 								element_parent.appendChild(nodes[j]);
 							}
 							last_id = id;
+							add_count += 1;
 							resource_url_more = base_url + (last_id) + "-";
 						}
 					}
@@ -29406,10 +29762,26 @@ function PageExpand(page_expand_arguments){
 						return;
 					}
 				}catch(e){
+					if(e){
+						callback({result:false});
+						return;
+					}
 				}
-				read_more_button.init();
+				callback({result:true,add_count:add_count});
 			}
 			execute_queue.attachFirst(f,null);
+		}
+
+		// --------------------------------------------------------------------------------
+		// DAT 文書の整合性テスト
+		// --------------------------------------------------------------------------------
+		function checkValidityFromDAT(str){
+			var m = str.match(new RegExp("</b>.*<b>.*?<>.*?<>.*?<>.*?<>","i"));
+			if(m){
+				m = m[0].match(new RegExp("[\r\n]"));
+				if(!m) return true;
+			}
+			return false;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -29571,7 +29943,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// DAT 文書を継ぎ足し読み込み
 		// --------------------------------------------------------------------------------
-		function loadMoreFromDAT(str){
+		function loadMoreFromDAT(str,callback){
 
 			// 最後尾 ID
 			var nodes = ElementGetElementsByTagName(element_parent,"dt");
@@ -29589,6 +29961,7 @@ function PageExpand(page_expand_arguments){
 			var p = 0;
 			var n = str.length;
 			var id = 1;
+			var add_count = 0;
 			function f(){
 				try{
 					if(p >= n) throw 0;
@@ -29621,6 +29994,7 @@ function PageExpand(page_expand_arguments){
 								element_parent.appendChild(nodes[j]);
 							}
 							last_id = id;
+							add_count += 1;
 						}
 					}
 
@@ -29631,8 +30005,12 @@ function PageExpand(page_expand_arguments){
 						return;
 					}
 				}catch(e){
+					if(e){
+						callback({result:false});
+						return;
+					}
 				}
-				read_more_button.init();
+				callback({result:true,add_count:add_count});
 			}
 			execute_queue.attachFirst(f,null);
 		}
@@ -29640,40 +30018,68 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 継ぎ足し読み込み
 		// --------------------------------------------------------------------------------
-		function readMore(){
+		function readMore(callback){
+			var num = load_more_list.length;
+			var pos = load_more_pos;
+			var i = 0;
 
-			// ローダーオブジェクトを作成
-			var loader = new Loader();
-
-			// 成功
-			loader.onload = function(str){
-				if(load_more_func){
-					load_more_func(str);
+			var failure = function(){
+				i += 1;
+				if(num <= i){
+					callback({result:false});
+					return;
 				}
+				pos += 1;
+				if(num <= pos) pos = 0;
+				load_more_pos = pos;
+				load();
 			};
 
-			// 失敗
-			loader.onerror = function(){
-				read_more_button.init();
-			};
+			var load = function (){
+				var param = load_more_list[pos];
 
-			// テキストの読み込み
-			loader.setMethod("GET");
-			loader.setURL(resource_url_more);
-			switch(work.bbs_name){
-			case "2ch":
-			case "2ch.sc":
-			case "machi":
-			case "machibbs":
-			case "pink":
-			case "kakiko":
-				loader.overrideMimeType("text/plain; charset=Shift_JIS");
-				break;
-			case "shitaraba":
-				loader.overrideMimeType("text/plain; charset=EUC-JP");
-				break;
-			}
-			loader.loadText();
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
+
+				// 成功
+				loader.onload = function(str){
+					if(!param.validity(str)){
+						failure();
+						return;
+					}
+					param.parse(str,function(response){
+						if(response.result){
+							callback(response);
+						}else{
+							failure();
+						}
+					});
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					failure();
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL(param.url);
+				switch(work.bbs_name){
+				case "2ch":
+				case "2ch.sc":
+				case "machi":
+				case "machibbs":
+				case "pink":
+				case "kakiko":
+					loader.overrideMimeType("text/plain; charset=Shift_JIS");
+					break;
+				case "shitaraba":
+					loader.overrideMimeType("text/plain; charset=EUC-JP");
+					break;
+				}
+				loader.loadText();
+			};
+			load();
 		}
 
 		// --------------------------------------------------------------------------------
@@ -29751,16 +30157,50 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
+		// 読み込みリスト
+		// --------------------------------------------------------------------------------
+		load_shadow_list = [
+			{
+				url:base_url,
+				parse:loadShadowFromHTML,
+				validity:checkValidityFromHTML
+			},{
+				url:(function(){
+					var m = base_url.match(new RegExp("http://([^/]+)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"));
+					if(!m) return "";
+					return "http://" + m[1] + "/" + m[2] + "/dat/" + m[3] + ".dat";
+				})(),
+				parse:loadShadowFromDAT,
+				validity:checkValidityFromDAT
+			}
+		];
+		load_more_list = [
+			{
+				url:base_url + last_id + "-",
+				parse:loadMoreFromHTML,
+				validity:checkValidityFromHTML
+			},{
+				url:(function(){
+					var m = base_url.match(new RegExp("http://([^/]+)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"));
+					if(!m) return "";
+					return "http://" + m[1] + "/" + m[2] + "/dat/" + m[3] + ".dat";
+				})(),
+				parse:loadMoreFromDAT,
+				validity:checkValidityFromDAT
+			}
+		];
+
+		// --------------------------------------------------------------------------------
 		// 読み込み方式
 		// --------------------------------------------------------------------------------
-		load_shadow_func = loadShadowFromHTML;
-		load_more_func = loadMoreFromHTML;
+		load_shadow_pos = 0;
+		load_more_pos = 0;
 
 		// JavaScript モード検出
 		switch(work.bbs_name){
 		case "2ch":
 		case "2ch.sc":
-			load_shadow_func = loadShadowFromDAT;
+			load_shadow_pos = 1;
 
 			var nodes = ElementGetElementsByTagName(DocumentGetHeadElement(document),"meta");
 			var i;
@@ -29776,29 +30216,55 @@ function PageExpand(page_expand_arguments){
 				if(!content)	continue;
 				if(content.indexOf("application") == -1)	continue;
 
-				load_more_func = loadMoreFromDAT;
+				load_more_pos = 1;
 				break;
 			}
 			break;
 		}
 
 		// --------------------------------------------------------------------------------
-		// アクセス先 URL
+		// BbsControlDockingForm 作成
 		// --------------------------------------------------------------------------------
-		if(load_more_func == loadMoreFromHTML){
-			resource_url_more = base_url + last_id + "-";
-		}else{
-			if(base_url.match(new RegExp("http://([^/]+)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"))){
-				resource_url_more = "http://" + RegExp.$1 + "/" + RegExp.$2 + "/dat/" + RegExp.$3 + ".dat";
+		(function(){
+			var node;
+
+			switch(work.bbs_name){
+			case "2ch":
+			case "2ch.sc":
+			case "pink":
+			case "kakiko":
+				var nodes = document.getElementsByTagName("form");
+				var num = nodes.length;
+				if(num){
+					node = nodes[num-1];
+				}
+				break;
+			case "shitaraba":
+				var nodes = document.getElementsByTagName("form");
+				var num = nodes.length;
+				var i;
+				for(i=0;i<num;i++){
+					if(nodes[i].action.indexOf("/bbs/write.cgi/") >= 0){
+						node = nodes[i];
+						break;
+					}
+				}
+				break;
+			case "machi":
+			case "machibbs":
+				var nodes = document.getElementsByTagName("form");
+				var num = nodes.length;
+				if(num){
+					node = nodes[0];
+				}
+				break;
 			}
-		}
-		if(load_shadow_func == loadShadowFromHTML){
-			resource_url_shadow = base_url;
-		}else{
-			if(base_url.match(new RegExp("http://([^/]+)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"))){
-				resource_url_shadow = "http://" + RegExp.$1 + "/" + RegExp.$2 + "/dat/" + RegExp.$3 + ".dat";
+
+			if(node){
+				var docking_form = new BbsControlDockingForm(node,false);
+				docking_form.setStyle("background:#e8e8e8; background-image:linear-gradient(to bottom, #f8f8f8, #e8e8e8); padding:20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px;");
 			}
-		}
+		})();
 
 		// --------------------------------------------------------------------------------
 		// BbsControlReadMoreButton 作成
@@ -29808,11 +30274,10 @@ function PageExpand(page_expand_arguments){
 		read_more_button.onclick = readMore;
 		DomNode_InsertAfter(element_parent,read_more_button.getElement());
 
-
 		// --------------------------------------------------------------------------------
 		// 書き込みをポップアップ化
 		// --------------------------------------------------------------------------------
-		if(load_more_func == loadMoreFromHTML){
+		if(load_more_pos == 0){
 
 			(function(){
 				var element_form;
@@ -30010,7 +30475,7 @@ function PageExpand(page_expand_arguments){
 								popup_iframe.close();
 								setEnable(true);
 								if(timer){
-									readMore();
+									readMore(function(){});
 									clear();
 								}
 							}
@@ -30037,34 +30502,55 @@ function PageExpand(page_expand_arguments){
 		// シャドウロード
 		// --------------------------------------------------------------------------------
 		(function(){
-			// ローダーオブジェクトを作成
-			var loader = new Loader();
+			var num = load_shadow_list.length;
+			var pos = load_shadow_pos;
+			var i = 0;
 
-			// 成功
-			loader.onload = function(str){
-				if(load_shadow_func){
-					load_shadow_func(str);
+			var failure = function(){
+				i += 1;
+				if(num <= i) return;
+				pos += 1;
+				if(num <= pos) pos = 0;
+				load_shadow_pos = pos;
+				load();
+			};
+
+			var load = function (){
+				var param = load_shadow_list[pos];
+
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
+
+				// 成功
+				loader.onload = function(str){
+					if(!param.validity(str)){
+						failure();
+						return;
+					}
+					param.parse(str);
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					failure();
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL(param.url);
+				switch(work.bbs_name){
+				case "2ch":
+				case "2ch.sc":
+				case "pink":
+					loader.overrideMimeType("text/plain; charset=Shift_JIS");
+					break;
+				case "shitaraba":
+					loader.overrideMimeType("text/plain; charset=EUC-JP");
+					break;
 				}
+				loader.loadText();
 			};
-
-			// 失敗
-			loader.onerror = function(){
-			};
-
-			// テキストの読み込み
-			loader.setMethod("GET");
-			loader.setURL(resource_url_shadow);
-			switch(work.bbs_name){
-			case "2ch":
-			case "2ch.sc":
-			case "pink":
-				loader.overrideMimeType("text/plain; charset=Shift_JIS");
-				break;
-			case "shitaraba":
-				loader.overrideMimeType("text/plain; charset=EUC-JP");
-				break;
-			}
-			loader.loadText();
+			load();
 		})();
 
 		response({result:true});
@@ -30924,6 +31410,28 @@ function PageExpand(page_expand_arguments){
 				}
 				if(dd){
 					cleanup(dd);
+				}
+			})();
+
+			(function(){
+				switch(work.bbs_name){
+				case "2ch.sc":
+					var node_list = ElementGetElementsByClassName(dt,"id");
+					var i;
+					var num = node_list.length;
+					for(i=num-1;i>=0;i--){
+						var node = node_list[i];
+						var text = DocumentCreateText(ElementGetTextContent(node));
+						DomNode_InsertAfter(node,text);
+						DomNodeRemove(node);
+					}
+					var node_list = ElementGetElementsByClassName(dt,"idNum");
+					var i;
+					var num = node_list.length;
+					for(i=num-1;i>=0;i--){
+						DomNodeRemove(node_list[i]);
+					}
+					break;
 				}
 			})();
 
@@ -37208,13 +37716,14 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.4.4");
+				new UI_Text(parent,"PageExpand ver.1.4.5");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
 				var parent = container.getElement();
-				new UI_Text(parent,'(c) Hakuhin 2010-2014');
+				new UI_Text(parent,'(c) Hakuhin 2010-2015');
 				new UI_AnchorText(parent,"http://hakuhin.jp/","http://hakuhin.jp/");
+				new UI_AnchorText(parent,"https://github.com/hakuhin/PageExpand","https://github.com/hakuhin/PageExpand");
 			})();
 		}
 
@@ -47616,7 +48125,7 @@ function PageExpand(page_expand_arguments){
 								embed.type = "application/x-shockwave-flash";
 								embed.width = "100%";
 								embed.height = "100%";
-								embed.setAttribute("allowScriptAccess","sameDomain");
+								embed.setAttribute("allowScriptAccess","always");
 								embed.setAttribute("bgcolor","#000000");
 								embed.setAttribute("quality","high");
 								embed.setAttribute("flashVars",flashvars);
@@ -50613,6 +51122,15 @@ function PageExpand(page_expand_arguments){
 				var image_viewer = new ImageViewer(_this);
 				image_viewer.setInputMouse(_input_mouse_current);
 			}
+
+			// スクロールを無効化
+			if(MouseEventGetChangedButtons(e) & 0x04){
+				if(e.preventDefault){
+					e.preventDefault();
+				}else{
+					return false;
+				}
+			}
 		}
 
 		// --------------------------------------------------------------------------------
@@ -51805,6 +52323,15 @@ function PageExpand(page_expand_arguments){
 				(_input_mouse.getButtonLeft() && _input_mouse.getButtonRight())
 			){
 				suicide();
+			}
+
+			// スクロールを無効化
+			if(MouseEventGetChangedButtons(e) & 0x04){
+				if(e.preventDefault){
+					e.preventDefault();
+				}else{
+					return false;
+				}
 			}
 		}
 
@@ -61888,6 +62415,7 @@ function PageExpand(page_expand_arguments){
 				_document_obj.removeEventListener("dragstart",mouse_down_func,true);
 				_document_obj.removeEventListener("drag",mouse_move_func,true);
 				_document_obj.removeEventListener("dragend",mouse_up_func,true);
+				window_obj.removeEventListener("contextmenu",context_menu_func);
 				window_obj.removeEventListener("blur",blur_func);
 			}
 
@@ -62016,6 +62544,15 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
+		// コンテキストメニュー（内部用）
+		// --------------------------------------------------------------------------------
+		function context_menu_func(e){
+			if(e.defaultPrevented === true) return;
+			if(e.returnValue === false) return;
+			_buttons &= ~0x02;
+		}
+
+		// --------------------------------------------------------------------------------
 		// 非アクティブ（内部用）
 		// --------------------------------------------------------------------------------
 		function blur_func(e){
@@ -62061,10 +62598,13 @@ function PageExpand(page_expand_arguments){
 				_document_obj.addEventListener("dragstart",mouse_down_func,true);
 				_document_obj.addEventListener("drag",mouse_move_func,true);
 				_document_obj.addEventListener("dragend",mouse_up_func,true);
+				window_obj.addEventListener("contextmenu",context_menu_func);
 				window_obj.addEventListener("blur",blur_func);
 				_mouse_input_func = function(e,r){
 					if(e.buttons !== undefined){
-						_buttons = e.buttons;
+						if(event_type_move[e.type]){
+							_buttons = e.buttons;
+						}
 					}
 					if(event_type_down[e.type]){
 						if(e.button == 0) _buttons |=  0x01;
@@ -66472,6 +67012,7 @@ function PageExpand(page_expand_arguments){
 				_observer_remove.release();
 				_observer_remove = null;
 			}
+			removeObserverScroll();
 
 			if(_analyze_work){
 				// 解析辞書除外
@@ -66482,6 +67023,7 @@ function PageExpand(page_expand_arguments){
 
 			if(_element){
 				if(_element.removeEventListener){
+					_element.removeEventListener("mousedown",mouseDown);
 					_element.removeEventListener("click",mouseClick);
 				}
 				DomNodeRemove(_element);
@@ -66507,42 +67049,219 @@ function PageExpand(page_expand_arguments){
 		// 初期化
 		// --------------------------------------------------------------------------------
 		_this.init = function(){
-			_element.value = "Read More";
+			_auto_mode = false;
+			ButtonSetValue("Read More");
+			_element.style.color = "#000";
 			_element.disabled = false;
 			_timer = _getTime();
+			_auto_time_now = _auto_time;
 			if(_task){
 				_task.release();
 				_task = null;
 			}
+			scroll();
 		};
+
+		// --------------------------------------------------------------------------------
+		// マウスダウン時に実行される関数（内部用）
+		// --------------------------------------------------------------------------------
+		function mouseDown(e){
+			// マウス入力を更新
+			input_mouse.setMouseEvent(e);
+
+			// スクロールを無効化
+			if(MouseEventGetChangedButtons(e) & 0x04){
+				click(e);
+				if(e.preventDefault){
+					e.preventDefault();
+				}else{
+					return false;
+				}
+			}
+		}
 
 		// --------------------------------------------------------------------------------
 		// マウスクリック時に実行される関数（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseClick(e){
-			if(_task)	return;
+			// マウス入力を更新
+			input_mouse.setMouseEvent(e);
 
-			_element.disabled = true;
+			if(MouseEventGetChangedButtons(e) & 0x04){
+			}else{
+				click(e);
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// クリック（内部用）
+		// --------------------------------------------------------------------------------
+		function click(e){
+			if(!(_this.onclick)) return;
+			if(_task){
+				if(_auto_mode){
+					_this.init();
+				}
+				return;
+			}
+
+			if(e.ctrlKey || e.shiftKey || (MouseEventGetChangedButtons(e) & 0x04)){
+				_auto_mode = true;
+				_element.style.color = "#d00";
+			}else{
+				_element.disabled = true;
+			}
 
 			// タスク生成
 			_task = task_container.createTask();
-			_task.setExecuteFunc(function(){
-				var time_sub = _getTime() - _timer;
+			if(_auto_mode){
+				if(_getTime() - _timer < _auto_time_now){
+					_task.setExecuteFunc(ReadMoreAutoLoadWaitInit);
+				}else{
+					_task.setExecuteFunc(ReadMoreLoadInit);
+				}
+			}else{
+				if(_getTime() - _timer < _wait_time){
+					_task.setExecuteFunc(ReadMoreLoadWaitInit);
+				}else{
+					_task.setExecuteFunc(ReadMoreLoadInit);
+				}
+			}
+		}
 
-				var t = Math.ceil((_wait_time - time_sub) / 1000);
-				if(t < 0)	t = 0;
-				_element.value = "wait ... " + t;
+		// --------------------------------------------------------------------------------
+		// スクロール監視開始（内部用）
+		// --------------------------------------------------------------------------------
+		function attachObserverScroll (){
+			removeObserverScroll();
 
-				if(time_sub > _wait_time){
-					_task.release();
-					_task = null;
+			// イベントリスナーに対応している
+			if(window.addEventListener){
+				window.addEventListener("scroll" ,scroll);
+			}
+		}
 
-					_element.value = "loading...";
-					if(_this.onclick){
-						_this.onclick();
+		// --------------------------------------------------------------------------------
+		// スクロール監視終了（内部用）
+		// --------------------------------------------------------------------------------
+		function removeObserverScroll (){
+			// イベントリスナーに対応している
+			if(window.removeEventListener){
+				window.removeEventListener("scroll" ,scroll);
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// スクロール時に実行される関数（内部用）
+		// --------------------------------------------------------------------------------
+		function scroll(){
+			removeObserverScroll();
+			_add_count = 0;
+			updateTitle();
+		}
+
+		// --------------------------------------------------------------------------------
+		// 読み込み待機（内部用）
+		// --------------------------------------------------------------------------------
+		function ReadMoreLoadWaitInit(){
+			_task.setExecuteFunc(ReadMoreLoadWaitExec);
+			_task.execute(0xffffffff);
+		}
+		function ReadMoreLoadWaitExec(){
+			var time_sub = _getTime() - _timer;
+
+			var t = Math.ceil((_wait_time - time_sub) / 1000);
+			if(t < 0)	t = 0;
+			ButtonSetValue("wait ... " + t);
+
+			if(time_sub > _wait_time){
+				_task.setExecuteFunc(ReadMoreLoadInit);
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// 自動読み込み待機（内部用）
+		// --------------------------------------------------------------------------------
+		function ReadMoreAutoLoadWaitInit(){
+			_task.setExecuteFunc(ReadMoreAutoLoadWaitExec);
+			_task.execute(0xffffffff);
+		}
+		function ReadMoreAutoLoadWaitExec(){
+			var time_sub = _getTime() - _timer;
+
+			var t = Math.ceil((_auto_time_now - time_sub) / 1000);
+			if(t < 0)	t = 0;
+			ButtonSetValue("auto ... " + t);
+
+			if(time_sub > _auto_time_now){
+				_task.setExecuteFunc(ReadMoreLoadInit);
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// 読み込み（内部用）
+		// --------------------------------------------------------------------------------
+		function ReadMoreLoadInit(){
+			ButtonSetValue("loading...");
+			_task.setExecuteFunc(null);
+
+			_this.onclick(function(response){
+				if(_auto_mode){
+					if(response.result){
+						if(response.add_count){
+							_auto_time_now = _auto_time_now * 0.5;
+							_add_count += response.add_count;
+							updateTitle();
+							attachObserverScroll();
+						}else{
+							var add = _auto_time_now * 0.5
+							if(add < 5000) add = 5000;
+							_auto_time_now += add;
+						}
+						_auto_time_now = Math.ceil(_auto_time_now / 1000) * 1000;
+						if(_auto_time_now > _auto_time_max) _auto_time_now = _auto_time_max;
+						if(_auto_time_now < _auto_time_min) _auto_time_now = _auto_time_min;
+
+						_timer = _getTime();
+						_task.setExecuteFunc(ReadMoreAutoLoadWaitInit);
+					}else{
+						_this.init();
 					}
+				}else{
+					_this.init();
 				}
 			});
+		}
+
+		// --------------------------------------------------------------------------------
+		// テキストを設定（内部用）
+		// --------------------------------------------------------------------------------
+		function ButtonSetValue(v){
+			if(v == _button_value_old) return;
+			_element.value = _button_value_old = v;
+		}
+
+		// --------------------------------------------------------------------------------
+		// タイトルを更新（内部用）
+		// --------------------------------------------------------------------------------
+		function updateTitle(){
+			try{
+				var title = document.title;
+				var m = title.match(new RegExp("\\([0-9]+\\) (.*)","i"));
+				if(m){
+					if(_title_old != m[1]){
+						_title_old = m[1];
+					}
+				}else{
+					_title_old = title;
+				}
+				if(_add_count){
+					document.title = "(" + _add_count + ") " + _title_old;
+				}else{
+					document.title = _title_old;
+				}
+			}catch(e){
+			}
 		}
 
 		// --------------------------------------------------------------------------------
@@ -66553,6 +67272,14 @@ function PageExpand(page_expand_arguments){
 		var _onclick;
 		var _timer;
 		var _wait_time;
+		var _auto_time;
+		var _auto_time_now;
+		var _auto_time_min;
+		var _auto_time_max;
+		var _auto_mode;
+		var _button_value_old;
+		var _title_old;
+		var _add_count;
 		var _analyze_work;
 		var _observer_remove;
 		var _event_handler_abort;
@@ -66564,7 +67291,13 @@ function PageExpand(page_expand_arguments){
 		(function(){
 			_this.onclick = null;
 			_timer = 0;
-			_wait_time = 5000;
+			_wait_time = 5 * 1000;
+			_auto_time = 10 * 1000;
+			_auto_time_min =  5 * 1000;
+			_auto_time_max = 60 * 1000;
+			_button_value_old = "";
+			_add_count = 0;
+			_title_old = "";
 
 			// ボタン
 			_element = DocumentCreateElement("input");
@@ -66572,6 +67305,7 @@ function PageExpand(page_expand_arguments){
 			ElementSetStyle(_element,"width:100%; height:50px; margin:25px 0px; padding:0px;");
 
 			if(_element.addEventListener){
+				_element.addEventListener("mousedown",mouseDown);
 				_element.addEventListener("click",mouseClick);
 			}
 			// 解析ワーク作成
@@ -66871,6 +67605,575 @@ function PageExpand(page_expand_arguments){
 				_fade_task.execute(0xffffffff);
 			})();
 
+		})();
+	}
+
+	// --------------------------------------------------------------------------------
+	// 掲示板コントロール DockingForm
+	// --------------------------------------------------------------------------------
+	function BbsControlDockingForm(element,outsider){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// スタイルを設定
+		// --------------------------------------------------------------------------------
+		_this.setStyle = function(css_text){
+			_css_text_popup = css_text;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 要素を取得
+		// --------------------------------------------------------------------------------
+		_this.getElement = function(){
+			return _element;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 開放
+		// --------------------------------------------------------------------------------
+		_this.release = function(){
+			update("original");
+
+			if(_task){
+				_task.release();
+				_task = null;
+			}
+
+			if(_event_handler_abort){
+				_event_handler_abort.release();
+				_event_handler_abort = null;
+			}
+
+			// リムーブ監視を破棄
+			if(_observer_remove){
+				_observer_remove.release();
+				_observer_remove = null;
+			}
+
+			if(_analyze_work){
+				// 解析辞書除外
+				AnalyzeWorkClearBbsControl(_analyze_work);
+				analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
+				_analyze_work = null;
+			}
+
+			if(_element){
+				removeEvent();
+				if(outsider){
+					DomNodeRemove(_element);
+				}
+				_element = null;
+			}
+			DomNodeRemove(_element_border);
+		};
+
+		// --------------------------------------------------------------------------------
+		// マウスダウン時に実行される関数（内部用）
+		// --------------------------------------------------------------------------------
+		function mouseDown(e){
+			var target = (e.target || e.srcElement);
+			if(_control_dic[target.tagName]) return;
+
+			// マウス入力を更新
+			input_mouse.setMouseEvent(e);
+
+			var rect = ElementGetBoundingClientRect(_element);
+			_drag_ofs = {
+				x:e.clientX - rect.left,
+				y:e.clientY - rect.top
+			};
+
+			// タスク起動
+			if(_task){
+				_task.release();
+				_task = null;
+			}
+			_task = task_container.createTask();
+			_task.setDestructorFunc(function(){
+				_task = null;
+			});
+			_task.setExecuteFunc(DockingFormTaskInit);
+			_task.execute(0xffffffff);
+
+			// 戻す
+			if(MouseEventGetChangedButtons(e) & 0x04){
+				update("original");
+			}
+
+			if(e.preventDefault){
+				e.preventDefault();
+			}else{
+				return false;
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// 境界マウスダウン時に実行される関数（内部用）
+		// --------------------------------------------------------------------------------
+		function mouseDownBorder(e){
+
+			// マウス入力を更新
+			input_mouse.setMouseEvent(e);
+
+			// タスク起動
+			if(_task){
+				_task.release();
+				_task = null;
+			}
+			_task = task_container.createTask();
+			_task.setDestructorFunc(function(){
+				_task = null;
+			});
+			_task.setExecuteFunc(function(){
+				var distance = 0;
+
+				var mouse_pos = input_mouse.getPositionClient();
+				var client_size = DocumentGetClientSize(document);
+				switch(_docking_type){
+				case "left":
+					distance = mouse_pos.x;
+					break;
+				case "top":
+					distance = mouse_pos.y;
+					break;
+				case "right":
+					distance = client_size.width - mouse_pos.x;
+					break;
+				case "bottom":
+					distance = client_size.height - mouse_pos.y;
+					break;
+				};
+
+				moveBorder(distance);
+
+				if(!(input_mouse.getButtonLeft())){
+					_task.release();
+					return;
+				}
+			});
+			_task.execute(0xffffffff);
+
+			if(e.preventDefault){
+				e.preventDefault();
+			}else{
+				return false;
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// ダブルクリック（内部用）
+		// --------------------------------------------------------------------------------
+		function mouseDoubleClick(e){
+			var target = (e.target || e.srcElement);
+			if(_control_dic[target.tagName]) return;
+
+			// マウス入力を更新
+			input_mouse.setMouseEvent(e);
+
+			switch(_docking_type){
+			case "original":
+				var rect = ElementGetBoundingClientRect(_element);
+				_drag_ofs = {
+					x:e.clientX - rect.left,
+					y:e.clientY - rect.top
+				};
+				update("popup");
+				var mouse_pos = ObjectCopy(input_mouse.getPositionClient());
+				var style = _element.style;
+				var pos_x = mouse_pos.x - _drag_ofs.x;
+				var pos_y = mouse_pos.y - _drag_ofs.y;
+				style.left = (pos_x) + "px";
+				style.top  = (pos_y) + "px";
+				break;
+			case "popup":
+				update("original");
+				break;
+			default:
+				if(_expand){
+					moveBorder(0);
+				}else{
+					moveBorder(_expand_distance);
+				}
+				break;
+			};
+		}
+
+		// --------------------------------------------------------------------------------
+		// イベントを外す（内部用）
+		// --------------------------------------------------------------------------------
+		function removeEvent(){
+			if(_element.removeEventListener){
+				_element.removeEventListener("mousedown",mouseDown);
+				_element.removeEventListener("dblclick",mouseDoubleClick);
+				_element_border.removeEventListener("mousedown",mouseDownBorder);
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// タスク実行（内部用）
+		// --------------------------------------------------------------------------------
+		function DockingFormTaskInit(task){
+			var work = task.getUserWork();
+			work.exec = DockingFormTaskDragWaitInit;
+			_task.setExecuteFunc(DockingFormTaskExec);
+			_task.execute(0xffffffff);
+
+		}
+		function DockingFormTaskExec(task){
+			var work = task.getUserWork();
+
+			if(work.exec) work.exec(task);
+
+			if(!(input_mouse.getButtonLeft())){
+				task.release();
+				return;
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// ドラッグ待機（内部用）
+		// --------------------------------------------------------------------------------
+		function DockingFormTaskDragWaitInit(task){
+			var work = task.getUserWork();
+			work.mouse_pos_start = input_mouse.getPositionClient();
+			work.exec = DockingFormTaskDragWaitExec;
+			work.exec(task);
+		}
+		function DockingFormTaskDragWaitExec(task){
+			var work = task.getUserWork();
+			var mouse_pos = input_mouse.getPositionClient();
+			var x = mouse_pos.x - work.mouse_pos_start.x;
+			var y = mouse_pos.y - work.mouse_pos_start.y;
+			var l = Math.sqrt(x * x + y * y);
+			if(l > 5){
+				work.exec = DockingFormTaskDragMoveInit;
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// ドラッグ移動（内部用）
+		// --------------------------------------------------------------------------------
+		function DockingFormTaskDragMoveInit(task){
+			var work = task.getUserWork();
+
+			work.exec = DockingFormTaskDragMoveExec;
+			work.exec(task);
+		}
+		function DockingFormTaskDragMoveExec(task){
+			var work = task.getUserWork();
+			var mouse_pos = ObjectCopy(input_mouse.getPositionClient());
+
+			var range = 10;
+			var client_size = DocumentGetClientSize(document);
+
+			if(mouse_pos.x < 0 + range){
+				update("left");
+			}else if(mouse_pos.y < 0 + range){
+				update("top");
+			}else if(mouse_pos.x > client_size.width  - range){
+				update("right");
+			}else if(mouse_pos.y > client_size.height - range){
+				update("bottom");
+			}else{
+				update("popup");
+			}
+
+			if(_docking_type == "popup"){
+				var style = _element.style;
+
+				var pos_x = mouse_pos.x - _drag_ofs.x;
+				var pos_y = mouse_pos.y - _drag_ofs.y;
+
+				style.left = (pos_x) + "px";
+				style.top  = (pos_y) + "px";
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// 更新（内部用）
+		// --------------------------------------------------------------------------------
+		function update(type){
+			if(_docking_type == type) return;
+
+			var style_form = _element.style;
+			var style_html = document.documentElement.style;
+			var style_border = _element_border.style;
+
+			// 戻す
+			switch(_docking_type){
+			case "left":
+				style_html.marginLeft = "0px";
+				break;
+			case "top":
+				style_html.marginTop = "0px";
+				break;
+			case "right":
+				style_html.marginRight = "0px";
+				break;
+			case "bottom":
+				style_html.paddingBottom = "0px";
+				break;
+			};
+			_docking_type = type;
+			_docking_distance = 0;
+
+			DomNodeRemove(_element_border);
+
+			style_form.cssText = _css_text_popup;
+			style_form.position = "fixed";
+			style_form.left = "0px";
+			style_form.top  = "0px";
+			style_form.right  = "auto";
+			style_form.bottom = "auto";
+			style_form.width  = "auto";
+			style_form.height = "auto";
+
+			var rect = ElementGetBoundingClientRect(_element);
+
+			var range = 2;
+			if(_drag_ofs.x < range) _drag_ofs.x = range;
+			if(_drag_ofs.y < range) _drag_ofs.y = range;
+			if(_drag_ofs.x > rect.right  - range) _drag_ofs.x = rect.right  - range;
+			if(_drag_ofs.y > rect.bottom - range) _drag_ofs.y = rect.bottom - range;
+
+			var client_size = DocumentGetClientSize(document);
+			var href_w = client_size.width  * 0.5;
+			var href_h = client_size.height * 0.5;
+			var w = rect.right - rect.left;
+			var h = rect.bottom - rect.top;
+			if(w > href_w) w = href_w;
+			if(h > href_h) h = href_h;
+
+			switch(type){
+			case "original":
+				style_form.cssText = _css_text_original;
+				break;
+			default:
+				style_form.cssText = _css_text_popup;
+				style_form.position = "fixed";
+				style_form.zIndex = 0x7FFFFFFF - 2;
+				style_form.width  = "auto";
+				style_form.height = "auto";
+				switch(type){
+				case "popup":
+					break;
+				default:
+					style_form.overflow = "auto";
+					style_border.cssText = "position:fixed;";
+					style_border.zIndex = 0x7FFFFFFF - 2;
+					document.body.appendChild(_element_border);
+					break;
+				}
+				break;
+			}
+			style_form.cursor = "move";
+
+			switch(type){
+			case "left":
+				style_form.left = "0px";
+				style_border.left = "0px";
+				break;
+			case "right":
+				style_form.right = "0px";
+				style_border.right = "0px";
+				break;
+			case "top":
+				style_form.top = "0px";
+				style_border.top = "0px";
+				break;
+			case "bottom":
+				style_form.bottom = "0px";
+				style_border.bottom = "0px";
+				break;
+			};
+
+			switch(_docking_type){
+			case "left":
+			case "right":
+				style_form.top = "0px";
+				style_form.bottom = "0px";
+				style_border.cursor = "col-resize";
+				style_border.top = "0px";
+				style_border.bottom = "0px";
+				style_border.width = "6px";
+				moveBorder(w);
+				break;
+			case "top":
+			case "bottom":
+				style_form.left = "0px";
+				style_form.right = "0px";
+				style_border.cursor = "row-resize";
+				style_border.left = "0px";
+				style_border.right = "0px";
+				style_border.height = "6px";
+				moveBorder(h);
+				break;
+			};
+		}
+
+		// --------------------------------------------------------------------------------
+		// 境界移動（内部用）
+		// --------------------------------------------------------------------------------
+		function moveBorder(distance){
+			var style_form = _element.style;
+			var style_html = document.documentElement.style;
+			var style_border = _element_border.style;
+			var size_obj = ComputedStyleGetSize(ElementGetComputedStyle(_element,""));
+
+			switch(_docking_type){
+			case "left":
+			case "right":
+				var w = distance - size_obj.paddingLeft - size_obj.paddingRight - size_obj.borderLeft - size_obj.borderRight;
+				if(w < 0) w = 0;
+				style_form.width = (w) + "px";
+				break;
+			case "top":
+			case "bottom":
+				var h = distance - size_obj.paddingTop - size_obj.paddingBottom - size_obj.borderTop - size_obj.borderBottom;
+				if(h < 0) h = 0;
+				style_form.height = (h) + "px";
+				break;
+			};
+
+			_expand = true;
+			var rect = ElementGetBoundingClientRect(_element);
+			switch(_docking_type){
+			case "left":
+			case "right":
+				var w = rect.right - rect.left;
+				if(distance < w){
+					_expand = false;
+					distance = w;
+				}
+				break;
+			case "top":
+			case "bottom":
+				var h = rect.bottom - rect.top;
+				if(distance < h){
+					_expand = false;
+					distance = h;
+				}
+				break;
+			};
+
+			var v = distance - 3;
+			switch(_docking_type){
+			case "left":
+				style_border.marginLeft = v + "px";
+				break;
+			case "top":
+				style_border.marginTop = v + "px";
+				break;
+			case "right":
+				style_border.marginRight = v + "px";
+				break;
+			case "bottom":
+				style_border.marginBottom = v + "px";
+				break;
+			};
+
+			var v = distance + 10;
+			var s = distance - _docking_distance;
+			var scroll_pos = WindowGetScrollPosition(window);
+			switch(_docking_type){
+			case "left":
+				style_html.marginLeft = v + "px";
+				break;
+			case "top":
+				style_html.marginTop = v + "px";
+				break;
+			case "right":
+				style_html.marginRight = v + "px";
+				WindowSetScrollPositionX(window,scroll_pos.x + s);
+				break;
+			case "bottom":
+				style_html.paddingBottom = v + "px";
+				WindowSetScrollPositionY(window,scroll_pos.y + s);
+				break;
+			};
+
+			_docking_distance = distance;
+
+			if(_expand){
+				_expand_distance = distance;
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// プライベート変数
+		// --------------------------------------------------------------------------------
+		var _element;
+		var _element_border;
+		var _css_text_popup;
+		var _css_text_original;
+		var _drag_ofs;
+		var _docking_type;
+		var _docking_distance;
+		var _expand;
+		var _expand_distance;
+		var _control_dic;
+		var _task;
+		var _analyze_work;
+		var _observer_remove;
+		var _event_handler_abort;
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		(function(){
+			if(element){
+				_element = element;
+				element = null;
+			}else{
+				_element = DocumentCreateElement("div");
+			}
+			_element_border = DocumentCreateElement("div");
+
+			_css_text_original = _element.style.cssText;
+			_drag_ofs = {x:0.0,y:0.0};
+			_docking_type = "";
+			_docking_distance = 0;
+			_expand = false;
+			_expand_distance = 0;
+			_control_dic = {
+				"INPUT":true,
+				"BUTTON":true,
+				"TEXTAREA":true,
+				"SELECT":true,
+				"FIELDSET":true,
+				"KEYGEN":true,
+				"OBJECT":true,
+				"EMBED":true,
+				"CANVAS":true
+			};
+
+			if(_element.addEventListener){
+				_element.addEventListener("mousedown",mouseDown);
+				_element.addEventListener("dblclick",mouseDoubleClick);
+				_element_border.addEventListener("mousedown",mouseDownBorder);
+			}
+
+			// 解析ワーク作成
+			_analyze_work = AnalyzeWorkCreate(_element);
+			// 解析済み
+			AnalyzeWorkSetInvalid(_analyze_work);
+			// 解析辞書登録オプション
+			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+			if(outsider) attach_options.SetOutsider();
+			// 解析辞書登録
+			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
+
+			// リムーブ監視
+			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
+			_observer_remove.setFunction(_this.release);
+
+			// 開放イベント
+			_event_handler_abort = page_expand_event_dispatcher.createEventHandler("release");
+			_event_handler_abort.setFunction(function(){
+				_this.release();
+			});
+
+			update("original");
 		})();
 	}
 
@@ -72480,6 +73783,23 @@ function PageExpand(page_expand_arguments){
 			"glyph-orientation-vertical: auto;" +
 			"vector-effect: none;" +
 			"paint-order: fill stroke markers;";
+	}
+
+	// --------------------------------------------------------------------------------
+	// マウスイベントで変化したボタンを buttons 形式で取得する
+	// --------------------------------------------------------------------------------
+	function MouseEventGetChangedButtons(event_obj){
+		try{
+			if(event_obj instanceof MouseEvent){
+				var buttons = 0;
+				if(event_obj.button == 0) buttons |= 0x01;
+				if(event_obj.button == 1) buttons |= 0x04;
+				if(event_obj.button == 2) buttons |= 0x02;
+				return buttons;
+			}
+		}catch(e){
+		}
+		return event_obj.button;
 	}
 
 	// --------------------------------------------------------------------------------
