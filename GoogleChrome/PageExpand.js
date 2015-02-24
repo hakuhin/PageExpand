@@ -8475,22 +8475,23 @@ function PageExpand(page_expand_arguments){
 
 			// ポップアップ表示（すべてのリンク）
 			var preset_popup_all = getPreset(proj.expand_image,"popup_all");
+			preset_popup_all.thumbnail.enable_thumbnail = false;
+			preset_popup_all.thumbnail.script_allow = PresetScript_ExpandImage_ThumbnailScriptAllow_ThumbnailAll();
+
 			// ポップアップ表示（画像を含むリンク）
 			var preset_popup_include_image = getPreset(proj.expand_image,"popup_include_image");
+			preset_popup_include_image.thumbnail.enable_thumbnail = false;
+			preset_popup_include_image.thumbnail.script_allow = PresetScript_ExpandImage_ThumbnailScriptAllow_ThumbnailNotIncludeImage();
+
 			// サムネイル表示（すべて）
 			var preset_thumbnail_all = getPreset(proj.expand_image,"thumbnail_all");
+			preset_thumbnail_all.popup.enable_popup_mouseover = false;
+			preset_thumbnail_all.popup.script_allow = PresetScript_ExpandImage_PopupScriptAllow_PopupAll();
+
 			// サムネイル表示（画像を含まないリンク）
 			var preset_thumbnail_not_include_image = getPreset(proj.expand_image,"thumbnail_not_include_image");
-
-			preset_popup_all.thumbnail.enable_thumbnail = false;
-			preset_popup_include_image.thumbnail.enable_thumbnail = false;
-			preset_thumbnail_all.popup.enable_popup_mouseover = false;
 			preset_thumbnail_not_include_image.popup.enable_popup_mouseover = false;
-
-			preset_popup_all.thumbnail.script_allow = preset_thumbnail_all.thumbnail.script_allow;
-			preset_thumbnail_all.popup.script_allow = preset_popup_all.popup.script_allow;
-			preset_popup_include_image.thumbnail.script_allow = preset_thumbnail_not_include_image.thumbnail.script_allow;
-			preset_thumbnail_not_include_image.popup.script_allow = preset_popup_include_image.popup.script_allow;
+			preset_thumbnail_not_include_image.popup.script_allow = PresetScript_ExpandImage_PopupScriptAllow_PopupIncludeImage();
 
 			// ポップアップ表示（アシスト要素のみ）
 			var obj = addPreset(proj.expand_image,"popup_image_in_anchor","thumbnail_all");
@@ -8508,7 +8509,7 @@ function PageExpand(page_expand_arguments){
 					disable_same_image:false,
 					load_type:"preload",
 					script_allow:"",
-					script_insert:preset_thumbnail_not_include_image.thumbnail.script_insert
+					script_insert:PresetScript_ExpandImage_ThumbnailScriptInsert()
 				},
 				popup:{
 					enable_popup_mouseover:true,
@@ -9963,12 +9964,6 @@ function PageExpand(page_expand_arguments){
 			var preset = obj.preset;
 			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Atchs();
 
-			// おーぷん２ちゃんねる
-			var obj = addPreset(proj.expand_bbs,"open2ch",null);
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Open2ch();
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Open2ch();
-
 			// chaika
 			var obj = addPreset(proj.expand_bbs,"chaika",null);
 			var preset = obj.preset;
@@ -9983,6 +9978,78 @@ function PageExpand(page_expand_arguments){
 			var obj = addPreset(proj.expand_bbs,"nicovideo_dictionary",null);
 			var preset = obj.preset;
 			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_NicovideoDictionary();
+
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.25
+		// --------------------------------------------------------------------------------
+		if(proj.version < 25){
+			// バージョン値
+			proj.version = 25;
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義
+			// --------------------------------------------------------------------------------
+			// スレッド掲示板用
+			var obj = addPreset(proj.expand_image,"bbs","twitter");
+			obj.preset = {
+				name:{
+					standard:"For 2ch.net",
+					locales:{
+						ja:"スレッド掲示板用",
+						en:"For 2ch.net"
+					}
+				},
+				thumbnail:{
+					enable_thumbnail:true,
+					enable_popup_mouseover:true,
+					disable_same_image:false,
+					load_type:"preload",
+					script_allow:PresetScript_ExpandImage_ThumbnailScriptAllow_ThumbnailNotIncludeImage(),
+					script_insert:PresetScript_ExpandImage_ThumbnailScriptInsert()
+				},
+				popup:{
+					enable_popup_mouseover:true,
+					origin_type:"center",
+					position_type:"absolute",
+					time_wait_open:0,
+					time_wait_close:0,
+					enable_animation_scale:true,
+					enable_animation_alpha:true,
+					load_type:"preload",
+					scale_percent:100,
+					script_allow:PresetScript_ExpandImage_PopupScriptAllow_PopupImageInAnchor()
+				},
+				reduced_image:{
+					enable_popup:true,
+					popup_allow_slcale_less_then:70
+				},
+				load:{
+					enable_notify:true,
+					enable_unload:false,
+					src_type:"mixed_content",
+					unload_allow_size_more_then:256
+				}
+			};
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			// スレッド掲示板
+			var preset = getPreset(proj.urlmap,"bbs");
+			preset.replacement_to_element = {enable:true,id:["assist_image_in_anchor"]};
+			preset.expand_image = {enable:true,id:"bbs"};
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// おーぷん２ちゃんねる
+			var obj = addPreset(proj.expand_bbs,"open2ch",null);
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Open2ch();
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Open2ch();
 
 		}
 		if(exit())	return proj;
@@ -23247,10 +23314,10 @@ function PageExpand(page_expand_arguments){
 			function f(){
 				try{
 					if(p >= n) throw 0;
-					p = str.indexOf("<dt",p);
+					p = str.indexOf("<dl",p);
 					if(p < 0) throw 0;
-					var e = str.indexOf("</dt>",p);
-					var s = str.substring(p,e) + "\n<BR>";
+					var e = str.indexOf("</dl>",p);
+					var s = str.substring(p,e);
 					var m = s.match(re_number);
 					if(m){
 						var id = parseInt(m[1]);
@@ -23346,48 +23413,12 @@ function PageExpand(page_expand_arguments){
 		// レスポンス親要素
 		// --------------------------------------------------------------------------------
 		var i;
-		var nodes = ElementGetElementsByTagName(document.body,"dl");
+		var nodes = ElementGetElementsByClassName(document.body,"thread");
 		var num = nodes.length;
-		for(i=0;i<num;i++){
-			element_parent = nodes[i];
-			break;
+		if(num){
+			element_parent = nodes[num-1];
 		}
-
 		if(!element_parent) return false;
-
-		// --------------------------------------------------------------------------------
-		// フォーム位置修正
-		// --------------------------------------------------------------------------------
-		switch(work.bbs_name){
-		case "machi":
-			var nodes = ElementGetElementsByTagName(element_parent,"dt");
-			if(nodes.length){
-				var dt = nodes[nodes.length - 1];
-				var node = dt.firstChild;
-				while(node){
-					var next = node.nextSibling;
-					DomNode_InsertAfter(element_parent,node);
-					node = next;
-				}
-				DomNodeRemove(dt);
-			}
-
-			var nodes = ElementGetElementsByTagName(element_parent,"dd");
-			if(nodes.length){
-				nodes = ElementGetElementsByTagName(nodes[nodes.length - 1],"br");
-				if(nodes.length){
-					var node = nodes[nodes.length - 1];
-					node = node.nextSibling;
-					while(node){
-						var next = node.nextSibling;
-						DomNode_InsertAfter(element_parent,node);
-						node = next;
-					}
-				}
-			}
-
-			break;
-		}
 
 		// --------------------------------------------------------------------------------
 		// 範囲取得
@@ -23461,10 +23492,10 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// BbsControlReadMoreButton 作成
 		// --------------------------------------------------------------------------------
-		read_more_button = new BbsControlReadMoreButton();
-		read_more_button.setWaitTime(2 * 1000);
-		read_more_button.onclick = readMore;
-		DomNode_InsertAfter(element_parent,read_more_button.getElement());
+		//read_more_button = new BbsControlReadMoreButton();
+		//read_more_button.setWaitTime(2 * 1000);
+		//read_more_button.onclick = readMore;
+		//DomNode_InsertAfter(element_parent,read_more_button.getElement());
 
 		// --------------------------------------------------------------------------------
 		// シャドウロード
@@ -24322,7 +24353,6 @@ function PageExpand(page_expand_arguments){
 			try{
 				var dl = dt.parentNode;
 				if(dl.tagName != "DL")	return false;
-				if(dl.className != "thread")	return false;
 			}catch(e){
 				return false;
 			}
@@ -37716,7 +37746,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.4.5");
+				new UI_Text(parent,"PageExpand ver.1.4.6");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
