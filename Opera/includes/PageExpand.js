@@ -788,6 +788,11 @@ function PageExpand(page_expand_arguments){
 			return;
 		}
 
+		// Content Editable
+		if(node.isContentEditable){
+			return;
+		}
+
 		// クローン検出
 		if(analyze_work_dictionary.verifyClone(node)){
 			// スクロール補正
@@ -2504,7 +2509,13 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// コールバック関数を実行
-		project.executeScriptAllowInlineSound(element,url,content_type,response_allow);
+		var request = {
+			element:element,
+			url:url,
+			content_type:content_type,
+			is_overridden_url:AnalyzeWorkGetOverrodeUrl(work)
+		};
+		project.executeScriptAllowInlineSound(request,response_allow);
 	}
 
 	// --------------------------------------------------------------------------------
@@ -3288,7 +3299,13 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// コールバック関数を実行
-		project.executeScriptAllowInlineVideo(element,url,content_type,response_allow);
+		var request = {
+			element:element,
+			url:url,
+			content_type:content_type,
+			is_overridden_url:AnalyzeWorkGetOverrodeUrl(work)
+		};
+		project.executeScriptAllowInlineVideo(request,response_allow);
 	}
 
 	// --------------------------------------------------------------------------------

@@ -15,5 +15,6 @@
     }
   ],
   "id": "PageExpand@hakuhin.jp",
-  "version": "1.4.6"
+  "version": "1.4.7",
+  "main": "lib/main.js"
 }

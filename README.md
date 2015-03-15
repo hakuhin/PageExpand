@@ -51,7 +51,7 @@ for Greasemonkey|[install](https://raw.githubusercontent.com/hakuhin/PageExpand/
  - By setting the URL, Can blocking web access.
 
 ##Extend display BBS
- - support (2ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, kakiko.com, logsoku.com, mimizun.com, 2chan.net, 4chan.org, 8chan.co, dic.nicovideo.jp, open2ch.net)
+ - support (2ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, kakiko.com, logsoku.com, mimizun.com, 2chan.net, 4chan.org, 8chan.co, reddit.com, dic.nicovideo.jp, open2ch.net)
  - Hovering the mouse cursor in URL of the "response number", Display popup.
  - Hovering the mouse cursor in URL of the "ID", Display popup. (Remove by click.)
  - Display the follower count. (Remove by click.)
