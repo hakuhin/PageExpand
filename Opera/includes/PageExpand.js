@@ -1994,6 +1994,11 @@ function PageExpand(page_expand_arguments){
 			var limitter_element = null;
 			var notify_element = null;
 
+			// ダウンロードリストに登録
+			var item = download_list_image.createItem();
+			item.setURL(thumbnail_url);
+			item.setFileName(thumbnail_url);
+
 			// サムネイルイメージを破棄（ElementLimiter 用）
 			function releaseThumbnailImageForElementLimiter(e){
 				// ローダーを中断
@@ -2125,11 +2130,6 @@ function PageExpand(page_expand_arguments){
 						notify_element = null;
 					}
 
-					// ダウンロードリストに登録
-					var item = download_list_image.createItem();
-					item.setURL(thumbnail_url);
-					item.setFileName(thumbnail_url);
-
 					// 画像サイズをセット
 					var image_size = ImageGetNaturalSize(thumbnail_image);
 					limitter_element.setByteSize(image_size.width * image_size.height * 4);
@@ -2218,6 +2218,7 @@ function PageExpand(page_expand_arguments){
 					complete();
 					return;
 				}
+
 				// アドレスを登録
 				address_collection.addAddress("image",thumbnail_url);
 			}
@@ -2275,6 +2276,11 @@ function PageExpand(page_expand_arguments){
 			var observer_remove = null;
 			var limitter_element = null;
 			var notify_element = null;
+
+			// ダウンロードリストに登録
+			var item = download_list_image.createItem();
+			item.setURL(url);
+			item.setFileName(url);
 
 			// ポップアップイメージを破棄（ElementLimiter 用）
 			function releasePopupImageForElementLimiter(e){
@@ -2341,11 +2347,6 @@ function PageExpand(page_expand_arguments){
 				loader = new Loader();
 				loader.onload = function(image){
 					complete();
-
-					// ダウンロードリストに登録
-					var item = download_list_image.createItem();
-					item.setURL(url);
-					item.setFileName(url);
 
 					// 画像サイズをセット
 					var image_size = ImageGetNaturalSize(image);
@@ -3722,7 +3723,7 @@ function PageExpand(page_expand_arguments){
 			num = allow_list_regexp.length;
 			for(i=0;i<num;i++){
 				if(url.match(new RegExp(allow_list_regexp[i],"i"))){
-					if(RegExp.rightContext.match(new RegExp("^([a-zA-Z0-9]+)","i"))){
+					if(RegExp.rightContext.match(new RegExp("^([-a-zA-Z0-9]+)","i"))){
 						expand_video(getIframeURL(url,RegExp.$1));
 						return;
 					}

@@ -9950,11 +9950,6 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 掲示板設定
 			// --------------------------------------------------------------------------------
-			// ２ちゃんねる掲示板
-			var obj = addPreset(proj.expand_bbs,"2ch",null);
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_2ch();
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2ch();
 
 			// ログ速
 			var obj = addPreset(proj.expand_bbs,"logsoku",null);
@@ -9966,11 +9961,6 @@ function PageExpand(page_expand_arguments){
 			var obj = addPreset(proj.expand_bbs,"mimizun",null);
 			var preset = obj.preset;
 			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Mimizun();
-
-			// あっとちゃんねるず
-			var obj = addPreset(proj.expand_bbs,"atchs",null);
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Atchs();
 
 			// chaika
 			var obj = addPreset(proj.expand_bbs,"chaika",null);
@@ -10275,12 +10265,6 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// 掲示板設定
 			// --------------------------------------------------------------------------------
-			// ふたば☆ちゃんねる
-			var obj = addPreset(proj.expand_bbs,"2chan",null);
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_2chan();
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2chan();
-
 			// reddit.com
 			var obj = addPreset(proj.expand_bbs,"reddit","8chan");
 			obj.preset = {
@@ -10315,6 +10299,39 @@ function PageExpand(page_expand_arguments){
 					style_sheet:"padding:20px 10px; margin:0px; border:1px solid #000; background:#FFF; overflow-y:auto; word-wrap:break-word; word-break:break-all; display:block;"
 				}
 			};
+
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.27
+		// --------------------------------------------------------------------------------
+		if(proj.version < 27){
+			// バージョン値
+			proj.version = 27;
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// ２ちゃんねる掲示板
+			var obj = addPreset(proj.expand_bbs,"2ch",null);
+			var preset = obj.preset;
+			var filter = preset.filter.regexp.filter;
+			filter[4].pattern = "^http://jbbs\\.shitaraba\\.net/bbs/read\\.cgi/[^/]+/[0-9]+/[0-9]+.*$";
+			filter[5].pattern = "^http://jbbs\\.shitaraba\\.net/bbs/read_archive\\.cgi/[^/]+/[0-9]+/[0-9]+.*$";
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_2ch();
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2ch();
+
+			// あっとちゃんねるず
+			var obj = addPreset(proj.expand_bbs,"atchs",null);
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Atchs();
+
+			// ふたば☆ちゃんねる
+			var obj = addPreset(proj.expand_bbs,"2chan",null);
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_2chan();
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2chan();
 
 		}
 		if(exit())	return proj;
@@ -20246,7 +20263,6 @@ function PageExpand(page_expand_arguments){
 				};
 
 				var element_iframe = popup_iframe.getIFrameElement();
-				var window_obj = element_iframe.contentWindow;
 				element_form.target = window_name;
 
 				(function(){
@@ -20261,6 +20277,7 @@ function PageExpand(page_expand_arguments){
 					task.setExecuteFunc(function(){
 						try{
 							var href = "";
+							var window_obj = element_iframe.contentWindow;
 							if(window_obj.document){
 								href = window_obj.document.URL;
 							}
@@ -26078,7 +26095,6 @@ function PageExpand(page_expand_arguments){
 				};
 
 				var element_iframe = popup_iframe.getIFrameElement();
-				var window_obj = element_iframe.contentWindow;
 				element_form.target = window_name;
 
 				(function(){
@@ -26093,6 +26109,7 @@ function PageExpand(page_expand_arguments){
 					task.setExecuteFunc(function(){
 						try{
 							var href = "";
+							var window_obj = element_iframe.contentWindow;
 							if(window_obj.document){
 								href = window_obj.document.URL;
 							}
@@ -30407,8 +30424,8 @@ function PageExpand(page_expand_arguments){
 			{url:"(http://(|[^.]+\\.)machi\\.to/bbs/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"machi"},
 			{url:"(http://(|[^.]+\\.)machibbs\\.net/[^/]+/[^/]*[0-9]+)",replace:"$1",name:"machibbs"},
 			{url:"(http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"pink"},
-			{url:"(http://jbbs\\.shitaraba\\.net/bbs/read.cgi/[^/]+/[0-9]+/[0-9]+)",replace:"$1/",name:"shitaraba"},
-			{url:"(http://jbbs\\.shitaraba\\.net/[^/]+/[0-9]+/storage/[0-9]+.*)",replace:"$1/",name:"shitaraba_storage"},
+			{url:"(http://jbbs\\.shitaraba\\.net/bbs/read\\.cgi/[^/]+/[0-9]+/[0-9]+)",replace:"$1/",name:"shitaraba"},
+			{url:"(http://jbbs\\.shitaraba\\.net/bbs/read_archive\\.cgi/[^/]+/[0-9]+/[0-9]+)",replace:"$1/",name:"shitaraba_storage"},
 			{url:"(http://[^.]+\\.kakiko\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"kakiko"},
 			{url:"(http://[^.]+\\.60\\.kg/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$0/",name:"kakiko"}
 		];
@@ -31463,7 +31480,6 @@ function PageExpand(page_expand_arguments){
 					};
 
 					var element_iframe = popup_iframe.getIFrameElement();
-					var window_obj = element_iframe.contentWindow;
 					element_form.target = window_name;
 
 					(function(){
@@ -31478,6 +31494,7 @@ function PageExpand(page_expand_arguments){
 						task.setExecuteFunc(function(){
 							try{
 								var href = "";
+								var window_obj = element_iframe.contentWindow;
 								if(window_obj.document){
 									href = window_obj.document.URL;
 								}
@@ -33323,10 +33340,6 @@ function PageExpand(page_expand_arguments){
 				_action_button.destroy();
 				_action_button = null;
 			}
-			if(_widget){
-				_widget.destroy();
-				_widget = null;
-			}
 
 			// 再登録
 			if(project.getEnableIconAddressBar()){
@@ -33365,20 +33378,6 @@ function PageExpand(page_expand_arguments){
 									});
 								}
 							});
-						}else{
-							// ウィジット
-							var addon_widget = FirefoxAddonGetWidget();
-							if(addon_widget){
-								_widget = addon_widget.Widget({
-									label: "PageExpand",
-									id: "PageExpandWidget",
-									contentURL: self.data.url("icon16.png"),
-									panel: _popup
-								});
-								_widget.on("click",function(){
-									extension_message.sendRequestToContent(_popup, {command: "reloadPopupMenu"});
-								});
-							}
 						}
 					}
 				}catch(e){
@@ -33448,7 +33447,6 @@ function PageExpand(page_expand_arguments){
 		var _worker_dictionary;
 		var _xhr_queue_dictionary;
 		var _action_button;
-		var _widget;
 		var _popup;
 		var _context_menu;
 		var _context_menu_items;
@@ -39047,7 +39045,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.4.7");
+				new UI_Text(parent,"PageExpand ver.1.4.8");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -47366,6 +47364,11 @@ function PageExpand(page_expand_arguments){
 			var limitter_element = null;
 			var notify_element = null;
 
+			// ダウンロードリストに登録
+			var item = download_list_image.createItem();
+			item.setURL(thumbnail_url);
+			item.setFileName(thumbnail_url);
+
 			// サムネイルイメージを破棄（ElementLimiter 用）
 			function releaseThumbnailImageForElementLimiter(e){
 				// ローダーを中断
@@ -47497,11 +47500,6 @@ function PageExpand(page_expand_arguments){
 						notify_element = null;
 					}
 
-					// ダウンロードリストに登録
-					var item = download_list_image.createItem();
-					item.setURL(thumbnail_url);
-					item.setFileName(thumbnail_url);
-
 					// 画像サイズをセット
 					var image_size = ImageGetNaturalSize(thumbnail_image);
 					limitter_element.setByteSize(image_size.width * image_size.height * 4);
@@ -47590,6 +47588,7 @@ function PageExpand(page_expand_arguments){
 					complete();
 					return;
 				}
+
 				// アドレスを登録
 				address_collection.addAddress("image",thumbnail_url);
 			}
@@ -47647,6 +47646,11 @@ function PageExpand(page_expand_arguments){
 			var observer_remove = null;
 			var limitter_element = null;
 			var notify_element = null;
+
+			// ダウンロードリストに登録
+			var item = download_list_image.createItem();
+			item.setURL(url);
+			item.setFileName(url);
 
 			// ポップアップイメージを破棄（ElementLimiter 用）
 			function releasePopupImageForElementLimiter(e){
@@ -47713,11 +47717,6 @@ function PageExpand(page_expand_arguments){
 				loader = new Loader();
 				loader.onload = function(image){
 					complete();
-
-					// ダウンロードリストに登録
-					var item = download_list_image.createItem();
-					item.setURL(url);
-					item.setFileName(url);
 
 					// 画像サイズをセット
 					var image_size = ImageGetNaturalSize(image);
@@ -49094,7 +49093,7 @@ function PageExpand(page_expand_arguments){
 			num = allow_list_regexp.length;
 			for(i=0;i<num;i++){
 				if(url.match(new RegExp(allow_list_regexp[i],"i"))){
-					if(RegExp.rightContext.match(new RegExp("^([a-zA-Z0-9]+)","i"))){
+					if(RegExp.rightContext.match(new RegExp("^([-a-zA-Z0-9]+)","i"))){
 						expand_video(getIframeURL(url,RegExp.$1));
 						return;
 					}
@@ -59559,7 +59558,7 @@ function PageExpand(page_expand_arguments){
 			}
 
 			// data URL scheme による画像の読み込み
-			function tryLoadDataUriScheme(data){
+			function tryLoadDataUriScheme(xhr){
 
 				// 開始関数を変更
 				_queue_element.onstart = function(){
@@ -59589,7 +59588,7 @@ function PageExpand(page_expand_arguments){
 					};
 
 					// 読み込み開始
-					image.src = data;
+					image.src = xhr.dataUriScheme;
 				};
 
 				// 通常リトライ回数
@@ -59614,11 +59613,12 @@ function PageExpand(page_expand_arguments){
 			_queue_element.onstart = function(){
 
 				// ソースタイプ
+				var use_blob_url_scheme = false;
 				var use_data_uri_scheme = false;
 				switch(project.getSourceLoadExpandImage()){
 				case "mixed_content":
 					if(project.getSecureCurrent() && (_request.url.indexOf("http://") == 0)){
-						use_data_uri_scheme = true;
+						use_blob_url_scheme = true;
 					}
 					break;
 				case "data_uri_scheme":
@@ -59628,7 +59628,42 @@ function PageExpand(page_expand_arguments){
 
 				// 読み込みを開始する
 				var result;
-				if(use_data_uri_scheme){
+				if(use_blob_url_scheme){
+					var result = loadBinary(function(result,xhr){
+
+						// ロード完了を通知
+						_queue_element.complete();
+
+						// ロード成功
+						if(result){
+							if(xhr.response){
+								// blob URL を作成
+								var blob_url = BlobURLCreate(new Blob([xhr.response],{type:"image"}));
+								// data URL scheme による画像の読み込み
+								tryLoadDataUriScheme({dataUriScheme:blob_url});
+							}else{
+								// Image による画像の読み込み
+								tryLoadImage();
+							}
+
+						// 失敗
+						}else{
+							if(xhr.status == 0){
+								// Image による画像の読み込み
+								tryLoadImage();
+							}else if(xhr.status == 401){
+								// 認証エラー
+								loadError();
+							}else{
+								// キューに再登録
+								if(!tryAttachElement(false)){
+									// Image による画像の読み込み
+									tryLoadImage();
+								}
+							}
+						}
+					});
+				}else if(use_data_uri_scheme){
 					var result = loadDataUriScheme(function(result,xhr){
 
 						// ロード完了を通知
@@ -59638,7 +59673,7 @@ function PageExpand(page_expand_arguments){
 						if(result){
 							if(xhr.dataUriScheme){
 								// data URL scheme による画像の読み込み
-								tryLoadDataUriScheme(xhr.dataUriScheme);
+								tryLoadDataUriScheme(xhr);
 							}else{
 								// Image による画像の読み込み
 								tryLoadImage();
@@ -60543,6 +60578,161 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
+		// バイナリ読み込み（内部用）
+		// --------------------------------------------------------------------------------
+		function loadBinary(response){
+
+			// アドレスチェック
+			if(!(_request.url)){
+				return false;
+			}
+
+			// プロトコルチェック
+			if(!_request.url.match(new RegExp("^(http|https|ftp)://(.*)$","i"))){
+				return false;
+			}
+
+			// バックグラウンドへ通信要求
+			if(1){
+				_request.current_url = WindowGetOwnerURL(window);
+				_request.override_mime_type = "text/plain; charset=x-user-defined";
+
+				var dataUriScheme = [];
+				var ary_buffer;
+				extension_message.sendRequest({command:"loadXMLHttpRequest",request:_request,single:_single_type}, function(receive) {
+					if(receive.type == "data"){
+						if(!ary_buffer){
+							ary_buffer = new ArrayBuffer(receive.total);
+						}
+						var i;
+						var n =receive.data.length;
+						var a = new Int8Array(ary_buffer,receive.pos);
+						for(i=0;i<n;i++){
+							a[i] = receive.data.charCodeAt(i) & 0xff;
+						}
+						return;
+					}
+
+					var xhr = receive.data;
+					xhr.response = ary_buffer;
+					switch(xhr.readyState){
+					case 4:
+						xhr.getAllResponseHeaders = function(){
+							return xhr.responseHeaders;
+						};
+						
+						var response_header = ResponseHeadersParseObject(xhr.responseHeaders);
+						xhr.getResponseHeader = function(label){
+							return response_header[label];
+						};
+
+						if((200 <= xhr.status && xhr.status < 300) || xhr.status == 304){
+							// 成功を返す
+							response(true,xhr);
+						}else{
+							// 失敗を返す
+							response(false,xhr);
+						}
+						break;
+					}
+				});
+
+				return true;
+			}
+
+			// XMLHttpRequest 作成
+			var xhr = null;
+
+			// 未対応
+			if(!xhr){
+				return false;
+			}
+
+			var sended = false;
+			var response_type = "";
+
+			// ステート変更時に実行されるイベント
+			xhr.onreadystatechange = function(r){
+				if(!sended) return;
+				switch(xhr.readyState){
+				case 4:
+					if((200 <= xhr.status && xhr.status < 300) || xhr.status == 304){
+						switch(response_type){
+						case "blob":
+							var file_reader = new FileReader();
+							file_reader.onload = function(){
+								xhr.dataUriScheme = file_reader.result;
+								response(true,xhr);
+							};
+							file_reader.onerror = function(){
+								response(false,xhr);
+							};
+							file_reader.readAsDataURL(xhr.response);
+							break;
+						case "arraybuffer":
+							Base64_From_ArrayBuffer_Async(xhr.response,function(base64){
+								// data URI scheme 変換
+								xhr.dataUriScheme = "data:" + xhr.getResponseHeader("Content-Type") + ";base64," + base64;
+								// 成功を返す
+								response(true,xhr);
+							});
+							break;
+						case "User-Defined":
+							Base64_From_XUserDefined_Async(xhr.responseText,function(base64){
+								// data URI scheme 変換
+								xhr.dataUriScheme = "data:" + xhr.getResponseHeader("Content-Type") + ";base64," + base64;
+								// 成功を返す
+								response(true,xhr);
+							});
+							break;
+						default:
+							// 成功を返す
+							response(true,xhr);
+							break;
+						}
+					}else{
+						// 失敗を返す
+						response(false,xhr);
+					}
+				}
+			};
+
+			// 読み込み開始
+			try{
+				xhr.open(_request.method,_request.url,true);
+			}catch(e){
+				return false;
+			}
+
+			var headers = _request.headers;
+			for(var name in headers){
+				xhr.setRequestHeader(name,headers[name]);
+			}
+			if(xhr.responseType !== undefined){
+				if(window.FileReader){
+					xhr.responseType = response_type = "blob";
+				}else{
+					xhr.responseType = response_type = "arraybuffer";
+				}
+			}else if(xhr.overrideMimeType){
+				xhr.overrideMimeType("text/plain; charset=x-user-defined");
+				response_type = "User-Defined";
+			}
+			if(_request.timeout){
+				xhr.timeout = _request.timeout;
+			}
+			try{
+				xhr.send(_request.data);
+				sended = true;
+			}catch(e){
+				return false;
+			}
+
+			return true;
+
+		}
+
+		// --------------------------------------------------------------------------------
 		// ロード失敗（内部用）
 		// --------------------------------------------------------------------------------
 		function loadError(){
@@ -61077,6 +61267,44 @@ function PageExpand(page_expand_arguments){
 					loader.loadText();
 				}
 
+				// --------------------------------------------------------------------------------
+				// 解析待ち
+				// --------------------------------------------------------------------------------
+				function phaseWaitAnalyze(callback){
+
+					progress.setMessage("Wait Analyze ...",0);
+					progress.setValueProgress(0.0,0);
+					progress.setValueProgress(0.0,1);
+
+					var max = execute_queue.getCountQueue();
+					var cnt = max;
+
+					var task = task_container.createTask();
+					task.setDestructorFunc(function(){
+						task = null;
+					});
+					task.setExecuteFunc(function(){
+						if(closed){
+							task.release();
+							return;
+						}
+
+						cnt = execute_queue.getCountQueue();
+						if(max < cnt) max = cnt;
+						if(cnt <= 0){
+							task.release();
+							callback();
+							return;
+						}
+
+						var d = 1.0;
+						if(max > 0) d = cnt / max;
+						d = 1.0 - d;
+
+						progress.setValueProgress(d,1);
+						progress.setMessage(Math.floor(d * 100) + "% (" + (cnt) + "/" + (max) + ")",1);
+					});
+				}
 
 				// --------------------------------------------------------------------------------
 				// ファイル名変換
@@ -61714,19 +61942,22 @@ function PageExpand(page_expand_arguments){
 				}
 
 				(function(){
-					// 配列に格納
-					var items = new Array();
-					var item = _queue._next;
-					while(_queue != item){
-						items.push(item);
-						item = item._next;
-					}
+					phaseWaitAnalyze(function(){
 
-					phaseConvertFileName(items,function(items){
-						phaseDownload(items,function(items){
-							phaseCalculateCRC(items,function(items){
-								phaseCreateArchive(items,function(items){
-									progress.close();
+						// 配列に格納
+						var items = new Array();
+						var item = _queue._next;
+						while(_queue != item){
+							items.push(item);
+							item = item._next;
+						}
+
+						phaseConvertFileName(items,function(items){
+							phaseDownload(items,function(items){
+								phaseCalculateCRC(items,function(items){
+									phaseCreateArchive(items,function(items){
+										progress.close();
+									});
 								});
 							});
 						});
@@ -64197,6 +64428,8 @@ function PageExpand(page_expand_arguments){
 		// オブジェクトを取得
 		// --------------------------------------------------------------------------------
 		_this.getObject = function(url){
+			if(url.length > 260) return {};
+
 			var obj = _dictionary[url];
 			if(obj){
 				var prev = obj.prev;
@@ -75501,17 +75734,6 @@ function FirefoxAddonGetContextMenu(){
 function FirefoxAddonGetPanel(){
 	try{
 		return require("sdk/panel");
-	}catch(e){}
-
-	return null;
-}
-
-// --------------------------------------------------------------------------------
-// Firefox アドオン用ウィジット取得
-// --------------------------------------------------------------------------------
-function FirefoxAddonGetWidget(){
-	try{
-		return require("sdk/widget");
 	}catch(e){}
 
 	return null;
