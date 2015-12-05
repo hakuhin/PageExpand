@@ -83,22 +83,21 @@ function PageExpand(page_expand_arguments){
 			// 実行ループ
 			// --------------------------------------------------------------------------------
 			(function(){
-				var time_handle;
-
-				// タスクを毎サイクル実行
-				function TaskContainerExecute(){
-					task_container.execute(task_execute_level);
-				}
+				var time_handle = null;
 
 				// 開始関数をセット
 				task_container.setStartFunc(function(){
-					time_handle = setInterval(TaskContainerExecute, 1000 / 60);
+					if(time_handle !== null) return;
+					time_handle = setInterval(function (){
+						task_container.execute(task_execute_level);
+					}, 1000 / 60);
 				});
 
 				// 終了関数をセット
 				task_container.setEndFunc(function(){
+					if(time_handle === null) return;
 					clearInterval(time_handle);
-					time_handle = undefined;
+					time_handle = null;
 				});
 			})();
 		}
@@ -4898,11 +4897,13 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(_content_window,"Language");
 				var parent = container.getElement();
 				_combo_box_language = new UI_ComboBox(parent);
-				_combo_box_language.attachItem("BROWSER LANGUAGE",-1);
-				_combo_box_language.attachItem("日本語",0);
-				_combo_box_language.attachItem("ENGLISH",1);
+				_combo_box_language.attachItem("BROWSER LANGUAGE","auto");
+				_combo_box_language.attachItem("English","en");
+				_combo_box_language.attachItem("中文（简体中文）","zh");
+				_combo_box_language.attachItem("日本語","ja");
 				_combo_box_language.onchange = function(v){
-					language.type = parseInt(v);
+					language.auto = (v === "auto");
+					if(!(language.auto)) language.code = v;
 					projectModify();
 
 					// PageExpandConfig を再構築
@@ -4911,8 +4912,11 @@ function PageExpand(page_expand_arguments){
 				};
 
 				// 言語タイプ
-				_combo_box_language.setValue(language.type);
-
+				if(language.auto){
+					_combo_box_language.setValue("auto");
+				}else{
+					_combo_box_language.setValue(language.code);
+				}
 			})();
 		}
 
@@ -4931,14 +4935,29 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.4.8");
+				new UI_Text(parent,"PageExpand ver.1.4.9");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
 				var parent = container.getElement();
-				new UI_Text(parent,'(c) Hakuhin 2010-2015');
-				new UI_AnchorText(parent,"http://hakuhin.jp/","http://hakuhin.jp/");
+				var table = document.createElement("table");
+				parent.appendChild(table);
+				var tr = table.insertRow(-1);
+				new UI_Text(tr.insertCell(-1),'by');
+				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","http://hakuhin.jp/");
+				new UI_Text(tr.insertCell(-1),'2010-2015');
 				new UI_AnchorText(parent,"https://github.com/hakuhin/PageExpand","https://github.com/hakuhin/PageExpand");
+
+				// 翻訳者
+				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_translator"));
+				var parent = container.getElement();
+				var table = document.createElement("table");
+				parent.appendChild(table);
+
+				var tr = table.insertRow(-1);
+				new UI_Text(tr.insertCell(-1),'中文（简体中文）');
+				new UI_Text(tr.insertCell(-1),'by');
+				new UI_AnchorText(tr.insertCell(-1),"weiq530","https://github.com/weiq530");
 			})();
 		}
 
@@ -4978,7 +4997,7 @@ function PageExpand(page_expand_arguments){
 
 				if(label){
 					var div = DocumentCreateElement("div");
-					ElementSetStyle(div,"padding:5px 0px 5px 20px; margin:0px 0px 10px; background:#666; color:#fff; border-radius:10px; box-shadow:0px 1px 1px #000;");
+					ElementSetStyle(div,"padding:5px 0px 5px 20px; margin:0px 0px 10px; background:#666; font-size:16px; color:#fff; border-radius:10px; box-shadow:0px 1px 1px #000;");
 					ElementSetTextContent(div,label);
 					_window.appendChild(div);
 				}
@@ -5055,7 +5074,7 @@ function PageExpand(page_expand_arguments){
 
 				if(label){
 					_label = DocumentCreateElement("div");
-					ElementSetStyle(_label,"padding:5px 0px 5px 20px; margin:0px 0px 10px; background:#666; color:#fff; border-radius:10px; box-shadow:0px 1px 1px #000;");
+					ElementSetStyle(_label,"padding:5px 0px 5px 20px; margin:0px 0px 10px; background:#666; font-size:16px; color:#fff; border-radius:10px; box-shadow:0px 1px 1px #000;");
 					ElementSetTextContent(_label,label);
 					_window.appendChild(_label);
 				}
@@ -5558,7 +5577,7 @@ function PageExpand(page_expand_arguments){
 				parent.appendChild(container);
 
 				var _label = DocumentCreateElement("label");
-				ElementSetStyle(_label,"user-select:none; -webkit-user-select:none; -moz-user-select:none; -khtml-user-select:none;");
+				ElementSetStyle(_label,"cursor:pointer; user-select:none; -webkit-user-select:none; -moz-user-select:none; -khtml-user-select:none;");
 				container.appendChild(_label);
 
 				_input = DocumentCreateElement("input");
@@ -6079,7 +6098,7 @@ function PageExpand(page_expand_arguments){
 
 				_input = DocumentCreateElement("input");
 				_input.type = "number";
-				ElementSetStyle(_input,"width:100%; padding:2px; background-color:#fff;");
+				ElementSetStyle(_input,"width:auto; min-width:200px; padding:2px; background-color:#fff;");
 				container.appendChild(_input);
 
 				_input.oninput = function(){
@@ -6313,7 +6332,7 @@ function PageExpand(page_expand_arguments){
 				parent.appendChild(container);
 
 				_combo_box = DocumentCreateElement("select");
-				ElementSetStyle(_combo_box,"width:100%; height:22px; font-size:14px;");
+				ElementSetStyle(_combo_box,"width:auto; min-width:200px; height:22px; font-size:14px;");
 				container.appendChild(_combo_box);
 
 				_combo_box.onchange = function(){

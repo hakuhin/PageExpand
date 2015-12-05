@@ -1,0 +1,1399 @@
+		en: {
+			extension_name: {
+				message: "PageExpand"
+			},
+			extension_description: {
+				message: "All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Override Referer. Extend BBS. etc..."
+			},
+			page_expand_config: {
+				message: "PageExpand Setting"
+			},
+			menu_setting_standard: {
+				message: "Standard Setting"
+			},
+			menu_setting_standard_filter_url: {
+				message: "To limit the operation by URL"
+			},
+			menu_setting_standard_filter_url_combo_box_item_deny: {
+				message: "Do not operate only at the specified address. (Otherwise it will all work.)"
+			},
+			menu_setting_standard_filter_url_combo_box_item_allow: {
+				message: "Work only at the specified address. (Otherwise, all does not work.)"
+			},
+			menu_setting_standard_filter_url_hint: {
+				message: "Describes the URL. Can be used an asterisk. Can be specified multi line."
+			},
+			menu_setting_standard_check_box_container: {
+				message: "Standard Setting"
+			},
+			menu_setting_standard_enable_icon_address_bar: {
+				message: "Displays an icon in the address bar."
+			},
+			menu_setting_standard_enable_context_menu: {
+				message: "Display the context menu."
+			},
+			menu_setting_standard_enable_startup: {
+				message: "Operation starts from when the load is finished."
+			},
+			menu_setting_standard_enable_debug_mode: {
+				message: "Running in debug mode."
+			},
+			menu_setting_standard_enable_output_log: {
+				message: "Output the log to the console.(debug)"
+			},
+			menu_setting_standard_execute_queue: {
+				message: "ExecuteQueue Setting (Normally, you do not need to change.)"
+			},
+			menu_setting_standard_execute_queue_time_sleep: {
+				message: "Sleep time (Millisecond)"
+			},
+			menu_setting_standard_execute_queue_time_occupancy: {
+				message: "Maximum CPU occupancy time (Millisecond)"
+			},
+			menu_setting_standard_execute_queue_hint: {
+				message: "When maximum CPU occupancy time is large, Response operation is worse,The script will run faster. If the sleep time is small,CPU utilization is higher,The script will run faster."
+			},
+			menu_setting_standard_touch: {
+				message: "Touch Operation Setting"
+			},
+			menu_setting_standard_enable_input_touch: {
+				message: "Enable touch operation."
+			},
+			menu_setting_standard_enable_double_touch_assist: {
+				message: "Display the double touch assist."
+			},
+			menu_setting_standard_command: {
+				message: "Execute Menu (for mobile)"
+			},
+			menu_setting_standard_command_execute_button: {
+				message: "Execute"
+			},
+			menu_setting_standard_command_execute_dialog: {
+				message: "Execute Menu"
+			},
+			menu_setting_standard_command_execute_dialog_tab_list: {
+				message: "select the tab"
+			},
+			menu_setting_standard_command_execute_dialog_command_list: {
+				message: "select the command"
+			},
+			menu_setting_standard_command_execute_dialog_confirm: {
+				message: "Do you want to execute?"
+			},
+			menu_setting_standard_export_import: {
+				message: "Setting Export / Import"
+			},
+			menu_setting_standard_export_button: {
+				message: "Export"
+			},
+			menu_setting_standard_import_button: {
+				message: "Import"
+			},
+			menu_setting_standard_export_dialog: {
+				message: "Setting Export"
+			},
+			menu_setting_standard_export_dialog_export: {
+				message: "Export"
+			},
+			menu_setting_standard_export_dialog_export_hint: {
+				message: "Please copy the text of TextArea."
+			},
+			menu_setting_standard_import_dialog: {
+				message: "Setting Import"
+			},
+			menu_setting_standard_import_dialog_explanation: {
+				message: "information about Import"
+			},
+			menu_setting_standard_import_dialog_explanation_0: {
+				message: "All current settings will be lost."
+			},
+			menu_setting_standard_import_dialog_explanation_1: {
+				message: "It is recommended that you take a backup on the export function."
+			},
+			menu_setting_standard_import_dialog_explanation_2: {
+				message: "Please note so that it does not contain malicious code."
+			},
+			menu_setting_standard_import_dialog_import: {
+				message: "Import"
+			},
+			menu_setting_standard_import_dialog_import_hint: {
+				message: "Please paste the output text from Export."
+			},
+			menu_setting_standard_import_dialog_confirm: {
+				message: "Do you want to Import?"
+			},
+			menu_setting_standard_import_alert: {
+				message: "A result of the import"
+			},
+			menu_setting_standard_import_alert_success: {
+				message: "Import has been completed."
+			},
+			menu_setting_standard_import_alert_failure: {
+				message: "Failed to import."
+			},
+			menu_setting_standard_storage_sync: {
+				message: "Sync Storage"
+			},
+			menu_setting_standard_storage_sync_load_button: {
+				message: "Load"
+			},
+			menu_setting_standard_storage_sync_save_button: {
+				message: "Save"
+			},
+			menu_setting_standard_storage_sync_delete_button: {
+				message: "Delete"
+			},
+			menu_setting_standard_storage_sync_load_dialog: {
+				message: "Load from the Sync Storage"
+			},
+			menu_setting_standard_storage_sync_load_dialog_explanation: {
+				message: "information about Load from the Sync Storage"
+			},
+			menu_setting_standard_storage_sync_load_dialog_explanation_0: {
+				message: "Load the data from the Sync Storage, apply to PageExpand Setting."
+			},
+			menu_setting_standard_storage_sync_load_dialog_explanation_1: {
+				message: "All current settings will be lost."
+			},
+			menu_setting_standard_storage_sync_load_dialog_explanation_2: {
+				message: "It is recommended that you take a backup on the export function."
+			},
+			menu_setting_standard_storage_sync_load_dialog_confirm: {
+				message: "Do you want to Load from the Sync Storage?"
+			},
+			menu_setting_standard_storage_sync_load_alert: {
+				message: "A result of the Load from the Sync Storage"
+			},
+			menu_setting_standard_storage_sync_load_alert_success: {
+				message: "Load from the Sync Storage has been completed."
+			},
+			menu_setting_standard_storage_sync_load_alert_failure: {
+				message: "Failed to the Load from the Sync Storage."
+			},
+			menu_setting_standard_storage_sync_save_dialog: {
+				message: "Save to the Sync Storage"
+			},
+			menu_setting_standard_storage_sync_save_dialog_explanation: {
+				message: "information about Save to the Sync Storage"
+			},
+			menu_setting_standard_storage_sync_save_dialog_explanation_0: {
+				message: "Save the current settings to the Sync Storage."
+			},
+			menu_setting_standard_storage_sync_save_dialog_explanation_1: {
+				message: "Need to enable the functionality of the sync of browser."
+			},
+			menu_setting_standard_storage_sync_save_dialog_explanation_2: {
+				message: "There is a limit to the size. Fail if the size is too large."
+			},
+			menu_setting_standard_storage_sync_save_dialog_confirm: {
+				message: "Do you want to Save to the Sync Storage?"
+			},
+			menu_setting_standard_storage_sync_save_alert: {
+				message: "A result of the Save to the Sync Storage"
+			},
+			menu_setting_standard_storage_sync_save_alert_success: {
+				message: "Save to the Sync Storage has been completed."
+			},
+			menu_setting_standard_storage_sync_save_alert_failure: {
+				message: "Failed to the Save to the Sync Storage."
+			},
+			menu_setting_standard_storage_sync_delete_dialog: {
+				message: "Delete from the Sync Storage"
+			},
+			menu_setting_standard_storage_sync_delete_dialog_explanation: {
+				message: "information about Delete from the Sync Storage"
+			},
+			menu_setting_standard_storage_sync_delete_dialog_explanation_0: {
+				message: "Delete the setting data stored in the Sync Storage."
+			},
+			menu_setting_standard_storage_sync_delete_dialog_confirm: {
+				message: "Do you want to Delete from the Sync Storage?"
+			},
+			menu_setting_standard_storage_sync_delete_alert: {
+				message: "A result of the Delete from the Sync Storage"
+			},
+			menu_setting_standard_storage_sync_delete_alert_success: {
+				message: "Delete from the Sync Storage has been completed."
+			},
+			menu_setting_standard_storage_sync_delete_alert_failure: {
+				message: "Failed to the Delete from the Sync Storage."
+			},
+			menu_setting_standard_reset: {
+				message: "Initialization of setting"
+			},
+			menu_setting_standard_reset_button: {
+				message: "Remove all the settings, Return to the initial state."
+			},
+			menu_setting_standard_reset_dialog: {
+				message: "Initialization of setting"
+			},
+			menu_setting_standard_reset_dialog_explanation: {
+				message: "information about Initialization"
+			},
+			menu_setting_standard_reset_dialog_explanation_0: {
+				message: "Returns all settings to their default state."
+			},
+			menu_setting_standard_reset_dialog_explanation_1: {
+				message: "All current settings will be lost."
+			},
+			menu_setting_standard_reset_dialog_confirm: {
+				message: "Do you want to Initialization?"
+			},
+			menu_setting_standard_reset_alert: {
+				message: "Initialization results"
+			},
+			menu_setting_standard_reset_alert_success: {
+				message: "Configuration initialization has been completed."
+			},
+			menu_setting_standard_reset_alert_failure: {
+				message: "Failed to initialize the configuration."
+			},
+
+			menu_setting_download: {
+				message: "Download Setting"
+			},
+			menu_setting_download_load: {
+				message: "Load Setting (XHR)"
+			},
+			menu_setting_download_load_thread_max: {
+				message: "Maximum number of simultaneous loads"
+			},
+			menu_setting_download_load_timeout: {
+				message: "Timeout (Millisecond)"
+			},
+			menu_setting_download_load_timeout_hint: {
+				message: "If specify 0, timeout is no limit."
+			},
+			menu_setting_download_download: {
+				message: "Download Setting"
+			},
+			menu_setting_download_download_thread_max: {
+				message: "Maximum number of simultaneous downloads"
+			},
+			menu_setting_download_download_conflict_type: {
+				message: "File Name Conflict"
+			},
+			menu_setting_download_download_conflict_type_combo_box_item_rename: {
+				message: "rename"
+			},
+			menu_setting_download_download_conflict_type_combo_box_item_overwrite: {
+				message: "overwrite"
+			},
+
+			menu_setting_expand_bbs: {
+				message: "BBS Settng"
+			},
+			menu_setting_expand_bbs_list: {
+				message: "List of BBS Setting"
+			},
+			menu_setting_expand_bbs_list_hint: {
+				message: "When you select an item in the list, the lower control can be edited. Condition script will be executed in order from top to bottom. possible to select multiple. Can be edited by multiple selection. Gray is preset setting. Preset setting can not be deleted."
+			},
+			menu_setting_expand_bbs_button_add: {
+				message: "add"
+			},
+			menu_setting_expand_bbs_button_delete: {
+				message: "delete"
+			},
+			menu_setting_expand_bbs_button_prio_up: {
+				message: "prio up"
+			},
+			menu_setting_expand_bbs_button_prio_down: {
+				message: "prio down"
+			},
+			menu_setting_expand_bbs_button_export: {
+				message: "export"
+			},
+			menu_setting_expand_bbs_button_import: {
+				message: "import"
+			},
+			menu_setting_expand_bbs_add_dialog: {
+				message: "Creating a new BBS Setting"
+			},
+			menu_setting_expand_bbs_add_dialog_name: {
+				message: "Name"
+			},
+			menu_setting_expand_bbs_add_dialog_copy_define: {
+				message: "Replicated from the existing setting."
+			},
+			menu_setting_expand_bbs_add_dialog_define_list_box_item_new: {
+				message: "create a new"
+			},
+			menu_setting_expand_bbs_export_dialog: {
+				message: "BBS Setting Export"
+			},
+			menu_setting_expand_bbs_export_dialog_export: {
+				message: "Export"
+			},
+			menu_setting_expand_bbs_export_dialog_export_hint: {
+				message: "Please copy the text of TextArea."
+			},
+			menu_setting_expand_bbs_import_dialog: {
+				message: "BBS Setting Import"
+			},
+			menu_setting_expand_bbs_import_dialog_explanation: {
+				message: "information about Import"
+			},
+			menu_setting_expand_bbs_import_dialog_explanation_0: {
+				message: "Preset setting will be overwritten. User setting will be add new."
+			},
+			menu_setting_expand_bbs_import_dialog_explanation_1: {
+				message: "It is recommended that you take a backup on the export function."
+			},
+			menu_setting_expand_bbs_import_dialog_explanation_2: {
+				message: "Please note so that it does not contain malicious code."
+			},
+			menu_setting_expand_bbs_import_dialog_import: {
+				message: "Import"
+			},
+			menu_setting_expand_bbs_import_dialog_import_hint: {
+				message: "Please paste the output text from Export."
+			},
+			menu_setting_expand_bbs_import_dialog_confirm: {
+				message: "Do you want to Import?"
+			},
+			menu_setting_expand_bbs_import_alert: {
+				message: "A result of the import"
+			},
+			menu_setting_expand_bbs_import_alert_success: {
+				message: "Import has been completed."
+			},
+			menu_setting_expand_bbs_import_alert_failure: {
+				message: "Failed to import."
+			},
+			menu_setting_expand_bbs_name: {
+				message: "Name"
+			},
+			menu_setting_expand_bbs_check_box_container: {
+				message: "Enable / Disable"
+			},
+			menu_setting_expand_bbs_enable_setting: {
+				message: "Use this setting."
+			},
+			menu_setting_expand_bbs_filter_url: {
+				message: "URL to allow the operation"
+			},
+			menu_setting_expand_bbs_popup_check_box_container: {
+				message: "Popup Setting"
+			},
+			menu_setting_expand_bbs_popup_enable_animation: {
+				message: "Enable pop-up animation"
+			},
+			menu_setting_expand_bbs_popup_origin_type: {
+				message: "Placement origin of the pop-up"
+			},
+			menu_setting_expand_bbs_popup_origin_type_combo_box_item_adsorb_top_bottom: {
+				message: "adsorb top bottom"
+			},
+			menu_setting_expand_bbs_popup_origin_type_combo_box_item_adsorb_left_right: {
+				message: "adsorb left right"
+			},
+			menu_setting_expand_bbs_popup_position_type: {
+				message: "Arrangement position of the pop-up"
+			},
+			menu_setting_expand_bbs_popup_position_type_combo_box_item_absolute: {
+				message: "absolute"
+			},
+			menu_setting_expand_bbs_popup_position_type_combo_box_item_fixed: {
+				message: "fixed"
+			},
+			menu_setting_expand_bbs_popup_percent: {
+				message: "Popup Size"
+			},
+			menu_setting_expand_bbs_popup_percent_h: {
+				message: "Percent Horizontal (0-100)"
+			},
+			menu_setting_expand_bbs_popup_percent_v: {
+				message: "Percent Vertical (0-100)"
+			},
+			menu_setting_expand_bbs_popup_time: {
+				message: "Popup Time"
+			},
+			menu_setting_expand_bbs_popup_time_wait_open: {
+				message: "The time to wait before open (Millisecond)"
+			},
+			menu_setting_expand_bbs_popup_time_wait_close: {
+				message: "The time to wait before close (Millisecond)"
+			},
+			menu_setting_expand_bbs_popup_style_sheet: {
+				message: "Stylesheet of Popup"
+			},
+			menu_setting_expand_bbs_script_initialize: {
+				message: "Initialize Script"
+			},
+			menu_setting_expand_bbs_script_callback: {
+				message: "Callback Script"
+			},
+			menu_setting_urlmap: {
+				message: "URL Mapping Setting"
+			},
+			menu_setting_urlmap_list: {
+				message: "List of URL Mapping Setting"
+			},
+			menu_setting_urlmap_list_hint: {
+				message: "When you select an item in the list, the lower control can be edited. Will be compared with the order from above. possible to select multiple. Can be edited by multiple selection. Gray is preset setting. Preset setting can not be deleted."
+			},
+			menu_setting_urlmap_button_add: {
+				message: "add"
+			},
+			menu_setting_urlmap_button_delete: {
+				message: "delete"
+			},
+			menu_setting_urlmap_button_prio_up: {
+				message: "prio up"
+			},
+			menu_setting_urlmap_button_prio_down: {
+				message: "prio down"
+			},
+			menu_setting_urlmap_add_dialog: {
+				message: "Creating a new URL Mapping"
+			},
+			menu_setting_urlmap_add_dialog_name: {
+				message: "Name"
+			},
+			menu_setting_urlmap_add_dialog_copy_define: {
+				message: "Replicated from the existing setting."
+			},
+			menu_setting_urlmap_add_dialog_define_list_box_item_new: {
+				message: "create a new"
+			},
+			menu_setting_urlmap_name: {
+				message: "Name"
+			},
+			menu_setting_urlmap_check_box_container: {
+				message: "Enable / Disable"
+			},
+			menu_setting_urlmap_enable_setting: {
+				message: "Use this setting."
+			},
+			menu_setting_urlmap_filter_url: {
+				message: "URL to allow the operation"
+			},
+			menu_setting_urlmap_unsecure_check_box_container: {
+				message: "Security"
+			},
+			menu_setting_urlmap_enable_unsecure: {
+				message: "Expand \"resources in the http://\" in a secure page."
+			},
+			menu_setting_urlmap_enable_unsecure_hint: {
+				message: "When disabled, Expand \"resources in the https://\". When enabled, expand \"resources in the http://\" further. However, the encryption warning is always displayed."
+			},
+			menu_setting_urlmap_enable_mixed_content: {
+				message: "Will try to expand \"Mixed content that is blocked by default\" in a secure page."
+			},
+			menu_setting_urlmap_enable_mixed_content_hint: {
+				message: "The browser will block the deployment of \"some of the elements\". When disabled, \"Elements that are blocked\" will not expand. When enabled, Will try to expand all elements. (Will fail unless change the settings in browser.)"
+			},
+			menu_setting_urlmap_define_button_edit: {
+				message: "edit"
+			},
+			menu_setting_urlmap_define_button_add: {
+				message: "add"
+			},
+			menu_setting_urlmap_define_button_remove: {
+				message: "remove"
+			},
+			menu_setting_urlmap_define_button_prio_up: {
+				message: "up"
+			},
+			menu_setting_urlmap_define_button_prio_down: {
+				message: "down"
+			},
+			menu_setting_urlmap_define_combo_box_item_no_use: {
+				message: "not use the definine"
+			},
+			menu_setting_define_multi_select_add_dialog: {
+				message: "add the define"
+			},
+			menu_setting_define_multi_select_add_dialog_list: {
+				message: "Select the define you want to add."
+			},
+			menu_setting_access_block: {
+				message: "Blocking Access Define"
+			},
+			menu_setting_access_block_filter_url: {
+				message: "URL to block access"
+			},
+			menu_setting_replacement_to_element: {
+				message: "Replace Element Define"
+			},
+			menu_setting_replacement_to_element_script: {
+				message: "Callback Script"
+			},
+			menu_setting_replacement_to_text: {
+				message: "Replace Text Define"
+			},
+			menu_setting_replacement_to_text_script: {
+				message: "Callback Script"
+			},
+			menu_setting_replacement_to_anchor: {
+				message: "Replace Anchor Define"
+			},
+			menu_setting_replacement_to_anchor_script: {
+				message: "Callback Script"
+			},
+			menu_setting_replacement_to_link: {
+				message: "Replace Link Define"
+			},
+			menu_setting_replacement_to_link_filter_list: {
+				message: "Filter List"
+			},
+			menu_setting_replacement_to_link_filter_name: {
+				message: "Filter Name"
+			},
+			menu_setting_replacement_to_link_filter: {
+				message: "Filter Setting"
+			},
+			menu_setting_replacement_to_link_filter_filter_url: {
+				message: "Link URL to allow the operation"
+			},
+			menu_setting_replacement_to_link_check_box_container: {
+				message: "Setting to link"
+			},
+			menu_setting_replacement_to_link_enable_reflect_to_anchor: {
+				message: "Reflected to the HTMLAnchorElement href"
+			},
+			menu_setting_replacement_to_link_enable_cache: {
+				message: "Cache the results of callback script"
+			},
+			menu_setting_replacement_to_link_filter_script: {
+				message: "Callback Script"
+			},
+			menu_setting_replacement_to_referer: {
+				message: "Replace Referer Define"
+			},
+			menu_setting_replacement_to_referer_filter_list: {
+				message: "Filter List"
+			},
+			menu_setting_replacement_to_referer_filter_name: {
+				message: "Filter Name"
+			},
+			menu_setting_replacement_to_referer_filter: {
+				message: "Filter Setting"
+			},
+			menu_setting_replacement_to_referer_filter_filter_url: {
+				message: "Link URL to allow the operation"
+			},
+			menu_setting_replacement_to_referer_filter_send_type: {
+				message: "Basic Referer"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item: {
+				message: "Basic Referer Value"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item_default: {
+				message: "default"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item_current_url: {
+				message: "current url"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item_link_url: {
+				message: "link url"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item_custom: {
+				message: "custom"
+			},
+			menu_setting_replacement_to_referer_filter_send_custom: {
+				message: "Custom String"
+			},
+			menu_setting_replacement_to_referer_filter_send_regexp: {
+				message: "Replaced by a regular expression"
+			},
+			menu_setting_replacement_to_referer_filter_send_regexp_match: {
+				message: "Match conditions"
+			},
+			menu_setting_replacement_to_referer_filter_send_regexp_replacement: {
+				message: "Replace String"
+			},
+			menu_setting_replacement_to_referer_filter_send_regexp_replacement_hint: {
+				message: "$0...Whole match. $1-$9...Partial match. $$…Dollar sign escape sequence."
+			},
+			menu_setting_replacement_to_useragent: {
+				message: "Replace Useragent Define"
+			},
+			menu_setting_replacement_to_useragent_filter_list: {
+				message: "Filter List"
+			},
+			menu_setting_replacement_to_useragent_filter_name: {
+				message: "Filter Name"
+			},
+			menu_setting_replacement_to_useragent_filter: {
+				message: "Filter Setting"
+			},
+			menu_setting_replacement_to_useragent_filter_filter_url: {
+				message: "Link URL to allow the operation"
+			},
+			menu_setting_replacement_to_useragent_filter_send: {
+				message: "Basic Useragent"
+			},
+			menu_setting_replacement_to_useragent_filter_send_custom: {
+				message: "Custom String"
+			},
+			menu_setting_make_link_to_text: {
+				message: "Make Link To Text Define"
+			},
+			menu_setting_make_link_to_text_script: {
+				message: "Callback Script"
+			},
+			menu_setting_expand_short_url: {
+				message: "Expand Short Url Define"
+			},
+			menu_setting_expand_short_url_filter_url: {
+				message: "URL to allow the operation"
+			},
+			menu_setting_expand_text: {
+				message: "Expand Text Define"
+			},
+			menu_setting_expand_text_inline: {
+				message: "Setting to display inline"
+			},
+			menu_setting_expand_text_inline_check_box_container: {
+				message: "Setting to display inline"
+			},
+			menu_setting_expand_text_inline_disable_same_text: {
+				message: "If the same URL, not to Expand."
+			},
+			menu_setting_expand_text_inline_script_allow: {
+				message: "Condition to display inline from a link"
+			},
+			menu_setting_expand_text_inline_script_insert: {
+				message: "Text Insert"
+			},
+			menu_setting_expand_image: {
+				message: "Expand Image Define"
+			},
+			menu_setting_expand_image_thumbnail: {
+				message: "Setting to display thumbnail"
+			},
+			menu_setting_expand_image_thumbnail_enable_check_box_container: {
+				message: "Enable / Disable"
+			},
+			menu_setting_expand_image_thumbnail_enable_thumbnail: {
+				message: "Display the thumbnail."
+			},
+			menu_setting_expand_image_thumbnail_check_box_container: {
+				message: "Setting to display thumbnail"
+			},
+			menu_setting_expand_image_thumbnail_enable_popup_mouseover: {
+				message: "If you mouse over the thumbnail, a pop-up display"
+			},
+			menu_setting_expand_image_thumbnail_disable_same_thumbnail_image: {
+				message: "If the same URL, not to Expand."
+			},
+			menu_setting_expand_image_thumbnail_script_allow: {
+				message: "Condition to display thumbnail from a link"
+			},
+			menu_setting_expand_image_thumbnail_script_insert: {
+				message: "Thumbnail Insert"
+			},
+			menu_setting_expand_image_popup: {
+				message: "Setting to display popup"
+			},
+			menu_setting_expand_image_popup_enable_check_box_container: {
+				message: "Enable / Disable"
+			},
+			menu_setting_expand_image_popup_enable_popup_mouseover: {
+				message: "If you mouse over the anchor, a pop-up display"
+			},
+			menu_setting_expand_image_popup_check_box_container: {
+				message: "Animation"
+			},
+			menu_setting_expand_image_popup_enable_animation_scale: {
+				message: "Enable scale fade animation"
+			},
+			menu_setting_expand_image_popup_enable_animation_alpha: {
+				message: "Enable alpha fade animation"
+			},
+			menu_setting_expand_image_popup_origin_type: {
+				message: "Placement origin of the pop-up image"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_center: {
+				message: "center"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_upper_left: {
+				message: "upper left"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_upper_right: {
+				message: "upper right"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_client_center: {
+				message: "client center"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_adsorb_element: {
+				message: "adsorb element"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_adsorb_mouse: {
+				message: "adsorb mouse"
+			},
+			menu_setting_expand_image_popup_time: {
+				message: "Popup Time"
+			},
+			menu_setting_expand_image_popup_time_wait_open: {
+				message: "The time to wait before open (Millisecond)"
+			},
+			menu_setting_expand_image_popup_time_wait_close: {
+				message: "The time to wait before close (Millisecond)"
+			},
+			menu_setting_expand_image_popup_position_type: {
+				message: "Arrangement position of the pop-up image"
+			},
+			menu_setting_expand_image_popup_position_type_combo_box_item_absolute: {
+				message: "absolute"
+			},
+			menu_setting_expand_image_popup_position_type_combo_box_item_fixed: {
+				message: "fixed"
+			},
+			menu_setting_expand_image_popup_size: {
+				message: "Popup Size"
+			},
+			menu_setting_expand_image_popup_size_scale: {
+				message: "Scale (Percent)"
+			},
+			menu_setting_expand_image_popup_script_allow: {
+				message: "Conditions to display popup from the link"
+			},
+			menu_setting_expand_image_reduced_image: {
+				message: "Reduced Image Setting"
+			},
+			menu_setting_expand_image_reduced_image_check_box_container: {
+				message: "Enable / Disable"
+			},
+			menu_setting_expand_image_popup_enable_popup: {
+				message: "If you mouse over the Reduced Image, a pop-up display"
+			},
+			menu_setting_expand_image_reduced_image_allow_slcale_less_then: {
+				message: "Conditions to display popup"
+			},
+			menu_setting_expand_image_reduced_image_allow_slcale_less_then_text: {
+				message: "If the magnification is less than."
+			},
+			menu_setting_expand_image_load: {
+				message: "Load Image Setting"
+			},
+			menu_setting_expand_image_load_check_box_container: {
+				message: "Load Image Setting"
+			},
+			menu_setting_expand_image_load_enable_notify: {
+				message: "Display the progress."
+			},
+			menu_setting_expand_image_load_start_type: {
+				message: "How to load image"
+			},
+			menu_setting_expand_image_load_start_type_preload: {
+				message: "Preload"
+			},
+			menu_setting_expand_image_load_start_type_scroll: {
+				message: "Conjunction with the scroll"
+			},
+			menu_setting_expand_image_load_src_type: {
+				message: "Image Source Format"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_url: {
+				message: "URL (all)"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_mixed_content: {
+				message: "Data URI scheme (only mixed content)"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_data_uri_scheme: {
+				message: "Data URI scheme (all)"
+			},
+			menu_setting_expand_image_load_unload_check_box_container: {
+				message: "Unload Image Setting"
+			},
+			menu_setting_expand_image_load_enable_unload: {
+				message: "Enable Unload Image"
+			},
+			menu_setting_expand_image_load_unload: {
+				message: "Conditions to unload image"
+			},
+			menu_setting_expand_image_load_allow_unload_more_then_text: {
+				message: "If load more than the specified of MBytes, Release the old image."
+			},
+			menu_setting_expand_sound: {
+				message: "Expand Sound Define"
+			},
+			menu_setting_expand_sound_inline: {
+				message: "Setting to display inline"
+			},
+			menu_setting_expand_sound_inline_check_box_container: {
+				message: "Setting to display inline"
+			},
+			menu_setting_expand_sound_inline_disable_same_text: {
+				message: "If the same URL, not to Expand."
+			},
+			menu_setting_expand_sound_inline_sound_max: {
+				message: "Maximum number of simultaneous display"
+			},
+			menu_setting_expand_sound_inline_script_allow: {
+				message: "Condition to display inline from a link"
+			},
+			menu_setting_expand_sound_inline_script_insert: {
+				message: "Audio Insert"
+			},
+			menu_setting_expand_sound_inline_element: {
+				message: "HTMLAudioElement Setting"
+			},
+			menu_setting_expand_sound_inline_element_script_allow: {
+				message: "Condition to display HTMLAudioElement"
+			},
+			menu_setting_expand_sound_inline_soundcloud: {
+				message: "soundcloud.com Setting"
+			},
+			menu_setting_expand_sound_inline_soundcloud_check_box_container: {
+				message: "soundcloud.com Setting"
+			},
+			menu_setting_expand_sound_inline_soundcloud_visible_player_flash: {
+				message: "enable player (Flash)"
+			},
+			menu_setting_expand_sound_inline_soundcloud_visible_player_html5: {
+				message: "enable player (HTML5)"
+			},
+			menu_setting_expand_sound_inline_mixcloud: {
+				message: "www.mixcloud.com Setting"
+			},
+			menu_setting_expand_sound_inline_mixcloud_check_box_container: {
+				message: "www.mixcloud.com Setting"
+			},
+			menu_setting_expand_sound_inline_mixcloud_visible_player: {
+				message: "enable player"
+			},
+			menu_setting_expand_video: {
+				message: "Expand Video Define"
+			},
+			menu_setting_expand_video_inline: {
+				message: "Setting to display inline"
+			},
+			menu_setting_expand_video_inline_check_box_container: {
+				message: "Setting to display inline"
+			},
+			menu_setting_expand_video_inline_disable_same_video: {
+				message: "If the same URL, not to Expand."
+			},
+			menu_setting_expand_video_inline_video_max: {
+				message: "Maximum number of simultaneous display"
+			},
+			menu_setting_expand_video_inline_script_allow: {
+				message: "Condition to display inline from a link"
+			},
+			menu_setting_expand_video_inline_script_insert: {
+				message: "Element Insert"
+			},
+			menu_setting_expand_video_inline_element: {
+				message: "HTMLVideoElement Setting"
+			},
+			menu_setting_expand_video_inline_element_script_allow: {
+				message: " Condition to display HTMLVideoElement"
+			},
+			menu_setting_expand_video_inline_youtube: {
+				message: "www.youtube.com Setting"
+			},
+			menu_setting_expand_video_inline_youtube_check_box_container: {
+				message: "www.youtube.com Setting"
+			},
+			menu_setting_expand_video_inline_youtube_visible_video: {
+				message: "enable video"
+			},
+			menu_setting_expand_video_inline_nicovideo: {
+				message: "www.nicovideo.jp Setting"
+			},
+			menu_setting_expand_video_inline_nicovideo_check_box_container: {
+				message: "www.nicovideo.jp Setting"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_video: {
+				message: "enable video"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_video: {
+				message: "enable video thumbnail"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_mylist: {
+				message: "enable mylist thumbnail"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_user: {
+				message: "enable user thumbnail"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_community: {
+				message: "enable community thumbnail"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_live: {
+				message: "enable live broadcast thumbnail"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_seiga: {
+				message: "enable seiga thumbnail"
+			},
+			menu_setting_expand_video_inline_ustream: {
+				message: "www.ustream.tv Setting"
+			},
+			menu_setting_expand_video_inline_ustream_check_box_container: {
+				message: "www.ustream.tv Setting"
+			},
+			menu_setting_expand_video_inline_ustream_visible_video_live: {
+				message: "enable delivery video"
+			},
+			menu_setting_expand_video_inline_ustream_visible_video_record: {
+				message: "enable recorded video "
+			},
+			menu_setting_expand_video_inline_dailymotion: {
+				message: "www.dailymotion.com Setting"
+			},
+			menu_setting_expand_video_inline_dailymotion_check_box_container: {
+				message: "www.dailymotion.com Setting"
+			},
+			menu_setting_expand_video_inline_dailymotion_visible_video: {
+				message: "enable video"
+			},
+			menu_setting_expand_video_inline_video: {
+				message: "vimeo.com Setting"
+			},
+			menu_setting_expand_video_inline_video_check_box_container: {
+				message: "vimeo.com Setting"
+			},
+			menu_setting_expand_video_inline_video_visible_video: {
+				message: "enable video"
+			},
+			menu_setting_expand_video_inline_fc2video: {
+				message: "video.fc2.com Setting"
+			},
+			menu_setting_expand_video_inline_fc2video_check_box_container: {
+				message: "video.fc2.com Setting"
+			},
+			menu_setting_expand_video_inline_fc2video_visible_video: {
+				message: "enable video"
+			},
+			menu_setting_expand_video_inline_liveleak: {
+				message: "www.liveleak.com Setting"
+			},
+			menu_setting_expand_video_inline_liveleak_check_box_container: {
+				message: "www.liveleak.com Setting"
+			},
+			menu_setting_expand_video_inline_liveleak_visible_video: {
+				message: "enable video"
+			},
+			menu_setting_expand_iframe: {
+				message: "Expand Iframe Define"
+			},
+			menu_setting_expand_iframe_inline: {
+				message: "Setting to display inline"
+			},
+			menu_setting_expand_iframe_inline_check_box_container: {
+				message: "Setting to display inline"
+			},
+			menu_setting_expand_iframe_inline_disable_same_iframe: {
+				message: "If the same URL, not to Expand."
+			},
+			menu_setting_expand_iframe_inline_script_allow: {
+				message: "Condition to display inline from a link"
+			},
+			menu_setting_expand_iframe_inline_script_insert: {
+				message: "HTMLIFrameElement Insert"
+			},
+			menu_setting_style_sheet: {
+				message: "Stylesheet Define"
+			},
+			menu_setting_style_sheet_expand_text: {
+				message: "Stylesheet of Expanded Text"
+			},
+			menu_setting_style_sheet_expand_text_element: {
+				message: "HTMLTextAreaElement Setting"
+			},
+			menu_setting_style_sheet_expand_text_element_inline: {
+				message: "Text Inline Display"
+			},
+			menu_setting_style_sheet_expand_image: {
+				message: "Stylesheet of Expanded Image"
+			},
+			menu_setting_style_sheet_expand_image_element: {
+				message: "HTMImageElement Setting"
+			},
+			menu_setting_style_sheet_expand_image_element_inline: {
+				message: "Image Thumbnail Display"
+			},
+			menu_setting_style_sheet_expand_image_element_popup: {
+				message: "Image Popup Display"
+			},
+			menu_setting_style_sheet_expand_sound: {
+				message: "Stylesheet of Expanded Sound"
+			},
+			menu_setting_style_sheet_expand_sound_element: {
+				message: "HTMLAudioElement Setting"
+			},
+			menu_setting_style_sheet_expand_sound_element_inline_audio: {
+				message: "Audo Inline Display"
+			},
+			menu_setting_style_sheet_expand_sound_soundcloud: {
+				message: "soundcloud.com Setting"
+			},
+			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_flash: {
+				message: "Player (Flash) Inline Display"
+			},
+			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_html5: {
+				message: "Player (HTML5) Inline Display"
+			},
+			menu_setting_style_sheet_expand_sound_mixcloud: {
+				message: "www.mixcloud.com Setting"
+			},
+			menu_setting_style_sheet_expand_sound_mixcloud_inline_player: {
+				message: "Player Inline Display"
+			},
+			menu_setting_style_sheet_expand_video: {
+				message: "Stylesheet of Expanded Video"
+			},
+			menu_setting_style_sheet_expand_video_element: {
+				message: "HTMLVideoElement Setting"
+			},
+			menu_setting_style_sheet_expand_video_element_inline_video: {
+				message: "Video Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_youtube: {
+				message: "www.youtube.com Setting"
+			},
+			menu_setting_style_sheet_expand_video_youtube_inline_video: {
+				message: "Video Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo: {
+				message: "www.nicovideo.jp Setting"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_video: {
+				message: "Video Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_video: {
+				message: "Video Thumbnail Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_mylist: {
+				message: "Mylist Thumbnail Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_user: {
+				message: "User Thumbnail Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_community: {
+				message: "Community Thumbnail Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_live: {
+				message: "Live Broadcast Thumbnail Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga: {
+				message: "Seiga Thumbnail Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_ustream: {
+				message: "www.ustream.tv Setting"
+			},
+			menu_setting_style_sheet_expand_video_ustream_inline_video_record: {
+				message: "Delivery Video Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_ustream_inline_video_live: {
+				message: "Recorded Video Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_dailymotion: {
+				message: "www.dailymotion.com Setting"
+			},
+			menu_setting_style_sheet_expand_video_dailymotion_inline_video: {
+				message: "Video Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_vimeo: {
+				message: "vimeo.com Setting"
+			},
+			menu_setting_style_sheet_expand_video_vimeo_inline_video: {
+				message: "Video Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_fc2video: {
+				message: "video.fc2.com Setting"
+			},
+			menu_setting_style_sheet_expand_video_fc2video_inline_video: {
+				message: "Video Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_liveleak: {
+				message: "www.liveleak.com Setting"
+			},
+			menu_setting_style_sheet_expand_video_liveleak_inline_video: {
+				message: "Video Inline Display"
+			},
+			menu_setting_style_sheet_expand_iframe: {
+				message: "Stylesheet of Expanded Iframe"
+			},
+			menu_setting_style_sheet_expand_iframe_element: {
+				message: "HTMLIFrameElement Setting"
+			},
+			menu_setting_style_sheet_expand_iframe_element_inline: {
+				message: "Iframe Inline Display"
+			},
+			menu_setting_experimental: {
+				message: "Experimental Define"
+			},
+			menu_setting_experimental_revise_scroll: {
+				message: "Revise Scroll Setting"
+			},
+			menu_setting_experimental_revise_scroll_check_box_container: {
+				message: "Revise Scroll Setting"
+			},
+			menu_setting_experimental_revise_scroll_enable: {
+				message: "enable"
+			},
+			menu_setting_experimental_revise_scroll_threshold_vertical: {
+				message: "Threshold Vertical ( 0 [top] ～ 100 [bottom] )"
+			},
+			menu_setting_language: {
+				message: "Language Setting"
+			},
+			menu_credit: {
+				message: "Credit"
+			},
+			menu_credit_info_version: {
+				message: "Version"
+			},
+			menu_credit_info_copyright: {
+				message: "Copyright"
+			},
+			menu_credit_info_translator: {
+				message: "Translator"
+			},
+			menu_setting_define_list: {
+				message: "List of Define"
+			},
+			menu_setting_define_list_hint: {
+				message: "When you select an item in the list, the lower control can be edited. Will be compared with the order from above. possible to select multiple. Can be edited by multiple selection. Gray is preset setting. Preset setting can not be deleted."
+			},
+			menu_setting_define_button_add: {
+				message: "add"
+			},
+			menu_setting_define_button_delete: {
+				message: "delete"
+			},
+			menu_setting_define_button_move_up: {
+				message: "move up"
+			},
+			menu_setting_define_button_move_down: {
+				message: "move down"
+			},
+			menu_setting_define_button_export: {
+				message: "export"
+			},
+			menu_setting_define_button_import: {
+				message: "import"
+			},
+			menu_setting_define_add_dialog: {
+				message: "Create a new define"
+			},
+			menu_setting_define_add_dialog_name: {
+				message: "Name"
+			},
+			menu_setting_define_add_dialog_copy_define: {
+				message: "Replicated from the existing define"
+			},
+			menu_setting_define_add_dialog_define_list_box_item_new: {
+				message: "create a new"
+			},
+			menu_setting_define_delete_dialog: {
+				message: "Delete the Define"
+			},
+			menu_setting_define_delete_dialog_name: {
+				message: "Define Name (Be removed)"
+			},
+			menu_setting_define_delete_dialog_change_define: {
+				message: "Alternative Selection"
+			},
+			menu_setting_define_delete_dialog_define_list_box_item_no_use: {
+				message: "not use the define"
+			},
+			menu_setting_define_name: {
+				message: "Define Name"
+			},
+			menu_setting_define_export_dialog: {
+				message: "Define Export"
+			},
+			menu_setting_define_export_dialog_export: {
+				message: "Export"
+			},
+			menu_setting_define_export_dialog_export_hint: {
+				message: "Please copy the text of TextArea."
+			},
+			menu_setting_define_import_dialog: {
+				message: "Define Import"
+			},
+			menu_setting_define_import_dialog_explanation: {
+				message: "information about Import"
+			},
+			menu_setting_define_import_dialog_explanation_0: {
+				message: "Preset setting will be overwritten. User setting will be add new."
+			},
+			menu_setting_define_import_dialog_explanation_1: {
+				message: "It is recommended that you take a backup on the export function."
+			},
+			menu_setting_define_import_dialog_explanation_2: {
+				message: "Please note so that it does not contain malicious code."
+			},
+			menu_setting_define_import_dialog_import: {
+				message: "Import"
+			},
+			menu_setting_define_import_dialog_import_hint: {
+				message: "Please paste the output text from Export."
+			},
+			menu_setting_define_import_dialog_confirm: {
+				message: "Do you want to Import?"
+			},
+			menu_setting_define_import_alert: {
+				message: "A result of the import"
+			},
+			menu_setting_define_import_alert_success: {
+				message: "Import has been completed."
+			},
+			menu_setting_define_import_alert_failure: {
+				message: "Failed to import."
+			},
+			menu_setting_define_wildcard_detail: {
+				message: "information about Wild Card"
+			},
+			menu_setting_define_wildcard_detail_0: {
+				message: "\"Wild Card\" is always execute at the last."
+			},
+			menu_setting_define_wildcard_detail_1: {
+				message: "\"Wild Card\" be applied to all communications."
+			},
+			menu_setting_define_wildcard_detail_2: {
+				message: "\"Wild Card\" is not the define. Can not be used in the \"URL Mapping Setting\"."
+			},
+			menu_setting_filter_list: {
+				message: "Filter List"
+			},
+			menu_setting_filter_list_hint: {
+				message: "When you select an item in the list, the lower control can be edited. Will be compared with the order from above. possible to select multiple. Can be edited by multiple selection."
+			},
+			menu_setting_filter_button_add: {
+				message: "add"
+			},
+			menu_setting_filter_button_delete: {
+				message: "delete"
+			},
+			menu_setting_filter_button_prio_up: {
+				message: "prio up"
+			},
+			menu_setting_filter_button_prio_down: {
+				message: "prio down"
+			},
+			menu_setting_filter_button_export: {
+				message: "export"
+			},
+			menu_setting_filter_button_import: {
+				message: "import"
+			},
+			menu_setting_filter_add_dialog: {
+				message: "Creating a new Filter Setting"
+			},
+			menu_setting_filter_add_dialog_name: {
+				message: "Name"
+			},
+			menu_setting_filter_add_dialog_copy_define: {
+				message: "Replicated from the existing setting."
+			},
+			menu_setting_filter_add_dialog_define_list_box_item_new: {
+				message: "create a new"
+			},
+			menu_setting_filter_export_dialog: {
+				message: "Filter Export"
+			},
+			menu_setting_filter_export_dialog_export: {
+				message: "Export"
+			},
+			menu_setting_filter_export_dialog_export_hint: {
+				message: "Please copy the text of TextArea."
+			},
+			menu_setting_filter_import_dialog: {
+				message: "Filter Import"
+			},
+			menu_setting_filter_import_dialog_explanation: {
+				message: "information about Import"
+			},
+			menu_setting_filter_import_dialog_explanation_0: {
+				message: "Import data is added to the last of the list."
+			},
+			menu_setting_filter_import_dialog_explanation_1: {
+				message: "It is recommended that you take a backup on the export function."
+			},
+			menu_setting_filter_import_dialog_explanation_2: {
+				message: "Please note so that it does not contain malicious code."
+			},
+			menu_setting_filter_import_dialog_import: {
+				message: "Import"
+			},
+			menu_setting_filter_import_dialog_import_hint: {
+				message: "Please paste the output text from Export."
+			},
+			menu_setting_filter_import_dialog_confirm: {
+				message: "Do you want to Import?"
+			},
+			menu_setting_filter_import_alert: {
+				message: "A result of the import"
+			},
+			menu_setting_filter_import_alert_success: {
+				message: "Import has been completed."
+			},
+			menu_setting_filter_import_alert_failure: {
+				message: "Failed to import."
+			},
+			menu_button_ok: {
+				message: "OK"
+			},
+			menu_button_yes: {
+				message: "YES"
+			},
+			menu_button_no: {
+				message: "CANCEL"
+			},
+			menu_scriptarea_hint: {
+				message: "To describe the anonymous function to array. Please note so that it does not contain malicious code."
+			},
+			menu_text_regexp_hint: {
+				message: "regular expression string. [flags] g...repeat. i...without case-sensitive."
+			},
+			menu_regexp_list_button_add: {
+				message: "add"
+			},
+			menu_regexp_list_button_delete: {
+				message: "delete"
+			},
+			menu_regexp_list_button_move_up: {
+				message: "move up"
+			},
+			menu_regexp_list_button_move_down: {
+				message: "move down"
+			},
+			menu_setting_url_edit_container_combo_box_item_asterisk: {
+				message: "asterisk format"
+			},
+			menu_setting_url_edit_container_combo_box_item_regexp: {
+				message: "regular expression format"
+			},
+			menu_setting_url_edit_container_type_asterisk_hint: {
+				message: "Describes the URL. Can be used an asterisk. Can be specified multi line."
+			},
+			page_expand_popup_menu: {
+				message: "PageExpand Menu"
+			},
+			context_menu_pageexpand_config: {
+				message: "PageExpand Setting"
+			},
+			context_menu_batch_download_image: {
+				message: "Batch Download (image)"
+			},
+			context_menu_batch_download_user: {
+				message: "Batch Download (user)"
+			},
+			context_menu_pageexpand_config_current_page: {
+				message: "PageExpand Setting Current Page"
+			},
+			context_menu_pageexpand_config_current_bbs: {
+				message: "PageExpand Setting Current BBS"
+			},
+			context_menu_pageexpand_config_current_page_confirm: {
+				message: "PageExpand Setting will run only in the following page. \n(The purpose is to prevent from being injected the malicious script)\n\nDo you want to open the following page?\n"
+			},
+			context_menu_pageexpand_config_auto_run_confirm: {
+				message: "Do you want to run the PageExpand Setting in this page?\n(If this page is contaminated, then the malicious script will be injected)"
+			},
+			context_menu_pageexpand_execute: {
+				message: "Execute PageExpand"
+			},
+			context_menu_pageexpand_abort: {
+				message: "Abort PageExpand"
+			},
+			context_menu_pageexpand_debug: {
+				message: "PageExpand Debug"
+			}
+		}

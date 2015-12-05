@@ -83,22 +83,21 @@ function PageExpand(page_expand_arguments){
 			// 実行ループ
 			// --------------------------------------------------------------------------------
 			(function(){
-				var time_handle;
-
-				// タスクを毎サイクル実行
-				function TaskContainerExecute(){
-					task_container.execute(task_execute_level);
-				}
+				var time_handle = null;
 
 				// 開始関数をセット
 				task_container.setStartFunc(function(){
-					time_handle = setInterval(TaskContainerExecute, 1000 / 60);
+					if(time_handle !== null) return;
+					time_handle = setInterval(function (){
+						task_container.execute(task_execute_level);
+					}, 1000 / 60);
 				});
 
 				// 終了関数をセット
 				task_container.setEndFunc(function(){
+					if(time_handle === null) return;
 					clearInterval(time_handle);
-					time_handle = undefined;
+					time_handle = null;
 				});
 			})();
 		}
@@ -2819,6 +2818,7 @@ function PageExpand(page_expand_arguments){
 					iframe = DocumentCreateElement('iframe');
 					iframe.frameBorder = "0";
 					iframe.scrolling = "no";
+					iframe.allowFullscreen = true;
 
 					// スタイルをセット
 					ElementSetStyle(iframe,project.getStyleSheetExpandSoundSoundcloudInlinePlayerFlash());
@@ -2958,6 +2958,7 @@ function PageExpand(page_expand_arguments){
 					iframe = DocumentCreateElement('iframe');
 					iframe.frameBorder = "0";
 					iframe.scrolling = "no";
+					iframe.allowFullscreen = true;
 
 					// スタイルをセット
 					ElementSetStyle(iframe,project.getStyleSheetExpandSoundSoundcloudInlinePlayerHtml5());
@@ -3174,6 +3175,7 @@ function PageExpand(page_expand_arguments){
 				iframe = DocumentCreateElement('iframe');
 				iframe.frameBorder = "0";
 				iframe.scrolling = "no";
+				iframe.allowFullscreen = true;
 
 				// スタイルをセット
 				ElementSetStyle(iframe,project.getStyleSheetExpandSoundMixcloudInlinePlayer());
@@ -3602,6 +3604,7 @@ function PageExpand(page_expand_arguments){
 			iframe = DocumentCreateElement('iframe');
 			iframe.frameBorder = "0";
 			iframe.scrolling = "no";
+			iframe.allowFullscreen = true;
 
 			// スタイルをセット
 			ElementSetStyle(iframe,project.getStyleSheetExpandVideoYoutubeInlineVideo());
@@ -3723,7 +3726,7 @@ function PageExpand(page_expand_arguments){
 			num = allow_list_regexp.length;
 			for(i=0;i<num;i++){
 				if(url.match(new RegExp(allow_list_regexp[i],"i"))){
-					if(RegExp.rightContext.match(new RegExp("^([-a-zA-Z0-9]+)","i"))){
+					if(RegExp.rightContext.match(new RegExp("^([-_a-zA-Z0-9]+)","i"))){
 						expand_video(getIframeURL(url,RegExp.$1));
 						return;
 					}
@@ -4200,6 +4203,7 @@ function PageExpand(page_expand_arguments){
 				iframe = DocumentCreateElement('iframe');
 				iframe.frameBorder = "0";
 				iframe.scrolling = "no";
+
 				// 読み込み開始
 				iframe.src = thumbnail_video_url;
 
@@ -5127,6 +5131,7 @@ function PageExpand(page_expand_arguments){
 				iframe = DocumentCreateElement('iframe');
 				iframe.frameBorder = "0";
 				iframe.scrolling = "no";
+				iframe.allowFullscreen = true;
 
 				// スタイルをセット
 				if(live){
@@ -5326,6 +5331,7 @@ function PageExpand(page_expand_arguments){
 			iframe = DocumentCreateElement('iframe');
 			iframe.frameBorder = "0";
 			iframe.scrolling = "no";
+			iframe.allowFullscreen = true;
 
 			// スタイルをセット
 			ElementSetStyle(iframe,project.getStyleSheetExpandVideoDailymotionInlineVideo());
@@ -5513,6 +5519,7 @@ function PageExpand(page_expand_arguments){
 			iframe = DocumentCreateElement('iframe');
 			iframe.frameBorder = "0";
 			iframe.scrolling = "no";
+			iframe.allowFullscreen = true;
 
 			// スタイルをセット
 			ElementSetStyle(iframe,project.getStyleSheetExpandVideoVimeoInlineVideo());
@@ -5938,6 +5945,7 @@ function PageExpand(page_expand_arguments){
 				iframe = DocumentCreateElement('iframe');
 				iframe.frameBorder = "0";
 				iframe.scrolling = "no";
+				iframe.allowFullscreen = true;
 
 				// スタイルをセット
 				ElementSetStyle(iframe,project.getStyleSheetExpandVideoLiveleakInlineVideo());

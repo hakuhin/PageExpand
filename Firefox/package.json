@@ -1,7 +1,8 @@
 {
   "name": "page_expand",
+  "title": "PageExpand",
   "fullName": "PageExpand",
-  "description": "All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Override Referer. Extend BBS. etc...\n画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、リファラ置換、掲示板の拡張表示など...",
+  "description": "All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Override Referer. Extend BBS. etc...",
   "author": "hakuhin",
   "homepage": "http://hakuhin.jp",
   "icon": "data/icon48.png",
@@ -14,7 +15,11 @@
       "label": "Click here to open PageExpand options."
     }
   ],
+  "engines": {
+    "firefox": ">=38.0",
+    "fennec": ">=38.0"
+  },
   "id": "PageExpand@hakuhin.jp",
-  "version": "1.4.8",
+  "version": "1.4.9",
   "main": "lib/main.js"
 }

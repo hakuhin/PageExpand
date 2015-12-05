@@ -1,0 +1,1397 @@
+		zh: {
+			extension_name: {
+				message: "PageExpand"
+			},
+			extension_description: {
+				message: "下载所有图片、图片缩放、扩展缩略图以及音频和视频、展开短网址、从文本生成链接、覆盖引用站点、扩展BBS，等等..."
+			},
+			page_expand_config: {
+				message: "PageExpand 设置"
+			},
+			menu_setting_standard: {
+				message: "标准设置"
+			},
+			menu_setting_standard_filter_url: {
+				message: "通过 URL 限制操作"
+			},
+			menu_setting_standard_filter_url_combo_box_item_deny: {
+				message: "只在指定的地址不要操作。(否则它会在所有地址工作)"
+			},
+			menu_setting_standard_filter_url_combo_box_item_allow: {
+				message: "只在指定的地址操作。(否则，所有地址都不工作。)"
+			},
+			menu_setting_standard_filter_url_hint: {
+				message: "URL 描述。可以使用星号。可以指定多行。"
+			},
+			menu_setting_standard_check_box_container: {
+				message: "标准设置"
+			},
+			menu_setting_standard_enable_icon_address_bar: {
+				message: "在地址栏中显示图标。"
+			},
+			menu_setting_standard_enable_context_menu: {
+				message: "显示上下文菜单。"
+			},
+			menu_setting_standard_enable_startup: {
+				message: "加载完成时开始操作。"
+			},
+			menu_setting_standard_enable_debug_mode: {
+				message: "在调试模式下运行。"
+			},
+			menu_setting_standard_enable_output_log: {
+				message: "输出到控制台日志。(调试)"
+			},
+			menu_setting_standard_execute_queue: {
+				message: "执行队列设置 (通常情况下，无需更改)"
+			},
+			menu_setting_standard_execute_queue_time_sleep: {
+				message: "睡眠时间 (毫秒)"
+			},
+			menu_setting_standard_execute_queue_time_occupancy: {
+				message: "最大的 CPU 占用时间 (毫秒)"
+			},
+			menu_setting_standard_execute_queue_hint: {
+				message: "当最大的 CPU 占用时间较大，响应操作较差，该脚本将运行得更快。如果睡眠时间很短，CPU 利用率较高，该脚本将运行得更快。"
+			},
+			menu_setting_standard_touch: {
+				message: "触摸操作设置"
+			},
+			menu_setting_standard_enable_input_touch: {
+				message: "启用触摸操作。"
+			},
+			menu_setting_standard_enable_double_touch_assist: {
+				message: "显示双触摸协助。"
+			},
+			menu_setting_standard_command: {
+				message: "执行菜单 (移动)"
+			},
+			menu_setting_standard_command_execute_button: {
+				message: "执行"
+			},
+			menu_setting_standard_command_execute_dialog: {
+				message: "执行菜单"
+			},
+			menu_setting_standard_command_execute_dialog_tab_list: {
+				message: "选择标签"
+			},
+			menu_setting_standard_command_execute_dialog_command_list: {
+				message: "选择命令"
+			},
+			menu_setting_standard_command_execute_dialog_confirm: {
+				message: "确定要执行吗?"
+			},
+			menu_setting_standard_export_import: {
+				message: "设置导出/导入"
+			},
+			menu_setting_standard_export_button: {
+				message: "导出"
+			},
+			menu_setting_standard_import_button: {
+				message: "导入"
+			},
+			menu_setting_standard_export_dialog: {
+				message: "导出设置"
+			},
+			menu_setting_standard_export_dialog_export: {
+				message: "导出"
+			},
+			menu_setting_standard_export_dialog_export_hint: {
+				message: "请复制文本区域的文本。"
+			},
+			menu_setting_standard_import_dialog: {
+				message: "导入设置"
+			},
+			menu_setting_standard_import_dialog_explanation: {
+				message: "关于导入的信息"
+			},
+			menu_setting_standard_import_dialog_explanation_0: {
+				message: "当前的所有设置都将丢失。"
+			},
+			menu_setting_standard_import_dialog_explanation_1: {
+				message: "建议你使用导出功能进行备份。"
+			},
+			menu_setting_standard_import_dialog_explanation_2: {
+				message: "请注意，它不包含恶意代码。"
+			},
+			menu_setting_standard_import_dialog_import: {
+				message: "导入"
+			},
+			menu_setting_standard_import_dialog_import_hint: {
+				message: "请粘贴从导出处输出的文本。"
+			},
+			menu_setting_standard_import_dialog_confirm: {
+				message: "确定要导入？"
+			},
+			menu_setting_standard_import_alert: {
+				message: "导入的结果"
+			},
+			menu_setting_standard_import_alert_success: {
+				message: "导入已经完成。"
+			},
+			menu_setting_standard_import_alert_failure: {
+				message: "导入失败！"
+			},
+			menu_setting_standard_storage_sync: {
+				message: "同步存储"
+			},
+			menu_setting_standard_storage_sync_load_button: {
+				message: "加载"
+			},
+			menu_setting_standard_storage_sync_save_button: {
+				message: "保存"
+			},
+			menu_setting_standard_storage_sync_delete_button: {
+				message: "删除"
+			},
+			menu_setting_standard_storage_sync_load_dialog: {
+				message: "从同步存储加载"
+			},
+			menu_setting_standard_storage_sync_load_dialog_explanation: {
+				message: "关于从同步存储加载的信息"
+			},
+			menu_setting_standard_storage_sync_load_dialog_explanation_0: {
+				message: "从同步存储加载数据，应用到 PageExpand 设置。"
+			},
+			menu_setting_standard_storage_sync_load_dialog_explanation_1: {
+				message: "当前的所有设置都将丢失。"
+			},
+			menu_setting_standard_storage_sync_load_dialog_explanation_2: {
+				message: "建议你使用导出功能进行备份"
+			},
+			menu_setting_standard_storage_sync_load_dialog_confirm: {
+				message: "确定从同步存储加载？"
+			},
+			menu_setting_standard_storage_sync_load_alert: {
+				message: "从同步存储加载的结果"
+			},
+			menu_setting_standard_storage_sync_load_alert_success: {
+				message: "从同步存储加载成功。"
+			},
+			menu_setting_standard_storage_sync_load_alert_failure: {
+				message: "从同步存储加载失败！"
+			},
+			menu_setting_standard_storage_sync_save_dialog: {
+				message: "保存到同步存储"
+			},
+			menu_setting_standard_storage_sync_save_dialog_explanation: {
+				message: "关于保存到同步存储的信息"
+			},
+			menu_setting_standard_storage_sync_save_dialog_explanation_0: {
+				message: "将当前设置保存到同步存储。"
+			},
+			menu_setting_standard_storage_sync_save_dialog_explanation_1: {
+				message: "需要启用浏览器的同步功能。"
+			},
+			menu_setting_standard_storage_sync_save_dialog_explanation_2: {
+				message: "有大小限制。如果数据太大，会失败。"
+			},
+			menu_setting_standard_storage_sync_save_dialog_confirm: {
+				message: "确定要保存到同步存储？"
+			},
+			menu_setting_standard_storage_sync_save_alert: {
+				message: "保存到同步存储的结果"
+			},
+			menu_setting_standard_storage_sync_save_alert_success: {
+				message: "保存到同步存储成功。"
+			},
+			menu_setting_standard_storage_sync_save_alert_failure: {
+				message: "保存到同步存储失败！"
+			},
+			menu_setting_standard_storage_sync_delete_dialog: {
+				message: "从同步存储删除"
+			},
+			menu_setting_standard_storage_sync_delete_dialog_explanation: {
+				message: "关于从同步存储区删除的信息"
+			},
+			menu_setting_standard_storage_sync_delete_dialog_explanation_0: {
+				message: "删除同步存储中存储的设置数据。"
+			},
+			menu_setting_standard_storage_sync_delete_dialog_confirm: {
+				message: "确定要从同步存储删除吗？"
+			},
+			menu_setting_standard_storage_sync_delete_alert: {
+				message: "关于从同步存储删除的结果"
+			},
+			menu_setting_standard_storage_sync_delete_alert_success: {
+				message: "从同步存储删除成功。"
+			},
+			menu_setting_standard_storage_sync_delete_alert_failure: {
+				message: "从同步存储删除失败！"
+			},
+			menu_setting_standard_reset: {
+				message: "设置初始化"
+			},
+			menu_setting_standard_reset_button: {
+				message: "删除所有的设置，返回到初始状态。"
+			},
+			menu_setting_standard_reset_dialog: {
+				message: "设置初始化"
+			},
+			menu_setting_standard_reset_dialog_explanation: {
+				message: "关于初始化的信息"
+			},
+			menu_setting_standard_reset_dialog_explanation_0: {
+				message: "将所有设置都返回到它们的默认状态。"
+			},
+			menu_setting_standard_reset_dialog_explanation_1: {
+				message: "当前的所有设置都将丢失。"
+			},
+			menu_setting_standard_reset_dialog_confirm: {
+				message: "确定要初始化吗？"
+			},
+			menu_setting_standard_reset_alert: {
+				message: "初始化的结果"
+			},
+			menu_setting_standard_reset_alert_success: {
+				message: "配置初始化已完成。"
+			},
+			menu_setting_standard_reset_alert_failure: {
+				message: "配置初始化失败！"
+			},
+			menu_setting_download: {
+				message: "下载设置"
+			},
+			menu_setting_download_load: {
+				message: "加载设置 (XHR)"
+			},
+			menu_setting_download_load_thread_max: {
+				message: "同时加载的最大数目"
+			},
+			menu_setting_download_load_timeout: {
+				message: "超时（毫秒）"
+			},
+			menu_setting_download_load_timeout_hint: {
+				message: "如果指定为 0，超时时间没有限制。"
+			},
+			menu_setting_download_download: {
+				message: "下载设置"
+			},
+			menu_setting_download_download_thread_max: {
+				message: "同时下载的最大数目"
+			},
+			menu_setting_download_download_conflict_type: {
+				message: "文件名冲突"
+			},
+			menu_setting_download_download_conflict_type_combo_box_item_rename: {
+				message: "重命名"
+			},
+			menu_setting_download_download_conflict_type_combo_box_item_overwrite: {
+				message: "覆盖"
+			},
+			menu_setting_expand_bbs: {
+				message: "BBS 设置"
+			},
+			menu_setting_expand_bbs_list: {
+				message: "BBS 设置列表"
+			},
+			menu_setting_expand_bbs_list_hint: {
+				message: "当你选择列表中的项目时，可以编辑较低的控制。条件脚本按照从上到下的顺序执行。可以选择多个进行编辑。灰色是预设设置。不能删除预设的设置。"
+			},
+			menu_setting_expand_bbs_button_add: {
+				message: "添加"
+			},
+			menu_setting_expand_bbs_button_delete: {
+				message: "删除"
+			},
+			menu_setting_expand_bbs_button_prio_up: {
+				message: "优先级+"
+			},
+			menu_setting_expand_bbs_button_prio_down: {
+				message: "优先级-"
+			},
+			menu_setting_expand_bbs_button_export: {
+				message: "导出"
+			},
+			menu_setting_expand_bbs_button_import: {
+				message: "导入"
+			},
+			menu_setting_expand_bbs_add_dialog: {
+				message: "创建新的 BBS 设置"
+			},
+			menu_setting_expand_bbs_add_dialog_name: {
+				message: "名称"
+			},
+			menu_setting_expand_bbs_add_dialog_copy_define: {
+				message: "从现有的设置复制。"
+			},
+			menu_setting_expand_bbs_add_dialog_define_list_box_item_new: {
+				message: "创建新的"
+			},
+			menu_setting_expand_bbs_export_dialog: {
+				message: "导出 BBS 设置"
+			},
+			menu_setting_expand_bbs_export_dialog_export: {
+				message: "导出"
+			},
+			menu_setting_expand_bbs_export_dialog_export_hint: {
+				message: "请复制文本区域的文本。"
+			},
+			menu_setting_expand_bbs_import_dialog: {
+				message: "导入 BBS 设置"
+			},
+			menu_setting_expand_bbs_import_dialog_explanation: {
+				message: "关于导入的信息"
+			},
+			menu_setting_expand_bbs_import_dialog_explanation_0: {
+				message: "预设的设置将被覆盖。将添加新的用户设置。"
+			},
+			menu_setting_expand_bbs_import_dialog_explanation_1: {
+				message: "建议你使用导出功能进行备份。"
+			},
+			menu_setting_expand_bbs_import_dialog_explanation_2: {
+				message: "请注意，它不包含恶意代码。"
+			},
+			menu_setting_expand_bbs_import_dialog_import: {
+				message: "导入"
+			},
+			menu_setting_expand_bbs_import_dialog_import_hint: {
+				message: "请粘贴从导出处输出的文本。"
+			},
+			menu_setting_expand_bbs_import_dialog_confirm: {
+				message: "确定要导入？"
+			},
+			menu_setting_expand_bbs_import_alert: {
+				message: "导入的结果"
+			},
+			menu_setting_expand_bbs_import_alert_success: {
+				message: "导入已经完成。"
+			},
+			menu_setting_expand_bbs_import_alert_failure: {
+				message: "导入失败！"
+			},
+			menu_setting_expand_bbs_name: {
+				message: "名称"
+			},
+			menu_setting_expand_bbs_check_box_container: {
+				message: "启用 / 禁用"
+			},
+			menu_setting_expand_bbs_enable_setting: {
+				message: "使用此设置。"
+			},
+			menu_setting_expand_bbs_filter_url: {
+				message: "URL 允许进行操作"
+			},
+			menu_setting_expand_bbs_popup_check_box_container: {
+				message: "弹窗设置"
+			},
+			menu_setting_expand_bbs_popup_enable_animation: {
+				message: "启用弹窗动画"
+			},
+			menu_setting_expand_bbs_popup_origin_type: {
+				message: "弹窗的起始位置"
+			},
+			menu_setting_expand_bbs_popup_origin_type_combo_box_item_adsorb_top_bottom: {
+				message: "吸附顶底"
+			},
+			menu_setting_expand_bbs_popup_origin_type_combo_box_item_adsorb_left_right: {
+				message: "吸附左右"
+			},
+			menu_setting_expand_bbs_popup_position_type: {
+				message: "弹窗的布置位置"
+			},
+			menu_setting_expand_bbs_popup_position_type_combo_box_item_absolute: {
+				message: "绝对"
+			},
+			menu_setting_expand_bbs_popup_position_type_combo_box_item_fixed: {
+				message: "固定"
+			},
+			menu_setting_expand_bbs_popup_percent: {
+				message: "弹窗的大小"
+			},
+			menu_setting_expand_bbs_popup_percent_h: {
+				message: "水平 % (0-100)"
+			},
+			menu_setting_expand_bbs_popup_percent_v: {
+				message: "垂直 % (0-100)"
+			},
+			menu_setting_expand_bbs_popup_time: {
+				message: "弹窗的时间"
+			},
+			menu_setting_expand_bbs_popup_time_wait_open: {
+				message: "打开前的等待时间 (毫秒)"
+			},
+			menu_setting_expand_bbs_popup_time_wait_close: {
+				message: "关闭后的等待时间 (毫秒)"
+			},
+			menu_setting_expand_bbs_popup_style_sheet: {
+				message: "弹窗的样式表"
+			},
+			menu_setting_expand_bbs_script_initialize: {
+				message: "初始化脚本"
+			},
+			menu_setting_expand_bbs_script_callback: {
+				message: "回调脚本"
+			},
+			menu_setting_urlmap: {
+				message: "URL 映射设置"
+			},
+			menu_setting_urlmap_list: {
+				message: "URL 映射设置列表"
+			},
+			menu_setting_urlmap_list_hint: {
+				message: "当你选择列表中的项目时，可以编辑较低的控制。按照从上到下的顺序进行比较。可以选择多个，可以进行多选编辑。灰色是预设设置。不能删除预设的设置。"
+			},
+			menu_setting_urlmap_button_add: {
+				message: "添加"
+			},
+			menu_setting_urlmap_button_delete: {
+				message: "删除"
+			},
+			menu_setting_urlmap_button_prio_up: {
+				message: "优先级+"
+			},
+			menu_setting_urlmap_button_prio_down: {
+				message: "优先级-"
+			},
+			menu_setting_urlmap_add_dialog: {
+				message: "创建新的 URL 映射"
+			},
+			menu_setting_urlmap_add_dialog_name: {
+				message: "名称"
+			},
+			menu_setting_urlmap_add_dialog_copy_define: {
+				message: "从现有的设置复制。"
+			},
+			menu_setting_urlmap_add_dialog_define_list_box_item_new: {
+				message: "创建新的"
+			},
+			menu_setting_urlmap_name: {
+				message: "名称"
+			},
+			menu_setting_urlmap_check_box_container: {
+				message: "启用 / 禁用"
+			},
+			menu_setting_urlmap_enable_setting: {
+				message: "使用此设置。"
+			},
+			menu_setting_urlmap_filter_url: {
+				message: "URL 允许进行操作"
+			},
+			menu_setting_urlmap_unsecure_check_box_container: {
+				message: "安全"
+			},
+			menu_setting_urlmap_enable_unsecure: {
+				message: "扩展 \" 资源到 http://\" 安全页。"
+			},
+			menu_setting_urlmap_enable_unsecure_hint: {
+				message: "当禁用时，扩展 \" 资源到 https://\"。当启用时，进一步扩展 \" 资源到 http://\" 。但是，总是显示加密警告。"
+			},
+			menu_setting_urlmap_enable_mixed_content: {
+				message: "尝试扩展 \"默认情况下阻止的混合内容\" 到安全页。"
+			},
+			menu_setting_urlmap_enable_mixed_content_hint: {
+				message: "浏览器将拦截 \"一些元素\" 的部署。当禁用时， \"被拦截的元素\" 将不会扩展。 当启用时，将尝试扩展所有元素。(除非在浏览器中更改设置否则会失败。)"
+			},
+			menu_setting_urlmap_define_button_edit: {
+				message: "编辑"
+			},
+			menu_setting_urlmap_define_button_add: {
+				message: "添加"
+			},
+			menu_setting_urlmap_define_button_remove: {
+				message: "移除"
+			},
+			menu_setting_urlmap_define_button_prio_up: {
+				message: "向上"
+			},
+			menu_setting_urlmap_define_button_prio_down: {
+				message: "向下"
+			},
+			menu_setting_urlmap_define_combo_box_item_no_use: {
+				message: "不使用定义"
+			},
+			menu_setting_define_multi_select_add_dialog: {
+				message: "添加定义"
+			},
+			menu_setting_define_multi_select_add_dialog_list: {
+				message: "选择要添加的定义。"
+			},
+			menu_setting_access_block: {
+				message: "拦截访问定义"
+			},
+			menu_setting_access_block_filter_url: {
+				message: "URL 拦截访问"
+			},
+			menu_setting_replacement_to_element: {
+				message: "替换元素定义"
+			},
+			menu_setting_replacement_to_element_script: {
+				message: "回调脚本"
+			},
+			menu_setting_replacement_to_text: {
+				message: "替换文本定义"
+			},
+			menu_setting_replacement_to_text_script: {
+				message: "回调脚本"
+			},
+			menu_setting_replacement_to_anchor: {
+				message: "替换锚点定义"
+			},
+			menu_setting_replacement_to_anchor_script: {
+				message: "回调脚本"
+			},
+			menu_setting_replacement_to_link: {
+				message: "替换链接定义"
+			},
+			menu_setting_replacement_to_link_filter_list: {
+				message: "筛选器列表"
+			},
+			menu_setting_replacement_to_link_filter_name: {
+				message: "筛选器名称"
+			},
+			menu_setting_replacement_to_link_filter: {
+				message: "筛选器设置"
+			},
+			menu_setting_replacement_to_link_filter_filter_url: {
+				message: "链接 URL，允许进行操作"
+			},
+			menu_setting_replacement_to_link_check_box_container: {
+				message: "设置链接"
+			},
+			menu_setting_replacement_to_link_enable_reflect_to_anchor: {
+				message: "反映到 HTML 锚点元素 href"
+			},
+			menu_setting_replacement_to_link_enable_cache: {
+				message: "缓存回调脚本的结果"
+			},
+			menu_setting_replacement_to_link_filter_script: {
+				message: "回调脚本"
+			},
+			menu_setting_replacement_to_referer: {
+				message: "替换 Referer 定义"
+			},
+			menu_setting_replacement_to_referer_filter_list: {
+				message: "筛选器列表"
+			},
+			menu_setting_replacement_to_referer_filter_name: {
+				message: "筛选器名称"
+			},
+			menu_setting_replacement_to_referer_filter: {
+				message: "筛选器设置"
+			},
+			menu_setting_replacement_to_referer_filter_filter_url: {
+				message: "链接 URL，允许进行操作"
+			},
+			menu_setting_replacement_to_referer_filter_send_type: {
+				message: "基本 Referer"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item: {
+				message: "基本 Referer 值"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item_default: {
+				message: "默认"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item_current_url: {
+				message: "当前 url"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item_link_url: {
+				message: "链接 url"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item_custom: {
+				message: "自定义"
+			},
+			menu_setting_replacement_to_referer_filter_send_custom: {
+				message: "自定义字符串"
+			},
+			menu_setting_replacement_to_referer_filter_send_regexp: {
+				message: "通过正则表达式替换"
+			},
+			menu_setting_replacement_to_referer_filter_send_regexp_match: {
+				message: "匹配条件"
+			},
+			menu_setting_replacement_to_referer_filter_send_regexp_replacement: {
+				message: "替换字符串"
+			},
+			menu_setting_replacement_to_referer_filter_send_regexp_replacement_hint: {
+				message: "$0...整体匹配。 $1-$9...部分匹配。 $$…美元符号转义序列。"
+			},
+			menu_setting_replacement_to_useragent: {
+				message: "替换用户代理定义"
+			},
+			menu_setting_replacement_to_useragent_filter_list: {
+				message: "筛选器列表"
+			},
+			menu_setting_replacement_to_useragent_filter_name: {
+				message: "筛选器名称"
+			},
+			menu_setting_replacement_to_useragent_filter: {
+				message: "筛选器设置"
+			},
+			menu_setting_replacement_to_useragent_filter_filter_url: {
+				message: "链接 URL，允许进行操作"
+			},
+			menu_setting_replacement_to_useragent_filter_send: {
+				message: "基本用户代理"
+			},
+			menu_setting_replacement_to_useragent_filter_send_custom: {
+				message: "自定义字符串"
+			},
+			menu_setting_make_link_to_text: {
+				message: "文本转链接定义"
+			},
+			menu_setting_make_link_to_text_script: {
+				message: "回调脚本"
+			},
+			menu_setting_expand_short_url: {
+				message: "扩展短 Url 定义"
+			},
+			menu_setting_expand_short_url_filter_url: {
+				message: "URL 允许进行操作"
+			},
+			menu_setting_expand_text: {
+				message: "扩展文本定义"
+			},
+			menu_setting_expand_text_inline: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_text_inline_check_box_container: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_text_inline_disable_same_text: {
+				message: "如果 URL 相同，不扩展。"
+			},
+			menu_setting_expand_text_inline_script_allow: {
+				message: "从链接显示内联的条件"
+			},
+			menu_setting_expand_text_inline_script_insert: {
+				message: "文本插入"
+			},
+			menu_setting_expand_image: {
+				message: "扩展图片定义"
+			},
+			menu_setting_expand_image_thumbnail: {
+				message: "显示缩略图设置"
+			},
+			menu_setting_expand_image_thumbnail_enable_check_box_container: {
+				message: "启用 / 禁用"
+			},
+			menu_setting_expand_image_thumbnail_enable_thumbnail: {
+				message: "显示缩略图。"
+			},
+			menu_setting_expand_image_thumbnail_check_box_container: {
+				message: "显示缩略图设置"
+			},
+			menu_setting_expand_image_thumbnail_enable_popup_mouseover: {
+				message: "如果你的鼠标悬停在缩略图上，弹出窗口显示。"
+			},
+			menu_setting_expand_image_thumbnail_disable_same_thumbnail_image: {
+				message: "如果 URL 相同，不扩展。"
+			},
+			menu_setting_expand_image_thumbnail_script_allow: {
+				message: "从链接显示缩略图的条件"
+			},
+			menu_setting_expand_image_thumbnail_script_insert: {
+				message: "缩略图插入"
+			},
+			menu_setting_expand_image_popup: {
+				message: "显示弹窗设置"
+			},
+			menu_setting_expand_image_popup_enable_check_box_container: {
+				message: "启用 / 禁用"
+			},
+			menu_setting_expand_image_popup_enable_popup_mouseover: {
+				message: "如果你的鼠标悬停在锚点上，弹出窗口显示。"
+			},
+			menu_setting_expand_image_popup_check_box_container: {
+				message: "动画"
+			},
+			menu_setting_expand_image_popup_enable_animation_scale: {
+				message: "启用规模淡入淡出动画"
+			},
+			menu_setting_expand_image_popup_enable_animation_alpha: {
+				message: "启用透明淡入淡出动画"
+			},
+			menu_setting_expand_image_popup_origin_type: {
+				message: "弹窗的起始位置"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_center: {
+				message: "中央"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_upper_left: {
+				message: "左上角"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_upper_right: {
+				message: "右上角"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_client_center: {
+				message: "客户端中央"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_adsorb_element: {
+				message: "吸附元素"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_adsorb_mouse: {
+				message: "吸附鼠标"
+			},
+			menu_setting_expand_image_popup_time: {
+				message: "弹窗的时间"
+			},
+			menu_setting_expand_image_popup_time_wait_open: {
+				message: "打开前的等待时间 (毫秒)"
+			},
+			menu_setting_expand_image_popup_time_wait_close: {
+				message: "关闭后的等待时间 (毫秒)"
+			},
+			menu_setting_expand_image_popup_position_type: {
+				message: "弹出图片的排列位置"
+			},
+			menu_setting_expand_image_popup_position_type_combo_box_item_absolute: {
+				message: "绝对"
+			},
+			menu_setting_expand_image_popup_position_type_combo_box_item_fixed: {
+				message: "固定"
+			},
+			menu_setting_expand_image_popup_size: {
+				message: "弹窗的大小"
+			},
+			menu_setting_expand_image_popup_size_scale: {
+				message: "比例 (%)"
+			},
+			menu_setting_expand_image_popup_script_allow: {
+				message: "从链接显示弹窗的条件"
+			},
+			menu_setting_expand_image_reduced_image: {
+				message: "小图片设置"
+			},
+			menu_setting_expand_image_reduced_image_check_box_container: {
+				message: "启用 / 禁用"
+			},
+			menu_setting_expand_image_popup_enable_popup: {
+				message: "如果你的鼠标悬停在小图片上，弹出窗口显示。"
+			},
+			menu_setting_expand_image_reduced_image_allow_slcale_less_then: {
+				message: "显示弹出窗口的条件"
+			},
+			menu_setting_expand_image_reduced_image_allow_slcale_less_then_text: {
+				message: "如果放大倍数小于"
+			},
+			menu_setting_expand_image_load: {
+				message: "加载图片设置"
+			},
+			menu_setting_expand_image_load_check_box_container: {
+				message: "加载图片设置"
+			},
+			menu_setting_expand_image_load_enable_notify: {
+				message: "显示进度。"
+			},
+			menu_setting_expand_image_load_start_type: {
+				message: "如何加载图片"
+			},
+			menu_setting_expand_image_load_start_type_preload: {
+				message: "预加载"
+			},
+			menu_setting_expand_image_load_start_type_scroll: {
+				message: "滚动结合"
+			},
+			menu_setting_expand_image_load_src_type: {
+				message: "图片源格式"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_url: {
+				message: "URL (所有)"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_mixed_content: {
+				message: "数据 URI 方案 (只有混合内容)"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_data_uri_scheme: {
+				message: "数据 URI 方案 (所有)"
+			},
+			menu_setting_expand_image_load_unload_check_box_container: {
+				message: "卸载图片设置"
+			},
+			menu_setting_expand_image_load_enable_unload: {
+				message: "启用卸载图片"
+			},
+			menu_setting_expand_image_load_unload: {
+				message: "卸载图片的条件"
+			},
+			menu_setting_expand_image_load_allow_unload_more_then_text: {
+				message: "如果加载超过指定的 MBytes，释放旧的图片。"
+			},
+			menu_setting_expand_sound: {
+				message: "扩展声音定义"
+			},
+			menu_setting_expand_sound_inline: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_sound_inline_check_box_container: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_sound_inline_disable_same_text: {
+				message: "如果 URL 相同，不扩展。"
+			},
+			menu_setting_expand_sound_inline_sound_max: {
+				message: "同时显示的最大数目"
+			},
+			menu_setting_expand_sound_inline_script_allow: {
+				message: "从链接显示内联的条件"
+			},
+			menu_setting_expand_sound_inline_script_insert: {
+				message: "音频插入"
+			},
+			menu_setting_expand_sound_inline_element: {
+				message: "HTML 音频元素设置"
+			},
+			menu_setting_expand_sound_inline_element_script_allow: {
+				message: "HTML 音频元素显示的条件"
+			},
+			menu_setting_expand_sound_inline_soundcloud: {
+				message: "soundcloud.com 设置"
+			},
+			menu_setting_expand_sound_inline_soundcloud_check_box_container: {
+				message: "soundcloud.com 设置"
+			},
+			menu_setting_expand_sound_inline_soundcloud_visible_player_flash: {
+				message: "启用播放器 (Flash)"
+			},
+			menu_setting_expand_sound_inline_soundcloud_visible_player_html5: {
+				message: "启用播放器 (HTML5)"
+			},
+			menu_setting_expand_sound_inline_mixcloud: {
+				message: "www.mixcloud.com 设置"
+			},
+			menu_setting_expand_sound_inline_mixcloud_check_box_container: {
+				message: "www.mixcloud.com 设置"
+			},
+			menu_setting_expand_sound_inline_mixcloud_visible_player: {
+				message: "启用播放器"
+			},
+			menu_setting_expand_video: {
+				message: "扩展视频定义"
+			},
+			menu_setting_expand_video_inline: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_video_inline_check_box_container: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_video_inline_disable_same_video: {
+				message: "如果 URL 相同，不扩展。"
+			},
+			menu_setting_expand_video_inline_video_max: {
+				message: "同时显示的最大数目"
+			},
+			menu_setting_expand_video_inline_script_allow: {
+				message: "从链接显示内联的条件"
+			},
+			menu_setting_expand_video_inline_script_insert: {
+				message: "元素插入"
+			},
+			menu_setting_expand_video_inline_element: {
+				message: "HTML 视频元素设置"
+			},
+			menu_setting_expand_video_inline_element_script_allow: {
+				message: " HTML 视频元素显示的条件"
+			},
+			menu_setting_expand_video_inline_youtube: {
+				message: "www.youtube.com 设置"
+			},
+			menu_setting_expand_video_inline_youtube_check_box_container: {
+				message: "www.youtube.com 设置"
+			},
+			menu_setting_expand_video_inline_youtube_visible_video: {
+				message: "启用视频"
+			},
+			menu_setting_expand_video_inline_nicovideo: {
+				message: "www.nicovideo.jp 设置"
+			},
+			menu_setting_expand_video_inline_nicovideo_check_box_container: {
+				message: "www.nicovideo.jp 设置"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_video: {
+				message: "启用视频"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_video: {
+				message: "启用视频缩略图"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_mylist: {
+				message: "启用 我的列表 缩略图"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_user: {
+				message: "启用 用户 缩略图"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_community: {
+				message: "启用 社区 缩略图"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_live: {
+				message: "启用 现场直播 缩略图"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_seiga: {
+				message: "启用 世佳 缩略图"
+			},
+			menu_setting_expand_video_inline_ustream: {
+				message: "www.ustream.tv 设置"
+			},
+			menu_setting_expand_video_inline_ustream_check_box_container: {
+				message: "www.ustream.tv 设置"
+			},
+			menu_setting_expand_video_inline_ustream_visible_video_live: {
+				message: "启用传送视频"
+			},
+			menu_setting_expand_video_inline_ustream_visible_video_record: {
+				message: "启用录制的视频"
+			},
+			menu_setting_expand_video_inline_dailymotion: {
+				message: "www.dailymotion.com 设置"
+			},
+			menu_setting_expand_video_inline_dailymotion_check_box_container: {
+				message: "www.dailymotion.com 设置"
+			},
+			menu_setting_expand_video_inline_dailymotion_visible_video: {
+				message: "启用视频"
+			},
+			menu_setting_expand_video_inline_video: {
+				message: "vimeo.com 设置"
+			},
+			menu_setting_expand_video_inline_video_check_box_container: {
+				message: "vimeo.com 设置"
+			},
+			menu_setting_expand_video_inline_video_visible_video: {
+				message: "启用视频"
+			},
+			menu_setting_expand_video_inline_fc2video: {
+				message: "video.fc2.com 设置"
+			},
+			menu_setting_expand_video_inline_fc2video_check_box_container: {
+				message: "video.fc2.com 设置"
+			},
+			menu_setting_expand_video_inline_fc2video_visible_video: {
+				message: "启用视频"
+			},
+			menu_setting_expand_video_inline_liveleak: {
+				message: "www.liveleak.com 设置"
+			},
+			menu_setting_expand_video_inline_liveleak_check_box_container: {
+				message: "www.liveleak.com 设置"
+			},
+			menu_setting_expand_video_inline_liveleak_visible_video: {
+				message: "启用视频"
+			},
+			menu_setting_expand_iframe: {
+				message: "扩展 Iframe 定义"
+			},
+			menu_setting_expand_iframe_inline: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_iframe_inline_check_box_container: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_iframe_inline_disable_same_iframe: {
+				message: "如果 URL 相同，不扩展。"
+			},
+			menu_setting_expand_iframe_inline_script_allow: {
+				message: "从链接显示内联的条件"
+			},
+			menu_setting_expand_iframe_inline_script_insert: {
+				message: "HTML 内嵌框架元素插入"
+			},
+			menu_setting_style_sheet: {
+				message: "样式表定义"
+			},
+			menu_setting_style_sheet_expand_text: {
+				message: "扩展文本样式表"
+			},
+			menu_setting_style_sheet_expand_text_element: {
+				message: "HTML 文本区域元素设置"
+			},
+			menu_setting_style_sheet_expand_text_element_inline: {
+				message: "文本内联显示"
+			},
+			menu_setting_style_sheet_expand_image: {
+				message: "扩展图片样式表"
+			},
+			menu_setting_style_sheet_expand_image_element: {
+				message: "HTML 图片元素设置"
+			},
+			menu_setting_style_sheet_expand_image_element_inline: {
+				message: "图片缩略图显示"
+			},
+			menu_setting_style_sheet_expand_image_element_popup: {
+				message: "图片弹窗显示"
+			},
+			menu_setting_style_sheet_expand_sound: {
+				message: "扩展声音样式表"
+			},
+			menu_setting_style_sheet_expand_sound_element: {
+				message: "HTML 音频元素设置"
+			},
+			menu_setting_style_sheet_expand_sound_element_inline_audio: {
+				message: "音频内联显示"
+			},
+			menu_setting_style_sheet_expand_sound_soundcloud: {
+				message: "soundcloud.com 设置"
+			},
+			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_flash: {
+				message: "播放器 (Flash) 内联显示"
+			},
+			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_html5: {
+				message: "播放器 (HTML5) 内联显示"
+			},
+			menu_setting_style_sheet_expand_sound_mixcloud: {
+				message: "www.mixcloud.com 设置"
+			},
+			menu_setting_style_sheet_expand_sound_mixcloud_inline_player: {
+				message: "播放器内联显示"
+			},
+			menu_setting_style_sheet_expand_video: {
+				message: "扩展视频样式表"
+			},
+			menu_setting_style_sheet_expand_video_element: {
+				message: "HTML 视频元素设置"
+			},
+			menu_setting_style_sheet_expand_video_element_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_youtube: {
+				message: "www.youtube.com 设置"
+			},
+			menu_setting_style_sheet_expand_video_youtube_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo: {
+				message: "www.nicovideo.jp 设置"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_video: {
+				message: "视频缩略图内联显示"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_mylist: {
+				message: "我的列表 缩略图内联显示"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_user: {
+				message: "用户 缩略图内联显示"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_community: {
+				message: "社区 缩略图内联显示"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_live: {
+				message: "现场直播 缩略图内联显示"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga: {
+				message: "世佳 缩略图内联显示"
+			},
+			menu_setting_style_sheet_expand_video_ustream: {
+				message: "www.ustream.tv 设置"
+			},
+			menu_setting_style_sheet_expand_video_ustream_inline_video_record: {
+				message: "传送视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_ustream_inline_video_live: {
+				message: "录制的视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_dailymotion: {
+				message: "www.dailymotion.com 设置"
+			},
+			menu_setting_style_sheet_expand_video_dailymotion_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_vimeo: {
+				message: "vimeo.com 设置"
+			},
+			menu_setting_style_sheet_expand_video_vimeo_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_fc2video: {
+				message: "video.fc2.com 设置"
+			},
+			menu_setting_style_sheet_expand_video_fc2video_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_liveleak: {
+				message: "www.liveleak.com 设置"
+			},
+			menu_setting_style_sheet_expand_video_liveleak_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_iframe: {
+				message: "扩展内嵌框架样式表"
+			},
+			menu_setting_style_sheet_expand_iframe_element: {
+				message: "HTML 内嵌框架样设置"
+			},
+			menu_setting_style_sheet_expand_iframe_element_inline: {
+				message: "内嵌框架样内联显示"
+			},
+			menu_setting_experimental: {
+				message: "实验定义"
+			},
+			menu_setting_experimental_revise_scroll: {
+				message: "修改滚动设置"
+			},
+			menu_setting_experimental_revise_scroll_check_box_container: {
+				message: "修改滚动设置"
+			},
+			menu_setting_experimental_revise_scroll_enable: {
+				message: "启用"
+			},
+			menu_setting_experimental_revise_scroll_threshold_vertical: {
+				message: "垂直阈值 ( 0 [顶部] ～ 100 [底部] )"
+			},
+			menu_setting_language: {
+				message: "LANGUAGE (语言设置)"
+			},
+			menu_credit: {
+				message: "致谢"
+			},
+			menu_credit_info_version: {
+				message: "版本"
+			},
+			menu_credit_info_copyright: {
+				message: "版权"
+			},
+			menu_credit_info_translator: {
+				message: "翻译者"
+			},
+			menu_setting_define_list: {
+				message: "定义列表"
+			},
+			menu_setting_define_list_hint: {
+				message: "当你选择列表中的项目时，可以编辑较低的控制。按照从上到下的顺序进行比较。可以选择多个，可以进行多选编辑。灰色是预设设置。不能删除预设的设置。"
+			},
+			menu_setting_define_button_add: {
+				message: "添加"
+			},
+			menu_setting_define_button_delete: {
+				message: "删除"
+			},
+			menu_setting_define_button_move_up: {
+				message: "上移"
+			},
+			menu_setting_define_button_move_down: {
+				message: "下移"
+			},
+			menu_setting_define_button_export: {
+				message: "导出"
+			},
+			menu_setting_define_button_import: {
+				message: "导入"
+			},
+			menu_setting_define_add_dialog: {
+				message: "创建新定义"
+			},
+			menu_setting_define_add_dialog_name: {
+				message: "名称"
+			},
+			menu_setting_define_add_dialog_copy_define: {
+				message: "从现有定义复制"
+			},
+			menu_setting_define_add_dialog_define_list_box_item_new: {
+				message: "创建新的"
+			},
+			menu_setting_define_delete_dialog: {
+				message: "删除定义"
+			},
+			menu_setting_define_delete_dialog_name: {
+				message: "定义名称 (被删除)"
+			},
+			menu_setting_define_delete_dialog_change_define: {
+				message: "替代选择"
+			},
+			menu_setting_define_delete_dialog_define_list_box_item_no_use: {
+				message: "不使用定义"
+			},
+			menu_setting_define_name: {
+				message: "定义名称"
+			},
+			menu_setting_define_export_dialog: {
+				message: "导出定义"
+			},
+			menu_setting_define_export_dialog_export: {
+				message: "导出"
+			},
+			menu_setting_define_export_dialog_export_hint: {
+				message: "请复制文本区域的文本。"
+			},
+			menu_setting_define_import_dialog: {
+				message: "导入定义"
+			},
+			menu_setting_define_import_dialog_explanation: {
+				message: "关于导入的信息"
+			},
+			menu_setting_define_import_dialog_explanation_0: {
+				message: "预设的设置将被覆盖。将添加新的用户设置。"
+			},
+			menu_setting_define_import_dialog_explanation_1: {
+				message: "建议你使用导出功能进行备份。"
+			},
+			menu_setting_define_import_dialog_explanation_2: {
+				message: "请注意，它不包含恶意代码。"
+			},
+			menu_setting_define_import_dialog_import: {
+				message: "导入"
+			},
+			menu_setting_define_import_dialog_import_hint: {
+				message: "请粘贴从导出处输出的文本。"
+			},
+			menu_setting_define_import_dialog_confirm: {
+				message: "确定要导入？"
+			},
+			menu_setting_define_import_alert: {
+				message: "导入的结果"
+			},
+			menu_setting_define_import_alert_success: {
+				message: "导入已经完成。"
+			},
+			menu_setting_define_import_alert_failure: {
+				message: "导入失败！"
+			},
+			menu_setting_define_wildcard_detail: {
+				message: "关于通配符的信息"
+			},
+			menu_setting_define_wildcard_detail_0: {
+				message: "\"通配符\" 是总在最后执行。"
+			},
+			menu_setting_define_wildcard_detail_1: {
+				message: "\"通配符\" 适用于所有通信。"
+			},
+			menu_setting_define_wildcard_detail_2: {
+				message: "\"通配符\" 不是的定义。不能用在 \"URL 映射设置\"。"
+			},
+			menu_setting_filter_list: {
+				message: "筛选器列表"
+			},
+			menu_setting_filter_list_hint: {
+				message: "当你选择列表中的项目时，可以编辑较低的控制。按照从上到下的顺序进行比较。可以选择多个，可以进行多选编辑。"
+			},
+			menu_setting_filter_button_add: {
+				message: "添加"
+			},
+			menu_setting_filter_button_delete: {
+				message: "删除"
+			},
+			menu_setting_filter_button_prio_up: {
+				message: "优先级+"
+			},
+			menu_setting_filter_button_prio_down: {
+				message: "优先级-"
+			},
+			menu_setting_filter_button_export: {
+				message: "导出"
+			},
+			menu_setting_filter_button_import: {
+				message: "导入"
+			},
+			menu_setting_filter_add_dialog: {
+				message: "创建新的筛选器设置"
+			},
+			menu_setting_filter_add_dialog_name: {
+				message: "名称"
+			},
+			menu_setting_filter_add_dialog_copy_define: {
+				message: "从现有的设置复制。"
+			},
+			menu_setting_filter_add_dialog_define_list_box_item_new: {
+				message: "创建新的"
+			},
+			menu_setting_filter_export_dialog: {
+				message: "导出过滤器"
+			},
+			menu_setting_filter_export_dialog_export: {
+				message: "导出"
+			},
+			menu_setting_filter_export_dialog_export_hint: {
+				message: "请复制文本区域的文本。"
+			},
+			menu_setting_filter_import_dialog: {
+				message: "导入过滤器"
+			},
+			menu_setting_filter_import_dialog_explanation: {
+				message: "关于导入的信息"
+			},
+			menu_setting_filter_import_dialog_explanation_0: {
+				message: "导入的数据被添加到列表的最后。"
+			},
+			menu_setting_filter_import_dialog_explanation_1: {
+				message: "建议你使用导出功能进行备份"
+			},
+			menu_setting_filter_import_dialog_explanation_2: {
+				message: "请注意，它不包含恶意代码。"
+			},
+			menu_setting_filter_import_dialog_import: {
+				message: "导入"
+			},
+			menu_setting_filter_import_dialog_import_hint: {
+				message: "请粘贴从导出处输出的文本。"
+			},
+			menu_setting_filter_import_dialog_confirm: {
+				message: "确定要导入？"
+			},
+			menu_setting_filter_import_alert: {
+				message: "导入的结果"
+			},
+			menu_setting_filter_import_alert_success: {
+				message: "导入已经完成。"
+			},
+			menu_setting_filter_import_alert_failure: {
+				message: "导入失败！"
+			},
+			menu_button_ok: {
+				message: "确定"
+			},
+			menu_button_yes: {
+				message: "是"
+			},
+			menu_button_no: {
+				message: "取消"
+			},
+			menu_scriptarea_hint: {
+				message: "用来描述到数组的匿名函数。请注意，它不包含恶意代码。"
+			},
+			menu_text_regexp_hint: {
+				message: "正则表达式字符串。 [标记] g...重复。 i...不包含。 case-敏感。"
+			},
+			menu_regexp_list_button_add: {
+				message: "添加"
+			},
+			menu_regexp_list_button_delete: {
+				message: "删除"
+			},
+			menu_regexp_list_button_move_up: {
+				message: "上移"
+			},
+			menu_regexp_list_button_move_down: {
+				message: "下移"
+			},
+			menu_setting_url_edit_container_combo_box_item_asterisk: {
+				message: "星号格式"
+			},
+			menu_setting_url_edit_container_combo_box_item_regexp: {
+				message: "正则表达式格式"
+			},
+			menu_setting_url_edit_container_type_asterisk_hint: {
+				message: "介绍 URL。可以使用一个星号。可以指定多行。"
+			},
+			page_expand_popup_menu: {
+				message: "PageExpand 菜单"
+			},
+			context_menu_pageexpand_config: {
+				message: "PageExpand 设置"
+			},
+			context_menu_batch_download_image: {
+				message: "批量下载 (图片)"
+			},
+			context_menu_batch_download_user: {
+				message: "批量下载 (用户)"
+			},
+			context_menu_pageexpand_config_current_page: {
+				message: "PageExpand 设置当前页"
+			},
+			context_menu_pageexpand_config_current_bbs: {
+				message: "PageExpand 设置当前 BBS"
+			},
+			context_menu_pageexpand_config_current_page_confirm: {
+				message: "PageExpand 设置将仅在以下页面中运行。 \n(目的是防止被注入恶意脚本)\n\n你想打开以下页面吗？\n"
+			},
+			context_menu_pageexpand_config_auto_run_confirm: {
+				message: "你想要在此页面中运行 PageExpand 设置吗？\n(如果此页面被污染，那么恶意脚本将被注入！)"
+			},
+			context_menu_pageexpand_execute: {
+				message: "执行 PageExpand"
+			},
+			context_menu_pageexpand_abort: {
+				message: "关于 PageExpand"
+			},
+			context_menu_pageexpand_debug: {
+				message: "PageExpand 调试"
+			}
+		}

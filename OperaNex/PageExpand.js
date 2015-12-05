@@ -200,22 +200,21 @@ function PageExpand(page_expand_arguments){
 			// 実行ループ
 			// --------------------------------------------------------------------------------
 			(function(){
-				var time_handle;
-
-				// タスクを毎サイクル実行
-				function TaskContainerExecute(){
-					task_container.execute(task_execute_level);
-				}
+				var time_handle = null;
 
 				// 開始関数をセット
 				task_container.setStartFunc(function(){
-					time_handle = setInterval(TaskContainerExecute, 1000 / 60);
+					if(time_handle !== null) return;
+					time_handle = setInterval(function (){
+						task_container.execute(task_execute_level);
+					}, 1000 / 60);
 				});
 
 				// 終了関数をセット
 				task_container.setEndFunc(function(){
+					if(time_handle === null) return;
 					clearInterval(time_handle);
-					time_handle = undefined;
+					time_handle = null;
 				});
 			})();
 		}
@@ -1665,23 +1664,15 @@ function PageExpand(page_expand_arguments){
 		// 言語を習得
 		// --------------------------------------------------------------------------------
 		_this.getLanguage = function(){
-			try{
-				var type = _proj_src.language.type;
-				var code = [
-					"ja",	// 日本語
-					"en"	// 英語
-				];
-
-				if(0 <= type && type < code.length){
-					return code[type];
-				}
-			}catch(e){
+			var language = _proj_src.language;
+			if(!(language.auto)){
+				return language.code;
 			}
 
 			// 自動判定
-			var language = NavigatorGetBrowserLanguage();
+			var code = NavigatorGetBrowserLanguage();
 
-			return language;
+			return code;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -4281,90 +4272,116 @@ function PageExpand(page_expand_arguments){
 		// プリセットを破棄
 		// --------------------------------------------------------------------------------
 		function removePreset(asset,id){
-			var ary = proj[asset];
-			var i;
-			var obj;
-			var num = ary.length;
-			for(i=0;i<num;i++){
-				if(ary[i].id == id){
-					obj = ary[i];
-					break;
+
+			// リストを取得
+			var def_list = proj[asset];		
+			if(!def_list) return null;
+
+			var is_user = false;
+			var is_used = false;
+			var is_define = !({
+				"urlmap":true,
+				"expand_bbs":true
+			}[asset]);
+			
+			// リストから除外		
+			var def_old = (function(){
+				var def_old;
+				var i;
+				var num = def_list.length;
+				for(i=0;i<num;i++){
+					def_old = def_list[i];
+					if(def_old.id === id){
+						def_list.splice(i,1);
+						return def_old;
+					}
 				}
-			}
+				return null;
+			})();
+			if(!def_old) return null;
 
-			if(obj){
-				// オブジェクトを破棄
-				ary.splice(i,1);
+			// バックアップ定義を作成		
+			var def_bak = (function(){
+				var def_bak = ObjectCopy(def_old);
+				if(!def_bak.user){
+					def_bak.user = def_bak.preset;
+				}else{
+					is_user = true;
+				}
+				delete def_old.user;
+				delete def_bak.preset;
 
-				var check = false;
+				var user = def_bak.user;
+				user.name.standard += " (BackUp)";
+				var locales = user.name.locales;
+				for(var p in locales){
+					locales[p] += " (BackUp)";
+				}
+				def_bak.id = PageExpandProjectObjectDefineGenerateNewUserId(proj[asset]);
+				return def_bak;			
+			})();
+			
+			(function(){
+				if(!(is_define)) return;
+
 				var urlmaps = proj.urlmap;
 				var urlmap_num = urlmaps.length;
-
-				// URLマッピングで使用中
+				var i;
+				var j;
 				for(i=0;i<urlmap_num;i++){
 					var urlmap = urlmaps[i];
-					if(urlmap.user){
-						if(urlmap.user[asset]){
-							if(urlmap.user[asset].id == id){
-								check = true;
-								break;
-							}
-						}
-					}
-				}
-				if(!check){
-					// ユーザー設定を持つ
-					if(obj.user){
-						check = true;
-					}
-				}
-
-				// プリセットをバックアップ
-				if(check){
-					var copy = ObjectCopy(obj);
-					if(!copy.user){
-						copy.user = copy.preset;
-					}
-					delete obj.user;
-					delete copy.preset;
-
-					var user = copy.user;
-					user.name.standard += " (BackUp)";
-					var locales = user.name.locales;
-					for(var p in locales){
-						locales[p] += " (BackUp)";
-					}
-					ary.splice(num-1, 0, copy);
-					copy.id = PageExpandProjectObjectDefineGenerateNewUserId(ary);
-
-					// 複製先に変更
-					for(i=0;i<urlmap_num;i++){
-						var urlmap = urlmaps[i];
-						if(urlmap.user){
-							if(urlmap.user[asset]){
-								if(urlmap.user[asset].id == id){
-									urlmap.user[asset].id = copy.id;
+					var preset = urlmap.preset;
+					if(!preset) continue;
+					var o = preset[asset];
+					if(!o) continue;
+					if((o.id) && (typeof(o.id) == "object")){
+						var a = o.id;
+						for(j=a.length-1;j>=0;j--){
+							if(a[j] === id){
+								a.splice(j,1);
+								if(a.length == 0){
+									o.enable = false;
 								}
 							}
 						}
+					}else if(o.id === id){
+						o.id = "";
+						o.enable = false;
 					}
 				}
 
-				// 未使用
 				for(i=0;i<urlmap_num;i++){
 					var urlmap = urlmaps[i];
-					if(urlmap.preset){
-						if(urlmap.preset[asset]){
-							if(urlmap.preset[asset].id == id){
-								urlmap.preset[asset].id = "";
-								urlmap.preset[asset].enable = false;
+					var user = urlmap.user;
+					if(!user) continue;
+					var o = user[asset];
+					if(!o) continue;
+					if((o.id) && (typeof(o.id) == "object")){
+						var a = o.id;
+						for(j=a.length-1;j>=0;j--){
+							if(a[j] === id){
+								a[j] = def_bak.id;
+								o.enable = true;
+								is_used = true;
 							}
 						}
+					}else if(o.id === id){
+						o.id = def_bak.id;
+						o.enable = true;
+						is_used = true;
 					}
 				}
+			})();
+			
+			var result = false;
+			if(!(is_define) && (is_user)) result = true;
+			if(is_used) result = true;
+
+			if(result){
+				def_list.push(def_bak);
 			}
 
-			return obj;
+			return def_old;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -7712,7 +7729,7 @@ function PageExpand(page_expand_arguments){
 						en:"Assist Expand (twitter)"
 					}
 				},
-				script:PresetScript_ReplacementToElement_AssistTwitter()
+				script:""
 			};
 
 			// 展開アシスト（ピクシブ用）
@@ -8351,11 +8368,6 @@ function PageExpand(page_expand_arguments){
 			preset.script_initialize = "";
 			preset.script_callback = "";
 
-			// 4chan.org
-			var obj = addPreset(proj.expand_bbs,"4chan",null);
-			var preset = obj.preset;
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_4chan();
-
 			// --------------------------------------------------------------------------------
 			// URLマッピング設定
 			// --------------------------------------------------------------------------------
@@ -8829,12 +8841,6 @@ function PageExpand(page_expand_arguments){
 				}
 			};
 
-			// ニコニコ大百科
-			var obj = addPreset(proj.expand_bbs,"nicovideo_dictionary",null);
-			var preset = obj.preset;
-			preset.script_initialize = "";
-			preset.script_callback = "";
-
 			// --------------------------------------------------------------------------------
 			// アクセスブロック定義
 			// --------------------------------------------------------------------------------
@@ -9059,27 +9065,6 @@ function PageExpand(page_expand_arguments){
 				obj.inline.script_insert = PresetScript_ExpandIframe_InlineScriptInsert_ExpandPdfInline();
 			});
 
-			// --------------------------------------------------------------------------------
-			// 掲示板設定
-			// --------------------------------------------------------------------------------
-			// みみずん検索
-			var obj = addPreset(proj.expand_bbs,"mimizun",null);
-			var preset = obj.preset;
-			preset.script_initialize = "";
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Mimizun();
-
-			// unkar.org
-			var obj = addPreset(proj.expand_bbs,"unkar",null);
-			var preset = obj.preset;
-			preset.script_initialize = "";
-			preset.script_callback = "";
-
-			// ニコニコ大百科
-			var obj = addPreset(proj.expand_bbs,"nicovideo_dictionary",null);
-			var preset = obj.preset;
-			preset.script_initialize = "";
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_NicovideoDictionary();
-
 		}
 		if(exit())	return proj;
 
@@ -9289,7 +9274,7 @@ function PageExpand(page_expand_arguments){
 				filter[2].script = PresetScript_ReplacementToLink_DirectLinkGeneric_Twitpic();
 
 				// Twitter Photo
-				filter[3].script = PresetScript_ReplacementToLink_DirectLinkGeneric_TwitterPhoto();
+				filter[3].script = "";
 
 				// Facebook Photo
 				filter[4].filter.asterisk.filter.push("*://www.facebook.com/*/photos/*");
@@ -9496,12 +9481,6 @@ function PageExpand(page_expand_arguments){
 
 			// unkar.org
 			removePreset("expand_bbs","unkar");
-
-			// あっとちゃんねるず
-			var obj = addPreset(proj.expand_bbs,"atchs",null);
-			var preset = obj.preset;
-			preset.script_initialize = "";
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Atchs();
 
 			// --------------------------------------------------------------------------------
 			// URLマッピング設定
@@ -9720,7 +9699,7 @@ function PageExpand(page_expand_arguments){
 				},
 				enable:true,
 				script_initialize:PresetScript_ExpandBbs_ScriptInitialize(),
-				script_callback:PresetScript_ExpandBbs_ScriptCallback_8chan(),
+				script_callback:"",
 				popup:{
 					origin_type:"adsorb_top_bottom",
 					position_type:"absolute",
@@ -9811,15 +9790,6 @@ function PageExpand(page_expand_arguments){
 				]
 			};
 
-			// --------------------------------------------------------------------------------
-			// 掲示板設定
-			// --------------------------------------------------------------------------------
-			// chaika
-			var obj = addPreset(proj.expand_bbs,"chaika","atchs");
-			var preset = obj.preset;
-			preset.script_initialize = "";
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Chaika();
-
 		}
 		if(exit())	return proj;
 
@@ -9873,7 +9843,7 @@ function PageExpand(page_expand_arguments){
 
 			// ツイッター用
 			updatePreset(proj.expand_image,"twitter",function(obj){
-				obj.thumbnail.script_allow = PresetScript_ExpandImage_ThumbnailScriptAllow_Twitter();
+				obj.thumbnail.script_allow = "";
 				obj.popup.script_allow = PresetScript_ExpandImage_PopupScriptAllow_Twitter();
 			});
 
@@ -9940,31 +9910,6 @@ function PageExpand(page_expand_arguments){
 			var preset = getPreset(proj.urlmap,"bbs");
 			preset.replacement_to_referer.id.unshift("bbs");
 
-			// --------------------------------------------------------------------------------
-			// 掲示板設定
-			// --------------------------------------------------------------------------------
-
-			// ログ速
-			var obj = addPreset(proj.expand_bbs,"logsoku",null);
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Logsoku();
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Logsoku();
-
-			// みみずん検索
-			var obj = addPreset(proj.expand_bbs,"mimizun",null);
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Mimizun();
-
-			// chaika
-			var obj = addPreset(proj.expand_bbs,"chaika",null);
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Chaika();
-
-			// ニコニコ大百科
-			var obj = addPreset(proj.expand_bbs,"nicovideo_dictionary",null);
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_NicovideoDictionary();
-
 		}
 		if(exit())	return proj;
 
@@ -10028,15 +9973,6 @@ function PageExpand(page_expand_arguments){
 			preset.replacement_to_element = {enable:true,id:["assist_image_in_anchor"]};
 			preset.expand_image = {enable:true,id:"bbs"};
 
-			// --------------------------------------------------------------------------------
-			// 掲示板設定
-			// --------------------------------------------------------------------------------
-			// おーぷん２ちゃんねる
-			var obj = addPreset(proj.expand_bbs,"open2ch",null);
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Open2ch();
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Open2ch();
-
 		}
 		if(exit())	return proj;
 
@@ -10062,14 +9998,6 @@ function PageExpand(page_expand_arguments){
 				},
 				script:PresetScript_ReplacementToElement_AssistReddit()
 			};
-
-			// --------------------------------------------------------------------------------
-			// アンカー置換定義
-			// --------------------------------------------------------------------------------
-			// 2ch.net 用
-			updatePreset(proj.replacement_to_anchor,"direct_link_bbs",function(obj){
-				obj.script = PresetScript_ReplacementToAnchor_DirectLinkBbs();
-			});
 
 			// --------------------------------------------------------------------------------
 			// ハイパーリンク置換定義
@@ -10281,7 +10209,7 @@ function PageExpand(page_expand_arguments){
 				},
 				enable:true,
 				script_initialize:PresetScript_ExpandBbs_ScriptInitialize(),
-				script_callback:PresetScript_ExpandBbs_ScriptCallback_reddit(),
+				script_callback:"",
 				popup:{
 					origin_type:"adsorb_top_bottom",
 					position_type:"absolute",
@@ -10312,19 +10240,278 @@ function PageExpand(page_expand_arguments){
 			var filter = preset.filter.regexp.filter;
 			filter[4].pattern = "^http://jbbs\\.shitaraba\\.net/bbs/read\\.cgi/[^/]+/[0-9]+/[0-9]+.*$";
 			filter[5].pattern = "^http://jbbs\\.shitaraba\\.net/bbs/read_archive\\.cgi/[^/]+/[0-9]+/[0-9]+.*$";
+
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.28
+		// --------------------------------------------------------------------------------
+		if(proj.version < 28){
+			// バージョン値
+			proj.version = 28;
+
+			// --------------------------------------------------------------------------------
+			// 言語設定
+			// --------------------------------------------------------------------------------
+			var language = proj.language;
+			language.auto = (language.type < 0);
+			language.code = (["ja","en"][language.type]) || "en";				
+			delete (language.type);
+
+			// --------------------------------------------------------------------------------
+			// リファラ置換定義
+			// --------------------------------------------------------------------------------
+			// スレッド掲示板用
+			removePreset("replacement_to_referer","bbs");
+
+			// 直リンク用（汎用）
+			var obj = addPreset(proj.replacement_to_referer,"direct_link_generic","wildcard");
+			obj.preset = {
+				name:{
+					standard:"For Direct Link (generic)",
+					locales:{
+						ja:"直リンク用（汎用）",
+						en:"For Direct Link (generic)"
+					}
+				},
+				filter:[
+					{
+						name:{
+							standard:"pixiv.net",
+							locales:{
+								ja:"pixiv.net",
+								en:"pixiv.net"
+							}
+						},
+						filter:{
+							type:"asterisk",
+							asterisk:{
+								filter:[
+									"*://*.pixiv.net/*"
+								]
+							},
+							regexp:{
+								filter:[]
+							}
+						},
+						send_referer:{
+							type:"link_url",
+							custom:"",
+							regexp:{
+								pattern:"",
+								flags:{i:false,g:false}
+							},
+							replacement:""
+						}
+					}
+				]
+			};
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義
+			// --------------------------------------------------------------------------------
+			// 展開アシスト（ツイッター用）
+			updatePreset(proj.replacement_to_element,"assist_twitter",function(obj){
+				obj.script = PresetScript_ReplacementToElement_AssistTwitter();
+			});
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義
+			// --------------------------------------------------------------------------------
+			// 2ch.net 用
+			updatePreset(proj.replacement_to_anchor,"direct_link_bbs",function(obj){
+				obj.script = PresetScript_ReplacementToAnchor_DirectLinkBbs();
+			});
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義
+			// --------------------------------------------------------------------------------
+			// 直リンク（汎用）
+			updatePreset(proj.replacement_to_link,"direct_link_generic",function(obj){
+				var filter = obj.filter;
+
+				// Twitter Photo
+				filter[3].script = PresetScript_ReplacementToLink_DirectLinkGeneric_TwitterPhoto();
+			});
+
+			// --------------------------------------------------------------------------------
+			// 短縮 URL 展開
+			// --------------------------------------------------------------------------------
+			var f = function(obj){
+				var filter = obj.filter.asterisk.filter;
+				var re = new RegExp("^(http|https)://(.*)$","i");
+				var i;
+				var num = filter.length;
+				for(i=0;i<num;i++){
+					var m = filter[i].match(re);
+					if(m) filter[i] = "*://" + m[2];
+				}
+			};
+
+			// 詳細
+			updatePreset(proj.expand_short_url,"detail",f);
+			// 簡易
+			updatePreset(proj.expand_short_url,"simple",f);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義
+			// --------------------------------------------------------------------------------
+			// ツイッター用
+			updatePreset(proj.expand_image,"twitter",function(obj){
+				obj.thumbnail.script_allow = PresetScript_ExpandImage_ThumbnailScriptAllow_Twitter();
+			});
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			// chaika
+			removePreset("urlmap","chaika");
+
+			// ブログ
+			var obj = getPreset(proj.urlmap,"blog_ja");
+			obj.replacement_to_referer = {enable:true,id:["direct_link_generic"]};
+
+			// ニコニコ静画
+			var obj = getPreset(proj.urlmap,"nico_seiga");
+			obj.replacement_to_referer = {enable:true,id:["direct_link_generic"]};
+
+			// deviantART
+			var obj = getPreset(proj.urlmap,"deviant_art");
+			obj.replacement_to_referer = {enable:true,id:["direct_link_generic"]};
+
+			// twitter
+			var obj = getPreset(proj.urlmap,"twitter");
+			obj.replacement_to_referer = {enable:true,id:["direct_link_generic"]};
+
+			// フェイスブック
+			var obj = getPreset(proj.urlmap,"facebook");
+			obj.replacement_to_referer = {enable:true,id:["direct_link_generic"]};
+
+			// スレッド掲示板
+			var obj = getPreset(proj.urlmap,"bbs");
+			var filter = obj.filter.asterisk.filter;
+			filter.splice(12,1);
+			filter.splice(11,1);
+			filter.splice(10,1);
+			obj.replacement_to_referer = {enable:true,id:["direct_link_generic"]};
+
+			// 画像掲示板
+			var obj = getPreset(proj.urlmap,"image_bbs");
+			obj.replacement_to_referer = {enable:true,id:["direct_link_generic"]};
+
+			// reddit.com
+			var obj = getPreset(proj.urlmap,"reddit");
+			obj.replacement_to_referer = {enable:true,id:["direct_link_generic"]};
+
+			// 画像検索サイト
+			var obj = getPreset(proj.urlmap,"image_search");
+			obj.replacement_to_referer = {enable:false,id:[]};
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// ２ちゃんねる掲示板
+			var obj = addPreset(proj.expand_bbs,"2ch",null);
+			var preset = obj.preset;
+			var filter = preset.filter.regexp.filter;
+			filter.splice(7,1);
+			filter.splice(6,1);
 			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_2ch();
 			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2ch();
 
-			// あっとちゃんねるず
-			var obj = addPreset(proj.expand_bbs,"atchs",null);
+			// ログ速
+			var obj = addPreset(proj.expand_bbs,"logsoku",null);
 			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Atchs();
+			preset.filter.regexp.filter.splice(0,3,{
+				pattern:"^http://www\\.logsoku\\.com/r/[^/]+/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			});
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Logsoku();
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Logsoku();
+
+			// みみずん検索
+			var obj = addPreset(proj.expand_bbs,"mimizun",null);
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Mimizun();
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Mimizun();
+
+			// おーぷん２ちゃんねる
+			var obj = addPreset(proj.expand_bbs,"open2ch",null);
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Open2ch();
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Open2ch();
 
 			// ふたば☆ちゃんねる
 			var obj = addPreset(proj.expand_bbs,"2chan",null);
 			var preset = obj.preset;
 			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_2chan();
 			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2chan();
+
+			// 4chan.org
+			var obj = addPreset(proj.expand_bbs,"4chan",null);
+			var preset = obj.preset;
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_4chan();
+
+			// 8chan.co
+			var obj = addPreset(proj.expand_bbs,"8chan",null);
+			var preset = obj.preset;
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_8chan();
+
+			// reddit.com
+			var obj = addPreset(proj.expand_bbs,"reddit",null);
+			var preset = obj.preset;
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_reddit();
+
+			// ニコニコ大百科
+			var obj = addPreset(proj.expand_bbs,"nicovideo_dictionary",null);
+			var preset = obj.preset;
+			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_NicovideoDictionary();
+			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_NicovideoDictionary();
+
+			// あっとちゃんねるず
+			removePreset("expand_bbs","atchs");
+
+			// chaika
+			removePreset("expand_bbs","chaika");
+
+			// ２ちゃんねる掲示板 v.06
+			var obj = addPreset(proj.expand_bbs,"2ch_v6","2ch");
+			obj.preset = {
+				name:{
+					standard:"2ch.net (v.06)",
+					locales:{
+						ja:"２ちゃんねる掲示板（v.06）",
+						en:"2ch.net (v.06)"
+					}
+				},
+				filter:{
+					type:"regexp",
+					asterisk:{
+						filter:[]
+					},
+					regexp:{
+						filter:[
+							{
+								pattern:"^http://potato\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+								flags:{i:true,g:false}
+							}
+						]
+					}
+				},
+				enable:true,
+				script_initialize:PresetScript_ExpandBbs_ScriptInitialize_2ch_v6(),
+				script_callback:PresetScript_ExpandBbs_ScriptCallback_2ch_v6(),
+				popup:{
+					origin_type:"adsorb_top_bottom",
+					position_type:"absolute",
+					enable_animation:true,
+					percent:{x:75,y:90},
+					time_wait_open:0,
+					time_wait_close:250,
+					style_sheet:"padding:20px 10px; margin:0px; border:1px solid #000; background:#FFF; overflow-y:auto; word-wrap:break-word; word-break:break-all; display:block;"
+				}
+			};
 
 		}
 		if(exit())	return proj;
@@ -10517,11 +10704,33 @@ function PageExpand(page_expand_arguments){
 	function(info,response){
 		var element = info.element;
 
+		// 画像検索上のサムネイル
 		var resolved_url = element.getAttribute("data-resolved-url-large");
 		if(resolved_url){
 			response({url:resolved_url});
 			return true;
 		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function(info,response){
+		var element = info.element;
+
+		// タイムライン上の画像サムネイル（twimg.com）
+		try{
+			var m = element.className.match(new RegExp("(^| )OldMedia-photoContainer( |$)","i"));
+			if(m){
+				var image_url = element.getAttribute("data-image-url");
+				if(image_url){
+					var m = image_url.match("(http|https)://[^:]+");
+					if(m) image_url = m[0] + ":orig";
+					response({url:image_url});
+					return true;
+				}
+			}
+		}catch(e){
+		}		
 
 		return false;
 	}.toString() +
@@ -11404,32 +11613,29 @@ function PageExpand(page_expand_arguments){
 
 		var list = [
 			// 2ちゃんねる
-			{search:"^http://ime\\.nu/",replace:"http://"},
-			{search:"^http://jump\\.2ch\\.net/[?]",replace:"http://"},
-			{search:"^http://2ch\\.io/",replace:"http://"},
+			{search:"^http://ime\\.nu/",replace:""},
+			{search:"^http://jump\\.2ch\\.net/[?]",replace:""},
+			{search:"^http://2ch\\.io/",replace:""},
 			// まちBBS
 			{search:"^http://machi\\.to/bbs/link\\.cgi[?]URL=",replace:""},
 			// PINKちゃんねる
-			{search:"^http://pinktower\\.com/([?]|)",replace:"http://"},
+			{search:"^http://pinktower\\.com/([?]|)",replace:""},
 			// したらば掲示板
 			{search:"^http://jbbs\\.shitaraba\\.net/bbs/link\\.cgi[?]url=",replace:"",decode_uri:true},
 			// ログ速
-			{search:"^http://l\\.moapi\\.net/",replace:""},
-			// かきこ
-			{search:"^http://fast\\.io/",replace:"http://"},
-			// あっとちゃんねるず
-			{search:"^http://z4c\\.in/",replace:"http://"},
-			{search:"^http://www[0-9]+\\.atchs\\.jp/j/",replace:"http://"}
+			{search:"^http://l\\.moapi\\.net/",replace:""}
 		];
 
 		var i;
 		var num = list.length;
+		var re_protocol = new RegExp("^(http|https|ftp)://");
 		for(i=0;i<num;i++){
 			var item = list[i];
 			r = new RegExp(item.search,"i");
 			if(url.match(r)){
 				url = url.replace(r,item.replace);
 				if(item.decode_uri) url = decodeURIComponent(url);
+				if(!(url.match(re_protocol))) url = "http://" + url;
 				anchor_element.href = url;
 				break;
 			}
@@ -11967,8 +12173,16 @@ function PageExpand(page_expand_arguments){
 
 			// 高解像度
 			if(!image_url){
-				var m = str.match(new RegExp('<a[^>]+data[-]resolved[-]url[-]large[ \n\r\t]*=[ \n\r\t]*"(https://pbs\\.twimg\\.com/media/[^"]+)"',"i"));
-				if(m) image_url = m[1];
+				var m = str.match(new RegExp("<meta[^>]+?(property|name)[ \n\r\t]*=[ \n\r\t]*\"og:image\"[^>]*>","i"));
+				if(m){
+					m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
+					if(m){
+						m = m[1].match(new RegExp("https://pbs\\.twimg\\.com/media/.*","i"));
+						if(m){
+							image_url = m[0];
+						}
+					}
+				}
 			}
 
 			// 低解像度
@@ -15126,6 +15340,10 @@ function PageExpand(page_expand_arguments){
 			var m = ElementGetClassName(node).match(new RegExp("(^| )tweet-text( |$)","i"));
 			if(!m) return false;
 
+			if(current_element.getAttribute("data-pre-embedded") === "true"){
+				return false;
+			}
+
 			var anchor_count = 0;
 			var nodes = ElementGetElementsByTagName(node,"a");
 			var i;
@@ -16979,6 +17197,7 @@ function PageExpand(page_expand_arguments){
 					control_id.setResponse(response);
 
 					var id = control_id.getId();
+					var myself = (response.getId() === id);
 					var element_id = control_id.getElement();
 					var textnode_id = DocumentCreateText("");
 
@@ -17012,7 +17231,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "id"){
-						if(response.getId() == id)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -17029,7 +17248,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromId(id);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_id = responses[i];
@@ -17140,6 +17363,7 @@ function PageExpand(page_expand_arguments){
 					control_name.setResponse(response);
 
 					var name = control_name.getName();
+					var myself = (response.getName() === name);
 					var element_name = control_name.getElement();
 					var textnode_name = DocumentCreateText("");
 
@@ -17173,7 +17397,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "name"){
-						if(response.getName() == name)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -17190,7 +17414,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromName(name);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_name = responses[i];
@@ -17643,6 +17871,7 @@ function PageExpand(page_expand_arguments){
 					control_name.setResponse(response);
 
 					var name = control_name.getName();
+					var myself = (response.getName() === name);
 					var element_name = control_name.getElement();
 					var textnode_name = DocumentCreateText("");
 
@@ -17673,7 +17902,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "name"){
-						if(response.getName() == name)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -17686,7 +17915,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromName(name);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_name = responses[i];
@@ -18123,6 +18356,7 @@ function PageExpand(page_expand_arguments){
 					control_id.setResponse(response);
 
 					var id = control_id.getId();
+					var myself = (response.getId() === id);
 					var element_id = control_id.getElement();
 					var textnode_id = DocumentCreateText("");
 
@@ -18161,7 +18395,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "id"){
-						if(response.getId() == id)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -18176,7 +18410,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromId(id);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_id = responses[i];
@@ -18290,6 +18528,7 @@ function PageExpand(page_expand_arguments){
 					control_name.setResponse(response);
 
 					var name = control_name.getName();
+					var myself = (response.getName() === name);
 					var element_name = control_name.getElement();
 					var textnode_name = DocumentCreateText("");
 
@@ -18323,7 +18562,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "name"){
-						if(response.getName() == name)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -18338,7 +18577,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromName(name);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_name = responses[i];
@@ -19036,6 +19279,7 @@ function PageExpand(page_expand_arguments){
 					control_id.setResponse(response);
 
 					var id = control_id.getId();
+					var myself = (response.getId() === id);
 					var element_id = control_id.getElement();
 					var textnode_id = DocumentCreateText("");
 
@@ -19074,7 +19318,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "id"){
-						if(response.getId() == id)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -19089,7 +19333,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromId(id);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_id = responses[i];
@@ -19203,6 +19451,7 @@ function PageExpand(page_expand_arguments){
 					control_name.setResponse(response);
 
 					var name = control_name.getName();
+					var myself = (response.getName() === name);
 					var element_name = control_name.getElement();
 					var textnode_name = DocumentCreateText("");
 
@@ -19236,7 +19485,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "name"){
-						if(response.getName() == name)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -19251,7 +19500,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromName(name);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_name = responses[i];
@@ -20127,6 +20380,7 @@ function PageExpand(page_expand_arguments){
 				if(num){
 					var docking_form = new BbsControlDockingForm(nodes[0],false);
 					docking_form.setStyle("background:#e8e8ec; background-image:linear-gradient(to bottom, #f8f8fc, #e8e8ec); padding:20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px; display:block; visibility:visible");
+					work.docking_form = docking_form;
 				}
 			}
 		})();
@@ -20175,6 +20429,7 @@ function PageExpand(page_expand_arguments){
 					var nodes = ElementGetElementsByTagName(element_form,"textarea");
 					if(nodes.length){
 						element_textarea = nodes[0];
+						work.form_textarea = element_textarea;
 					}
 				}
 			})();
@@ -20325,6 +20580,10 @@ function PageExpand(page_expand_arguments){
 				event_handler_release.setFunction(function(){
 					release();
 				});
+				
+				if(work.docking_form){
+					work.docking_form.onreset = clear;
+				}
 			})();
 		})();
 
@@ -20449,12 +20708,10 @@ function PageExpand(page_expand_arguments){
 							var clone_num = clone.length;
 							if(clone_num){
 								var table = DocumentCreateElement("table");
-								var tr = DocumentCreateElement("tr");
-								var td = DocumentCreateElement("td");
-								table.style.margin = "0px 0px 10px";
 								_window.appendChild(table);
-								table.appendChild(tr);
-								tr.appendChild(td);
+								var tr = table.insertRow(-1);
+								var td = tr.insertCell(-1);
+								table.style.margin = "0px 0px 10px";
 
 								var param = new Object();
 								param.parent = node.parent;
@@ -20525,7 +20782,10 @@ function PageExpand(page_expand_arguments){
 								if(!abbreviate){
 									var control_quote = new BbsControlQuote(null,true);
 									var element_quote = control_quote.getElement();
-									element_quote.style.cssText = "font-size:small; text-decoration:underline; margin-left:10px;";
+									var style = element_quote.style;
+									style.fontSize = "small";
+									style.textDecoration = "underline";
+									style.marginLeft = "10px";
 									//var textnode_quote = DocumentCreateText(" >>" + numbers_new.join(","));
 									var textnode_quote = DocumentCreateText(" >>" + numbers_new.length);
 									element_quote.appendChild(textnode_quote);
@@ -20567,12 +20827,10 @@ function PageExpand(page_expand_arguments){
 							var clone_num = clone.length;
 							if(clone_num){
 								var table = DocumentCreateElement("table");
-								var tr = DocumentCreateElement("tr");
-								var td = DocumentCreateElement("td");
-								table.style.margin = "0px 0px 10px";
 								_window.appendChild(table);
-								table.appendChild(tr);
-								tr.appendChild(td);
+								var tr = table.insertRow(-1);
+								var td = tr.insertCell(-1);
+								table.style.margin = "0px 0px 10px";
 
 								var param = new Object();
 								param.parent = node.parent;
@@ -20684,6 +20942,7 @@ function PageExpand(page_expand_arguments){
 						control_id.setResponse(response);
 
 						var id = control_id.getId();
+						var myself = (response.getId() === id);
 						var element_id = control_id.getElement();
 						var textnode_id = DocumentCreateText("");
 
@@ -20717,7 +20976,7 @@ function PageExpand(page_expand_arguments){
 						// ポップアップ化
 						// --------------------------------------------------------------------------------
 						if(type == "id"){
-							if(response.getId() == id)	return null;
+							if(myself) return null;
 						}
 
 						// ダイアログを作成
@@ -20730,7 +20989,11 @@ function PageExpand(page_expand_arguments){
 							var responses = bbs_dictionary.getResponsesFromId(id);
 							var i = 0;
 							var num = responses.length;
-							if(num <= 1) return false;
+							if(myself){
+								if(num < 2) return false;
+							}else{
+								if(num < 1) return false;
+							}
 
 							function f(){
 								var response_id = responses[i];
@@ -20740,12 +21003,10 @@ function PageExpand(page_expand_arguments){
 								var clone_num = clone.length;
 								if(clone_num){
 									var table = DocumentCreateElement("table");
-									var tr = DocumentCreateElement("tr");
-									var td = DocumentCreateElement("td");
-									table.style.margin = "0px 0px 10px";
 									_window.appendChild(table);
-									table.appendChild(tr);
-									tr.appendChild(td);
+									var tr = table.insertRow(-1);
+									var td = tr.insertCell(-1);
+									table.style.margin = "0px 0px 10px";
 
 									var param = new Object();
 									param.parent = node.parent;
@@ -20856,6 +21117,7 @@ function PageExpand(page_expand_arguments){
 						control_name.setResponse(response);
 
 						var name = control_name.getName();
+						var myself = (response.getName() === name);
 						var element_name = control_name.getElement();
 						var textnode_name = DocumentCreateText("");
 
@@ -20889,7 +21151,7 @@ function PageExpand(page_expand_arguments){
 						// ポップアップ化
 						// --------------------------------------------------------------------------------
 						if(type == "name"){
-							if(response.getName() == name)	return null;
+							if(myself) return null;
 						}
 
 						// ダイアログを作成
@@ -20902,7 +21164,11 @@ function PageExpand(page_expand_arguments){
 							var responses = bbs_dictionary.getResponsesFromName(name);
 							var i = 0;
 							var num = responses.length;
-							if(num <= 1) return false;
+							if(myself){
+								if(num < 2) return false;
+							}else{
+								if(num < 1) return false;
+							}
 
 							function f(){
 								var response_name = responses[i];
@@ -20912,12 +21178,10 @@ function PageExpand(page_expand_arguments){
 								var clone_num = clone.length;
 								if(clone_num){
 									var table = DocumentCreateElement("table");
-									var tr = DocumentCreateElement("tr");
-									var td = DocumentCreateElement("td");
-									table.style.margin = "0px 0px 10px";
 									_window.appendChild(table);
-									table.appendChild(tr);
-									tr.appendChild(td);
+									var tr = table.insertRow(-1);
+									var td = tr.insertCell(-1);
+									table.style.margin = "0px 0px 10px";
 
 									var param = new Object();
 									param.parent = node.parent;
@@ -20994,7 +21258,7 @@ function PageExpand(page_expand_arguments){
 							while(node){
 								var text_value = DomNodeGetNodeValue(node);
 
-								var m = text_value.match(new RegExp("(IP:)([0-9]{1,3}\\.[0-9]{1,3}\\.[*][(][-.a-zA-Z0-9]+[)])","i"));
+								var m = text_value.match(new RegExp("(IP:)([-.:*a-zA-Z0-9()]+)","i"));
 								if(m){
 									// 元のテキストノード
 									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
@@ -21032,6 +21296,7 @@ function PageExpand(page_expand_arguments){
 						control_host.setResponse(response);
 
 						var host = control_host.getHost();
+						var myself = (response.getHost() === host);
 						var element_host = control_host.getElement();
 						var textnode_host = DocumentCreateText("");
 
@@ -21065,7 +21330,7 @@ function PageExpand(page_expand_arguments){
 						// ポップアップ化
 						// --------------------------------------------------------------------------------
 						if(type == "host"){
-							if(response.getHost() == host)	return null;
+							if(myself) return null;
 						}
 
 						// ダイアログを作成
@@ -21078,7 +21343,11 @@ function PageExpand(page_expand_arguments){
 							var responses = bbs_dictionary.getResponsesFromHost(host);
 							var i = 0;
 							var num = responses.length;
-							if(num <= 1) return false;
+							if(myself){
+								if(num < 2) return false;
+							}else{
+								if(num < 1) return false;
+							}
 
 							function f(){
 								var response_host = responses[i];
@@ -21088,12 +21357,151 @@ function PageExpand(page_expand_arguments){
 								var clone_num = clone.length;
 								if(clone_num){
 									var table = DocumentCreateElement("table");
-									var tr = DocumentCreateElement("tr");
-									var td = DocumentCreateElement("td");
-									table.style.margin = "0px 0px 10px";
 									_window.appendChild(table);
-									table.appendChild(tr);
-									tr.appendChild(td);
+									var tr = table.insertRow(-1);
+									var td = tr.insertCell(-1);
+									table.style.margin = "0px 0px 10px";
+
+									var param = new Object();
+									param.parent = node.parent;
+									for(j=0;j<clone_num;j++){
+										var obj = clone[j];
+										if(!param[obj.name]) param[obj.name] = new Array();
+										param[obj.name].push(obj.element);
+										td.appendChild(obj.element);
+									}
+
+									// レスポンスダイアログを登録
+									attachBbsResponseDialog(response_host,param,response_dialog,"host");
+								}
+
+								i += 1;
+								if(i < num){
+									execute_queue.attachFirst(f,null);
+								}else{
+									callback({result:true});
+								}
+							}
+							execute_queue.attachFirst(f,null);
+						};
+
+						return null;
+					})(control_list[i]);
+				}
+			}
+
+			// --------------------------------------------------------------------------------
+			// ホスト(メッセージ)
+			// --------------------------------------------------------------------------------
+			function forHostInMessage(target){
+				if(BbsControlHostExist(target))	return;
+
+				var control_list = new Array();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlHost を生成
+				// --------------------------------------------------------------------------------
+				(function(){	
+					try{
+						var node = target.firstChild;
+						if(node.nodeValue !== "[") return;
+						node = node.nextSibling;
+						if(node.tagName !== "FONT") return;
+						var m = node.innerHTML.match(new RegExp("^([-.:*a-zA-Z0-9()]+)$","i"));
+						if(!m) return;
+						node = node.nextSibling;
+						if(node.nodeValue !== "]") return;
+			
+						// BbsControlHost を生成
+						var control_host = new BbsControlHost(null,false);
+						control_host.setHost(m[1]);
+						control_list.push(control_host);
+						var element_host = control_host.getElement();
+						DomNode_InsertBefore(node,element_host);						
+						
+					}catch(e){
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlHost を検索
+				// --------------------------------------------------------------------------------
+				var i;
+				var num = control_list.length;
+				for(i=0;i<num;i++){
+					(function(control_host){
+
+						control_host.setResponse(response);
+
+						var host = control_host.getHost();
+						var myself = (response.getHost() === host);
+						var element_host = control_host.getElement();
+						var textnode_host = DocumentCreateText("");
+
+						// --------------------------------------------------------------------------------
+						// 変化があったときに実行されるイベント
+						// --------------------------------------------------------------------------------
+						control_host.onchange = function(count){
+							var style = element_host.style;
+							if(count > 1){
+								DomNodeSetNodeValue(textnode_host,"(" + count + ")");
+								StyleDeclarationSetProperty(style,"margin-left","4px");
+								StyleDeclarationSetProperty(style,"margin-right","4px");
+							}else{
+								DomNodeSetNodeValue(textnode_host,"");
+								StyleDeclarationRemoveProperty(style,"margin-left");
+								StyleDeclarationRemoveProperty(style,"margin-right");
+							}
+
+							if(count >= 5){
+								StyleDeclarationSetProperty(style,"color","#e80000");
+								StyleDeclarationRemoveProperty(style,"font-size");
+							}else if(count >= 2){
+								StyleDeclarationRemoveProperty(style,"color");
+								StyleDeclarationRemoveProperty(style,"font-size");
+							}else{
+								StyleDeclarationSetProperty(style,"color","#707070");
+								StyleDeclarationSetProperty(style,"font-size","80%");
+							}
+						};
+						control_host.update();
+						element_host.appendChild(textnode_host);
+
+						// --------------------------------------------------------------------------------
+						// ポップアップ化
+						// --------------------------------------------------------------------------------
+						if(type == "host"){
+							if(myself) return null;
+						}
+
+						// ダイアログを作成
+						var response_dialog = new BbsResponseDialog();
+						if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+						response_dialog.setElementParent(node.parent);
+						response_dialog.setElementHitArea(element_host);
+						response_dialog.oncreate = function(_window,callback){
+
+							var responses = bbs_dictionary.getResponsesFromHost(host);
+							var i = 0;
+							var num = responses.length;
+							if(myself){
+								if(num < 2) return false;
+							}else{
+								if(num < 1) return false;
+							}
+
+							function f(){
+								var response_host = responses[i];
+								var clone = response_host.getCloneElements();
+
+								var j;
+								var clone_num = clone.length;
+								if(clone_num){
+									var table = DocumentCreateElement("table");
+									_window.appendChild(table);
+									var tr = table.insertRow(-1);
+									var td = tr.insertCell(-1);
+									table.style.margin = "0px 0px 10px";
 
 									var param = new Object();
 									param.parent = node.parent;
@@ -21191,12 +21599,10 @@ function PageExpand(page_expand_arguments){
 						var clone_num = clone.length;
 						if(clone_num){
 							var table = DocumentCreateElement("table");
-							var tr = DocumentCreateElement("tr");
-							var td = DocumentCreateElement("td");
-							table.style.margin = "0px 0px 10px";
 							_window.appendChild(table);
-							table.appendChild(tr);
-							tr.appendChild(td);
+							var tr = table.insertRow(-1);
+							var td = tr.insertCell(-1);
+							table.style.margin = "0px 0px 10px";
 
 							var param = new Object();
 							param.parent = node.parent;
@@ -21222,6 +21628,100 @@ function PageExpand(page_expand_arguments){
 				};
 			}
 
+			// --------------------------------------------------------------------------------
+			// 返信
+			// --------------------------------------------------------------------------------
+			function forReply(target){
+				if(BbsControlReplyExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlReply を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var n = target;
+					if(!n) return;
+					if(n.nodeType != 3) return;
+
+					// 本文
+					var m = DomNodeGetNodeValue(n).match(new RegExp("No[.][0-9]+","i"));
+					if(!m)	return;
+
+					// 元のテキストノード
+					DomNodeSetNodeValue(n,RegExp.leftContext);
+
+					// BbsControlReply を生成
+					var control_reply = new BbsControlReply(null,false);
+					var element_reply = control_reply.getElement();
+					ElementSetTextContent(element_reply,m[0]);
+					DomNode_InsertAfter(n,element_reply);
+
+					// 直後テキスト
+					n = DocumentCreateText(RegExp.rightContext);
+					DomNode_InsertAfter(element_reply,n);
+
+					control_reply.setResponse(response);
+					var docking_form = work.docking_form;
+					var textarea = work.form_textarea;
+					var blockquote = (function(){
+						var list = node.post_message;
+						var i;
+						var num = list.length;
+						for(i=0;i<num;i++){
+							if(list[i].nodeName == "BLOCKQUOTE") return list[i];
+						}
+						return null;
+					})();
+	
+					// --------------------------------------------------------------------------------
+					// クリックされたときに実行されるイベント
+					// --------------------------------------------------------------------------------
+					control_reply.onclick = function(e){
+						docking_form.popupForReply(element_reply);
+						var text = textarea.value;
+						var num = text.length;
+						var selection_end = textarea.selectionEnd;
+						var insert_str;
+						if(num == 0){
+							insert_str = (function(){
+								var ary = [">"];								
+								var f = function (node){
+									switch(node.nodeType){
+									case 1:
+										if(BbsControlQuoteEqual(node)) return;
+										if(node.tagName === "BR"){
+											ary.push("\n");
+											ary.push(">");
+										}else{
+											var i;
+											var nodes = node.childNodes;
+											var num = nodes.length;
+											for(i=0;i<num;i++){
+												f(nodes[i]);
+											}
+										}
+										break;
+									case 3:
+										ary.push(node.nodeValue);
+										break;
+									}									
+								};
+								f(blockquote);
+								if(ary[ary.length - 1] == ">") ary.pop();
+								ary.push("\n");
+								return ary.join("");
+							})();
+						}else if(selection_end >= num){
+							insert_str = ">No." + (response.getNumber()) + "\n";
+						}else{
+							insert_str = ">No." + (response.getNumber());
+						}
+						textarea.value = text.slice(0,selection_end) + insert_str + text.slice(selection_end);
+						textarea.selectionEnd = selection_end + insert_str.length;
+						textarea.focus();
+					};
+				})();
+			}
+
 			(function(){
 				var i;
 				var num;
@@ -21230,6 +21730,7 @@ function PageExpand(page_expand_arguments){
 				list = node.post_info;
 				num = list.length;
 				for(i=0;i<num;i++){
+					forReply(list[i]);
 					forId(list[i]);
 					forName(list[i]);
 					forHost(list[i]);
@@ -21245,6 +21746,7 @@ function PageExpand(page_expand_arguments){
 					forQuote(list[i]);
 					forId(list[i]);
 					forName(list[i]);
+					forHostInMessage(list[i]);
 				}
 			})();
 		}
@@ -21688,8 +22190,10 @@ function PageExpand(page_expand_arguments){
 				}
 
 				// ホスト名の取得
-				if(info_text.match(new RegExp("IP:([0-9]{1,3}\\.[0-9]{1,3}\\.[*][(][-.a-zA-Z0-9]+[)])","i"))){
+				if(info_text.match(new RegExp("IP:([-.:*a-zA-Z0-9()]+)","i"))){
 					response.setHost(RegExp.$1);
+				}else if(post_message.innerHTML.match(new RegExp('^\\[<font color="#ff0000">([-.:*a-zA-Z0-9()]+)</font>\\]',"i"))){
+					response.setHost(RegExp.$1);					
 				}
 
 				// フォロー解析
@@ -21749,31 +22253,31 @@ function PageExpand(page_expand_arguments){
 				// 消去時に実行されるイベント
 				response.onerase = function(){
 					var original = response.getOriginalElements();
+					if(!(original.length)) return;
 
-					var node;
-					if(original.length){
-						node = original[original.length-1].element;
-						while(node){
-							if(node.tagName == "TABLE") break;
-							node = node.parentNode;
+					var table;
+					var node = original[original.length-1].element;
+					while(node){
+						if(node.tagName == "TABLE"){
+							table = node;
+							break;
 						}
-					}
-					if(node){
-						var revise_scroll = new DocumentReviseScroll();
-						revise_scroll.executeRemoveElementBefore(node);
-						DomNodeRemove(node);
-						revise_scroll.executeRemoveElementAfter(node);
+						node = node.parentNode;
 					}
 
-					// オリジナルエレメントを外す
-					var i;
-					var num = original.length;
-					for(i=0;i<num;i++){
+					if(table){
 						var revise_scroll = new DocumentReviseScroll();
-						var node = original[i].element;
-						revise_scroll.executeRemoveElementBefore(node);
-						DomNodeRemove(node);
-						revise_scroll.executeRemoveElementAfter(node);
+						revise_scroll.executeRemoveElementBefore(table);
+						DomNodeRemove(table);
+						revise_scroll.executeRemoveElementAfter(table);
+					}else{
+						// オリジナルエレメントを外す
+						var i;
+						var num = original.length;
+						for(i=num-1;i>=0;i--){
+							var node = original[i].element;
+							DomNodeRemove(node);
+						}
 					}
 				};
 
@@ -21789,2160 +22293,6 @@ function PageExpand(page_expand_arguments){
 					post_file:post_file_list,
 					post_message:post_message_list,
 					parent:document.body
-				},
-				null,
-				null
-			);
-
-			return true;
-		})();
-
-		response({useful:useful});
-		return true;
-	}.toString() +
-"\n]";
-	}
-
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「chaika」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptInitialize_Chaika(){
-		return "" +
-"[\n\t" + 
-	function(info,response){
-		var work = info.work;
-
-		// --------------------------------------------------------------------------------
-		// 基本URL抽出
-		// --------------------------------------------------------------------------------
-		var url = document.URL;
-		var bbs_list = [
-			{url:"(http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch"},
-			{url:"(http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"pink"},
-			{url:"(http://jbbs\\.shitaraba\\.net/bbs/read.cgi/[^/]+/[0-9]+/[0-9]+)",replace:"$1/",name:"shitaraba"}
-		];
-
-		var i;
-		var num = bbs_list.length;
-		for(i=0;i<num;i++){
-			var bbs = bbs_list[i];
-			var re = new RegExp(bbs.url,"i");
-			var m = url.match(re);
-			if(m){
-				work.base_url = m[1].replace(re,bbs.replace);
-				work.bbs_name = bbs.name;
-				break;
-			}
-		}
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function (info,response){
-		var work = info.work;
-		if(!(work.bbs_name)){
-			return false;
-		}
-
-		var first_id = 1;
-		var last_id = 1;
-		var dictionary_id = new Array();
-		var load_shadow_list;
-		var load_shadow_pos = 0;
-		var load_more_list;
-		var load_more_pos = 0;
-		var element_parent = null;
-		var element_last = null;
-		var element_footer = null;
-		var read_more_button = null;
-		var element_form = null;
-		var base_url = work.base_url;
-		var resource_url_more;
-		var generate_html_func = null;
-
-		// --------------------------------------------------------------------------------
-		// 文字列からレスポンス番号を取得
-		// --------------------------------------------------------------------------------
-		work.createResponseAnchorNumbers = function (str){
-			var numbers = new ResponseAnchorNumbers();
-
-			var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
-			var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
-			var re_number = new RegExp("^([0-9０-９]+)","i");
-
-			var m = str.match(re_search);
-			if(m){
-				var p = m[1].length;
-				while(true){
-					// 番号-番号
-					m = str.substr(p).match(re_range);
-					if(m){
-						var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-						var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-						if(id0 < 1) id0 = 1;
-						if(id1 < 1) id1 = 1;
-						if(id0 > 10000) id0 = 10000;
-						if(id1 > 10000) id1 = 10000;
-						p += m[0].length;
-						numbers.addNumbers(id0,id1);
-					}else{
-						// 番号
-						m = str.substr(p).match(re_number);
-						if(m){
-							p += m[0].length;
-							var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-							if(id < 1) id = 1;
-							if(id > 0x7fffffff) id = 0x7fffffff;
-							numbers.addNumber(id);
-						}
-					}
-
-					if(m){
-						// カンマ
-						if(RegExp.rightContext.search(",") == 0){
-							p += 1;
-							continue;
-						}
-					}
-					break;
-				}
-			}
-			return numbers;
-		};
-
-		// --------------------------------------------------------------------------------
-		// レスアンカー拡張
-		// --------------------------------------------------------------------------------
-		work.extendResponseAnchor = function (target){
-			if(BbsControlResponseAnchorExist(target))	return;
-
-			var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
-			var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
-			var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
-			var re_number = new RegExp("([0-9０-９]+)","i");
-
-			var i;
-			var nodes = ElementGetElementsByTagName(target,"a");
-			var num = nodes.length;
-			for(i=num-1;i>=0;i--){
-				var node = nodes[i];
-				var m = ElementGetTextContent(node).match(re_simple);
-				if(m){
-					var text_node = DocumentCreateText(m[0]);
-					DomNode_InsertBefore(node,text_node);
-					DomNodeRemove(node);
-				}
-			}
-
-			// テキストノードを統合
-			target.normalize();
-
-			var p;
-			var n;
-			var q;
-			var ignore_dictionary = {"A":1,"SCRIPT":1};
-			var queue = new Object();
-			q = {p:queue,n:queue,node:target};
-			queue.p = q;
-			queue.n = q;
-
-			while(queue.n != queue){
-				q = queue.n;
-				p = q.p;
-				n = q.n;
-				p.n = n;
-				n.p = p;
-				var node = q.node;
-				switch(node.nodeType){
-				case 1:
-					var i;
-					var nodes = node.childNodes;
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						n = queue;
-						p = n.p;
-						q = {p:p,n:n,node:nodes[i]};
-						p.n = q;
-						n.p = q;
-					}
-					break;
-				case 3:
-					while(node){
-						var m = DomNodeGetNodeValue(node).match(re_detail);
-						if(!m)	break;
-
-						// 元のテキストノード
-						DomNodeSetNodeValue(node,RegExp.leftContext);
-
-						// BbsControlName を生成
-						var element = DocumentCreateElement("a");
-						ElementSetTextContent(element,m[0]);
-						DomNode_InsertAfter(node,element);
-
-						// 直後テキスト
-						node = DocumentCreateText(RegExp.rightContext);
-						DomNode_InsertAfter(element,node);
-
-						var query = "";
-						m = ElementGetTextContent(element).match(re_range);
-						if(m){
-							var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-							var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-							if(min < 1) min = 1;
-							if(max < 1) max = 1;
-							if(min > 10000) min = 10000;
-							if(max > 10000) max = 10000;
-							if(max < min){
-								var tmp = min;
-								min = max;
-								max = tmp;
-							}
-							query = min + "-" + max;
-						}else{
-							// 番号
-							m = ElementGetTextContent(element).match(re_number);
-							if(m){
-								query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
-								if(query < 1) query = 1;
-								if(query > 0x7fffffff) query = 0x7fffffff;
-							}
-
-						}
-						element.href = work.base_url + query;
-					}
-				}
-			}
-		};
-
-		// --------------------------------------------------------------------------------
-		// HTML 文書の整合性テスト
-		// --------------------------------------------------------------------------------
-		function checkValidityFromHTML(str){
-			var m = str.match(new RegExp("<dt>.*?<dd>[ ].*?[ ]<br><br>","i"));
-			if(m){
-				m = m[0].match(new RegExp("[\r\n]"));
-				if(!m) return true;
-			}
-			return false;
-		}
-
-		// --------------------------------------------------------------------------------
-		// HTML 文書をシャドウ読み込み
-		// --------------------------------------------------------------------------------
-		function loadShadowFromHTML(str){
-			var re_search;
-			var re_number;
-			var re_name = new RegExp("<b>(.*?)</b>","i");
-			var re_mail = new RegExp("<a href=\"mailto:(.*)\">","i");
-			var re_date;
-			var re_id;
-			var re_be;
-			var re_gen_id0 = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
-			var re_gen_id1 = new RegExp("([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
-			var re_gen_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
-			switch(work.bbs_name){
-			case "2ch":
-			case "pink":
-				re_search = new RegExp("([0-9]+) ：(.*?)<dd> (.*)","i");
-				re_number = new RegExp("([0-9]+)","i");
-				re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:|<)","i");
-				re_id = new RegExp("(ID):([^ ]+)","i");
-				re_be = new RegExp("<a href=\"javascript:be\\(([0-9]+)\\);\">[?](.*?)</a>","i");
-				break;
-			case "shitaraba":
-				re_search = new RegExp("<a href=\".*?\">([0-9]+)</a> ：(.*?)<dd> (.*)","i");
-				re_number = new RegExp("<a href=\".*?\">([0-9]+)</a> ：","i");
-				re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:| HOST:|<)","i");
-				re_id = new RegExp("(ID|HOST):([^ ]+)","i");
-				break;
-			}
-
-			var p = 0;
-			var n = str.length;
-			function f(){
-				if(p >= n) return;
-				p = str.indexOf("<dt>",p);
-				if(p < 0) return;
-				var e = str.indexOf("\n",p);
-				var s = str.substring(p,e);
-				var m = s.match(re_number);
-				if(m){
-					var id = parseInt(m[1]);
-					if((first_id <= id) && (id <= last_id)){
-					}else if(dictionary_id[id]){
-					}else{
-						// ナンバーからレスポンスオブジェクトを取得
-						var response = bbs_dictionary.getResponse(id);
-						if(!(response.getAnalyzed())){
-							var m = s.match(re_search);
-							if(m){
-								var obj = new Object();
-								obj.number = id;
-								obj.name = "";
-								obj.mail = "";
-								obj.date = "";
-								obj.id = "";
-								obj.be = "";
-								obj.message = m[3];
-								if(m[2].match(re_date)){
-									obj.date = RegExp.$1;
-								}
-								if(m[2].match(re_name)){
-									obj.name = RegExp.$1;
-								}
-								if(m[2].match(re_id)){
-									obj.id = RegExp.$2;
-								}
-								if(m[2].match(re_mail)){
-									obj.mail = RegExp.$1;
-								}
-								if(re_be){
-									if(m[2].match(re_be)){
-										obj.be = RegExp.$1 + "-" + RegExp.$2;
-									}
-								}
-
-								var nodes = StringHtmlCreateDomNodesSafe(generate_html_func(obj));
-								var dt = ElementGetElementsByClassName(nodes[0],"resHeader")[0];
-								var dd = ElementGetElementsByClassName(nodes[0],"resBody")[0];
-								if(!dt) return;
-								if(!dd) return;
-
-								var dt_text = ElementGetTextContent(dt);
-
-								// レスアンカー拡張
-								work.extendResponseAnchor(dd);
-
-								// IDの取得
-								var nodes = ElementGetElementsByClassName(dt,"resID");
-								if(nodes.length){
-									if(ElementGetTextContent(nodes[0]).match(re_gen_id1)){
-										response.setId(RegExp.$1);
-									}
-								}else{
-									if(dt_text.match(re_gen_id0)){
-										response.setId(RegExp.$1);
-									}
-								}
-
-								// 名前の取得
-								if(dt_text.match(re_gen_name)){
-									response.setName(RegExp.$1);
-								}
-
-								// ホスト名の取得
-								(function(){
-									var p;
-									var n;
-									var q;
-									var ignore_dictionary = {"B":1,"SCRIPT":1};
-									var queue = new Object();
-									q = {p:queue,n:queue,node:dt};
-									queue.p = q;
-									queue.n = q;
-
-									while(queue.n != queue){
-										q = queue.n;
-										p = q.p;
-										n = q.n;
-										p.n = n;
-										n.p = p;
-										var node = q.node;
-										switch(node.nodeType){
-										case 1:
-											if(!(ignore_dictionary[node.tagName])){
-												var i;
-												var nodes = node.childNodes;
-												var num = nodes.length;
-												for(i=0;i<num;i++){
-													n = queue;
-													p = n.p;
-													q = {p:p,n:n,node:nodes[i]};
-													p.n = q;
-													n.p = q;
-												}
-											}
-											break;
-										case 3:
-											var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-											if(m){
-												response.setHost(m[2]);
-												return;
-											}
-											var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})(|\\n) \\]","i"));
-											if(m){
-												response.setHost(m[2]);
-												return;
-											}
-											var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-											if(m){
-												response.setHost(m[2]);
-												return;
-											}
-											break;
-										}
-									}
-								})();
-
-								// フォロー解析
-								var dictionary = new Object();
-								(function(){
-									var nodes = ElementGetElementsByTagName(dd,"a");
-									var i;
-									var num = nodes.length;
-									for(i=0;i<num;i++){
-										var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-										numbers.getNumbers(function(n){
-											if(!dictionary[n]){
-												var following = bbs_dictionary.getResponse(n);
-												following.addFollower(response);
-												dictionary[n] = true;
-											}
-										});
-									}
-								})();
-
-								// オリジナルエレメントをセット
-								if(dt)	response.addOriginalElements("dt",dt);
-								if(dd)	response.addOriginalElements("dd",dd);
-
-								// 消去時に実行されるイベント
-								response.onerase = function(){};
-
-								response.setAnalyzed();
-							}
-						}
-
-					}
-				}
-
-				if(p < e){
-					p = e + 1;
-					execute_queue.attachFirst(f,null);
-				}
-			}
-			execute_queue.attachFirst(f,null);
-		}
-
-		// --------------------------------------------------------------------------------
-		// HTML 文書を継ぎ足し読み込み
-		// --------------------------------------------------------------------------------
-		function loadMoreFromHTML(str,callback){
-			var re_search;
-			var re_number;
-			var re_name = new RegExp("<b>(.*?)</b>","i");
-			var re_mail = new RegExp("<a href=\"mailto:(.*)\">","i");
-			var re_date;
-			var re_id;
-			var re_be;
-			switch(work.bbs_name){
-			case "2ch":
-			case "pink":
-				re_search = new RegExp("([0-9]+) ：(.*?)<dd> (.*)","i");
-				re_number = new RegExp("([0-9]+)","i");
-				re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:|<)","i");
-				re_id = new RegExp("(ID):([^ ]+)","i");
-				re_be = new RegExp("<a href=\"javascript:be\\(([0-9]+)\\);\">[?](.*?)</a>","i");
-				break;
-			case "shitaraba":
-				re_search = new RegExp("<a href=\".*?\">([0-9]+)</a> ：(.*?)<dd> (.*)","i");
-				re_number = new RegExp("<a href=\".*?\">([0-9]+)</a> ：","i");
-				re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:| HOST:|<)","i");
-				re_id = new RegExp("(ID|HOST):([^ ]+)","i");
-				break;
-			}
-
-			var p = 0;
-			var n = str.length;
-			var add_count = 0;
-			function f(){
-				try{
-					if(p >= n) throw 0;
-					p = str.indexOf("<dt>",p);
-					if(p < 0) throw 0;
-					var e = str.indexOf("\n",p);
-					var s = str.substring(p,e);
-					var m = s.match(re_number);
-					if(m){
-						var id = parseInt(m[1]);
-						if(last_id < id){
-							var m = s.match(re_search);
-							if(m){
-								var obj = new Object();
-								obj.number = id;
-								obj.name = "";
-								obj.mail = "";
-								obj.date = "";
-								obj.id = "";
-								obj.be = "";
-								obj.message = m[3];
-								if(m[2].match(re_date)){
-									obj.date = RegExp.$1;
-								}
-								if(m[2].match(re_name)){
-									obj.name = RegExp.$1;
-								}
-								if(m[2].match(re_id)){
-									obj.id = RegExp.$2;
-								}
-								if(m[2].match(re_mail)){
-									obj.mail = RegExp.$1;
-								}
-								if(re_be){
-									if(m[2].match(re_be)){
-										obj.be = RegExp.$1 + "-" + RegExp.$2;
-									}
-								}
-
-								var response = bbs_dictionary.getResponse(id);
-								response.clearAnalyzed();
-								response.clearOriginalElements();
-								response.clearFollowing();
-
-								var nodes = StringHtmlCreateDomNodesSafe(generate_html_func(obj));
-								var j;
-								var node_num = nodes.length;
-								if(element_last){
-									for(j=0;j<node_num;j++){
-										DomNode_InsertAfter(element_last,nodes[j]);
-										element_last = nodes[j];
-									}
-								}
-								if(element_parent){
-									for(j=0;j<node_num;j++){
-										element_parent.appendChild(nodes[j]);
-									}
-								}
-								last_id = id;
-								add_count += 1;
-								resource_url_more = base_url + (last_id) + "-";
-							}
-						}
-					}
-
-					if(p < e){
-						p = e + 1;
-						execute_queue.attachFirst(f,null);
-						return;
-					}
-				}catch(e){
-					if(e){
-						callback({result:false});
-						return;
-					}
-				}
-				callback({result:true,add_count:add_count});
-			}
-			execute_queue.attachFirst(f,null);
-		}
-
-		// --------------------------------------------------------------------------------
-		// DAT 文書の整合性テスト
-		// --------------------------------------------------------------------------------
-		function checkValidityFromDAT(str){
-			var m = str.match(new RegExp("</b>.*<b>.*?<>.*?<>.*?<>.*?<>","i"));
-			if(m){
-				m = m[0].match(new RegExp("[\r\n]"));
-				if(!m) return true;
-			}
-			return false;
-		}
-
-		// --------------------------------------------------------------------------------
-		// DAT 文書をシャドウ読み込み
-		// --------------------------------------------------------------------------------
-		function loadShadowFromDAT(str){
-			var re_search = new RegExp("(.*?)<>(.*?)<>(.*?)<> (.*?) <>","i");
-			var re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:| BE:)","i");
-			var re_id = new RegExp("ID:([^ ]+)","i");
-			var re_be = new RegExp("BE:([^ ]+)","i");
-			var re_icon = new RegExp("^sssp://img.2ch.net/ico/(.*?)( <br> .*)$","i");
-			var re_gen_id0 = new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
-			var re_gen_id1 = new RegExp("([-a-zA-Z0-9+/.]+)[●!]{0,2}","i");
-			var re_gen_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
-
-			var p = 0;
-			var n = str.length;
-			var id = 1;
-			function f(){
-				if(p >= n) return;
-				var e = str.indexOf("\n",p);
-				if((first_id <= id) && (id <= last_id)){
-				}else if(dictionary_id[id]){
-				}else{
-					// ナンバーからレスポンスオブジェクトを取得
-					var response = bbs_dictionary.getResponse(id);
-					if(!(response.getAnalyzed())){
-						var m = str.substring(p,e).match(re_search);
-						if(m){
-							var obj = new Object();
-							obj.number = id;
-							obj.name = m[1];
-							obj.mail = m[2];
-							obj.date = "";
-							obj.id = "";
-							obj.be = "";
-							obj.message = m[4];
-							if(m[3].match(re_date)){
-								obj.date = RegExp.$1;
-							}
-							if(m[3].match(re_id)){
-								obj.id = RegExp.$1;
-							}
-							if(m[3].match(re_be)){
-								obj.be = RegExp.$1;
-							}
-							if(obj.message.match(re_icon)){
-								obj.message = "<img src=\"http://img.2ch.net/ico/" + RegExp.$1 + "\">" + RegExp.$2;
-							}
-
-							var nodes = StringHtmlCreateDomNodesSafe(generate_html_func(obj));
-							var dt = ElementGetElementsByClassName(nodes[0],"resHeader")[0];
-							var dd = ElementGetElementsByClassName(nodes[0],"resBody")[0];
-							if(!dt) return;
-							if(!dd) return;
-
-							var dt_text = ElementGetTextContent(dt);
-
-							// レスアンカー拡張
-							work.extendResponseAnchor(dd);
-
-							// IDの取得
-							var nodes = ElementGetElementsByClassName(dt,"resID");
-							if(nodes.length){
-								if(ElementGetTextContent(nodes[0]).match(re_gen_id1)){
-									response.setId(RegExp.$1);
-								}
-							}else{
-								if(dt_text.match(re_gen_id0)){
-									response.setId(RegExp.$1);
-								}
-							}
-
-							// 名前の取得
-							if(dt_text.match(re_gen_name)){
-								response.setName(RegExp.$1);
-							}
-
-							// ホスト名の取得
-							(function(){
-								var p;
-								var n;
-								var q;
-								var ignore_dictionary = {"B":1,"SCRIPT":1};
-								var queue = new Object();
-								q = {p:queue,n:queue,node:dt};
-								queue.p = q;
-								queue.n = q;
-
-								while(queue.n != queue){
-									q = queue.n;
-									p = q.p;
-									n = q.n;
-									p.n = n;
-									n.p = p;
-									var node = q.node;
-									switch(node.nodeType){
-									case 1:
-										if(!(ignore_dictionary[node.tagName])){
-											var i;
-											var nodes = node.childNodes;
-											var num = nodes.length;
-											for(i=0;i<num;i++){
-												n = queue;
-												p = n.p;
-												q = {p:p,n:n,node:nodes[i]};
-												p.n = q;
-												n.p = q;
-											}
-										}
-										break;
-									case 3:
-										var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-										if(m){
-											response.setHost(m[2]);
-											return;
-										}
-										var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})(|\\n) \\]","i"));
-										if(m){
-											response.setHost(m[2]);
-											return;
-										}
-										var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-										if(m){
-											response.setHost(m[2]);
-											return;
-										}
-										break;
-									}
-								}
-							})();
-
-							// フォロー解析
-							var dictionary = new Object();
-							(function(){
-								var nodes = ElementGetElementsByTagName(dd,"a");
-								var i;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-									numbers.getNumbers(function(n){
-										if(!dictionary[n]){
-											var following = bbs_dictionary.getResponse(n);
-											following.addFollower(response);
-											dictionary[n] = true;
-										}
-									});
-								}
-							})();
-
-							// オリジナルエレメントをセット
-							if(dt)	response.addOriginalElements("dt",dt);
-							if(dd)	response.addOriginalElements("dd",dd);
-
-							// 消去時に実行されるイベント
-							response.onerase = function(){};
-
-							response.setAnalyzed();
-						}
-					}
-				}
-
-				id += 1;
-				if(p < e){
-					p = e + 1;
-					execute_queue.attachFirst(f,null);
-				}
-			}
-			execute_queue.attachFirst(f,null);
-		}
-
-		// --------------------------------------------------------------------------------
-		// DAT 文書を継ぎ足し読み込み
-		// --------------------------------------------------------------------------------
-		function loadMoreFromDAT(str,callback){
-			var re_search = new RegExp("(.*?)<>(.*?)<>(.*?)<> (.*?) <>","i");
-			var re_date = new RegExp("([0-9]+/[0-9]+/[0-9]+.* [0-9]+:[0-9]+:[0-9]+.*?)($| ID:| BE:)","i");
-			var re_id = new RegExp("ID:([^ ]+)","i");
-			var re_be = new RegExp("BE:([^ ]+)","i");
-			var re_icon = new RegExp("^sssp://img.2ch.net/ico/(.*?)( <br> .*)$","i");
-
-			var p = 0;
-			var n = str.length;
-			var id = 1;
-			var add_count = 0;
-			function f(){
-				try{
-					if(p >= n) throw 0;
-					var e = str.indexOf("\n",p);
-					if(last_id < id){
-						var m = str.substring(p,e).match(re_search);
-						if(m){
-							var response = bbs_dictionary.getResponse(id);
-							response.clearAnalyzed();
-							response.clearOriginalElements();
-							response.clearFollowing();
-
-							var obj = new Object();
-							obj.number = id;
-							obj.name = m[1];
-							obj.mail = m[2];
-							obj.date = "";
-							obj.id = "";
-							obj.be = "";
-							obj.message = m[4];
-							if(m[3].match(re_date)){
-								obj.date = RegExp.$1;
-							}
-							if(m[3].match(re_id)){
-								obj.id = RegExp.$1;
-							}
-							if(m[3].match(re_be)){
-								obj.be = RegExp.$1;
-							}
-							if(obj.message.match(re_icon)){
-								obj.message = "<img src=\"http://img.2ch.net/ico/" + RegExp.$1 + "\">" + RegExp.$2;
-							}
-
-							var nodes = StringHtmlCreateDomNodesSafe(generate_html_func(obj));
-							var j;
-							var node_num = nodes.length;
-							if(element_last){
-								for(j=0;j<node_num;j++){
-									DomNode_InsertAfter(element_last,nodes[j]);
-									element_last = nodes[j];
-								}
-							}
-							if(element_parent){
-								for(j=0;j<node_num;j++){
-									element_parent.appendChild(nodes[j]);
-								}
-							}
-							last_id = id;
-							add_count += 1;
-						}
-					}
-
-					id += 1;
-					if(p < e){
-						p = e + 1;
-						execute_queue.attachFirst(f,null);
-						return;
-					}
-				}catch(e){
-					if(e){
-						callback({result:false});
-						return;
-					}
-				}
-				callback({result:true,add_count:add_count});
-			}
-			execute_queue.attachFirst(f,null);
-		}
-
-		// --------------------------------------------------------------------------------
-		// 継ぎ足し読み込み
-		// --------------------------------------------------------------------------------
-		function readMore(callback){
-			var num = load_more_list.length;
-			var pos = load_more_pos;
-			var i = 0;
-
-			var failure = function(){
-				i += 1;
-				if(num <= i){
-					callback({result:false});
-					return;
-				}
-				pos += 1;
-				if(num <= pos) pos = 0;
-				load_more_pos = pos;
-				load();
-			};
-
-			var load = function (){
-				var param = load_more_list[pos];
-
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
-
-				// 成功
-				loader.onload = function(str){
-					if(!param.validity(str)){
-						failure();
-						return;
-					}
-					param.parse(str,function(response){
-						if(response.result){
-							callback(response);
-						}else{
-							failure();
-						}
-					});
-				};
-
-				// 失敗
-				loader.onerror = function(){
-					failure();
-				};
-
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(param.url);
-				switch(work.bbs_name){
-				case "2ch":
-				case "pink":
-					loader.overrideMimeType("text/plain; charset=Shift_JIS");
-					break;
-				case "shitaraba":
-					loader.overrideMimeType("text/plain; charset=EUC-JP");
-					break;
-				}
-				loader.loadText();
-			};
-			load();
-		}
-
-		// --------------------------------------------------------------------------------
-		// フッダ要素
-		// --------------------------------------------------------------------------------
-		if(!element_footer){
-			var nodes = document.getElementsByTagName("footer");
-			if(nodes.length){
-				element_footer = nodes[nodes.length - 1];
-			}
-		}
-		if(!element_footer){
-			element_footer = document.getElementById("footer");
-		}
-
-		// --------------------------------------------------------------------------------
-		// Default スタイル
-		// --------------------------------------------------------------------------------
-		if(!generate_html_func){
-			(function(){
-				var nodes = ElementGetElementsByClassName(document.body,"resNumber");
-				var node_num = nodes.length;
-				var i;
-
-				// --------------------------------------------------------------------------------
-				// 範囲取得
-				// --------------------------------------------------------------------------------
-				var re_number = new RegExp("([0-9]+)","i");
-				for(i=node_num-1;i>=0;i--){
-					var node = nodes[i];
-					if(ElementGetTextContent(node).match(re_number)){
-						last_id = parseInt(RegExp.$1);
-						dictionary_id[last_id] = true;
-						element_last = node;
-						break;
-					}
-				}
-
-				var rg_id = new RegExp("^res[0-9]+$","i");
-				while(element_last){
-					if(element_last.id.match(rg_id)){
-						break;
-					}
-					element_last = element_last.parentNode;
-				}
-
-				if(!element_last) return;
-				for(i=0;i<node_num;i++){
-					var node = nodes[i];
-					if(ElementGetTextContent(node).match(re_number)){
-						first_id = parseInt(RegExp.$1);
-						dictionary_id[first_id] = true;
-						if(first_id != 1){
-							break;
-						}
-					}
-				}
-
-				// --------------------------------------------------------------------------------
-				// コード生成コールバック
-				// --------------------------------------------------------------------------------
-				if(element_last.tagName.toUpperCase() == "ARTICLE"){
-					generate_html_func = function(param){
-						return '<article id="res' + param.number + '" class="resContainer" data-id="' + param.id + '   0" data-number="' + param.number + '" data-aboned="false">' +
-							'    <h2 class="resHeader">' +
-							'        <span class="resNumber">' + param.number + '</span>' +
-							'        <span class="resHeaderContent">' +
-							'            <span class="resName">' + param.name + '</span>' +
-							'            <span class="resMail">' + param.mail + '</span>' +
-							'            <span class="resDate">' + param.date + '</span>' +
-							'            <span class="resID" data-id="' + param.id + '">' + param.id + '</span><span style="color: rgb(136, 136, 136); font-size: small;"></span>' +
-							'            <span class="resIP" data-id=""></span>' +
-							'            <span class="resHost" data-id=""></span>' +
-							'            <span class="resBeID" data-id="0">' + param.be + '</span>' +
-							'        </span>' +
-							'        <span class="resHeaderAboneContent"></span>' +
-							'    <span style="color: rgb(136, 136, 136); font-size: small;"></span></h2>' +
-							'    <p class="resBody"> ' + param.message + ' </p></article>';
-					}
-					work.skin_type = "default";
-				}else{
-					generate_html_func = function(param){
-						return '<dl id="res' + param.number + '" class="resContainer" resid="' + param.id + '" collapsed="false" isabone="false">' +
-							'<dt class="resHeader">' +
-								'<span class="resNumber">' + param.number + ' </span>' +
-								'<span class="resHeaderContent">' +
-									'<span class="resName"><span class="resSystem">' + param.name + '</span></span> ' +
-									'[<span class="resMail">' + param.mail + '</span>] ' +
-									'<span class="resDate">' + param.date + ' </span> ' +
-									((param.id) ? ('ID:' + param.id + ' ') : ('')) +
-									((param.be) ? ('Be:<span class="resBeID">' + param.be + '</span>') : ('')) +
-								'</span>' +
-								'<span class="resHeaderAboneContent"></span>' +
-								'<span style="color: rgb(136, 136, 136); font-size: small;"></span>' +
-							'</dt>' +
-							'<dd class="resBody"> ' + param.message + ' </dd>' +
-						'</dl>';
-					}
-					work.skin_type = "default";
-				}
-			})();
-		}
-
-		if(!generate_html_func) return false;
-
-		// --------------------------------------------------------------------------------
-		// 読み込みリスト
-		// --------------------------------------------------------------------------------
-		load_shadow_pos = 0;
-		load_more_pos = 0;
-		load_shadow_list = new Array();
-		load_more_list = new Array();
-
-		load_shadow_list.push({
-			url:base_url,
-			parse:loadShadowFromHTML,
-			validity:checkValidityFromHTML
-		});
-		load_more_list.push({
-			url:base_url + last_id + "-",
-			parse:loadMoreFromHTML,
-			validity:checkValidityFromHTML
-		});
-
-		switch(work.bbs_name){
-		case "2ch":
-		case "pink":
-			load_shadow_pos = 1;
-			load_more_pos = 1;
-			load_shadow_list.push({
-				url:(function(){
-					var m = base_url.match(new RegExp("http://([^/]+)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"));
-					if(!m) return "";
-					return "http://" + m[1] + "/" + m[2] + "/dat/" + m[3] + ".dat";
-				})(),
-				parse:loadShadowFromDAT,
-				validity:checkValidityFromDAT
-			});
-			load_more_list.push({
-				url:(function(){
-					var m = base_url.match(new RegExp("http://([^/]+)/test/read\\.cgi/([^/]+)/([0-9]+)/","i"));
-					if(!m) return "";
-					return "http://" + m[1] + "/" + m[2] + "/dat/" + m[3] + ".dat";
-				})(),
-				parse:loadMoreFromDAT,
-				validity:checkValidityFromDAT
-			});
-			break;
-		}
-
-		// --------------------------------------------------------------------------------
-		// BbsControlReadMoreButton 作成
-		// --------------------------------------------------------------------------------
-		read_more_button = new BbsControlReadMoreButton();
-		read_more_button.setWaitTime(2 * 1000);
-		read_more_button.onclick = readMore;
-		if(element_footer){
-			DomNode_InsertBefore(element_footer,read_more_button.getElement());
-		}else{
-			document.body.appendChild(read_more_button.getElement());
-		}
-
-		// --------------------------------------------------------------------------------
-		// シャドウロード
-		// --------------------------------------------------------------------------------
-		(function(){
-			var num = load_shadow_list.length;
-			var pos = load_shadow_pos;
-			var i = 0;
-
-			var failure = function(){
-				i += 1;
-				if(num <= i) return;
-				pos += 1;
-				if(num <= pos) pos = 0;
-				load_shadow_pos = pos;
-				load();
-			};
-
-			var load = function (){
-				var param = load_shadow_list[pos];
-
-				// ローダーオブジェクトを作成
-				var loader = new Loader();
-
-				// 成功
-				loader.onload = function(str){
-					if(!param.validity(str)){
-						failure();
-						return;
-					}
-					param.parse(str);
-				};
-
-				// 失敗
-				loader.onerror = function(){
-					failure();
-				};
-
-				// テキストの読み込み
-				loader.setMethod("GET");
-				loader.setURL(param.url);
-				switch(work.bbs_name){
-				case "2ch":
-				case "pink":
-					loader.overrideMimeType("text/plain; charset=Shift_JIS");
-					break;
-				case "shitaraba":
-					loader.overrideMimeType("text/plain; charset=EUC-JP");
-					break;
-				}
-				loader.loadText();
-			};
-			load();
-		})();
-
-		// --------------------------------------------------------------------------------
-		// 擬似要素無効化
-		// --------------------------------------------------------------------------------
-		(function(){
-			var element = DocumentCreateElement("style");
-			document.body.appendChild(element);
-			var style_sheet = ElementGetStyleSheet(element);
-			CSSStyleSheetInsertRule(style_sheet,"[data-id-posts-all]:after","content: none !important;",0);
-			CSSStyleSheetInsertRule(style_sheet,".resNumber[data-referred]:after","content: none !important;",1);
-		})();
-
-		response({result:true});
-		return true;
-	}.toString() +
-	",\n\n\t" +
-	function (info,response){
-		response({result:false});
-		return true;
-	}.toString() +
-"\n]";
-	}
-
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「chaika」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptCallback_Chaika(){
-		return "" +
-"[\n\t" + 
-	function(info,response){
-		var element = info.element;
-		var work = info.work;
-
-		// --------------------------------------------------------------------------------
-		// レスポンスダイアログを登録
-		// --------------------------------------------------------------------------------
-		function attachBbsResponseDialog(response,node,parent_dialog,type){
-
-			// --------------------------------------------------------------------------------
-			// レスアンカー
-			// --------------------------------------------------------------------------------
-			function forResponseAnchor(target){
-				if(BbsControlResponseAnchorExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlResponseAnchor を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var i;
-					var nodes = ElementGetElementsByTagName(target,"a");
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						var node = nodes[i];
-						var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(node));
-						if(numbers.getCount()){
-							var control_res_anchor = new BbsControlResponseAnchor(node,false);
-							control_res_anchor.setResponseAnchorNumbers(numbers);
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlResponseAnchor を検索
-				// --------------------------------------------------------------------------------
-				BbsControlResponseAnchorSearch(target,function(control_res_anchor){
-
-					var element_res_anchor = control_res_anchor.getElement();
-					var numbers = control_res_anchor.getResponseAnchorNumbers();
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_res_anchor);
-					response_dialog.oncreate = function(_window,callback){
-
-						var dl = DocumentCreateElement("dl");
-						dl.style.margin = "0px";
-						_window.appendChild(dl);
-
-						var created = false;
-						var i = 0;
-						var number_list = numbers.getNumberList();
-						var num = number_list.length;
-						if(!num) return false;
-
-						function f(){
-							var following = bbs_dictionary.getResponse(number_list[i]);
-							var clone = following.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									dl.appendChild(obj.element);
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(following,param,response_dialog,"response");
-
-								created = true;
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:created});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// ID
-			// --------------------------------------------------------------------------------
-			function forId(target){
-				if(BbsControlIdExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlId を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var p;
-					var n;
-					var q;
-					var ignore_dictionary = {"A":1,"SCRIPT":1};
-					var queue = new Object();
-					q = {p:queue,n:queue,node:target};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-
-							// 名前欄
-							if(node.className == "resID"){
-								var m = ElementGetTextContent(node).match(new RegExp("(ID:|)([-a-zA-Z0-9+/.]+)[●!]{0,2}$","i"));
-								if(m){
-									// BbsControlId を生成
-									var control_id = new BbsControlId(null,true);
-									control_id.setId(m[2]);
-									var element_id = control_id.getElement();
-									DomNode_InsertAfter(node,element_id);
-									var textnode_id = DocumentCreateText("");
-									element_id.appendChild(textnode_id);
-									control_id.setTextNode(textnode_id);
-								}
-
-							}else if(!(ignore_dictionary[node.tagName])){
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-
-							break;
-						case 3:
-							while(node){
-
-								var m = DomNodeGetNodeValue(node).match(new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i"));
-								if(!m)	break;
-
-								// 元のテキストノード
-								DomNodeSetNodeValue(node,RegExp.leftContext);
-
-								// BbsControlId を生成
-								var control_id = new BbsControlId(null,false);
-								control_id.setId(m[1]);
-								var element_id = control_id.getElement();
-								ElementSetTextContent(element_id,m[0]);
-								DomNode_InsertAfter(node,element_id);
-								var textnode_id = DocumentCreateText("");
-								element_id.appendChild(textnode_id);
-								control_id.setTextNode(textnode_id);
-
-								// 直後テキスト
-								node = DocumentCreateText(RegExp.rightContext);
-								DomNode_InsertAfter(element_id,node);
-							}
-							break;
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlId を検索
-				// --------------------------------------------------------------------------------
-				BbsControlIdSearch(target,function(control_id){
-
-					control_id.setResponse(response);
-
-					var id = control_id.getId();
-					var element_id = control_id.getElement();
-					var textnode_id = control_id.getTextNode();
-
-					// --------------------------------------------------------------------------------
-					// 変化があったときに実行されるイベント
-					// --------------------------------------------------------------------------------
-					control_id.onchange = function(count){
-						if(count > 1){
-							DomNodeSetNodeValue(textnode_id,"(" + count + ")");
-						}else{
-							DomNodeSetNodeValue(textnode_id,"");
-						}
-
-						var style = element_id.style;
-						if(count >= 5){
-							StyleDeclarationSetProperty(style,"color","#e80000");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else if(count >= 2){
-							StyleDeclarationRemoveProperty(style,"color");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else{
-							StyleDeclarationSetProperty(style,"color","#888");
-							StyleDeclarationSetProperty(style,"font-size","small");
-						}
-					};
-					control_id.update();
-
-					// --------------------------------------------------------------------------------
-					// ポップアップ化
-					// --------------------------------------------------------------------------------
-					if(type == "id"){
-						if(response.getId() == id)	return null;
-					}
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_id);
-					response_dialog.oncreate = function(_window,callback){
-
-						var dl = DocumentCreateElement("dl");
-						dl.style.margin = "0px";
-						_window.appendChild(dl);
-
-						var responses = bbs_dictionary.getResponsesFromId(id);
-						var i = 0;
-						var num = responses.length;
-						if(num <= 1) return false;
-
-						function f(){
-							var response_id = responses[i];
-							var clone = response_id.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									dl.appendChild(obj.element);
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(response_id,param,response_dialog,"id");
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:true});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// トリップ
-			// --------------------------------------------------------------------------------
-			function forName(target){
-				if(BbsControlNameExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlName を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var p;
-					var n;
-					var q;
-					var ignore_dictionary = {"SCRIPT":1};
-					var queue = new Object();
-					q = {p:queue,n:queue,node:target};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-							if(!(ignore_dictionary[node.tagName])){
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-							break;
-						case 3:
-							while(node){
-
-								// 本文
-								var m = DomNodeGetNodeValue(node).match(new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i"));
-								if(!m)	break;
-
-								// 元のテキストノード
-								DomNodeSetNodeValue(node,RegExp.leftContext);
-
-								// BbsControlName を生成
-								var control_name = new BbsControlName(null,false);
-								control_name.setName(m[0]);
-								var element_name = control_name.getElement();
-								ElementSetTextContent(element_name,m[0]);
-								DomNode_InsertAfter(node,element_name);
-
-								// 直後テキスト
-								node = DocumentCreateText(RegExp.rightContext);
-								DomNode_InsertAfter(element_name,node);
-							}
-							break;
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlName を検索
-				// --------------------------------------------------------------------------------
-				BbsControlNameSearch(target,function(control_name){
-
-					control_name.setResponse(response);
-
-					var name = control_name.getName();
-					var element_name = control_name.getElement();
-					var textnode_name = DocumentCreateText("");
-
-
-					// --------------------------------------------------------------------------------
-					// 変化があったときに実行されるイベント
-					// --------------------------------------------------------------------------------
-					control_name.onchange = function(count){
-						if(count > 1){
-							DomNodeSetNodeValue(textnode_name,"(" + count + ")");
-						}else{
-							DomNodeSetNodeValue(textnode_name,"");
-						}
-
-						var style = element_name.style;
-						if(count >= 5){
-							StyleDeclarationSetProperty(style,"color","#e80000");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else if(count >= 2){
-							StyleDeclarationRemoveProperty(style,"color");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else{
-							StyleDeclarationSetProperty(style,"color","#888");
-							StyleDeclarationSetProperty(style,"font-size","small");
-						}
-					};
-					control_name.update();
-					element_name.appendChild(textnode_name);
-
-					// --------------------------------------------------------------------------------
-					// ポップアップ化
-					// --------------------------------------------------------------------------------
-					if(type == "name"){
-						if(response.getName() == name)	return null;
-					}
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_name);
-					response_dialog.oncreate = function(_window,callback){
-
-						var dl = DocumentCreateElement("dl");
-						dl.style.margin = "0px";
-						_window.appendChild(dl);
-
-						var responses = bbs_dictionary.getResponsesFromName(name);
-						var i = 0;
-						var num = responses.length;
-						if(num <= 1) return false;
-
-						function f(){
-							var response_name = responses[i];
-							var clone = response_name.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									dl.appendChild(obj.element);
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(response_name,param,response_dialog,"name");
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:true});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// ホスト
-			// --------------------------------------------------------------------------------
-			function forHost(target){
-				if(BbsControlHostExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlHost を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var p;
-					var n;
-					var q;
-					var ignore_dictionary = {"B":1,"SCRIPT":1};
-					var queue = new Object();
-					q = {p:queue,n:queue,node:target};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-							if(!(ignore_dictionary[node.tagName])){
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-							break;
-						case 3:
-							while(node){
-								var text_value = DomNodeGetNodeValue(node);
-
-								var m = text_value.match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-								if(m){
-									// 元のテキストノード
-									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
-
-									// BbsControlHost を生成
-									var control_host = new BbsControlHost(null,false);
-									control_host.setHost(m[2]);
-									var element_host = control_host.getElement();
-									ElementSetTextContent(element_host,m[2]);
-									DomNode_InsertAfter(node,element_host);
-
-									// 直後テキスト
-									node = DocumentCreateText(RegExp.rightContext);
-									DomNode_InsertAfter(element_host,node);
-									continue;
-								}
-
-								var m = text_value.match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})((|\\n) \\])","i"));
-								if(m){
-									// 元のテキストノード
-									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
-
-									// BbsControlHost を生成
-									var control_host = new BbsControlHost(null,false);
-									control_host.setHost(m[2]);
-									var element_host = control_host.getElement();
-									ElementSetTextContent(element_host,m[2]);
-									DomNode_InsertAfter(node,element_host);
-
-									// 直後テキスト
-									node = DocumentCreateText("\n ]" + RegExp.rightContext);
-									DomNode_InsertAfter(element_host,node);
-									continue;
-								}
-
-								var m = text_value.match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-								if(m){
-									// 元のテキストノード
-									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
-
-									// BbsControlHost を生成
-									var control_host = new BbsControlHost(null,false);
-									control_host.setHost(m[2]);
-									var element_host = control_host.getElement();
-									ElementSetTextContent(element_host,m[2]);
-									DomNode_InsertAfter(node,element_host);
-
-									// 直後テキスト
-									node = DocumentCreateText(RegExp.rightContext);
-									DomNode_InsertAfter(element_host,node);
-									continue;
-								}
-
-								break;
-							}
-
-							break;
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlHost を検索
-				// --------------------------------------------------------------------------------
-				BbsControlHostSearch(target,function(control_host){
-
-					control_host.setResponse(response);
-
-					var host = control_host.getHost();
-					var element_host = control_host.getElement();
-					var textnode_host = DocumentCreateText("");
-
-
-					// --------------------------------------------------------------------------------
-					// 変化があったときに実行されるイベント
-					// --------------------------------------------------------------------------------
-					control_host.onchange = function(count){
-						if(count > 1){
-							DomNodeSetNodeValue(textnode_host,"(" + count + ")");
-						}else{
-							DomNodeSetNodeValue(textnode_host,"");
-						}
-
-						var style = element_host.style;
-						if(count >= 5){
-							StyleDeclarationSetProperty(style,"color","#e80000");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else if(count >= 2){
-							StyleDeclarationRemoveProperty(style,"color");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else{
-							StyleDeclarationSetProperty(style,"color","#888");
-							StyleDeclarationSetProperty(style,"font-size","80%");
-						}
-					};
-					control_host.update();
-					element_host.appendChild(textnode_host);
-
-					// --------------------------------------------------------------------------------
-					// ポップアップ化
-					// --------------------------------------------------------------------------------
-					if(type == "host"){
-						if(response.getHost() == host)	return null;
-					}
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_host);
-					response_dialog.oncreate = function(_window,callback){
-
-						var dl = DocumentCreateElement("dl");
-						dl.style.margin = "0px";
-						_window.appendChild(dl);
-
-						var responses = bbs_dictionary.getResponsesFromHost(host);
-						var i = 0;
-						var num = responses.length;
-						if(num <= 1) return false;
-
-						function f(){
-							var response_host = responses[i];
-							var clone = response_host.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									dl.appendChild(obj.element);
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(response_host,param,response_dialog,"host");
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:true});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// フォロワー
-			// --------------------------------------------------------------------------------
-			function forFollower(target){
-				if(BbsControlFollowerExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlFollower を生成
-				// --------------------------------------------------------------------------------
-				var control_follower = new BbsControlFollower(null,true);
-				control_follower.setResponse(response);
-
-				var element_follower = control_follower.getElement();
-				var textnode_follower = DocumentCreateText("");
-
-				element_follower.appendChild(textnode_follower);
-
-				// --------------------------------------------------------------------------------
-				// 変化があったときに実行されるイベント
-				// --------------------------------------------------------------------------------
-				control_follower.onchange = function(count){
-					if(count){
-						textnode_follower.nodeValue = " follower(" + count + ")";
-					}else{
-						textnode_follower.nodeValue = "";
-					}
-
-					var style = element_follower.style;
-					if(count >= 3){
-						StyleDeclarationSetProperty(style,"color","#e80000");
-						StyleDeclarationRemoveProperty(style,"font-size");
-
-					}else{
-						StyleDeclarationSetProperty(style,"color","#888");
-						StyleDeclarationSetProperty(style,"font-size","small");
-					}
-					if(count){
-						StyleDeclarationSetProperty(style,"margin","0px 4px 0px 0px");
-					}else{
-						StyleDeclarationRemoveProperty(style,"margin");
-					}
-				};
-				control_follower.update();
-				var nodes = ElementGetElementsByTagName(target,"br");
-				if(nodes.length){
-					DomNode_InsertBefore(nodes[0],element_follower);
-				}else{
-					target.appendChild(element_follower);
-				}
-
-				// --------------------------------------------------------------------------------
-				// ポップアップ化
-				// --------------------------------------------------------------------------------
-				// ダイアログを作成
-				var response_dialog = new BbsResponseDialog();
-				if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-				response_dialog.setElementParent(node.parent);
-				response_dialog.setElementHitArea(element_follower);
-				response_dialog.oncreate = function(_window,callback){
-
-					var dl = DocumentCreateElement("dl");
-					dl.style.margin = "0px";
-					_window.appendChild(dl);
-
-					var ary = response.getFollower();
-					var i = 0;
-					var num = ary.length;
-					if(num <= 0) return false;
-
-					function f(){
-						var follower = bbs_dictionary.getResponse(ary[i].getNumber());
-						var clone = follower.getCloneElements();
-
-						var j;
-						var clone_num = clone.length;
-						if(clone_num){
-
-							var param = new Object();
-							param.parent = node.parent;
-							for(j=0;j<clone_num;j++){
-								var obj = clone[j];
-								param[obj.name] = obj.element;
-								dl.appendChild(obj.element);
-							}
-
-							// レスポンスダイアログを登録
-							attachBbsResponseDialog(follower,param,response_dialog,"response");
-						}
-
-						i += 1;
-						if(i < num){
-							execute_queue.attachFirst(f,null);
-						}else{
-							callback({result:true});
-						}
-					}
-					execute_queue.attachFirst(f,null);
-				};
-			}
-
-			if(node.dt){
-				forResponseAnchor(node.dt);
-				forId(node.dt);
-				forName(node.dt);
-				forHost(node.dt);
-				forFollower(node.dt);
-			}
-			if(node.dd){
-				forResponseAnchor(node.dd);
-				forId(node.dd);
-				forName(node.dd);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// エレメントを解析
-		// --------------------------------------------------------------------------------
-		var useful = (function(){
-			var dt = element;
-			var dd;
-
-			try{
-				var i;
-				var nodes = dt.childNodes;
-				var num = nodes.length;
-				for(i=0;i<num;i++){
-					if(nodes[i].className == "resNumber") break;
-				}
-				if(i >= num) return false;
-			}catch(e){
-				return false;
-			}
-
-			try{
-				dd = DomNodeGetNextElementSibling(dt);
-				if(!dd) return false;
-			}catch(e){
-				return false;
-			}
-
-			try{
-				var dl = dt.parentNode;
-				if(!dl.id.match(new RegExp("^res[0-9]+$","i"))) return false;
-				if(!DomNodeGetAttachedDocument(dl)) return false;
-			}catch(e){
-				return false;
-			}
-
-			// --------------------------------------------------------------------------------
-			// レスアンカー拡張
-			// --------------------------------------------------------------------------------
-			work.extendResponseAnchor(dd);
-
-			// --------------------------------------------------------------------------------
-			// クリーンアップ
-			// --------------------------------------------------------------------------------
-			(function(){
-				function cleanupHeader(target){
-					var p;
-					var n;
-					var q;
-					var queue = new Object();
-					q = {p:queue,n:queue,node:target};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-							if(node.className == "resID"){
-								var prev = node.previousSibling;
-								if(prev){
-									if((prev.nodeType == 3) && (DomNodeGetNodeValue(prev).indexOf("ID:") >= 0)){
-										if(!(node.childNodes.length)){
-											DomNodeRemove(prev);
-											DomNodeRemove(node);
-										}else{
-											DomNodeSetNodeValue(prev,DomNodeGetNodeValue(prev) + ElementGetTextContent(node));
-											DomNodeRemove(node);
-										}
-									}
-								}
-							}else if(node.className == "resBeID"){
-								var prev = node.previousSibling;
-								if(prev){
-									if((prev.nodeType == 3) && (DomNodeGetNodeValue(prev).indexOf("Be:") >= 0)){
-										if(!(node.childNodes.length)){
-											DomNodeRemove(prev);
-											DomNodeRemove(node);
-										}
-									}
-								}
-							}else{
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-							break;
-						}
-					}
-				}
-
-				function cleanup(target){
-					BbsControlSearchTrash(target,function(element){
-						var node = element.firstChild;
-						if(!node)	return null;
-						if(node.nodeType != 3)	return null;
-
-						// ID
-						var m = node.nodeValue.match(new RegExp("^ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i"));
-						if(m){
-							// 直後テキスト
-							var node = DocumentCreateText(m[0]);
-							DomNode_InsertAfter(element,node);
-							DomNodeRemove(element);
-							return null;
-						}
-
-						// トリップ
-						var m = node.nodeValue.match(new RegExp("^(◆[a-zA-Z0-9+/.]{10,12})","i"));
-						if(m){
-							// 直後テキスト
-							var node = DocumentCreateText(m[0]);
-							DomNode_InsertAfter(element,node);
-							DomNodeRemove(element);
-							return null;
-						}
-
-						// ホスト名
-						var m = node.nodeValue.match(new RegExp("^([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-						if(m){
-							// 直後テキスト
-							var node = DocumentCreateText(m[0]);
-							DomNode_InsertAfter(element,node);
-							DomNodeRemove(element);
-
-							// テキストノードを統合
-							node.parentNode.normalize();
-							return null;
-						}
-						var m = node.nodeValue.match(new RegExp("^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-						if(m){
-							// 直後テキスト
-							var node = DocumentCreateText(m[0]);
-							DomNode_InsertAfter(element,node);
-							DomNodeRemove(element);
-
-							// テキストノードを統合
-							node.parentNode.normalize();
-							return null;
-						}
-
-						return null;
-					});
-				}
-
-				if(dt){
-					cleanupHeader(dt);
-					cleanup(dt);
-				}
-				if(dd){
-					cleanup(dd);
-				}
-			})();
-
-			// ナンバーを取得
-			var dt_text = ElementGetTextContent(dt);
-			if(!(dt_text.match(new RegExp("([0-9]+)","i"))))	return false;
-
-			// ナンバーからレスポンスオブジェクトを取得
-			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
-
-			// レスポンス解析
-			if(!response.getAnalyzed()){
-
-				// IDの取得
-				var nodes = ElementGetElementsByClassName(dt,"resID");
-				if(nodes.length){
-					if(ElementGetTextContent(nodes[0]).match(new RegExp("(ID:|)([-a-zA-Z0-9+/.]+)[●!]{0,2}","i"))){
-						response.setId(RegExp.$2);
-					}
-				}else{
-					if(dt_text.match(new RegExp("ID:([-a-zA-Z0-9+/.]+)[●!]{0,2}","i"))){
-						response.setId(RegExp.$1);
-					}
-				}
-
-				// 名前の取得
-				if(dt_text.match(new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i"))){
-					response.setName(RegExp.$1);
-				}
-
-				// ホスト名の取得
-				(function(){
-					var p;
-					var n;
-					var q;
-					var ignore_dictionary = {"B":1,"SCRIPT":1};
-					var queue = new Object();
-					q = {p:queue,n:queue,node:dt};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-							if(!(ignore_dictionary[node.tagName])){
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-							break;
-						case 3:
-							var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-							if(m){
-								response.setHost(m[2]);
-								return;
-							}
-							var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})(|\\n) \\]","i"));
-							if(m){
-								response.setHost(m[2]);
-								return;
-							}
-							var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-							if(m){
-								response.setHost(m[2]);
-								return;
-							}
-							break;
-						}
-					}
-				})();
-
-				// フォロー解析
-				var dictionary = new Object();
-				(function(){
-					var nodes = ElementGetElementsByTagName(dd,"a");
-					var i;
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-						numbers.getNumbers(function(n){
-							if(!dictionary[n]){
-								var following = bbs_dictionary.getResponse(n);
-								following.addFollower(response);
-								dictionary[n] = true;
-							}
-						});
-					}
-				})();
-
-				// オリジナルエレメントをセット
-				if(dt)	response.addOriginalElements("dt",dt);
-				if(dd)	response.addOriginalElements("dd",dd);
-
-				// 消去時に実行されるイベント
-				response.onerase = function(){
-					var original = response.getOriginalElements();
-
-					// オリジナルエレメントを外す
-					var i;
-					var num = original.length;
-					for(i=0;i<num;i++){
-						var revise_scroll = new DocumentReviseScroll();
-						var node = original[i].element;
-						revise_scroll.executeRemoveElementBefore(node);
-						DomNodeRemove(node);
-						revise_scroll.executeRemoveElementAfter(node);
-					}
-				};
-
-				response.setAnalyzed();
-			}
-
-			// レスポンスダイアログを登録（ルート）
-			attachBbsResponseDialog(
-				response,
-				{
-					dt:dt,
-					dd:dd,
-					parent:dt.parentNode
 				},
 				null,
 				null
@@ -24792,6 +23142,7 @@ function PageExpand(page_expand_arguments){
 					control_id.setResponse(response);
 
 					var id = control_id.getId();
+					var myself = (response.getId() === id);
 					var element_id = control_id.getElement();
 					var textnode_id = control_id.getTextNode();
 
@@ -24823,7 +23174,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "id"){
-						if(response.getId() == id)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -24840,7 +23191,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromId(id);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_id = responses[i];
@@ -24973,6 +23328,7 @@ function PageExpand(page_expand_arguments){
 					control_name.setResponse(response);
 
 					var name = control_name.getName();
+					var myself = (response.getName() === name);
 					var element_name = control_name.getElement();
 					var textnode_name = DocumentCreateText("");
 
@@ -25006,7 +23362,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "name"){
-						if(response.getName() == name)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -25023,7 +23379,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromName(name);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_name = responses[i];
@@ -25174,6 +23534,7 @@ function PageExpand(page_expand_arguments){
 					control_host.setResponse(response);
 
 					var host = control_host.getHost();
+					var myself = (response.getHost() === host);
 					var element_host = control_host.getElement();
 					var textnode_host = DocumentCreateText("");
 
@@ -25207,7 +23568,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "host"){
-						if(response.getHost() == host)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -25224,7 +23585,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromHost(host);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_host = responses[i];
@@ -25624,1695 +23989,6 @@ function PageExpand(page_expand_arguments){
 					dt:dt,
 					dd:dd,
 					parent:dl
-				},
-				null,
-				null
-			);
-
-			return true;
-		})();
-
-		response({useful:useful});
-		return true;
-	}.toString() +
-"\n]";
-	}
-
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「あっとちゃんねるず」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptInitialize_Atchs(){
-		return "" +
-"[\n\t" + 
-	function(info,response){
-		var work = info.work;
-
-		// --------------------------------------------------------------------------------
-		// 基本URL抽出
-		// --------------------------------------------------------------------------------
-		var url = document.URL;
-		var bbs_list = [
-			{url:"(http://[^.]+\\.atchs\\.jp/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"atchs"}
-		];
-
-		var i;
-		var num = bbs_list.length;
-		for(i=0;i<num;i++){
-			var bbs = bbs_list[i];
-			var re = new RegExp(bbs.url,"i");
-			var m = url.match(re);
-			if(m){
-				work.base_url = m[1].replace(re,bbs.replace);
-				work.bbs_name = bbs.name;
-				break;
-			}
-		}
-
-		return false;
-	}.toString() +
-	",\n\n\t" +
-	function (info,response){
-		var work = info.work;
-		if(!(work.bbs_name)){
-			return false;
-		}
-
-		var first_id = 1;
-		var last_id = 1;
-		var dictionary_id = new Array();
-		var element_parent = null;
-		var read_more_button = null;
-		var element_form = null;
-		var base_url = work.base_url;
-		var resource_url_shadow = base_url;
-		var resource_url_more = base_url;
-
-		// --------------------------------------------------------------------------------
-		// 文字列からレスポンス番号を取得
-		// --------------------------------------------------------------------------------
-		work.createResponseAnchorNumbers = function (str){
-			var numbers = new ResponseAnchorNumbers();
-
-			var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
-			var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
-			var re_number = new RegExp("^([0-9０-９]+)","i");
-
-			var m = str.match(re_search);
-			if(m){
-				var p = m[1].length;
-				while(true){
-					// 番号-番号
-					m = str.substr(p).match(re_range);
-					if(m){
-						var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-						var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-						if(id0 < 1) id0 = 1;
-						if(id1 < 1) id1 = 1;
-						if(id0 > 10000) id0 = 10000;
-						if(id1 > 10000) id1 = 10000;
-						p += m[0].length;
-						numbers.addNumbers(id0,id1);
-					}else{
-						// 番号
-						m = str.substr(p).match(re_number);
-						if(m){
-							p += m[0].length;
-							var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-							if(id < 1) id = 1;
-							if(id > 0x7fffffff) id = 0x7fffffff;
-							numbers.addNumber(id);
-						}
-					}
-
-					if(m){
-						// カンマ
-						if(RegExp.rightContext.search(",") == 0){
-							p += 1;
-							continue;
-						}
-					}
-					break;
-				}
-			}
-			return numbers;
-		};
-
-		// --------------------------------------------------------------------------------
-		// レスアンカー拡張
-		// --------------------------------------------------------------------------------
-		work.extendResponseAnchor = function (target){
-			if(BbsControlResponseAnchorExist(target))	return;
-
-			var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
-			var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
-			var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
-			var re_number = new RegExp("([0-9０-９]+)","i");
-
-			var i;
-			var nodes = ElementGetElementsByTagName(target,"a");
-			var num = nodes.length;
-			for(i=num-1;i>=0;i--){
-				var node = nodes[i];
-				var m = ElementGetTextContent(node).match(re_simple);
-				if(m){
-					var text_node = DocumentCreateText(m[0]);
-					DomNode_InsertBefore(node,text_node);
-					DomNodeRemove(node);
-				}
-			}
-
-			// テキストノードを統合
-			target.normalize();
-
-			var p;
-			var n;
-			var q;
-			var ignore_dictionary = {"A":1,"SCRIPT":1};
-			var queue = new Object();
-			q = {p:queue,n:queue,node:target};
-			queue.p = q;
-			queue.n = q;
-
-			while(queue.n != queue){
-				q = queue.n;
-				p = q.p;
-				n = q.n;
-				p.n = n;
-				n.p = p;
-				var node = q.node;
-				switch(node.nodeType){
-				case 1:
-					var i;
-					var nodes = node.childNodes;
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						n = queue;
-						p = n.p;
-						q = {p:p,n:n,node:nodes[i]};
-						p.n = q;
-						n.p = q;
-					}
-					break;
-				case 3:
-					while(node){
-						var m = DomNodeGetNodeValue(node).match(re_detail);
-						if(!m)	break;
-
-						// 元のテキストノード
-						DomNodeSetNodeValue(node,RegExp.leftContext);
-
-						// BbsControlName を生成
-						var element = DocumentCreateElement("a");
-						ElementSetTextContent(element,m[0]);
-						DomNode_InsertAfter(node,element);
-
-						// 直後テキスト
-						node = DocumentCreateText(RegExp.rightContext);
-						DomNode_InsertAfter(element,node);
-
-						var query = "";
-						m = ElementGetTextContent(element).match(re_range);
-						if(m){
-							var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
-							var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
-							if(min < 1) min = 1;
-							if(max < 1) max = 1;
-							if(min > 10000) min = 10000;
-							if(max > 10000) max = 10000;
-							if(max < min){
-								var tmp = min;
-								min = max;
-								max = tmp;
-							}
-							query = min + "-" + max;
-						}else{
-							// 番号
-							m = ElementGetTextContent(element).match(re_number);
-							if(m){
-								query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
-								if(query < 1) query = 1;
-								if(query > 0x7fffffff) query = 0x7fffffff;
-							}
-
-						}
-						element.href = work.base_url + query;
-					}
-				}
-			}
-		};
-
-		// --------------------------------------------------------------------------------
-		// 継ぎ足し読み込み
-		// --------------------------------------------------------------------------------
-		function readMore(callback){
-
-			// ローダーオブジェクトを作成
-			var loader = new Loader();
-
-			// 成功
-			loader.onload = function(str){
-				var re_number = new RegExp("<a href=\".*?\">([0-9]+)</a>","i");
-
-				var p = 0;
-				var n = str.length;
-				var add_count = 0;
-				function f(){
-					try{
-						if(p >= n) throw 0;
-						p = str.indexOf("<div class=\"res\">",p);
-						if(p < 0) throw 0;
-						var e = str.indexOf("</div>",p);
-						if(e >= 0) e += 6;
-						var s = str.substring(p,e);
-						var m = s.match(re_number);
-						if(m){
-							var id = parseInt(m[1]);
-							if(last_id < id){
-								var response = bbs_dictionary.getResponse(id);
-								response.clearAnalyzed();
-								response.clearOriginalElements();
-								response.clearFollowing();
-
-								var nodes = StringHtmlCreateDomNodesSafe(s);
-								var j;
-								var node_num = nodes.length;
-								for(j=0;j<node_num;j++){
-									element_parent.appendChild(nodes[j]);
-								}
-								last_id = id;
-								add_count += 1;
-								resource_url_more = base_url + (last_id) + "-";
-							}
-						}
-
-						if(p < e){
-							p = e;
-							execute_queue.attachFirst(f,null);
-							return;
-						}
-					}catch(e){
-					}
-					callback({result:true,add_count:add_count});
-				}
-				execute_queue.attachFirst(f,null);
-			};
-
-			// 失敗
-			loader.onerror = function(){
-				callback({result:false});
-			};
-
-			// テキストの読み込み
-			loader.setMethod("GET");
-			loader.setURL(resource_url_more);
-			loader.loadText();
-		}
-
-		// --------------------------------------------------------------------------------
-		// レスポンス親要素
-		// --------------------------------------------------------------------------------
-		element_parent = document.getElementById("article");
-		if(!element_parent) return false;
-
-
-		// --------------------------------------------------------------------------------
-		// 範囲取得
-		// --------------------------------------------------------------------------------
-		var nodes = ElementGetElementsByTagName(element_parent,"div");
-		var i;
-		var node_num = nodes.length;
-		for(i=0;i<node_num;i++){
-			var node = nodes[i];
-			if(node.className == "res"){
-				var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)","i"));
-				if(m){
-					first_id = parseInt(m[1]);
-					dictionary_id[first_id] = true;
-					if(first_id != 1){
-						break;
-					}
-				}
-			}
-		}
-		for(i=node_num-1;i>=0;i--){
-			var node = nodes[i];
-			if(node.className == "res"){
-				var m = ElementGetTextContent(node).match(new RegExp("([0-9]+)","i"));
-				if(m){
-					last_id = parseInt(m[1]);
-					dictionary_id[last_id] = true;
-					if(last_id <= 1000){
-						break;
-					}
-				}
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// アクセス先 URL
-		// --------------------------------------------------------------------------------
-		resource_url_shadow = base_url;
-		resource_url_more = base_url + last_id + "-";
-
-		// --------------------------------------------------------------------------------
-		// BbsControlDockingForm 作成
-		// --------------------------------------------------------------------------------
-		(function(){
-			var node;
-
-			// フォーム
-			var nodes = ElementGetElementsByTagName(document.body,"form");
-			var i;
-			for(i=0;i<nodes.length;i++){
-				if(nodes[i].action.indexOf("/test/bbs.cgi/") >= 0){
-					node = nodes[i];
-					break;
-				}
-			}
-
-			if(node){
-				var docking_form = new BbsControlDockingForm(node,false);
-				docking_form.setStyle("background:#e8e8e8; background-image:linear-gradient(to bottom, #f8f8f8, #e8e8e8); padding:20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px;");
-			}
-		})();
-
-		// --------------------------------------------------------------------------------
-		// BbsControlReadMoreButton 作成
-		// --------------------------------------------------------------------------------
-		read_more_button = new BbsControlReadMoreButton();
-		read_more_button.setWaitTime(2 * 1000);
-		read_more_button.onclick = readMore;
-		var read_more_button_prev = document.getElementById("wrap");
-		if(read_more_button_prev){
-			DomNode_InsertAfter(read_more_button_prev,read_more_button.getElement());
-		}
-
-		// --------------------------------------------------------------------------------
-		// 書き込みをポップアップ化
-		// --------------------------------------------------------------------------------
-		(function(){
-			var element_form;
-			var input_submit;
-			var element_textarea;
-			var event_handler_release;
-			var task;
-
-			(function(){
-				// フォーム
-				var nodes = ElementGetElementsByTagName(document.body,"form");
-				var i;
-				for(i=0;i<nodes.length;i++){
-					if(nodes[i].action.indexOf("/test/bbs.cgi/") >= 0){
-						element_form = nodes[i];
-						break;
-					}
-				}
-
-				// サブミットボタン
-				if(element_form){
-					var nodes = ElementGetElementsByTagName(element_form,"input");
-					for(i=0;i<nodes.length;i++){
-						if(nodes[i].type.toLowerCase() == "submit"){
-							input_submit = nodes[i];
-							break;
-						}
-					}
-					var nodes = ElementGetElementsByTagName(element_form,"textarea");
-					if(nodes.length){
-						element_textarea = nodes[0];
-					}
-				}
-			})();
-
-			// 開放
-			function release(){
-				if(event_handler_release){
-					event_handler_release.release();
-					event_handler_release = null;
-				}
-
-				removeEvent();
-
-				if(task){
-					task.release();
-				}
-			}
-
-			// クリア
-			function clear(){
-				element_textarea.value = "";
-			}
-
-			// 有効セット
-			function setEnable(type){
-				input_submit.disabled = !(type);
-			}
-
-			// イベント追加
-			function addEvent(){
-				if(window.addEventListener){
-					input_submit.addEventListener("click",EventClickButton);
-					element_form.addEventListener("submit",EventSubmitForm);
-				}else if(window.attachEvent){
-					input_submit.attachEvent("onclick",EventClickButton);
-					element_form.attachEvent("onsubmit",EventSubmitForm);
-				}
-			}
-
-			// イベント除外
-			function removeEvent(){
-				if(window.removeEventListener){
-					input_submit.removeEventListener("click",EventClickButton);
-					element_form.removeEventListener("submit",EventSubmitForm);
-				}else if(window.detachEvent){
-					input_submit.detachEvent("onclick",EventClickButton);
-					element_form.detachEvent("onsubmit",EventSubmitForm);
-				}
-			}
-
-			// サブミット直前に実行されるイベント
-			function EventSubmitForm(e){
-				setEnable(false);
-			}
-
-			// クリック時に実行されるイベント
-			function EventClickButton(e){
-				var w = 600;
-				var h = 500;
-
-				var window_name = "_pageexpand_" + Math.floor(Math.random() * 0x7FFFFFFF);
-				var popup_iframe = new BbsControlPopupIframe(window_name);
-				popup_iframe.setWindowSize(w,h);
-				popup_iframe.onclose = function(){
-					setEnable(true);
-				};
-
-				var element_iframe = popup_iframe.getIFrameElement();
-				element_form.target = window_name;
-
-				(function(){
-					var closed = false;
-					var timer = null;
-
-					// タスク生成
-					task = task_container.createTask();
-					task.setDestructorFunc(function(){
-						task = null;
-					});
-					task.setExecuteFunc(function(){
-						try{
-							var href = "";
-							var window_obj = element_iframe.contentWindow;
-							if(window_obj.document){
-								href = window_obj.document.URL;
-							}
-							if(href.indexOf("http://") == 0){
-								if(href.indexOf("/test/read.cgi/") != -1){
-									if(!timer){
-										timer = (new Date()).getTime();
-									}
-								}else if(href.indexOf("/test/bbs.cgi/") == -1){
-									closed = true;
-								}else{
-									var document_obj = window_obj.document;
-									if(document_obj.readyState == "complete"){
-										if(document_obj.title === ""){
-											if(!timer){
-												timer = (new Date()).getTime();
-											}
-										}
-									}
-								}
-							}
-							if(timer){
-								if((new Date()).getTime() - timer > 1000 * 0){
-									closed = true;
-								}
-							}
-						}catch(e){
-							closed = true;
-						}
-
-						if(closed){
-							if(task){
-								task.release();
-							}
-							popup_iframe.close();
-							setEnable(true);
-							if(timer){
-								readMore(function(){});
-								clear();
-							}
-						}
-					});
-				})();
-			}
-
-			(function(){
-				if(!element_form) return;
-				if(!input_submit) return;
-				if(!element_textarea) return;
-
-				addEvent();
-
-				event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
-				event_handler_release.setFunction(function(){
-					release();
-				});
-			})();
-		})();
-
-		// --------------------------------------------------------------------------------
-		// シャドウロード
-		// --------------------------------------------------------------------------------
-		(function(){
-			// ローダーオブジェクトを作成
-			var loader = new Loader();
-
-			// 成功
-			loader.onload = function(str){
-				var re_number = new RegExp("<a href=\".*?\">([0-9]+)</a>","i");
-				var re_id = new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i");
-				var re_name = new RegExp("(◆(|[ ])[a-zA-Z0-9+/.]{10,12})","i");
-
-				var p = 0;
-				var n = str.length;
-				function f(){
-					if(p >= n) return;
-					p = str.indexOf("<div class=\"res\">",p);
-					if(p < 0) return;
-					var e = str.indexOf("</div>",p);
-					if(e >= 0) e += 6;
-					var s = str.substring(p,e);
-					var m = s.match(re_number);
-					if(m){
-						var id = parseInt(m[1]);
-						if((first_id <= id) && (id <= last_id)){
-						}else if(dictionary_id[id]){
-						}else{
-							// ナンバーからレスポンスオブジェクトを取得
-							var response = bbs_dictionary.getResponse(id);
-							if(!(response.getAnalyzed())){
-								var nodes = StringHtmlCreateDomNodesSafe(s);
-								var dt = nodes[0];
-								var dd = ElementGetElementsByTagName(dt,"p")[0];
-
-								try{
-									if(dt.tagName != "DIV")	return false;
-									if(dt.className != "res")	return false;
-									if(dd.className != "res_body")	return false;
-								}catch(e){
-									return false;
-								}
-
-								var dt_text = ElementGetTextContent(dt);
-
-								// レスアンカー拡張
-								work.extendResponseAnchor(dd);
-
-								// IDの取得
-								if(dt_text.match(re_id)){
-									response.setId(RegExp.$1);
-								}
-
-								// 名前の取得
-								if(dt_text.match(re_name)){
-									response.setName(RegExp.$1);
-								}
-
-								// ホスト名の取得
-								(function(){
-									var p;
-									var n;
-									var q;
-									var ignore_dictionary = {"B":1,"SCRIPT":1};
-									var queue = new Object();
-									q = {p:queue,n:queue,node:dt};
-									queue.p = q;
-									queue.n = q;
-
-									while(queue.n != queue){
-										q = queue.n;
-										p = q.p;
-										n = q.n;
-										p.n = n;
-										n.p = p;
-										var node = q.node;
-										switch(node.nodeType){
-										case 1:
-											if(!(ignore_dictionary[node.tagName])){
-												var i;
-												var nodes = node.childNodes;
-												var num = nodes.length;
-												for(i=0;i<num;i++){
-													n = queue;
-													p = n.p;
-													q = {p:p,n:n,node:nodes[i]};
-													p.n = q;
-													n.p = q;
-												}
-											}
-											break;
-										case 3:
-											var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-											if(m){
-												response.setHost(m[2]);
-												return;
-											}
-											var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})\\n \\]","i"));
-											if(m){
-												response.setHost(m[2]);
-												return;
-											}
-											var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-											if(m){
-												response.setHost(m[2]);
-												return;
-											}
-											break;
-										}
-									}
-								})();
-
-								// フォロー解析
-								var dictionary = new Object();
-								(function(){
-									var nodes = ElementGetElementsByTagName(dd,"a");
-									var i;
-									var num = nodes.length;
-									for(i=0;i<num;i++){
-										var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-										numbers.getNumbers(function(n){
-											if(!dictionary[n]){
-												var following = bbs_dictionary.getResponse(n);
-												following.addFollower(response);
-												dictionary[n] = true;
-											}
-										});
-									}
-								})();
-
-								// オリジナルエレメントをセット
-								if(dt)	response.addOriginalElements("dt",dt);
-								if(dd)	response.addOriginalElements("dd",dd);
-
-								// 消去時に実行されるイベント
-								response.onerase = function(){};
-
-								response.setAnalyzed();
-							}
-						}
-					}
-
-					if(p < e){
-						p = e;
-						execute_queue.attachFirst(f,null);
-					}
-				}
-				execute_queue.attachFirst(f,null);
-			};
-
-			// 失敗
-			loader.onerror = function(){
-			};
-
-			// テキストの読み込み
-			loader.setMethod("GET");
-			loader.setURL(resource_url_shadow);
-			loader.loadText();
-		})();
-
-		response({result:true});
-		return true;
-	}.toString() +
-	",\n\n\t" +
-	function (info,response){
-		response({result:false});
-		return true;
-	}.toString() +
-"\n]";
-	}
-
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「あっとちゃんねるず」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptCallback_Atchs(){
-		return "" +
-"[\n\t" + 
-	function(info,response){
-		var element = info.element;
-		var work = info.work;
-
-		// --------------------------------------------------------------------------------
-		// レスポンスダイアログを登録
-		// --------------------------------------------------------------------------------
-		function attachBbsResponseDialog(response,node,parent_dialog,type){
-
-			// --------------------------------------------------------------------------------
-			// レスアンカー
-			// --------------------------------------------------------------------------------
-			function forResponseAnchor(target){
-				if(BbsControlResponseAnchorExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlResponseAnchor を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var i;
-					var nodes = ElementGetElementsByTagName(target,"a");
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						var node = nodes[i];
-						var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(node));
-						if(numbers.getCount()){
-							var control_res_anchor = new BbsControlResponseAnchor(node,false);
-							control_res_anchor.setResponseAnchorNumbers(numbers);
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlResponseAnchor を検索
-				// --------------------------------------------------------------------------------
-				BbsControlResponseAnchorSearch(target,function(control_res_anchor){
-
-					var element_res_anchor = control_res_anchor.getElement();
-					var numbers = control_res_anchor.getResponseAnchorNumbers();
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_res_anchor);
-					response_dialog.oncreate = function(_window,callback){
-
-						var created = false;
-						var i = 0;
-						var number_list = numbers.getNumberList();
-						var num = number_list.length;
-						if(!num) return false;
-
-						function f(){
-							var following = bbs_dictionary.getResponse(number_list[i]);
-							var clone = following.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									_window.appendChild(obj.element);
-								}
-								try{
-									var dd = ElementGetElementsByTagName(param["dt"],"p")[0];
-									DomNode_InsertBefore(dd,param["dd"]);
-									DomNodeRemove(dd);
-								}catch(e){
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(following,param,response_dialog,"response");
-
-								created = true;
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:created});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// ID
-			// --------------------------------------------------------------------------------
-			function forId(target){
-				if(BbsControlIdExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlId を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var p;
-					var n;
-					var q;
-					var ignore_dictionary = {"A":1,"SCRIPT":1};
-					var queue = new Object();
-					q = {p:queue,n:queue,node:target};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-							if(!(ignore_dictionary[node.tagName])){
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-
-							break;
-						case 3:
-							while(node){
-
-								var m = DomNodeGetNodeValue(node).match(new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i"));
-								if(!m)	break;
-
-								// 元のテキストノード
-								DomNodeSetNodeValue(node,RegExp.leftContext);
-
-								// BbsControlId を生成
-								var control_id = new BbsControlId(null,false);
-								control_id.setId(m[1]);
-								var element_id = control_id.getElement();
-								ElementSetTextContent(element_id,m[0]);
-								DomNode_InsertAfter(node,element_id);
-
-								// 直後テキスト
-								node = DocumentCreateText(RegExp.rightContext);
-								DomNode_InsertAfter(element_id,node);
-							}
-							break;
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlId を検索
-				// --------------------------------------------------------------------------------
-				BbsControlIdSearch(target,function(control_id){
-
-					control_id.setResponse(response);
-
-					var id = control_id.getId();
-					var element_id = control_id.getElement();
-					var textnode_id = DocumentCreateText("");
-
-					element_id.appendChild(textnode_id);
-
-					// --------------------------------------------------------------------------------
-					// 変化があったときに実行されるイベント
-					// --------------------------------------------------------------------------------
-					control_id.onchange = function(count){
-						if(count > 1){
-							DomNodeSetNodeValue(textnode_id,"(" + count + ")");
-						}else{
-							DomNodeSetNodeValue(textnode_id,"");
-						}
-
-						var style = element_id.style;
-						if(count >= 5){
-							StyleDeclarationSetProperty(style,"color","#e80000");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else if(count >= 2){
-							StyleDeclarationRemoveProperty(style,"color");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else{
-							StyleDeclarationSetProperty(style,"color","#888");
-							StyleDeclarationSetProperty(style,"font-size","small");
-						}
-					};
-					control_id.update();
-
-					// --------------------------------------------------------------------------------
-					// ポップアップ化
-					// --------------------------------------------------------------------------------
-					if(type == "id"){
-						if(response.getId() == id)	return null;
-					}
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_id);
-					response_dialog.oncreate = function(_window,callback){
-
-						var responses = bbs_dictionary.getResponsesFromId(id);
-						var i = 0;
-						var num = responses.length;
-						if(num <= 1) return false;
-
-						function f(){
-							var response_id = responses[i];
-							var clone = response_id.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									_window.appendChild(obj.element);
-								}
-								try{
-									var dd = ElementGetElementsByTagName(param["dt"],"p")[0];
-									DomNode_InsertBefore(dd,param["dd"]);
-									DomNodeRemove(dd);
-								}catch(e){
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(response_id,param,response_dialog,"id");
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:true});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// トリップ
-			// --------------------------------------------------------------------------------
-			function forName(target){
-				if(BbsControlNameExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlName を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var p;
-					var n;
-					var q;
-					var ignore_dictionary = {"SCRIPT":1};
-					var queue = new Object();
-					q = {p:queue,n:queue,node:target};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-							if(!(ignore_dictionary[node.tagName])){
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-							break;
-						case 3:
-							while(node){
-
-								// 本文
-								var m = DomNodeGetNodeValue(node).match(new RegExp("(◆(|[ ])[a-zA-Z0-9+/.]{10,12})","i"));
-								if(!m)	break;
-
-								// 元のテキストノード
-								DomNodeSetNodeValue(node,RegExp.leftContext);
-
-								// BbsControlName を生成
-								var control_name = new BbsControlName(null,false);
-								control_name.setName(m[0]);
-								var element_name = control_name.getElement();
-								ElementSetTextContent(element_name,m[0]);
-								DomNode_InsertAfter(node,element_name);
-
-								// 直後テキスト
-								node = DocumentCreateText(RegExp.rightContext);
-								DomNode_InsertAfter(element_name,node);
-							}
-							break;
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlName を検索
-				// --------------------------------------------------------------------------------
-				BbsControlNameSearch(target,function(control_name){
-
-					control_name.setResponse(response);
-
-					var name = control_name.getName();
-					var element_name = control_name.getElement();
-					var textnode_name = DocumentCreateText("");
-
-
-					// --------------------------------------------------------------------------------
-					// 変化があったときに実行されるイベント
-					// --------------------------------------------------------------------------------
-					control_name.onchange = function(count){
-						if(count > 1){
-							DomNodeSetNodeValue(textnode_name,"(" + count + ")");
-						}else{
-							DomNodeSetNodeValue(textnode_name,"");
-						}
-
-						var style = element_name.style;
-						if(count >= 5){
-							StyleDeclarationSetProperty(style,"color","#e80000");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else if(count >= 2){
-							StyleDeclarationRemoveProperty(style,"color");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else{
-							StyleDeclarationSetProperty(style,"color","#888");
-							StyleDeclarationSetProperty(style,"font-size","small");
-						}
-					};
-					control_name.update();
-					element_name.appendChild(textnode_name);
-
-					// --------------------------------------------------------------------------------
-					// ポップアップ化
-					// --------------------------------------------------------------------------------
-					if(type == "name"){
-						if(response.getName() == name)	return null;
-					}
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_name);
-					response_dialog.oncreate = function(_window,callback){
-
-						var responses = bbs_dictionary.getResponsesFromName(name);
-						var i = 0;
-						var num = responses.length;
-						if(num <= 1) return false;
-
-						function f(){
-							var response_name = responses[i];
-							var clone = response_name.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									_window.appendChild(obj.element);
-								}
-								try{
-									var dd = ElementGetElementsByTagName(param["dt"],"p")[0];
-									DomNode_InsertBefore(dd,param["dd"]);
-									DomNodeRemove(dd);
-								}catch(e){
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(response_name,param,response_dialog,"name");
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:true});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// ホスト
-			// --------------------------------------------------------------------------------
-			function forHost(target){
-				if(BbsControlHostExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlHost を生成
-				// --------------------------------------------------------------------------------
-				(function(){
-					var p;
-					var n;
-					var q;
-					var ignore_dictionary = {"B":1,"SCRIPT":1};
-					var queue = new Object();
-					q = {p:queue,n:queue,node:target};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-							if(!(ignore_dictionary[node.tagName])){
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-							break;
-						case 3:
-							while(node){
-								var text_value = DomNodeGetNodeValue(node);
-
-								var m = text_value.match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-								if(m){
-									// 元のテキストノード
-									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
-
-									// BbsControlHost を生成
-									var control_host = new BbsControlHost(null,false);
-									control_host.setHost(m[2]);
-									var element_host = control_host.getElement();
-									ElementSetTextContent(element_host,m[2]);
-									DomNode_InsertAfter(node,element_host);
-
-									// 直後テキスト
-									node = DocumentCreateText(RegExp.rightContext);
-									DomNode_InsertAfter(element_host,node);
-									continue;
-								}
-
-								var m = text_value.match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})(\\n \\])","i"));
-								if(m){
-									// 元のテキストノード
-									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
-
-									// BbsControlHost を生成
-									var control_host = new BbsControlHost(null,false);
-									control_host.setHost(m[2]);
-									var element_host = control_host.getElement();
-									ElementSetTextContent(element_host,m[2]);
-									DomNode_InsertAfter(node,element_host);
-
-									// 直後テキスト
-									node = DocumentCreateText("\n ]" + RegExp.rightContext);
-									DomNode_InsertAfter(element_host,node);
-									continue;
-								}
-
-								var m = text_value.match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-								if(m){
-									// 元のテキストノード
-									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
-
-									// BbsControlHost を生成
-									var control_host = new BbsControlHost(null,false);
-									control_host.setHost(m[2]);
-									var element_host = control_host.getElement();
-									ElementSetTextContent(element_host,m[2]);
-									DomNode_InsertAfter(node,element_host);
-
-									// 直後テキスト
-									node = DocumentCreateText(RegExp.rightContext);
-									DomNode_InsertAfter(element_host,node);
-									continue;
-								}
-
-								break;
-							}
-
-							break;
-						}
-					}
-				})();
-
-				// --------------------------------------------------------------------------------
-				// BbsControlHost を検索
-				// --------------------------------------------------------------------------------
-				BbsControlHostSearch(target,function(control_host){
-
-					control_host.setResponse(response);
-
-					var host = control_host.getHost();
-					var element_host = control_host.getElement();
-					var textnode_host = DocumentCreateText("");
-
-
-					// --------------------------------------------------------------------------------
-					// 変化があったときに実行されるイベント
-					// --------------------------------------------------------------------------------
-					control_host.onchange = function(count){
-						if(count > 1){
-							DomNodeSetNodeValue(textnode_host,"(" + count + ")");
-						}else{
-							DomNodeSetNodeValue(textnode_host,"");
-						}
-
-						var style = element_host.style;
-						if(count >= 5){
-							StyleDeclarationSetProperty(style,"color","#e80000");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else if(count >= 2){
-							StyleDeclarationRemoveProperty(style,"color");
-							StyleDeclarationRemoveProperty(style,"font-size");
-						}else{
-							StyleDeclarationSetProperty(style,"color","#888");
-							StyleDeclarationSetProperty(style,"font-size","80%");
-						}
-					};
-					control_host.update();
-					element_host.appendChild(textnode_host);
-
-					// --------------------------------------------------------------------------------
-					// ポップアップ化
-					// --------------------------------------------------------------------------------
-					if(type == "host"){
-						if(response.getHost() == host)	return null;
-					}
-
-					// ダイアログを作成
-					var response_dialog = new BbsResponseDialog();
-					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-					response_dialog.setElementParent(node.parent);
-					response_dialog.setElementHitArea(element_host);
-					response_dialog.oncreate = function(_window,callback){
-
-						var responses = bbs_dictionary.getResponsesFromHost(host);
-						var i = 0;
-						var num = responses.length;
-						if(num <= 1) return false;
-
-						function f(){
-							var response_host = responses[i];
-							var clone = response_host.getCloneElements();
-
-							var j;
-							var clone_num = clone.length;
-							if(clone_num){
-
-								var param = new Object();
-								param.parent = node.parent;
-								for(j=0;j<clone_num;j++){
-									var obj = clone[j];
-									param[obj.name] = obj.element;
-									_window.appendChild(obj.element);
-								}
-								try{
-									var dd = ElementGetElementsByTagName(param["dt"],"p")[0];
-									DomNode_InsertBefore(dd,param["dd"]);
-									DomNodeRemove(dd);
-								}catch(e){
-								}
-
-								// レスポンスダイアログを登録
-								attachBbsResponseDialog(response_host,param,response_dialog,"host");
-							}
-
-							i += 1;
-							if(i < num){
-								execute_queue.attachFirst(f,null);
-							}else{
-								callback({result:true});
-							}
-						}
-						execute_queue.attachFirst(f,null);
-					};
-
-					return null;
-				});
-			}
-
-			// --------------------------------------------------------------------------------
-			// フォロワー
-			// --------------------------------------------------------------------------------
-			function forFollower(target){
-				if(BbsControlFollowerExist(target))	return;
-
-				// --------------------------------------------------------------------------------
-				// BbsControlFollower を生成
-				// --------------------------------------------------------------------------------
-				var control_follower = new BbsControlFollower(null,true);
-				control_follower.setResponse(response);
-
-				var element_follower = control_follower.getElement();
-				var textnode_follower = DocumentCreateText("");
-
-				element_follower.appendChild(textnode_follower);
-
-				// --------------------------------------------------------------------------------
-				// 変化があったときに実行されるイベント
-				// --------------------------------------------------------------------------------
-				control_follower.onchange = function(count){
-					if(count){
-						textnode_follower.nodeValue = " follower(" + count + ")";
-					}else{
-						textnode_follower.nodeValue = "";
-					}
-
-					var style = element_follower.style;
-					if(count >= 3){
-						StyleDeclarationSetProperty(style,"color","#e80000");
-						StyleDeclarationRemoveProperty(style,"font-size");
-
-					}else{
-						StyleDeclarationSetProperty(style,"color","#888");
-						StyleDeclarationSetProperty(style,"font-size","small");
-					}
-					if(count){
-						StyleDeclarationSetProperty(style,"margin","0px 4px 0px 0px");
-					}else{
-						StyleDeclarationRemoveProperty(style,"margin");
-					}
-				};
-				control_follower.update();
-				var nodes = ElementGetElementsByTagName(target,"br");
-				if(nodes.length){
-					DomNode_InsertBefore(nodes[0],element_follower);
-				}else{
-					target.appendChild(element_follower);
-				}
-
-				// --------------------------------------------------------------------------------
-				// ポップアップ化
-				// --------------------------------------------------------------------------------
-				// ダイアログを作成
-				var response_dialog = new BbsResponseDialog();
-				if(parent_dialog)	parent_dialog.attachChild(response_dialog);
-				response_dialog.setElementParent(node.parent);
-				response_dialog.setElementHitArea(element_follower);
-				response_dialog.oncreate = function(_window,callback){
-
-					var ary = response.getFollower();
-					var i = 0;
-					var num = ary.length;
-					if(num <= 0) return false;
-
-					function f(){
-						var follower = bbs_dictionary.getResponse(ary[i].getNumber());
-						var clone = follower.getCloneElements();
-
-						var j;
-						var clone_num = clone.length;
-						if(clone_num){
-
-							var param = new Object();
-							param.parent = node.parent;
-							for(j=0;j<clone_num;j++){
-								var obj = clone[j];
-								param[obj.name] = obj.element;
-								_window.appendChild(obj.element);
-							}
-							try{
-								var dd = ElementGetElementsByTagName(param["dt"],"p")[0];
-								DomNode_InsertBefore(dd,param["dd"]);
-								DomNodeRemove(dd);
-							}catch(e){
-							}
-
-							// レスポンスダイアログを登録
-							attachBbsResponseDialog(follower,param,response_dialog,"response");
-						}
-
-						i += 1;
-						if(i < num){
-							execute_queue.attachFirst(f,null);
-						}else{
-							callback({result:true});
-						}
-					}
-					execute_queue.attachFirst(f,null);
-				};
-			}
-
-			if(node.dt){
-				forResponseAnchor(node.dt);
-				forId(node.dt);
-				forName(node.dt);
-				forHost(node.dt);
-				forFollower(node.dt);
-			}
-			if(node.dd){
-				forResponseAnchor(node.dd);
-				forId(node.dd);
-				forName(node.dd);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// エレメントを解析
-		// --------------------------------------------------------------------------------
-		var useful = (function(){
-			var dt = element;
-			var dd;
-
-			try{
-				if(dt.tagName != "DIV")	return false;
-				if(dt.className != "res")	return false;
-			}catch(e){
-				return false;
-			}
-
-			try{
-				dd = ElementGetElementsByTagName(dt,"p")[0];
-				if(dd.className != "res_body")	return false;
-			}catch(e){
-				return false;
-			}
-
-			try{
-				var div = dt.parentNode;
-				if(div.id != "article")	return false;
-			}catch(e){
-				return false;
-			}
-
-			// document に未登録
-			if(!DomNodeGetAttachedDocument(dt))	return false;
-
-			// --------------------------------------------------------------------------------
-			// レスアンカー拡張
-			// --------------------------------------------------------------------------------
-			work.extendResponseAnchor(dd);
-
-			// --------------------------------------------------------------------------------
-			// クリーンアップ
-			// --------------------------------------------------------------------------------
-			(function(){
-				function cleanup(target){
-					BbsControlSearchTrash(target,function(element){
-						var node = element.firstChild;
-						if(!node)	return null;
-						if(node.nodeType != 3)	return null;
-
-						// ID
-						var m = node.nodeValue.match(new RegExp("^ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i"));
-						if(m){
-							// 直後テキスト
-							var node = DocumentCreateText(m[0]);
-							DomNode_InsertAfter(element,node);
-							DomNodeRemove(element);
-							return null;
-						}
-
-						// トリップ
-						var m = node.nodeValue.match(new RegExp("^(◆(|[ ])[a-zA-Z0-9+/.]{10,12})","i"));
-						if(m){
-							// 直後テキスト
-							var node = DocumentCreateText(m[0]);
-							DomNode_InsertAfter(element,node);
-							DomNodeRemove(element);
-							return null;
-						}
-
-						// ホスト名
-						var m = node.nodeValue.match(new RegExp("^([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-						if(m){
-							// 直後テキスト
-							var node = DocumentCreateText(m[0]);
-							DomNode_InsertAfter(element,node);
-							DomNodeRemove(element);
-
-							// テキストノードを統合
-							node.parentNode.normalize();
-							return null;
-						}
-						var m = node.nodeValue.match(new RegExp("^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-						if(m){
-							// 直後テキスト
-							var node = DocumentCreateText(m[0]);
-							DomNode_InsertAfter(element,node);
-							DomNodeRemove(element);
-
-							// テキストノードを統合
-							node.parentNode.normalize();
-							return null;
-						}
-
-						return null;
-					});
-				}
-
-				if(dt){
-					cleanup(dt);
-				}
-				if(dd){
-					cleanup(dd);
-				}
-			})();
-
-			// ナンバーを取得
-			var dt_text = ElementGetTextContent(dt);
-			if(!(dt_text.match(new RegExp("([0-9]+)","i"))))	return false;
-
-			// ナンバーからレスポンスオブジェクトを取得
-			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
-
-			// レスポンス解析
-			if(!response.getAnalyzed()){
-
-				(function(){
-					// 本文を除外
-					var dt_clone = dt.cloneNode(true);
-					try{
-						var dd = ElementGetElementsByTagName(dt_clone,"p")[0];
-						DomNodeRemove(dd);
-					}catch(e){
-					}
-					dt_text = ElementGetTextContent(dt_clone);
-				})();
-
-				// IDの取得
-				if(dt_text.match(new RegExp("ID:([a-zA-Z0-9+/.]{8,10})[●!]{0,2}","i"))){
-					response.setId(RegExp.$1);
-				}
-
-				// 名前の取得
-				if(dt_text.match(new RegExp("(◆(|[ ])[a-zA-Z0-9+/.]{10,12})","i"))){
-					response.setName(RegExp.$1);
-				}
-
-				// ホスト名の取得
-				(function(){
-					var p;
-					var n;
-					var q;
-					var ignore_dictionary = {"B":1,"SCRIPT":1};
-					var queue = new Object();
-					q = {p:queue,n:queue,node:dt};
-					queue.p = q;
-					queue.n = q;
-
-					while(queue.n != queue){
-						q = queue.n;
-						p = q.p;
-						n = q.n;
-						p.n = n;
-						n.p = p;
-						var node = q.node;
-						switch(node.nodeType){
-						case 1:
-							if(!(ignore_dictionary[node.tagName])){
-								var i;
-								var nodes = node.childNodes;
-								var num = nodes.length;
-								for(i=0;i<num;i++){
-									n = queue;
-									p = n.p;
-									q = {p:p,n:n,node:nodes[i]};
-									p.n = q;
-									n.p = q;
-								}
-							}
-							break;
-						case 3:
-							var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
-							if(m){
-								response.setHost(m[2]);
-								return;
-							}
-							var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})\\n \\]","i"));
-							if(m){
-								response.setHost(m[2]);
-								return;
-							}
-							var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
-							if(m){
-								response.setHost(m[2]);
-								return;
-							}
-							break;
-						}
-					}
-				})();
-
-				// フォロー解析
-				var dictionary = new Object();
-				(function(){
-					var nodes = ElementGetElementsByTagName(dd,"a");
-					var i;
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
-						numbers.getNumbers(function(n){
-							if(!dictionary[n]){
-								var following = bbs_dictionary.getResponse(n);
-								following.addFollower(response);
-								dictionary[n] = true;
-							}
-						});
-					}
-				})();
-
-				// オリジナルエレメントをセット
-				if(dt)	response.addOriginalElements("dt",dt);
-				if(dd)	response.addOriginalElements("dd",dd);
-
-				// 消去時に実行されるイベント
-				response.onerase = function(){
-					var original = response.getOriginalElements();
-
-					// オリジナルエレメントを外す
-					var i;
-					var num = original.length;
-					for(i=0;i<num;i++){
-						var revise_scroll = new DocumentReviseScroll();
-						var node = original[i].element;
-						revise_scroll.executeRemoveElementBefore(node);
-						DomNodeRemove(node);
-						revise_scroll.executeRemoveElementAfter(node);
-					}
-				};
-
-				response.setAnalyzed();
-			}
-
-			// レスポンスダイアログを登録（ルート）
-			attachBbsResponseDialog(
-				response,
-				{
-					dt:dt,
-					dd:dd,
-					parent:dt.parentNode
 				},
 				null,
 				null
@@ -27996,6 +24672,7 @@ function PageExpand(page_expand_arguments){
 					control_id.setResponse(response);
 
 					var id = control_id.getId();
+					var myself = (response.getId() === id);
 					var element_id = control_id.getElement();
 					var textnode_id = DocumentCreateText("");
 
@@ -28029,7 +24706,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "id"){
-						if(response.getId() == id)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -28042,7 +24719,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromId(id);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_id = responses[i];
@@ -28159,6 +24840,7 @@ function PageExpand(page_expand_arguments){
 					control_name.setResponse(response);
 
 					var name = control_name.getName();
+					var myself = (response.getName() === name);
 					var element_name = control_name.getElement();
 					var textnode_name = DocumentCreateText("");
 
@@ -28192,7 +24874,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "name"){
-						if(response.getName() == name)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -28205,7 +24887,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromName(name);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_name = responses[i];
@@ -28362,6 +25048,7 @@ function PageExpand(page_expand_arguments){
 					control_host.setResponse(response);
 
 					var host = control_host.getHost();
+					var myself = (response.getHost() === host);
 					var element_host = control_host.getElement();
 					var textnode_host = DocumentCreateText("");
 
@@ -28395,7 +25082,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "host"){
-						if(response.getHost() == host)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -28408,7 +25095,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromHost(host);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_host = responses[i];
@@ -29521,6 +26212,7 @@ function PageExpand(page_expand_arguments){
 					control_id.setResponse(response);
 
 					var id = control_id.getId();
+					var myself = (response.getId() === id);
 					var element_id = control_id.getElement();
 					var textnode_id = control_id.getTextNode();
 
@@ -29552,7 +26244,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "id"){
-						if(response.getId() == id)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -29565,7 +26257,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromId(id);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_id = responses[i];
@@ -29683,6 +26379,7 @@ function PageExpand(page_expand_arguments){
 					control_name.setResponse(response);
 
 					var name = control_name.getName();
+					var myself = (response.getName() === name);
 					var element_name = control_name.getElement();
 					var textnode_name = DocumentCreateText("");
 
@@ -29716,7 +26413,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "name"){
-						if(response.getName() == name)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -29729,7 +26426,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromName(name);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_name = responses[i];
@@ -29887,6 +26588,7 @@ function PageExpand(page_expand_arguments){
 					control_host.setResponse(response);
 
 					var host = control_host.getHost();
+					var myself = (response.getHost() === host);
 					var element_host = control_host.getElement();
 					var textnode_host = DocumentCreateText("");
 
@@ -29920,7 +26622,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "host"){
-						if(response.getHost() == host)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -29933,7 +26635,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromHost(host);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_host = responses[i];
@@ -30399,9 +27105,9 @@ function PageExpand(page_expand_arguments){
 	}
 
 	// --------------------------------------------------------------------------------
-	// 掲示板設定「２ちゃんねる掲示板」
+	// 掲示板設定「２ちゃんねる掲示板（v.06）」
 	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptInitialize_2ch(){
+	function PresetScript_ExpandBbs_ScriptInitialize_2ch_v6(){
 		return "" +
 "[\n\t" + 
 	function(info,response){
@@ -30412,15 +27118,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"(http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch"},
-			{url:"(http://[^.]+\\.2ch\\.sc/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch.sc"},
-			{url:"(http://(|[^.]+\\.)machi\\.to/bbs/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"machi"},
-			{url:"(http://(|[^.]+\\.)machibbs\\.net/[^/]+/[^/]*[0-9]+)",replace:"$1",name:"machibbs"},
-			{url:"(http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"pink"},
-			{url:"(http://jbbs\\.shitaraba\\.net/bbs/read\\.cgi/[^/]+/[0-9]+/[0-9]+)",replace:"$1/",name:"shitaraba"},
-			{url:"(http://jbbs\\.shitaraba\\.net/bbs/read_archive\\.cgi/[^/]+/[0-9]+/[0-9]+)",replace:"$1/",name:"shitaraba_storage"},
-			{url:"(http://[^.]+\\.kakiko\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"kakiko"},
-			{url:"(http://[^.]+\\.60\\.kg/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$0/",name:"kakiko"}
+			{url:"(http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch_v6"}
 		];
 
 		var i;
@@ -30572,8 +27270,1948 @@ function PageExpand(page_expand_arguments){
 						// 元のテキストノード
 						DomNodeSetNodeValue(node,RegExp.leftContext);
 
-						// BbsControlName を生成
-						var element = DocumentCreateElement("a");
+						// 偽装アンカーを生成
+						var element = DocumentCreateElement("span");
+						element.style.cssText = "color:#00F; text-decoration: underline; cursor: pointer;";
+						ElementSetTextContent(element,m[0]);
+						DomNode_InsertAfter(node,element);
+
+						// 直後テキスト
+						node = DocumentCreateText(RegExp.rightContext);
+						DomNode_InsertAfter(element,node);
+
+						var query = "";
+						m = ElementGetTextContent(element).match(re_range);
+						if(m){
+							var min = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							var max = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+							if(min < 1) min = 1;
+							if(max < 1) max = 1;
+							if(min > 10000) min = 10000;
+							if(max > 10000) max = 10000;
+							if(max < min){
+								var tmp = min;
+								min = max;
+								max = tmp;
+							}
+							query = min + "-" + max;
+						}else{
+							// 番号
+							m = ElementGetTextContent(element).match(re_number);
+							if(m){
+								query = parseInt(StringConvertFromNumericFullToNumericHalf(m[0]));
+								if(query < 1) query = 1;
+								if(query > 0x7fffffff) query = 0x7fffffff;
+							}
+
+						}
+						element.href = work.base_url + query;
+					}
+				}
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// HTML 文書の整合性テスト
+		// --------------------------------------------------------------------------------
+		function checkValidityFromHTML(str){
+			var m = str.match(new RegExp('<div[^>]+class="(| )thread( |)"[^>]*>.*?<div[^>]+class="(| )post( |)"[^>]*>.*?<div[^>]+class="(| )message( |)"[^>]*>',"i"));
+			if(m){
+				return true;
+			}
+			return false;
+		}
+
+		// --------------------------------------------------------------------------------
+		// HTML 文書をシャドウ読み込み
+		// --------------------------------------------------------------------------------
+		function loadShadowFromHTML(str){
+			var re_number;
+			var re_id = new RegExp("ID:([-a-zA-Z0-9+/.●!=]{8,})","i");
+			var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
+			switch(work.bbs_name){
+			case "2ch_v6":
+					re_number = new RegExp('id="([0-9]+)',"i");
+				break;
+			}
+
+			var p = 0;
+			var n = str.length;
+			function f(){
+				if(p >= n) return;
+				p = str.indexOf('<div class="post"',p);
+				if(p < 0) return;
+				var e = str.indexOf("</div></div>",p);
+				if(e >= 0) e += 12;
+				var s = str.substring(p,e);
+				var m = s.match(re_number);
+				if(m){
+					var id = parseInt(m[1]);
+					if((first_id <= id) && (id <= last_id)){
+					}else if(dictionary_id[id]){
+					}else{
+						var nodes = StringHtmlCreateDomNodesSafe(s);
+						var info_post = nodes[0];
+						var info_number;
+						var info_name;
+						var info_date;
+						var info_message;
+
+						try{
+							if(info_post.className != "post") return;
+							info_number = ElementGetElementsByClassName(info_post,"number")[0];
+							info_name = ElementGetElementsByClassName(info_post,"name")[0];
+							info_date = ElementGetElementsByClassName(info_post,"date")[0];
+							info_message = ElementGetElementsByClassName(info_post,"message")[0];	
+						}catch(e){
+							return;
+						}
+
+						// ナンバーからレスポンスオブジェクトを取得
+						var response = bbs_dictionary.getResponse(id);
+						if(!(response.getAnalyzed())){
+							// レスアンカー拡張
+							work.extendResponseAnchor(info_message);
+
+							// IDの取得
+							if(ElementGetTextContent(info_date).match(re_id)){
+								response.setId(RegExp.$1);
+							}
+
+							// 名前の取得
+							if(ElementGetTextContent(info_name).match(re_name)){
+								response.setName(RegExp.$1);
+							}
+
+							// ホスト名の取得
+							(function(){
+								var p;
+								var n;
+								var q;
+								var ignore_dictionary = {"B":1,"SCRIPT":1};
+								var queue = new Object();
+								q = {p:queue,n:queue,node:info_date};
+								queue.p = q;
+								queue.n = q;
+
+								while(queue.n != queue){
+									q = queue.n;
+									p = q.p;
+									n = q.n;
+									p.n = n;
+									n.p = p;
+									var node = q.node;
+									switch(node.nodeType){
+									case 1:
+										if(!(ignore_dictionary[node.tagName])){
+											var i;
+											var nodes = node.childNodes;
+											var num = nodes.length;
+											for(i=0;i<num;i++){
+												n = queue;
+												p = n.p;
+												q = {p:p,n:n,node:nodes[i]};
+												p.n = q;
+												n.p = q;
+											}
+										}
+										break;
+									case 3:
+										var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
+										if(m){
+											response.setHost(m[2]);
+											return;
+										}
+										var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})(|\\n) \\]","i"));
+										if(m){
+											response.setHost(m[2]);
+											return;
+										}
+										var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
+										if(m){
+											response.setHost(m[2]);
+											return;
+										}
+										break;
+									}
+								}
+							})();
+
+							// フォロー解析
+							var dictionary = new Object();
+							(function(){
+								var nodes = ElementGetElementsByTagName(info_message,"span");
+								var i;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
+									numbers.getNumbers(function(n){
+										if(!dictionary[n]){
+											var following = bbs_dictionary.getResponse(n);
+											following.addFollower(response);
+											dictionary[n] = true;
+										}
+									});
+								}
+							})();
+
+							// オリジナルエレメントをセット
+							var nodes = info_post.childNodes;
+							var i;
+							var num = nodes.length;
+							for(i=0;i<num;i++){
+								var node = nodes[i];
+								var class_name = node.className || ("_" + i);
+								response.addOriginalElements(class_name,node);
+							}
+
+							// 消去時に実行されるイベント
+							response.onerase = function(){};
+
+							response.setAnalyzed();
+						}
+					}
+				}
+
+				if(p < e){
+					p = e;
+					execute_queue.attachFirst(f,null);
+				}
+			}
+			execute_queue.attachFirst(f,null);
+		}
+
+		// --------------------------------------------------------------------------------
+		// HTML 文書を継ぎ足し読み込み
+		// --------------------------------------------------------------------------------
+		function loadMoreFromHTML(str,callback){
+
+			// 最後尾取得
+			var nodes = ElementGetElementsByClassName(element_parent,"post");
+			var node_num = nodes.length;
+			if(node_num){
+				var re_id = new RegExp("^([0-9]+)","i");
+				if(ElementGetTextContent(nodes[node_num-1]).match(re_id)){
+					last_id = parseInt(RegExp.$1);
+					dictionary_id[last_id] = true;
+				}
+			}
+
+			var re_number;
+			switch(work.bbs_name){
+			case "2ch_v6":
+					re_number = new RegExp("([0-9]+)","i");
+				break;
+			}
+
+			var p = 0;
+			var n = str.length;
+			var add_count = 0;
+			function f(){
+				try{
+					if(p >= n) throw 0;
+					p = str.indexOf('<div class="post"',p);
+					if(p < 0) throw 0;
+					var e = str.indexOf("</div></div>",p);
+					if(e >= 0) e += 12;
+					var s = str.substring(p,e);
+					var m = s.match(re_number);
+					if(m){
+						var id = parseInt(m[1]);
+						if(last_id < id){
+							var response = bbs_dictionary.getResponse(id);
+							response.clearAnalyzed();
+							response.clearOriginalElements();
+							response.clearFollowing();
+
+							var nodes = StringHtmlCreateDomNodesSafe(s);
+							var j;
+							var node_num = nodes.length;
+							for(j=0;j<node_num;j++){
+								element_parent.appendChild(nodes[j]);
+							}
+							last_id = id;
+							add_count += 1;
+							resource_url_more = base_url + (last_id) + "-";
+						}
+					}
+
+					if(p < e){
+						p = e;
+						execute_queue.attachFirst(f,null);
+						return;
+					}
+				}catch(e){
+					if(e){
+						callback({result:false});
+						return;
+					}
+				}
+				callback({result:true,add_count:add_count});
+			}
+			execute_queue.attachFirst(f,null);
+		}
+
+		// --------------------------------------------------------------------------------
+		// 継ぎ足し読み込み
+		// --------------------------------------------------------------------------------
+		function readMore(callback){
+			var num = load_more_list.length;
+			var pos = load_more_pos;
+			var i = 0;
+
+			var failure = function(){
+				i += 1;
+				if(num <= i){
+					callback({result:false});
+					return;
+				}
+				pos += 1;
+				if(num <= pos) pos = 0;
+				load_more_pos = pos;
+				load();
+			};
+
+			var load = function (){
+				var param = load_more_list[pos];
+
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
+
+				// 成功
+				loader.onload = function(str){
+					if(!param.validity(str)){
+						failure();
+						return;
+					}
+					param.parse(str,function(response){
+						if(response.result){
+							callback(response);
+						}else{
+							failure();
+						}
+					});
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					failure();
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL(param.url);
+				switch(work.bbs_name){
+				case "2ch_v6":
+					loader.overrideMimeType("text/plain; charset=Shift_JIS");
+					break;
+				}
+				loader.loadText();
+			};
+			load();
+		}
+
+		// --------------------------------------------------------------------------------
+		// レスポンス親要素
+		// --------------------------------------------------------------------------------
+		var i;
+		var nodes = ElementGetElementsByClassName(document.body,"thread");
+		var num = nodes.length;
+		for(i=0;i<num;i++){
+			element_parent = nodes[i];
+			break;
+		}
+
+		if(!element_parent) return false;
+
+		// --------------------------------------------------------------------------------
+		// 範囲取得
+		// --------------------------------------------------------------------------------
+		var nodes = ElementGetElementsByClassName(element_parent,"post");
+		var node_num = nodes.length;
+		if(node_num){
+			var re_id = new RegExp("^([0-9]+)","i");
+
+			if(ElementGetTextContent(nodes[0]).match(re_id)){
+				first_id = parseInt(RegExp.$1);
+				dictionary_id[0] = true;
+			}
+
+			if((first_id == 1) && (node_num > 1)){
+				if(ElementGetTextContent(nodes[1]).match(re_id)){
+					first_id = parseInt(RegExp.$1);
+					dictionary_id[first_id] = true;
+					if(first_id <= 2) first_id = 1;
+				}
+			}
+
+			if(ElementGetTextContent(nodes[node_num-1]).match(re_id)){
+				last_id = parseInt(RegExp.$1);
+				dictionary_id[last_id] = true;
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// 読み込みリスト
+		// --------------------------------------------------------------------------------
+		load_shadow_list = [
+			{
+				url:base_url,
+				parse:loadShadowFromHTML,
+				validity:checkValidityFromHTML
+			}
+		];
+		load_more_list = [
+			{
+				url:base_url + last_id + "-",
+				parse:loadMoreFromHTML,
+				validity:checkValidityFromHTML
+			}
+		];
+
+		// --------------------------------------------------------------------------------
+		// 読み込み方式
+		// --------------------------------------------------------------------------------
+		load_shadow_pos = 0;
+		load_more_pos = 0;
+
+		// --------------------------------------------------------------------------------
+		// BbsControlReadMoreButton 作成
+		// --------------------------------------------------------------------------------
+		read_more_button = new BbsControlReadMoreButton();
+		read_more_button.setWaitTime(2 * 1000);
+		read_more_button.onclick = readMore;
+		DomNode_InsertAfter(element_parent,read_more_button.getElement());
+
+		// --------------------------------------------------------------------------------
+		// 書き込みをポップアップ化
+		// --------------------------------------------------------------------------------
+		(function(){
+			var element_form;
+			var input_submit;
+			var element_textarea;
+			var event_handler_release;
+			var task;
+
+			(function(){
+				// フォーム
+				var nodes = ElementGetElementsByTagName(document.body,"form");
+				var i;
+				switch(work.bbs_name){
+				case "2ch_v6":
+					for(i=0;i<nodes.length;i++){
+						if(nodes[i].action.indexOf("/test/bbs.cgi") >= 0){
+							element_form = nodes[i];
+							break;
+						}
+					}
+					break;
+				}
+
+				// サブミットボタン
+				if(element_form){
+					var nodes = ElementGetElementsByTagName(element_form,"input");
+					for(i=0;i<nodes.length;i++){
+						if(nodes[i].type.toLowerCase() == "submit"){
+							input_submit = nodes[i];
+							break;
+						}
+					}
+					var nodes = ElementGetElementsByTagName(element_form,"textarea");
+					if(nodes.length){
+						element_textarea = nodes[0];
+						work.form_textarea = element_textarea;
+					}
+
+					// BbsControlDockingForm 作成
+					var docking_form = new BbsControlDockingForm(element_form,false);
+					docking_form.setStyle("background:#e8e8e8; background-image:linear-gradient(to bottom, #f8f8f8, #e8e8e8); padding:0px 20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px;");
+					work.docking_form = docking_form;
+				}
+			})();
+
+			// 開放
+			function release(){
+				if(event_handler_release){
+					event_handler_release.release();
+					event_handler_release = null;
+				}
+
+				removeEvent();
+
+				if(task){
+					task.release();
+				}
+			}
+
+			// クリア
+			function clear(){
+				element_textarea.value = "";
+			}
+
+			// 有効セット
+			function setEnable(type){
+				input_submit.disabled = !(type);
+			}
+
+			// イベント追加
+			function addEvent(){
+				if(window.addEventListener){
+					input_submit.addEventListener("click",EventClickButton);
+					element_form.addEventListener("submit",EventSubmitForm);
+				}else if(window.attachEvent){
+					input_submit.attachEvent("onclick",EventClickButton);
+					element_form.attachEvent("onsubmit",EventSubmitForm);
+				}
+			}
+
+			// イベント除外
+			function removeEvent(){
+				if(window.removeEventListener){
+					input_submit.removeEventListener("click",EventClickButton);
+					element_form.removeEventListener("submit",EventSubmitForm);
+				}else if(window.detachEvent){
+					input_submit.detachEvent("onclick",EventClickButton);
+					element_form.detachEvent("onsubmit",EventSubmitForm);
+				}
+			}
+
+			// サブミット直前に実行されるイベント
+			function EventSubmitForm(e){
+				setEnable(false);
+			}
+
+			// クリック時に実行されるイベント
+			function EventClickButton(e){
+				var w;
+				var h;
+				switch(work.bbs_name){
+				case "2ch_v6":
+					w = 800;
+					h = 600;
+					var cookie = document.cookie;
+					if(cookie){
+						if(cookie.indexOf("PREN=") != -1){
+							w = 600;
+							h = 450;
+						}
+					}
+					break;
+				}
+
+				var window_name = "_pageexpand_" + Math.floor(Math.random() * 0x7FFFFFFF);
+				var popup_iframe = new BbsControlPopupIframe(window_name);
+				popup_iframe.setWindowSize(w,h);
+				popup_iframe.onclose = function(){
+					setEnable(true);
+				};
+
+				var element_iframe = popup_iframe.getIFrameElement();
+				element_form.target = window_name;
+
+				(function(){
+					var closed = false;
+					var timer = null;
+
+					// タスク生成
+					task = task_container.createTask();
+					task.setDestructorFunc(function(){
+						task = null;
+					});
+					task.setExecuteFunc(function(){
+						try{
+							var href = "";
+							var window_obj = element_iframe.contentWindow;
+							if(window_obj.document){
+								href = window_obj.document.URL;
+							}
+							if(href.indexOf("http://") == 0){
+								switch(work.bbs_name){
+								case "2ch_v6":
+									if(href.indexOf("/test/bbs.cgi") == -1){
+										closed = true;
+									}else if(!timer){
+										var body = window_obj.document.body;
+										if(body){
+											if(ElementGetTextContent(body).indexOf("書きこみが終わりました") != -1){
+												timer = (new Date()).getTime();
+											}
+										}
+									}
+									break;
+								}
+							}
+							if(timer){
+								if((new Date()).getTime() - timer > 1000 * 2){
+									closed = true;
+								}
+							}
+						}catch(e){
+							closed = true;
+						}
+
+						if(closed){
+							if(task){
+								task.release();
+							}
+							popup_iframe.close();
+							setEnable(true);
+							if(timer){
+								readMore(function(){});
+								clear();
+							}
+						}
+					});
+				})();
+			}
+
+			(function(){
+				if(!element_form) return;
+				if(!input_submit) return;
+				if(!element_textarea) return;
+				if(window.localStorage.getItem("autoPost") == "true") return;
+
+				if(load_more_pos == 0){
+					addEvent();
+	
+					event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
+					event_handler_release.setFunction(function(){
+						release();
+					});
+				}
+
+				if(work.docking_form){
+					work.docking_form.onreset = clear;
+				}
+			})();
+		})();
+
+		// --------------------------------------------------------------------------------
+		// シャドウロード
+		// --------------------------------------------------------------------------------
+		(function(){
+			var num = load_shadow_list.length;
+			var pos = load_shadow_pos;
+			var i = 0;
+
+			var failure = function(){
+				i += 1;
+				if(num <= i) return;
+				pos += 1;
+				if(num <= pos) pos = 0;
+				load_shadow_pos = pos;
+				load();
+			};
+
+			var load = function (){
+				var param = load_shadow_list[pos];
+
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
+
+				// 成功
+				loader.onload = function(str){
+					if(!param.validity(str)){
+						failure();
+						return;
+					}
+					param.parse(str);
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					failure();
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL(param.url);
+				switch(work.bbs_name){
+				case "2ch_v6":
+					loader.overrideMimeType("text/plain; charset=Shift_JIS");
+					break;
+				}
+				loader.loadText();
+			};
+			load();
+		})();
+
+		response({result:true});
+		return true;
+	}.toString() +
+	",\n\n\t" +
+	function (info,response){
+		response({result:false});
+		return true;
+	}.toString() +
+"\n]";
+	}
+
+	// --------------------------------------------------------------------------------
+	// 掲示板設定「２ちゃんねる掲示板（v.06）」
+	// --------------------------------------------------------------------------------
+	function PresetScript_ExpandBbs_ScriptCallback_2ch_v6(){
+		return "" +
+"[\n\t" + 
+	function(info,response){
+		var element = info.element;
+		var work = info.work;
+
+		// --------------------------------------------------------------------------------
+		// レスポンスダイアログを登録
+		// --------------------------------------------------------------------------------
+		function attachBbsResponseDialog(response,node,parent_dialog,type){
+
+			// --------------------------------------------------------------------------------
+			// レスアンカー
+			// --------------------------------------------------------------------------------
+			function forResponseAnchor(target){
+				if(BbsControlResponseAnchorExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlResponseAnchor を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var i;
+					var nodes = ElementGetElementsByTagName(target,"span");
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						var node = nodes[i];
+						var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(node));
+						if(numbers.getCount()){
+							var control_res_anchor = new BbsControlResponseAnchor(node,false);
+							control_res_anchor.setResponseAnchorNumbers(numbers);
+						}
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlResponseAnchor を検索
+				// --------------------------------------------------------------------------------
+				BbsControlResponseAnchorSearch(target,function(control_res_anchor){
+
+					var element_res_anchor = control_res_anchor.getElement();
+					var numbers = control_res_anchor.getResponseAnchorNumbers();
+
+					// ダイアログを作成
+					var response_dialog = new BbsResponseDialog();
+					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+					response_dialog.setElementParent(node.parent);
+					response_dialog.setElementHitArea(element_res_anchor);
+					response_dialog.oncreate = function(_window,callback){
+
+						var created = false;
+						var i = 0;
+						var number_list = numbers.getNumberList();
+						var num = number_list.length;
+						if(!num) return false;
+
+						function f(){
+							var dl = DocumentCreateElement("div");
+							dl.style.margin = "0px 0px 20px";
+							_window.appendChild(dl);
+
+							var following = bbs_dictionary.getResponse(number_list[i]);
+							var clone = following.getCloneElements();
+
+							var j;
+							var clone_num = clone.length;
+							if(clone_num){
+								var param = new Object();
+								param.parent = node.parent;
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									param[obj.name] = obj.element;
+									dl.appendChild(obj.element);
+								}
+
+								// レスポンスダイアログを登録
+								attachBbsResponseDialog(following,param,response_dialog,"response");
+
+								created = true;
+							}
+
+							i += 1;
+							if(i < num){
+								execute_queue.attachFirst(f,null);
+							}else{
+								callback({result:created});
+							}
+						}
+						execute_queue.attachFirst(f,null);
+					};
+
+					return null;
+				});
+			}
+
+			// --------------------------------------------------------------------------------
+			// ID
+			// --------------------------------------------------------------------------------
+			function forId(target){
+				if(BbsControlIdExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlId を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var p;
+					var n;
+					var q;
+					var ignore_dictionary = {"A":1,"SCRIPT":1};
+					var queue = new Object();
+					q = {p:queue,n:queue,node:target};
+					queue.p = q;
+					queue.n = q;
+
+					while(queue.n != queue){
+						q = queue.n;
+						p = q.p;
+						n = q.n;
+						p.n = n;
+						n.p = p;
+						var node = q.node;
+						switch(node.nodeType){
+						case 1:
+							if(!(ignore_dictionary[node.tagName])){
+								var i;
+								var nodes = node.childNodes;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									n = queue;
+									p = n.p;
+									q = {p:p,n:n,node:nodes[i]};
+									p.n = q;
+									n.p = q;
+								}
+							}
+
+							break;
+						case 3:
+							while(node){
+
+								var m = DomNodeGetNodeValue(node).match(new RegExp("ID:([-a-zA-Z0-9+/.●!=]{8,})","i"));
+								if(!m)	break;
+
+								// 元のテキストノード
+								DomNodeSetNodeValue(node,RegExp.leftContext);
+
+								// BbsControlId を生成
+								var control_id = new BbsControlId(null,false);
+								control_id.setId(m[1]);
+								var element_id = control_id.getElement();
+								ElementSetTextContent(element_id,m[0]);
+								DomNode_InsertAfter(node,element_id);
+
+								// 直後テキスト
+								node = DocumentCreateText(RegExp.rightContext);
+								DomNode_InsertAfter(element_id,node);
+							}
+							break;
+						}
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlId を検索
+				// --------------------------------------------------------------------------------
+				BbsControlIdSearch(target,function(control_id){
+
+					control_id.setResponse(response);
+
+					var id = control_id.getId();
+					var myself = (response.getId() === id);
+					var element_id = control_id.getElement();
+					var textnode_id = DocumentCreateText("");
+
+					element_id.appendChild(textnode_id);
+
+					// --------------------------------------------------------------------------------
+					// 変化があったときに実行されるイベント
+					// --------------------------------------------------------------------------------
+					control_id.onchange = function(count){
+						if(count > 1){
+							DomNodeSetNodeValue(textnode_id,"(" + count + ")");
+						}else{
+							DomNodeSetNodeValue(textnode_id,"");
+						}
+
+						var style = element_id.style;
+						if(count >= 5){
+							StyleDeclarationSetProperty(style,"color","#e80000");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else if(count >= 2){
+							StyleDeclarationRemoveProperty(style,"color");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else{
+							StyleDeclarationSetProperty(style,"color","#888");
+							StyleDeclarationSetProperty(style,"font-size","small");
+						}
+					};
+					control_id.update();
+
+					// --------------------------------------------------------------------------------
+					// ポップアップ化
+					// --------------------------------------------------------------------------------
+					if(type == "id"){
+						if(myself) return null;
+					}
+
+					// ダイアログを作成
+					var response_dialog = new BbsResponseDialog();
+					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+					response_dialog.setElementParent(node.parent);
+					response_dialog.setElementHitArea(element_id);
+					response_dialog.oncreate = function(_window,callback){
+
+						var responses = bbs_dictionary.getResponsesFromId(id);
+						var i = 0;
+						var num = responses.length;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
+
+						function f(){
+							var dl = DocumentCreateElement("div");
+							dl.style.margin = "0px 0px 20px";
+							_window.appendChild(dl);
+
+							var response_id = responses[i];
+							var clone = response_id.getCloneElements();
+
+							var j;
+							var clone_num = clone.length;
+							if(clone_num){
+
+								var param = new Object();
+								param.parent = node.parent;
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									param[obj.name] = obj.element;
+									dl.appendChild(obj.element);
+								}
+
+								// レスポンスダイアログを登録
+								attachBbsResponseDialog(response_id,param,response_dialog,"id");
+							}
+
+							i += 1;
+							if(i < num){
+								execute_queue.attachFirst(f,null);
+							}else{
+								callback({result:true});
+							}
+						}
+						execute_queue.attachFirst(f,null);
+					};
+
+					return null;
+				});
+			}
+
+			// --------------------------------------------------------------------------------
+			// トリップ
+			// --------------------------------------------------------------------------------
+			function forName(target){
+				if(BbsControlNameExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlName を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var p;
+					var n;
+					var q;
+					var ignore_dictionary = {"SCRIPT":1};
+					var queue = new Object();
+					q = {p:queue,n:queue,node:target};
+					queue.p = q;
+					queue.n = q;
+
+					while(queue.n != queue){
+						q = queue.n;
+						p = q.p;
+						n = q.n;
+						p.n = n;
+						n.p = p;
+						var node = q.node;
+						switch(node.nodeType){
+						case 1:
+							if(!(ignore_dictionary[node.tagName])){
+								var i;
+								var nodes = node.childNodes;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									n = queue;
+									p = n.p;
+									q = {p:p,n:n,node:nodes[i]};
+									p.n = q;
+									n.p = q;
+								}
+							}
+							break;
+						case 3:
+							while(node){
+
+								// 本文
+								var m = DomNodeGetNodeValue(node).match(new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i"));
+								if(!m)	break;
+
+								// 元のテキストノード
+								DomNodeSetNodeValue(node,RegExp.leftContext);
+
+								// BbsControlName を生成
+								var control_name = new BbsControlName(null,false);
+								control_name.setName(m[0]);
+								var element_name = control_name.getElement();
+								ElementSetTextContent(element_name,m[0]);
+								DomNode_InsertAfter(node,element_name);
+
+								// 直後テキスト
+								node = DocumentCreateText(RegExp.rightContext);
+								DomNode_InsertAfter(element_name,node);
+							}
+							break;
+						}
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlName を検索
+				// --------------------------------------------------------------------------------
+				BbsControlNameSearch(target,function(control_name){
+
+					control_name.setResponse(response);
+
+					var name = control_name.getName();
+					var myself = (response.getName() === name);
+					var element_name = control_name.getElement();
+					var textnode_name = DocumentCreateText("");
+
+
+					// --------------------------------------------------------------------------------
+					// 変化があったときに実行されるイベント
+					// --------------------------------------------------------------------------------
+					control_name.onchange = function(count){
+						if(count > 1){
+							DomNodeSetNodeValue(textnode_name,"(" + count + ")");
+						}else{
+							DomNodeSetNodeValue(textnode_name,"");
+						}
+
+						var style = element_name.style;
+						if(count >= 5){
+							StyleDeclarationSetProperty(style,"color","#e80000");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else if(count >= 2){
+							StyleDeclarationRemoveProperty(style,"color");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else{
+							StyleDeclarationSetProperty(style,"color","#888");
+							StyleDeclarationSetProperty(style,"font-size","small");
+						}
+					};
+					control_name.update();
+					element_name.appendChild(textnode_name);
+
+					// --------------------------------------------------------------------------------
+					// ポップアップ化
+					// --------------------------------------------------------------------------------
+					if(type == "name"){
+						if(myself) return null;
+					}
+
+					// ダイアログを作成
+					var response_dialog = new BbsResponseDialog();
+					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+					response_dialog.setElementParent(node.parent);
+					response_dialog.setElementHitArea(element_name);
+					response_dialog.oncreate = function(_window,callback){
+
+						var responses = bbs_dictionary.getResponsesFromName(name);
+						var i = 0;
+						var num = responses.length;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
+
+						function f(){
+							var dl = DocumentCreateElement("div");
+							dl.style.margin = "0px 0px 20px";
+							_window.appendChild(dl);
+
+							var response_name = responses[i];
+							var clone = response_name.getCloneElements();
+
+							var j;
+							var clone_num = clone.length;
+							if(clone_num){
+
+								var param = new Object();
+								param.parent = node.parent;
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									param[obj.name] = obj.element;
+									dl.appendChild(obj.element);
+								}
+
+								// レスポンスダイアログを登録
+								attachBbsResponseDialog(response_name,param,response_dialog,"name");
+							}
+
+							i += 1;
+							if(i < num){
+								execute_queue.attachFirst(f,null);
+							}else{
+								callback({result:true});
+							}
+						}
+						execute_queue.attachFirst(f,null);
+					};
+
+					return null;
+				});
+			}
+
+			// --------------------------------------------------------------------------------
+			// ホスト
+			// --------------------------------------------------------------------------------
+			function forHost(target){
+				if(BbsControlHostExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlHost を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var p;
+					var n;
+					var q;
+					var ignore_dictionary = {"B":1,"SCRIPT":1};
+					var queue = new Object();
+					q = {p:queue,n:queue,node:target};
+					queue.p = q;
+					queue.n = q;
+
+					while(queue.n != queue){
+						q = queue.n;
+						p = q.p;
+						n = q.n;
+						p.n = n;
+						n.p = p;
+						var node = q.node;
+						switch(node.nodeType){
+						case 1:
+							if(!(ignore_dictionary[node.tagName])){
+								var i;
+								var nodes = node.childNodes;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									n = queue;
+									p = n.p;
+									q = {p:p,n:n,node:nodes[i]};
+									p.n = q;
+									n.p = q;
+								}
+							}
+							break;
+						case 3:
+							while(node){
+								var text_value = DomNodeGetNodeValue(node);
+
+								var m = text_value.match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
+								if(m){
+									// 元のテキストノード
+									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
+
+									// BbsControlHost を生成
+									var control_host = new BbsControlHost(null,false);
+									control_host.setHost(m[2]);
+									var element_host = control_host.getElement();
+									ElementSetTextContent(element_host,m[2]);
+									DomNode_InsertAfter(node,element_host);
+
+									// 直後テキスト
+									node = DocumentCreateText(RegExp.rightContext);
+									DomNode_InsertAfter(element_host,node);
+									continue;
+								}
+
+								var m = text_value.match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})((|\\n) \\])","i"));
+								if(m){
+									// 元のテキストノード
+									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
+
+									// BbsControlHost を生成
+									var control_host = new BbsControlHost(null,false);
+									control_host.setHost(m[2]);
+									var element_host = control_host.getElement();
+									ElementSetTextContent(element_host,m[2]);
+									DomNode_InsertAfter(node,element_host);
+
+									// 直後テキスト
+									node = DocumentCreateText("\n ]" + RegExp.rightContext);
+									DomNode_InsertAfter(element_host,node);
+									continue;
+								}
+
+								var m = text_value.match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
+								if(m){
+									// 元のテキストノード
+									DomNodeSetNodeValue(node,RegExp.leftContext + m[1]);
+
+									// BbsControlHost を生成
+									var control_host = new BbsControlHost(null,false);
+									control_host.setHost(m[2]);
+									var element_host = control_host.getElement();
+									ElementSetTextContent(element_host,m[2]);
+									DomNode_InsertAfter(node,element_host);
+
+									// 直後テキスト
+									node = DocumentCreateText(RegExp.rightContext);
+									DomNode_InsertAfter(element_host,node);
+									continue;
+								}
+
+								break;
+							}
+
+							break;
+						}
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlHost を検索
+				// --------------------------------------------------------------------------------
+				BbsControlHostSearch(target,function(control_host){
+
+					control_host.setResponse(response);
+
+					var host = control_host.getHost();
+					var myself = (response.getHost() === host);
+					var element_host = control_host.getElement();
+					var textnode_host = DocumentCreateText("");
+
+
+					// --------------------------------------------------------------------------------
+					// 変化があったときに実行されるイベント
+					// --------------------------------------------------------------------------------
+					control_host.onchange = function(count){
+						if(count > 1){
+							DomNodeSetNodeValue(textnode_host,"(" + count + ")");
+						}else{
+							DomNodeSetNodeValue(textnode_host,"");
+						}
+
+						var style = element_host.style;
+						if(count >= 5){
+							StyleDeclarationSetProperty(style,"color","#e80000");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else if(count >= 2){
+							StyleDeclarationRemoveProperty(style,"color");
+							StyleDeclarationRemoveProperty(style,"font-size");
+						}else{
+							StyleDeclarationSetProperty(style,"color","#888");
+							StyleDeclarationSetProperty(style,"font-size","80%");
+						}
+					};
+					control_host.update();
+					element_host.appendChild(textnode_host);
+
+					// --------------------------------------------------------------------------------
+					// ポップアップ化
+					// --------------------------------------------------------------------------------
+					if(type == "host"){
+						if(myself) return null;
+					}
+
+					// ダイアログを作成
+					var response_dialog = new BbsResponseDialog();
+					if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+					response_dialog.setElementParent(node.parent);
+					response_dialog.setElementHitArea(element_host);
+					response_dialog.oncreate = function(_window,callback){
+
+						var responses = bbs_dictionary.getResponsesFromHost(host);
+						var i = 0;
+						var num = responses.length;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
+
+						function f(){
+							var dl = DocumentCreateElement("div");
+							dl.style.margin = "0px 0px 20px";
+							_window.appendChild(dl);
+
+							var response_host = responses[i];
+							var clone = response_host.getCloneElements();
+
+							var j;
+							var clone_num = clone.length;
+							if(clone_num){
+
+								var param = new Object();
+								param.parent = node.parent;
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									param[obj.name] = obj.element;
+									dl.appendChild(obj.element);
+								}
+
+								// レスポンスダイアログを登録
+								attachBbsResponseDialog(response_host,param,response_dialog,"host");
+							}
+
+							i += 1;
+							if(i < num){
+								execute_queue.attachFirst(f,null);
+							}else{
+								callback({result:true});
+							}
+						}
+						execute_queue.attachFirst(f,null);
+					};
+
+					return null;
+				});
+			}
+
+			// --------------------------------------------------------------------------------
+			// フォロワー
+			// --------------------------------------------------------------------------------
+			function forFollower(target){
+				if(BbsControlFollowerExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlFollower を生成
+				// --------------------------------------------------------------------------------
+				var control_follower = new BbsControlFollower(null,true);
+				control_follower.setResponse(response);
+
+				var element_follower = control_follower.getElement();
+				var textnode_follower = DocumentCreateText("");
+
+				element_follower.appendChild(textnode_follower);
+
+				// --------------------------------------------------------------------------------
+				// 変化があったときに実行されるイベント
+				// --------------------------------------------------------------------------------
+				control_follower.onchange = function(count){
+					if(count){
+						textnode_follower.nodeValue = " follower(" + count + ")";
+					}else{
+						textnode_follower.nodeValue = "";
+					}
+
+					var style = element_follower.style;
+					if(count >= 3){
+						StyleDeclarationSetProperty(style,"color","#e80000");
+						StyleDeclarationRemoveProperty(style,"font-size");
+
+					}else{
+						StyleDeclarationSetProperty(style,"color","#888");
+						StyleDeclarationSetProperty(style,"font-size","small");
+					}
+					if(count){
+						StyleDeclarationSetProperty(style,"margin","0px 4px 0px 0px");
+					}else{
+						StyleDeclarationRemoveProperty(style,"margin");
+					}
+				};
+				control_follower.update();
+				target.appendChild(element_follower);
+
+				// --------------------------------------------------------------------------------
+				// ポップアップ化
+				// --------------------------------------------------------------------------------
+				// ダイアログを作成
+				var response_dialog = new BbsResponseDialog();
+				if(parent_dialog)	parent_dialog.attachChild(response_dialog);
+				response_dialog.setElementParent(node.parent);
+				response_dialog.setElementHitArea(element_follower);
+				response_dialog.oncreate = function(_window,callback){
+
+					var ary = response.getFollower();
+					var i = 0;
+					var num = ary.length;
+					if(num <= 0) return false;
+
+					function f(){
+						var dl = DocumentCreateElement("div");
+						dl.style.margin = "0px 0px 20px";
+						_window.appendChild(dl);
+
+						var follower = bbs_dictionary.getResponse(ary[i].getNumber());
+						var clone = follower.getCloneElements();
+
+						var j;
+						var clone_num = clone.length;
+						if(clone_num){
+
+							var param = new Object();
+							param.parent = node.parent;
+							for(j=0;j<clone_num;j++){
+								var obj = clone[j];
+								param[obj.name] = obj.element;
+								dl.appendChild(obj.element);
+							}
+
+							// レスポンスダイアログを登録
+							attachBbsResponseDialog(follower,param,response_dialog,"response");
+						}
+
+						i += 1;
+						if(i < num){
+							execute_queue.attachFirst(f,null);
+						}else{
+							callback({result:true});
+						}
+					}
+					execute_queue.attachFirst(f,null);
+				};
+			}
+
+			// --------------------------------------------------------------------------------
+			// 返信
+			// --------------------------------------------------------------------------------
+			function forReply(target){
+				if(BbsControlReplyExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlReply を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var node = target.firstChild;
+					if(!node) return;
+
+					switch(node.nodeType){
+					case 1:
+						// 本文
+						var m = ElementGetTextContent(node).match(new RegExp("^[0-9]+$","i"));
+						if(!m)	return;
+
+						// BbsControlReply を生成
+						var control_reply = new BbsControlReply(node,true);
+						break;
+					case 3:
+						// 本文
+						var m = DomNodeGetNodeValue(node).match(new RegExp("^[0-9]+","i"));
+						if(!m)	return;
+	
+						// 元のテキストノード
+						DomNodeSetNodeValue(node,RegExp.leftContext);
+	
+						// BbsControlReply を生成
+						var control_reply = new BbsControlReply(null,false);
+						var element_reply = control_reply.getElement();
+						ElementSetTextContent(element_reply,m[0]);
+						DomNode_InsertAfter(node,element_reply);
+	
+						// 直後テキスト
+						node = DocumentCreateText(RegExp.rightContext);
+						DomNode_InsertAfter(element_reply,node);					
+						break;
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlReply を検索
+				// --------------------------------------------------------------------------------
+				BbsControlReplySearch(target,function(control_reply){
+
+					control_reply.setResponse(response);
+					var element_reply = control_reply.getElement();
+					var docking_form = work.docking_form;
+					var textarea = work.form_textarea;
+
+					// --------------------------------------------------------------------------------
+					// クリックされたときに実行されるイベント
+					// --------------------------------------------------------------------------------
+					control_reply.onclick = function(e){
+						docking_form.popupForReply(element_reply);
+						var text = textarea.value;
+						var num = text.length;
+						var selection_end = textarea.selectionEnd;
+						var insert_str;
+						if(selection_end >= num){
+							insert_str = ">>" + (response.getNumber()) + "\n";
+						}else{
+							insert_str = ">>" + (response.getNumber());
+						}
+						textarea.value = text.slice(0,selection_end) + insert_str + text.slice(selection_end);
+						textarea.selectionEnd = selection_end + insert_str.length;
+						textarea.focus();
+					};
+
+					return null;
+				});
+			}
+
+			if(node.number){
+				forReply(node.number);
+			}
+			if(node.name){
+				forName(node.name);
+			}
+			if(node.date){
+				forId(node.date);
+				forHost(node.date);
+				forFollower(node.date);
+			}
+			if(node.message){
+				forResponseAnchor(node.message);
+				forId(node.message);
+				forName(node.message);
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// エレメントを解析
+		// --------------------------------------------------------------------------------
+		var useful = (function(){
+			var info_post = element;
+			var info_number;
+			var info_name;
+			var info_date;
+			var info_message;
+
+			try{
+				if(info_post.className != "post") return false;
+				info_number = ElementGetElementsByClassName(info_post,"number")[0];
+				info_name = ElementGetElementsByClassName(info_post,"name")[0];
+				info_date = ElementGetElementsByClassName(info_post,"date")[0];
+				info_message = ElementGetElementsByClassName(info_post,"message")[0];	
+			}catch(e){
+				return false;
+			}
+
+			// document に未登録
+			if(!DomNodeGetAttachedDocument(info_post))	return false;
+
+			// --------------------------------------------------------------------------------
+			// レスアンカー拡張
+			// --------------------------------------------------------------------------------
+			work.extendResponseAnchor(info_message);
+
+			// --------------------------------------------------------------------------------
+			// クリーンアップ
+			// --------------------------------------------------------------------------------
+			(function(){
+				function cleanup(target){
+					BbsControlSearchTrash(target,function(element){
+						var node = element.firstChild;
+						if(!node)	return null;
+						if(node.nodeType != 3)	return null;
+
+						// ID
+						var m = node.nodeValue.match(new RegExp("^ID:([-a-zA-Z0-9+/.●!=]{8,})","i"));
+						if(m){
+							// 直後テキスト
+							var node = DocumentCreateText(m[0]);
+							DomNode_InsertAfter(element,node);
+							DomNodeRemove(element);
+							return null;
+						}
+
+						// トリップ
+						var m = node.nodeValue.match(new RegExp("^(◆[a-zA-Z0-9+/.]{10,12})","i"));
+						if(m){
+							// 直後テキスト
+							var node = DocumentCreateText(m[0]);
+							DomNode_InsertAfter(element,node);
+							DomNodeRemove(element);
+							return null;
+						}
+
+						// ホスト名
+						var m = node.nodeValue.match(new RegExp("^([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
+						if(m){
+							// 直後テキスト
+							var node = DocumentCreateText(m[0]);
+							DomNode_InsertAfter(element,node);
+							DomNodeRemove(element);
+
+							// テキストノードを統合
+							node.parentNode.normalize();
+							return null;
+						}
+						var m = node.nodeValue.match(new RegExp("^([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
+						if(m){
+							// 直後テキスト
+							var node = DocumentCreateText(m[0]);
+							DomNode_InsertAfter(element,node);
+							DomNodeRemove(element);
+
+							// テキストノードを統合
+							node.parentNode.normalize();
+							return null;
+						}
+
+						return null;
+					});
+				}
+
+				if(info_number){
+					cleanup(info_number);
+				}
+				if(info_name){
+					cleanup(info_name);
+				}
+				if(info_date){
+					cleanup(info_date);
+				}
+				if(info_message){
+					cleanup(info_message);
+				}
+			})();
+
+			(function(){
+				switch(work.bbs_name){
+				case "2ch_v6":
+					var node_list = ElementGetElementsByClassName(info_post,"back-links");
+					var i;
+					var num = node_list.length;
+					for(i=num-1;i>=0;i--){
+						DomNodeRemove(node_list[i]);
+					}
+					break;
+				}
+			})();
+
+			// ナンバーを取得
+			if(!(ElementGetTextContent(info_number).match(new RegExp("^([0-9]+)[ ]","i"))))	return false;
+
+			// ナンバーからレスポンスオブジェクトを取得
+			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
+
+			// レスポンス解析
+			if(!response.getAnalyzed()){
+
+				// IDの取得
+				if(ElementGetTextContent(info_date).match(new RegExp("ID:([-a-zA-Z0-9+/.●!=]{8,})","i"))){
+					response.setId(RegExp.$1);
+				}
+
+				// 名前の取得
+				if(ElementGetTextContent(info_name).match(new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i"))){
+					response.setName(RegExp.$1);
+				}
+
+				// ホスト名の取得
+				(function(){
+					var p;
+					var n;
+					var q;
+					var ignore_dictionary = {"B":1,"SCRIPT":1};
+					var queue = new Object();
+					q = {p:queue,n:queue,node:info_date};
+					queue.p = q;
+					queue.n = q;
+
+					while(queue.n != queue){
+						q = queue.n;
+						p = q.p;
+						n = q.n;
+						p.n = n;
+						n.p = p;
+						var node = q.node;
+						switch(node.nodeType){
+						case 1:
+							if(!(ignore_dictionary[node.tagName])){
+								var i;
+								var nodes = node.childNodes;
+								var num = nodes.length;
+								for(i=0;i<num;i++){
+									n = queue;
+									p = n.p;
+									q = {p:p,n:n,node:nodes[i]};
+									p.n = q;
+									n.p = q;
+								}
+							}
+							break;
+						case 3:
+							var m = DomNodeGetNodeValue(node).match(new RegExp("(^|HOST:)([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})","i"));
+							if(m){
+								response.setHost(m[2]);
+								return;
+							}
+							var m = DomNodeGetNodeValue(node).match(new RegExp("(\\[ )([-._a-zA-Z0-9]{1,}(\\.[-._a-zA-Z0-9]{1,}){2,})(|\\n) \\]","i"));
+							if(m){
+								response.setHost(m[2]);
+								return;
+							}
+							var m = DomNodeGetNodeValue(node).match(new RegExp("(発信元:)([0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3})","i"));
+							if(m){
+								response.setHost(m[2]);
+								return;
+							}
+							break;
+						}
+					}
+				})();
+
+				// フォロー解析
+				var dictionary = new Object();
+				(function(){
+					var nodes = ElementGetElementsByTagName(info_message,"span");
+					var i;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						var numbers = work.createResponseAnchorNumbers(ElementGetTextContent(nodes[i]));
+						numbers.getNumbers(function(n){
+							if(!dictionary[n]){
+								var following = bbs_dictionary.getResponse(n);
+								following.addFollower(response);
+								dictionary[n] = true;
+							}
+						});
+					}
+				})();
+
+				// オリジナルエレメントをセット
+				var nodes = info_post.childNodes;
+				var i;
+				var num = nodes.length;
+				for(i=0;i<num;i++){
+					var node = nodes[i];
+					var class_name = node.className || ("_" + i);
+					response.addOriginalElements(class_name,node);
+				}
+
+				// 消去時に実行されるイベント
+				response.onerase = function(){
+					var original = response.getOriginalElements();
+					
+					if(original[0]){
+						var revise_scroll = new DocumentReviseScroll();
+						var node = original[0].element.parentNode;
+						revise_scroll.executeRemoveElementBefore(node);
+						DomNodeRemove(node);
+						revise_scroll.executeRemoveElementAfter(node);
+					}
+				};
+
+				response.setAnalyzed();
+			}
+
+			var node_obj = new Object();
+			var nodes = info_post.childNodes;
+			var i;
+			var num = nodes.length;
+			for(i=0;i<num;i++){
+				var node = nodes[i];
+				var class_name = node.className || ("_" + i);
+				node_obj[class_name] = node;
+			}
+			node_obj.parent = info_post;
+
+			// レスポンスダイアログを登録（ルート）
+			attachBbsResponseDialog(
+				response,
+				node_obj,
+				null,
+				null
+			);
+
+			return true;
+		})();
+
+		response({useful:useful});
+		return true;
+	}.toString() +
+"\n]";
+	}
+
+	// --------------------------------------------------------------------------------
+	// 掲示板設定「２ちゃんねる掲示板」
+	// --------------------------------------------------------------------------------
+	function PresetScript_ExpandBbs_ScriptInitialize_2ch(){
+		return "" +
+"[\n\t" + 
+	function(info,response){
+		var work = info.work;
+
+		// --------------------------------------------------------------------------------
+		// 基本URL抽出
+		// --------------------------------------------------------------------------------
+		var url = document.URL;
+		var bbs_list = [
+			{url:"(http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch"},
+			{url:"(http://[^.]+\\.2ch\\.sc/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch.sc"},
+			{url:"(http://(|[^.]+\\.)machi\\.to/bbs/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"machi"},
+			{url:"(http://(|[^.]+\\.)machibbs\\.net/[^/]+/[^/]*[0-9]+)",replace:"$1",name:"machibbs"},
+			{url:"(http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"pink"},
+			{url:"(http://jbbs\\.shitaraba\\.net/bbs/read\\.cgi/[^/]+/[0-9]+/[0-9]+)",replace:"$1/",name:"shitaraba"},
+			{url:"(http://jbbs\\.shitaraba\\.net/bbs/read_archive\\.cgi/[^/]+/[0-9]+/[0-9]+)",replace:"$1/",name:"shitaraba_storage"}
+		];
+
+		var i;
+		var num = bbs_list.length;
+		for(i=0;i<num;i++){
+			var bbs = bbs_list[i];
+			var re = new RegExp(bbs.url,"i");
+			var m = url.match(re);
+			if(m){
+				work.base_url = m[1].replace(re,bbs.replace);
+				work.bbs_name = bbs.name;
+				break;
+			}
+		}
+
+		return false;
+	}.toString() +
+	",\n\n\t" +
+	function (info,response){
+		var work = info.work;
+		if(!(work.bbs_name)){
+			return false;
+		}
+
+		var first_id = 1;
+		var last_id = 1;
+		var dictionary_id = new Array();
+		var load_shadow_list;
+		var load_shadow_pos = 0;
+		var load_more_list;
+		var load_more_pos = 0;
+		var element_parent = null;
+		var read_more_button = null;
+		var element_form = null;
+		var base_url = work.base_url;
+		var resource_url_more;
+
+		// --------------------------------------------------------------------------------
+		// 文字列からレスポンス番号を取得
+		// --------------------------------------------------------------------------------
+		work.createResponseAnchorNumbers = function (str){
+			var numbers = new ResponseAnchorNumbers();
+
+			var re_search = new RegExp("^(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
+			var re_range = new RegExp("^([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("^([0-9０-９]+)","i");
+
+			var m = str.match(re_search);
+			if(m){
+				var p = m[1].length;
+				while(true){
+					// 番号-番号
+					m = str.substr(p).match(re_range);
+					if(m){
+						var id0 = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+						var id1 = parseInt(StringConvertFromNumericFullToNumericHalf(m[2]));
+						if(id0 < 1) id0 = 1;
+						if(id1 < 1) id1 = 1;
+						if(id0 > 10000) id0 = 10000;
+						if(id1 > 10000) id1 = 10000;
+						p += m[0].length;
+						numbers.addNumbers(id0,id1);
+					}else{
+						// 番号
+						m = str.substr(p).match(re_number);
+						if(m){
+							p += m[0].length;
+							var id = parseInt(StringConvertFromNumericFullToNumericHalf(m[1]));
+							if(id < 1) id = 1;
+							if(id > 0x7fffffff) id = 0x7fffffff;
+							numbers.addNumber(id);
+						}
+					}
+
+					if(m){
+						// カンマ
+						if(RegExp.rightContext.search(",") == 0){
+							p += 1;
+							continue;
+						}
+					}
+					break;
+				}
+			}
+			return numbers;
+		};
+
+		// --------------------------------------------------------------------------------
+		// レスアンカー拡張
+		// --------------------------------------------------------------------------------
+		work.extendResponseAnchor = function (target){
+			if(BbsControlResponseAnchorExist(target))	return;
+
+			var re_simple = new RegExp("^(>>|<<|>)[-,0-9０-９]+$","i");
+			var re_detail = new RegExp("(>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)(([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+),)*([0-9０-９]+[-][0-9０-９]+|[0-9０-９]+)","i");
+			var re_range = new RegExp("([0-9０-９]+)[-]([0-9０-９]+)","i");
+			var re_number = new RegExp("([0-9０-９]+)","i");
+
+			var i;
+			var nodes = ElementGetElementsByTagName(target,"a");
+			var num = nodes.length;
+			for(i=num-1;i>=0;i--){
+				var node = nodes[i];
+				var m = ElementGetTextContent(node).match(re_simple);
+				if(m){
+					var text_node = DocumentCreateText(m[0]);
+					DomNode_InsertBefore(node,text_node);
+					DomNodeRemove(node);
+				}
+			}
+
+			// テキストノードを統合
+			target.normalize();
+
+			var p;
+			var n;
+			var q;
+			var ignore_dictionary = {"A":1,"SCRIPT":1};
+			var queue = new Object();
+			q = {p:queue,n:queue,node:target};
+			queue.p = q;
+			queue.n = q;
+
+			while(queue.n != queue){
+				q = queue.n;
+				p = q.p;
+				n = q.n;
+				p.n = n;
+				n.p = p;
+				var node = q.node;
+				switch(node.nodeType){
+				case 1:
+					var i;
+					var nodes = node.childNodes;
+					var num = nodes.length;
+					for(i=0;i<num;i++){
+						n = queue;
+						p = n.p;
+						q = {p:p,n:n,node:nodes[i]};
+						p.n = q;
+						n.p = q;
+					}
+					break;
+				case 3:
+					while(node){
+						var m = DomNodeGetNodeValue(node).match(re_detail);
+						if(!m)	break;
+
+						// 元のテキストノード
+						DomNodeSetNodeValue(node,RegExp.leftContext);
+
+						var element;
+						switch(work.bbs_name){
+						case "2ch.sc":
+							element = DocumentCreateElement("span");
+							element.style.cssText = "color:#00F; text-decoration: underline; cursor: pointer;";
+							break;
+						default:
+							element = DocumentCreateElement("a");
+							break;
+						}
 						ElementSetTextContent(element,m[0]);
 						DomNode_InsertAfter(node,element);
 
@@ -30630,13 +29268,12 @@ function PageExpand(page_expand_arguments){
 		function loadShadowFromHTML(str){
 
 			var re_number;
-			var re_id = new RegExp("ID:([-a-zA-Z0-9+/.●!]{8,})","i");
+			var re_id = new RegExp("ID:([-a-zA-Z0-9+/.●!=]{8,})","i");
 			var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
 			switch(work.bbs_name){
 			case "2ch":
 			case "2ch.sc":
 			case "pink":
-			case "kakiko":
 			case "machi":
 			case "machibbs":
 					re_number = new RegExp("([0-9]+)","i");
@@ -30746,7 +29383,15 @@ function PageExpand(page_expand_arguments){
 							// フォロー解析
 							var dictionary = new Object();
 							(function(){
-								var nodes = ElementGetElementsByTagName(dd,"a");
+								var nodes;
+								switch(work.bbs_name){
+								case "2ch.sc":
+									nodes = ElementGetElementsByTagName(dd,"span");
+									break;
+								default:
+									nodes = ElementGetElementsByTagName(dd,"a");
+									break;
+								}
 								var i;
 								var num = nodes.length;
 								for(i=0;i<num;i++){
@@ -30790,7 +29435,6 @@ function PageExpand(page_expand_arguments){
 			case "2ch":
 			case "2ch.sc":
 			case "pink":
-			case "kakiko":
 			case "machi":
 			case "machibbs":
 					re_number = new RegExp("([0-9]+)","i");
@@ -30865,7 +29509,7 @@ function PageExpand(page_expand_arguments){
 		function loadShadowFromDAT(str){
 			var re_search = new RegExp("(.*?)<>(.*?)<>(.*?)<>(.*?)<>","i");
 			var re_number = new RegExp("([0-9]+)","i");
-			var re_id = new RegExp("ID:([-a-zA-Z0-9+/.●!]{8,})","i");
+			var re_id = new RegExp("ID:([-a-zA-Z0-9+/.●!=]{8,})","i");
 			var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
 			var re_icon = new RegExp("^ sssp://img.2ch.net/ico/(.*?)( <br> .*)$","i");
 
@@ -30979,7 +29623,15 @@ function PageExpand(page_expand_arguments){
 							// フォロー解析
 							var dictionary = new Object();
 							(function(){
-								var nodes = ElementGetElementsByTagName(dd,"a");
+								var nodes;
+								switch(work.bbs_name){
+								case "2ch.sc":
+									nodes = ElementGetElementsByTagName(dd,"span");
+									break;
+								default:
+									nodes = ElementGetElementsByTagName(dd,"a");
+									break;
+								}
 								var i;
 								var num = nodes.length;
 								for(i=0;i<num;i++){
@@ -31145,7 +29797,6 @@ function PageExpand(page_expand_arguments){
 				case "machi":
 				case "machibbs":
 				case "pink":
-				case "kakiko":
 					loader.overrideMimeType("text/plain; charset=Shift_JIS");
 					break;
 				case "shitaraba":
@@ -31298,50 +29949,6 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
-		// BbsControlDockingForm 作成
-		// --------------------------------------------------------------------------------
-		(function(){
-			var node;
-
-			switch(work.bbs_name){
-			case "2ch":
-			case "2ch.sc":
-			case "pink":
-			case "kakiko":
-				var nodes = document.getElementsByTagName("form");
-				var num = nodes.length;
-				if(num){
-					node = nodes[num-1];
-				}
-				break;
-			case "shitaraba":
-				var nodes = document.getElementsByTagName("form");
-				var num = nodes.length;
-				var i;
-				for(i=0;i<num;i++){
-					if(nodes[i].action.indexOf("/bbs/write.cgi/") >= 0){
-						node = nodes[i];
-						break;
-					}
-				}
-				break;
-			case "machi":
-			case "machibbs":
-				var nodes = document.getElementsByTagName("form");
-				var num = nodes.length;
-				if(num){
-					node = nodes[0];
-				}
-				break;
-			}
-
-			if(node){
-				var docking_form = new BbsControlDockingForm(node,false);
-				docking_form.setStyle("background:#e8e8e8; background-image:linear-gradient(to bottom, #f8f8f8, #e8e8e8); padding:20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px;");
-			}
-		})();
-
-		// --------------------------------------------------------------------------------
 		// BbsControlReadMoreButton 作成
 		// --------------------------------------------------------------------------------
 		read_more_button = new BbsControlReadMoreButton();
@@ -31352,111 +29959,142 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 書き込みをポップアップ化
 		// --------------------------------------------------------------------------------
-		if(load_more_pos == 0){
+		(function(){
+			var element_form;
+			var input_submit;
+			var element_textarea;
+			var event_handler_release;
+			var task;
 
 			(function(){
-				var element_form;
-				var input_submit;
-				var element_textarea;
-				var event_handler_release;
-				var task;
+				// フォーム
+				var nodes = ElementGetElementsByTagName(document.body,"form");
+				var i;
+				switch(work.bbs_name){
+				case "2ch":
+				case "pink":
+				case "2ch.sc":
+					for(i=0;i<nodes.length;i++){
+						if(nodes[i].action.indexOf("/test/bbs.cgi") >= 0){
+							element_form = nodes[i];
+							break;
+						}
+					}
+					break;
+				case "shitaraba":
+					for(i=0;i<nodes.length;i++){
+						if(nodes[i].action.indexOf("/bbs/write.cgi/") >= 0){
+							element_form = nodes[i];
+							break;
+						}
+					}
+					break;
+				case "machi":
+				case "machibbs":
+					for(i=0;i<nodes.length;i++){
+						if(nodes[i].action.indexOf("/bbs/write.cgi") >= 0){
+							element_form = nodes[i];
+							break;
+						}
+					}
+					break;
+				}
 
-				(function(){
-					// フォーム
-					var nodes = ElementGetElementsByTagName(document.body,"form");
-					var i;
+				// JavaScript モード
+				if(!element_form){
 					switch(work.bbs_name){
-					case "2ch":
 					case "2ch.sc":
-					case "pink":
-						for(i=0;i<nodes.length;i++){
-							if(nodes[i].action.indexOf("/test/bbs.cgi") >= 0){
-								element_form = nodes[i];
-								break;
-							}
-						}
-						break;
-					case "shitaraba":
-						for(i=0;i<nodes.length;i++){
-							if(nodes[i].action.indexOf("/bbs/write.cgi/") >= 0){
-								element_form = nodes[i];
-								break;
-							}
-						}
+						element_form = document.getElementById("postForm");
 						break;
 					}
+				}
+
+				if(element_form){
 
 					// サブミットボタン
-					if(element_form){
-						var nodes = ElementGetElementsByTagName(element_form,"input");
-						for(i=0;i<nodes.length;i++){
-							if(nodes[i].type.toLowerCase() == "submit"){
-								input_submit = nodes[i];
-								break;
-							}
-						}
-						var nodes = ElementGetElementsByTagName(element_form,"textarea");
-						if(nodes.length){
-							element_textarea = nodes[0];
+					var nodes = ElementGetElementsByTagName(element_form,"input");
+					for(i=0;i<nodes.length;i++){
+						if(nodes[i].type.toLowerCase() == "submit"){
+							input_submit = nodes[i];
+							break;
 						}
 					}
-				})();
 
-				// 開放
-				function release(){
-					if(event_handler_release){
-						event_handler_release.release();
-						event_handler_release = null;
+					// テキストエリア
+					var nodes = ElementGetElementsByTagName(element_form,"textarea");
+					if(nodes.length){
+						element_textarea = nodes[0];
+						work.form_textarea = element_textarea;
 					}
 
-					removeEvent();
+					// BbsControlDockingForm 作成
+					var docking_form = new BbsControlDockingForm(element_form,false);
+					docking_form.setStyle("background:#e8e8e8; background-image:linear-gradient(to bottom, #f8f8f8, #e8e8e8); padding:20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px;");
+					work.docking_form = docking_form;
+				}
+			})();
 
-					if(task){
-						task.release();
-					}
+			// 開放
+			function release(){
+				if(event_handler_release){
+					event_handler_release.release();
+					event_handler_release = null;
 				}
 
-				// クリア
-				function clear(){
-					element_textarea.value = "";
-				}
+				removeEvent();
 
-				// 有効セット
-				function setEnable(type){
-					input_submit.disabled = !(type);
+				if(task){
+					task.release();
 				}
+			}
 
-				// イベント追加
-				function addEvent(){
-					if(window.addEventListener){
-						input_submit.addEventListener("click",EventClickButton);
-						element_form.addEventListener("submit",EventSubmitForm);
-					}else if(window.attachEvent){
-						input_submit.attachEvent("onclick",EventClickButton);
-						element_form.attachEvent("onsubmit",EventSubmitForm);
-					}
+			// クリア
+			function clear(){
+				element_textarea.value = "";
+			}
+
+			// 有効セット
+			function setEnable(type){
+				input_submit.disabled = !(type);
+			}
+
+			// イベント追加
+			function addEvent(){
+				if(window.addEventListener){
+					input_submit.addEventListener("click",EventClickButton);
+					element_form.addEventListener("submit",EventSubmitForm);
+				}else if(window.attachEvent){
+					input_submit.attachEvent("onclick",EventClickButton);
+					element_form.attachEvent("onsubmit",EventSubmitForm);
 				}
+			}
 
-				// イベント除外
-				function removeEvent(){
-					if(window.removeEventListener){
-						input_submit.removeEventListener("click",EventClickButton);
-						element_form.removeEventListener("submit",EventSubmitForm);
-					}else if(window.detachEvent){
-						input_submit.detachEvent("onclick",EventClickButton);
-						element_form.detachEvent("onsubmit",EventSubmitForm);
-					}
+			// イベント除外
+			function removeEvent(){
+				if(window.removeEventListener){
+					input_submit.removeEventListener("click",EventClickButton);
+					element_form.removeEventListener("submit",EventSubmitForm);
+				}else if(window.detachEvent){
+					input_submit.detachEvent("onclick",EventClickButton);
+					element_form.detachEvent("onsubmit",EventSubmitForm);
 				}
+			}
 
-				// サブミット直前に実行されるイベント
-				function EventSubmitForm(e){
-					setEnable(false);
-				}
+			// サブミット直前に実行されるイベント
+			function EventSubmitForm(e){
+				setEnable(false);
+			}
 
-				// クリック時に実行されるイベント
-				function EventClickButton(e){
-					var w = 800;
-					var h = 600;
+			// クリック時に実行されるイベント
+			function EventClickButton(e){
+				var w;
+				var h;
+				switch(work.bbs_name){
+				case "2ch":
+				case "2ch.sc":
+				case "pink":
+					w = 800;
+					h = 600;
 					var cookie = document.cookie;
 					if(cookie){
 						if(cookie.indexOf("PREN=") != -1){
@@ -31464,114 +30102,138 @@ function PageExpand(page_expand_arguments){
 							h = 450;
 						}
 					}
-
-					var window_name = "_pageexpand_" + Math.floor(Math.random() * 0x7FFFFFFF);
-					var popup_iframe = new BbsControlPopupIframe(window_name);
-					popup_iframe.setWindowSize(w,h);
-					popup_iframe.onclose = function(){
-						setEnable(true);
-					};
-
-					var element_iframe = popup_iframe.getIFrameElement();
-					element_form.target = window_name;
-
-					(function(){
-						var closed = false;
-						var timer = null;
-
-						// タスク生成
-						task = task_container.createTask();
-						task.setDestructorFunc(function(){
-							task = null;
-						});
-						task.setExecuteFunc(function(){
-							try{
-								var href = "";
-								var window_obj = element_iframe.contentWindow;
-								if(window_obj.document){
-									href = window_obj.document.URL;
-								}
-								if(href.indexOf("http://") == 0){
-									switch(work.bbs_name){
-									case "2ch":
-									case "pink":
-										if(href.indexOf("test/bbs.cgi?guid=") == -1){
-											closed = true;
-										}else if(!timer){
-											var body = window_obj.document.body;
-											if(body){
-												if(ElementGetTextContent(body).indexOf("書きこみが終わりました") != -1){
-													timer = (new Date()).getTime();
-												}
-											}
-										}
-										break;
-
-									case "2ch.sc":
-										if(href.indexOf("test/bbs.cgi?guid=") == -1){
-											closed = true;
-										}else if(!timer){
-											var body = window_obj.document.body;
-											if(body){
-												if(ElementGetTextContent(body).indexOf("書きこみが終わりました") != -1){
-													timer = (new Date()).getTime();
-												}
-											}
-										}
-										break;
-
-									case "shitaraba":
-										if(href.indexOf("/bbs/write.cgi/") == -1){
-											closed = true;
-										}else if(!timer){
-											var body = window_obj.document.body;
-											if(body){
-												if(ElementGetTextContent(body).indexOf("書きこみが終りました") != -1){
-													timer = (new Date()).getTime();
-												}
-											}
-										}
-										break;
-									}
-								}
-								if(timer){
-									if((new Date()).getTime() - timer > 1000 * 2){
-										closed = true;
-									}
-								}
-							}catch(e){
-								closed = true;
-							}
-
-							if(closed){
-								if(task){
-									task.release();
-								}
-								popup_iframe.close();
-								setEnable(true);
-								if(timer){
-									readMore(function(){});
-									clear();
-								}
-							}
-						});
-					})();
+					break;
+				case "shitaraba":
+					w = 600;
+					h = 450;
+					break;
+				case "machi":
+				case "machibbs":
+					w = 700;
+					h = 400;
+					break;
 				}
 
+				var window_name = "_pageexpand_" + Math.floor(Math.random() * 0x7FFFFFFF);
+				var popup_iframe = new BbsControlPopupIframe(window_name);
+				popup_iframe.setWindowSize(w,h);
+				popup_iframe.onclose = function(){
+					setEnable(true);
+				};
+
+				var element_iframe = popup_iframe.getIFrameElement();
+				element_form.target = window_name;
+
 				(function(){
-					if(!element_form) return;
-					if(!input_submit) return;
-					if(!element_textarea) return;
+					var closed = false;
+					var timer = null;
 
+					// タスク生成
+					task = task_container.createTask();
+					task.setDestructorFunc(function(){
+						task = null;
+					});
+					task.setExecuteFunc(function(){
+						try{
+							var href = "";
+							var window_obj = element_iframe.contentWindow;
+							if(window_obj.document){
+								href = window_obj.document.URL;
+							}
+							if(href.indexOf("http://") == 0){
+								switch(work.bbs_name){
+								case "2ch":
+								case "pink":
+									if(href.indexOf("test/bbs.cgi?guid=") == -1){
+										closed = true;
+									}else if(!timer){
+										var body = window_obj.document.body;
+										if(body){
+											if(ElementGetTextContent(body).indexOf("書きこみが終わりました") != -1){
+												timer = (new Date()).getTime();
+											}
+										}
+									}
+									break;
+
+								case "2ch.sc":
+									if(href.indexOf("test/bbs.cgi?guid=") == -1){
+										closed = true;
+									}else if(!timer){
+										var body = window_obj.document.body;
+										if(body){
+											if(ElementGetTextContent(body).indexOf("書きこみが終わりました") != -1){
+												timer = (new Date()).getTime();
+											}
+										}
+									}
+									break;
+
+								case "shitaraba":
+									if(href.indexOf("/bbs/write.cgi/") == -1){
+										closed = true;
+									}else if(!timer){
+										var body = window_obj.document.body;
+										if(body){
+											if(ElementGetTextContent(body).indexOf("書きこみが終りました") != -1){
+												timer = (new Date()).getTime();
+											}
+										}
+									}
+									break;
+
+								case "machi":
+								case "machibbs":
+									if(href.indexOf("bbs/write.cgi?guid=ON") == -1){
+										closed = true;
+										timer = 1;
+									}
+									break;
+								}
+							}
+							if(timer){
+								if((new Date()).getTime() - timer > 1000 * 2){
+									closed = true;
+								}
+							}
+						}catch(e){
+							closed = true;
+						}
+
+						if(closed){
+							if(task){
+								task.release();
+							}
+							popup_iframe.close();
+							setEnable(true);
+							if(timer){
+								readMore(function(){});
+								clear();
+							}
+						}
+					});
+				})();
+			}
+
+			(function(){
+				if(!element_form) return;
+				if(!input_submit) return;
+				if(!element_textarea) return;
+
+				if(load_more_pos == 0){
 					addEvent();
-
+	
 					event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
 					event_handler_release.setFunction(function(){
 						release();
 					});
-				})();
+				}
+
+				if(work.docking_form){
+					work.docking_form.onreset = clear;
+				}
 			})();
-		}
+		})();
 
 		// --------------------------------------------------------------------------------
 		// シャドウロード
@@ -31665,7 +30327,15 @@ function PageExpand(page_expand_arguments){
 				// --------------------------------------------------------------------------------
 				(function(){
 					var i;
-					var nodes = ElementGetElementsByTagName(target,"a");
+					var nodes;
+					switch(work.bbs_name){
+					case "2ch.sc":
+						nodes = ElementGetElementsByTagName(target,"span");
+						break;
+					default:
+						nodes = ElementGetElementsByTagName(target,"a");
+						break;
+					}
 					var num = nodes.length;
 					for(i=0;i<num;i++){
 						var node = nodes[i];
@@ -31782,7 +30452,7 @@ function PageExpand(page_expand_arguments){
 						case 3:
 							while(node){
 
-								var m = DomNodeGetNodeValue(node).match(new RegExp("ID:([-a-zA-Z0-9+/.●!]{8,})","i"));
+								var m = DomNodeGetNodeValue(node).match(new RegExp("ID:([-a-zA-Z0-9+/.●!=]{8,})","i"));
 								if(!m)	break;
 
 								// 元のテキストノード
@@ -31812,6 +30482,7 @@ function PageExpand(page_expand_arguments){
 					control_id.setResponse(response);
 
 					var id = control_id.getId();
+					var myself = (response.getId() === id);
 					var element_id = control_id.getElement();
 					var textnode_id = DocumentCreateText("");
 
@@ -31845,7 +30516,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "id"){
-						if(response.getId() == id)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -31862,7 +30533,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromId(id);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_id = responses[i];
@@ -31973,6 +30648,7 @@ function PageExpand(page_expand_arguments){
 					control_name.setResponse(response);
 
 					var name = control_name.getName();
+					var myself = (response.getName() === name);
 					var element_name = control_name.getElement();
 					var textnode_name = DocumentCreateText("");
 
@@ -32006,7 +30682,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "name"){
-						if(response.getName() == name)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -32023,7 +30699,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromName(name);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_name = responses[i];
@@ -32174,6 +30854,7 @@ function PageExpand(page_expand_arguments){
 					control_host.setResponse(response);
 
 					var host = control_host.getHost();
+					var myself = (response.getHost() === host);
 					var element_host = control_host.getElement();
 					var textnode_host = DocumentCreateText("");
 
@@ -32207,7 +30888,7 @@ function PageExpand(page_expand_arguments){
 					// ポップアップ化
 					// --------------------------------------------------------------------------------
 					if(type == "host"){
-						if(response.getHost() == host)	return null;
+						if(myself) return null;
 					}
 
 					// ダイアログを作成
@@ -32224,7 +30905,11 @@ function PageExpand(page_expand_arguments){
 						var responses = bbs_dictionary.getResponsesFromHost(host);
 						var i = 0;
 						var num = responses.length;
-						if(num <= 1) return false;
+						if(myself){
+							if(num < 2) return false;
+						}else{
+							if(num < 1) return false;
+						}
 
 						function f(){
 							var response_host = responses[i];
@@ -32360,12 +31045,89 @@ function PageExpand(page_expand_arguments){
 				};
 			}
 
+			// --------------------------------------------------------------------------------
+			// 返信
+			// --------------------------------------------------------------------------------
+			function forReply(target){
+				if(BbsControlReplyExist(target))	return;
+
+				// --------------------------------------------------------------------------------
+				// BbsControlReply を生成
+				// --------------------------------------------------------------------------------
+				(function(){
+					var node = target.firstChild;
+					if(!node) return;
+
+					switch(node.nodeType){
+					case 1:
+						// 本文
+						var m = ElementGetTextContent(node).match(new RegExp("^[0-9]+$","i"));
+						if(!m)	return;
+
+						// BbsControlReply を生成
+						var control_reply = new BbsControlReply(node,true);
+						break;
+					case 3:
+						// 本文
+						var m = DomNodeGetNodeValue(node).match(new RegExp("^[0-9]+","i"));
+						if(!m)	return;
+	
+						// 元のテキストノード
+						DomNodeSetNodeValue(node,RegExp.leftContext);
+	
+						// BbsControlReply を生成
+						var control_reply = new BbsControlReply(null,false);
+						var element_reply = control_reply.getElement();
+						ElementSetTextContent(element_reply,m[0]);
+						DomNode_InsertAfter(node,element_reply);
+	
+						// 直後テキスト
+						node = DocumentCreateText(RegExp.rightContext);
+						DomNode_InsertAfter(element_reply,node);					
+						break;
+					}
+				})();
+
+				// --------------------------------------------------------------------------------
+				// BbsControlReply を検索
+				// --------------------------------------------------------------------------------
+				BbsControlReplySearch(target,function(control_reply){
+
+					control_reply.setResponse(response);
+					var element_reply = control_reply.getElement();
+					var docking_form = work.docking_form;
+					var textarea = work.form_textarea;
+
+					// --------------------------------------------------------------------------------
+					// クリックされたときに実行されるイベント
+					// --------------------------------------------------------------------------------
+					control_reply.onclick = function(e){
+						docking_form.popupForReply(element_reply);
+						var text = textarea.value;
+						var num = text.length;
+						var selection_end = textarea.selectionEnd;
+						var insert_str;
+						if(selection_end >= num){
+							insert_str = ">>" + (response.getNumber()) + "\n";
+						}else{
+							insert_str = ">>" + (response.getNumber());
+						}
+						textarea.value = text.slice(0,selection_end) + insert_str + text.slice(selection_end);
+						textarea.selectionEnd = selection_end + insert_str.length;
+						textarea.focus();
+					};
+
+					return null;
+				});
+			}
+
 			if(node.dt){
 				forResponseAnchor(node.dt);
 				forId(node.dt);
 				forName(node.dt);
 				forHost(node.dt);
 				forFollower(node.dt);
+				forReply(node.dt);
 			}
 			if(node.dd){
 				forResponseAnchor(node.dd);
@@ -32433,7 +31195,7 @@ function PageExpand(page_expand_arguments){
 						if(node.nodeType != 3)	return null;
 
 						// ID
-						var m = node.nodeValue.match(new RegExp("^ID:([-a-zA-Z0-9+/.●!]{8,})","i"));
+						var m = node.nodeValue.match(new RegExp("^ID:([-a-zA-Z0-9+/.●!=]{8,})","i"));
 						if(m){
 							// 直後テキスト
 							var node = DocumentCreateText(m[0]);
@@ -32506,6 +31268,16 @@ function PageExpand(page_expand_arguments){
 					for(i=num-1;i>=0;i--){
 						DomNodeRemove(node_list[i]);
 					}
+					
+					var node = dt.firstChild;
+					if(node.tagName == "SPAN"){
+						var str = ElementGetTextContent(node);
+						if(str.match(new RegExp("^([0-9]+)","i"))){
+							var text = DocumentCreateText(str);
+							DomNode_InsertAfter(node,text);
+							DomNodeRemove(node);				
+						}
+					}
 					break;
 				}
 			})();
@@ -32521,7 +31293,7 @@ function PageExpand(page_expand_arguments){
 			if(!response.getAnalyzed()){
 
 				// IDの取得
-				if(dt_text.match(new RegExp("ID:([-a-zA-Z0-9+/.●!]{8,})","i"))){
+				if(dt_text.match(new RegExp("ID:([-a-zA-Z0-9+/.●!=]{8,})","i"))){
 					response.setId(RegExp.$1);
 				}
 
@@ -32587,7 +31359,15 @@ function PageExpand(page_expand_arguments){
 				// フォロー解析
 				var dictionary = new Object();
 				(function(){
-					var nodes = ElementGetElementsByTagName(dd,"a");
+					var nodes;
+					switch(work.bbs_name){
+					case "2ch.sc":
+						nodes = ElementGetElementsByTagName(dd,"span");
+						break;
+					default:
+						nodes = ElementGetElementsByTagName(dd,"a");
+						break;
+					}
 					var i;
 					var num = nodes.length;
 					for(i=0;i<num;i++){
@@ -33095,6 +31875,7 @@ function PageExpand(page_expand_arguments){
 				title:_i18n.getMessage("context_menu_batch_download_image"),
 				contexts:["all"], 
 				onclick: function(info, tab) {
+					if(!tab) tab = info.tab;
 					extension_message.sendRequestToContent(tab, {command: "batchDownloadImage"});
 				}
 			});
@@ -33105,6 +31886,7 @@ function PageExpand(page_expand_arguments){
 				title:_i18n.getMessage("context_menu_batch_download_user"),
 				contexts:["all"], 
 				onclick: function(info, tab) {
+					if(!tab) tab = info.tab;
 					extension_message.sendRequestToContent(tab, {command: "batchDownloadUser"});
 				}
 			});
@@ -33119,6 +31901,7 @@ function PageExpand(page_expand_arguments){
 				title:_i18n.getMessage("context_menu_pageexpand_config_current_page"),
 				contexts:["all"], 
 				onclick: function(info, tab) {
+					if(!tab) tab = info.tab;
 					var query = new Object();
 					query.type = "urlmap";
 					query.url = encodeURIComponent(tab.url);
@@ -33152,6 +31935,7 @@ function PageExpand(page_expand_arguments){
 					title:_i18n.getMessage("context_menu_pageexpand_execute"),
 					contexts:["all"], 
 					onclick: function(info, tab) {
+						if(!tab) tab = info.tab;
 						extension_message.sendRequestToContent(tab, {command: "executePageExpand"});
 					}
 				});
@@ -33163,6 +31947,7 @@ function PageExpand(page_expand_arguments){
 				title:_i18n.getMessage("context_menu_pageexpand_abort"),
 				contexts:["all"], 
 				onclick: function(info, tab) {
+					if(!tab) tab = info.tab;
 					extension_message.sendRequestToContent(tab, {command: "abortPageExpand"});
 				}
 			});
@@ -33173,6 +31958,7 @@ function PageExpand(page_expand_arguments){
 				title:_i18n.getMessage("context_menu_pageexpand_debug"),
 				contexts:["all"],
 				onclick: function(info, tab) {
+					if(!tab) tab = info.tab;
 					extension_message.sendRequestToContent(tab, {command: "executeDebug"});
 				}
 			});
@@ -33556,7 +32342,10 @@ function PageExpand(page_expand_arguments){
 
 			// ポップアップアクションを追加
 			command_dictionary["attachPopupAction"] = function(param,sender,sendResponse){
-				chrome.pageAction.show(sender.sender.tab.id);
+				try{
+					chrome.pageAction.show(sender.tab.id);
+				}catch(e){
+				}
 			};
 
 
@@ -33568,17 +32357,12 @@ function PageExpand(page_expand_arguments){
 				// --------------------------------------------------------------------------------
 				// タブの状態
 				// --------------------------------------------------------------------------------
-				chrome.windows.getAll({populate:true}, function(a){
+				chrome.tabs.query({},function(tabs){
 					var i;
-					var j;
-					var t;
-					var tab;
-					for(i in a){
-						t = a[i].tabs;
-						for(j in t){
-							tab = t[j];
-							_tabs[tab.id] = tab;
-						}
+					var num = tabs.length;
+					for(i=0;i<num;i++){
+						var tab = tabs[i];
+						_tabs[tab.id] = tab;
 					}
 				});
 				chrome.tabs.onCreated.addListener( function(tab){
@@ -38758,11 +37542,13 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(_content_window,"Language");
 				var parent = container.getElement();
 				_combo_box_language = new UI_ComboBox(parent);
-				_combo_box_language.attachItem("BROWSER LANGUAGE",-1);
-				_combo_box_language.attachItem("日本語",0);
-				_combo_box_language.attachItem("ENGLISH",1);
+				_combo_box_language.attachItem("BROWSER LANGUAGE","auto");
+				_combo_box_language.attachItem("English","en");
+				_combo_box_language.attachItem("中文（简体中文）","zh");
+				_combo_box_language.attachItem("日本語","ja");
 				_combo_box_language.onchange = function(v){
-					language.type = parseInt(v);
+					language.auto = (v === "auto");
+					if(!(language.auto)) language.code = v;
 					projectModify();
 
 					// PageExpandConfig を再構築
@@ -38771,8 +37557,11 @@ function PageExpand(page_expand_arguments){
 				};
 
 				// 言語タイプ
-				_combo_box_language.setValue(language.type);
-
+				if(language.auto){
+					_combo_box_language.setValue("auto");
+				}else{
+					_combo_box_language.setValue(language.code);
+				}
 			})();
 		}
 
@@ -38791,14 +37580,29 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.4.8");
+				new UI_Text(parent,"PageExpand ver.1.4.9");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
 				var parent = container.getElement();
-				new UI_Text(parent,'(c) Hakuhin 2010-2015');
-				new UI_AnchorText(parent,"http://hakuhin.jp/","http://hakuhin.jp/");
+				var table = document.createElement("table");
+				parent.appendChild(table);
+				var tr = table.insertRow(-1);
+				new UI_Text(tr.insertCell(-1),'by');
+				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","http://hakuhin.jp/");
+				new UI_Text(tr.insertCell(-1),'2010-2015');
 				new UI_AnchorText(parent,"https://github.com/hakuhin/PageExpand","https://github.com/hakuhin/PageExpand");
+
+				// 翻訳者
+				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_translator"));
+				var parent = container.getElement();
+				var table = document.createElement("table");
+				parent.appendChild(table);
+
+				var tr = table.insertRow(-1);
+				new UI_Text(tr.insertCell(-1),'中文（简体中文）');
+				new UI_Text(tr.insertCell(-1),'by');
+				new UI_AnchorText(tr.insertCell(-1),"weiq530","https://github.com/weiq530");
 			})();
 		}
 
@@ -38838,7 +37642,7 @@ function PageExpand(page_expand_arguments){
 
 				if(label){
 					var div = DocumentCreateElement("div");
-					ElementSetStyle(div,"padding:5px 0px 5px 20px; margin:0px 0px 10px; background:#666; color:#fff; border-radius:10px; box-shadow:0px 1px 1px #000;");
+					ElementSetStyle(div,"padding:5px 0px 5px 20px; margin:0px 0px 10px; background:#666; font-size:16px; color:#fff; border-radius:10px; box-shadow:0px 1px 1px #000;");
 					ElementSetTextContent(div,label);
 					_window.appendChild(div);
 				}
@@ -38915,7 +37719,7 @@ function PageExpand(page_expand_arguments){
 
 				if(label){
 					_label = DocumentCreateElement("div");
-					ElementSetStyle(_label,"padding:5px 0px 5px 20px; margin:0px 0px 10px; background:#666; color:#fff; border-radius:10px; box-shadow:0px 1px 1px #000;");
+					ElementSetStyle(_label,"padding:5px 0px 5px 20px; margin:0px 0px 10px; background:#666; font-size:16px; color:#fff; border-radius:10px; box-shadow:0px 1px 1px #000;");
 					ElementSetTextContent(_label,label);
 					_window.appendChild(_label);
 				}
@@ -39406,7 +38210,7 @@ function PageExpand(page_expand_arguments){
 				parent.appendChild(container);
 
 				var _label = DocumentCreateElement("label");
-				ElementSetStyle(_label,"user-select:none; -webkit-user-select:none; -moz-user-select:none; -khtml-user-select:none;");
+				ElementSetStyle(_label,"cursor:pointer; user-select:none; -webkit-user-select:none; -moz-user-select:none; -khtml-user-select:none;");
 				container.appendChild(_label);
 
 				_input = DocumentCreateElement("input");
@@ -39919,7 +38723,7 @@ function PageExpand(page_expand_arguments){
 
 				_input = DocumentCreateElement("input");
 				_input.type = "number";
-				ElementSetStyle(_input,"width:100%; padding:2px; background-color:#fff;");
+				ElementSetStyle(_input,"width:auto; min-width:200px; padding:2px; background-color:#fff;");
 				container.appendChild(_input);
 
 				_input.oninput = function(){
@@ -40153,7 +38957,7 @@ function PageExpand(page_expand_arguments){
 				parent.appendChild(container);
 
 				_combo_box = DocumentCreateElement("select");
-				ElementSetStyle(_combo_box,"width:100%; height:22px; font-size:14px;");
+				ElementSetStyle(_combo_box,"width:auto; min-width:200px; height:22px; font-size:14px;");
 				container.appendChild(_combo_box);
 
 				_combo_box.onchange = function(){
@@ -45597,8 +44401,8 @@ function PageExpand(page_expand_arguments){
 				});
 				break;
 			default:
-				chrome.tabs.getSelected(null, function(tab) {
-					extension_message.sendRequestToContent(tab, {command: command});
+				chrome.tabs.query({active:true,currentWindow:true},function(tabs) {
+					extension_message.sendRequestToContent(tabs[0], {command: command});
 				});
 				break;
 			}
@@ -45608,9 +44412,9 @@ function PageExpand(page_expand_arguments){
 		// アクティブページのURLを取得（内部用）
 		// --------------------------------------------------------------------------------
 		function getActiveURL(func){
-			chrome.tabs.getSelected(null, function(tab) {
+			chrome.tabs.query({active:true,currentWindow:true},function(tabs) {
 				var url = "";
-				if(tab)	url = tab.url;
+				if(tabs[0])	url = tabs[0].url;
 				func(url);
 			});
 		}
@@ -47953,6 +46757,7 @@ function PageExpand(page_expand_arguments){
 					iframe = DocumentCreateElement('iframe');
 					iframe.frameBorder = "0";
 					iframe.scrolling = "no";
+					iframe.allowFullscreen = true;
 
 					// スタイルをセット
 					ElementSetStyle(iframe,project.getStyleSheetExpandSoundSoundcloudInlinePlayerFlash());
@@ -48092,6 +46897,7 @@ function PageExpand(page_expand_arguments){
 					iframe = DocumentCreateElement('iframe');
 					iframe.frameBorder = "0";
 					iframe.scrolling = "no";
+					iframe.allowFullscreen = true;
 
 					// スタイルをセット
 					ElementSetStyle(iframe,project.getStyleSheetExpandSoundSoundcloudInlinePlayerHtml5());
@@ -48308,6 +47114,7 @@ function PageExpand(page_expand_arguments){
 				iframe = DocumentCreateElement('iframe');
 				iframe.frameBorder = "0";
 				iframe.scrolling = "no";
+				iframe.allowFullscreen = true;
 
 				// スタイルをセット
 				ElementSetStyle(iframe,project.getStyleSheetExpandSoundMixcloudInlinePlayer());
@@ -48736,6 +47543,7 @@ function PageExpand(page_expand_arguments){
 			iframe = DocumentCreateElement('iframe');
 			iframe.frameBorder = "0";
 			iframe.scrolling = "no";
+			iframe.allowFullscreen = true;
 
 			// スタイルをセット
 			ElementSetStyle(iframe,project.getStyleSheetExpandVideoYoutubeInlineVideo());
@@ -48857,7 +47665,7 @@ function PageExpand(page_expand_arguments){
 			num = allow_list_regexp.length;
 			for(i=0;i<num;i++){
 				if(url.match(new RegExp(allow_list_regexp[i],"i"))){
-					if(RegExp.rightContext.match(new RegExp("^([-a-zA-Z0-9]+)","i"))){
+					if(RegExp.rightContext.match(new RegExp("^([-_a-zA-Z0-9]+)","i"))){
 						expand_video(getIframeURL(url,RegExp.$1));
 						return;
 					}
@@ -49334,6 +48142,7 @@ function PageExpand(page_expand_arguments){
 				iframe = DocumentCreateElement('iframe');
 				iframe.frameBorder = "0";
 				iframe.scrolling = "no";
+
 				// 読み込み開始
 				iframe.src = thumbnail_video_url;
 
@@ -50261,6 +49070,7 @@ function PageExpand(page_expand_arguments){
 				iframe = DocumentCreateElement('iframe');
 				iframe.frameBorder = "0";
 				iframe.scrolling = "no";
+				iframe.allowFullscreen = true;
 
 				// スタイルをセット
 				if(live){
@@ -50460,6 +49270,7 @@ function PageExpand(page_expand_arguments){
 			iframe = DocumentCreateElement('iframe');
 			iframe.frameBorder = "0";
 			iframe.scrolling = "no";
+			iframe.allowFullscreen = true;
 
 			// スタイルをセット
 			ElementSetStyle(iframe,project.getStyleSheetExpandVideoDailymotionInlineVideo());
@@ -50647,6 +49458,7 @@ function PageExpand(page_expand_arguments){
 			iframe = DocumentCreateElement('iframe');
 			iframe.frameBorder = "0";
 			iframe.scrolling = "no";
+			iframe.allowFullscreen = true;
 
 			// スタイルをセット
 			ElementSetStyle(iframe,project.getStyleSheetExpandVideoVimeoInlineVideo());
@@ -51072,6 +49884,7 @@ function PageExpand(page_expand_arguments){
 				iframe = DocumentCreateElement('iframe');
 				iframe.frameBorder = "0";
 				iframe.scrolling = "no";
+				iframe.allowFullscreen = true;
 
 				// スタイルをセット
 				ElementSetStyle(iframe,project.getStyleSheetExpandVideoLiveleakInlineVideo());
@@ -55615,13 +54428,17 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------------------
-		switch(language){
-		case 'ja':
-			_dictionary = InternationalMessage.locales.ja;
-			break;
-		default:
-			_dictionary = InternationalMessage.locales.en;
-			break;
+		if(!(language)) language = "";
+		language = language.toLowerCase();
+		if(!(_dictionary)){
+			_dictionary = InternationalMessage.locales[language];
+		}
+		if(!(_dictionary)){
+			var m = language.match(new RegExp("[^-]+"),"");
+			if(m) _dictionary = InternationalMessage.locales[m[0]];
+		}
+		if(!(_dictionary)){
+			_dictionary = InternationalMessage.locales["en"];
 		}
 	}
 
@@ -56772,6 +55589,9 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_credit_info_copyright: {
 				message: "製作"
+			},
+			menu_credit_info_translator: {
+				message: "翻訳者"
 			},
 			menu_setting_define_list: {
 				message: "定義一覧"
@@ -58158,7 +56978,7 @@ function PageExpand(page_expand_arguments){
 				message: "Threshold Vertical ( 0 [top] ～ 100 [bottom] )"
 			},
 			menu_setting_language: {
-				message: "LANGUAGE (Language Setting)"
+				message: "Language Setting"
 			},
 			menu_credit: {
 				message: "Credit"
@@ -58168,6 +56988,9 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_credit_info_copyright: {
 				message: "Copyright"
+			},
+			menu_credit_info_translator: {
+				message: "Translator"
 			},
 			menu_setting_define_list: {
 				message: "List of Define"
@@ -58421,6 +57244,1403 @@ function PageExpand(page_expand_arguments){
 			context_menu_pageexpand_debug: {
 				message: "PageExpand Debug"
 			}
+		},
+		zh: {
+			extension_name: {
+				message: "PageExpand"
+			},
+			extension_description: {
+				message: "下载所有图片、图片缩放、扩展缩略图以及音频和视频、展开短网址、从文本生成链接、覆盖引用站点、扩展BBS，等等..."
+			},
+			page_expand_config: {
+				message: "PageExpand 设置"
+			},
+			menu_setting_standard: {
+				message: "标准设置"
+			},
+			menu_setting_standard_filter_url: {
+				message: "通过 URL 限制操作"
+			},
+			menu_setting_standard_filter_url_combo_box_item_deny: {
+				message: "只在指定的地址不要操作。(否则它会在所有地址工作)"
+			},
+			menu_setting_standard_filter_url_combo_box_item_allow: {
+				message: "只在指定的地址操作。(否则，所有地址都不工作。)"
+			},
+			menu_setting_standard_filter_url_hint: {
+				message: "URL 描述。可以使用星号。可以指定多行。"
+			},
+			menu_setting_standard_check_box_container: {
+				message: "标准设置"
+			},
+			menu_setting_standard_enable_icon_address_bar: {
+				message: "在地址栏中显示图标。"
+			},
+			menu_setting_standard_enable_context_menu: {
+				message: "显示上下文菜单。"
+			},
+			menu_setting_standard_enable_startup: {
+				message: "加载完成时开始操作。"
+			},
+			menu_setting_standard_enable_debug_mode: {
+				message: "在调试模式下运行。"
+			},
+			menu_setting_standard_enable_output_log: {
+				message: "输出到控制台日志。(调试)"
+			},
+			menu_setting_standard_execute_queue: {
+				message: "执行队列设置 (通常情况下，无需更改)"
+			},
+			menu_setting_standard_execute_queue_time_sleep: {
+				message: "睡眠时间 (毫秒)"
+			},
+			menu_setting_standard_execute_queue_time_occupancy: {
+				message: "最大的 CPU 占用时间 (毫秒)"
+			},
+			menu_setting_standard_execute_queue_hint: {
+				message: "当最大的 CPU 占用时间较大，响应操作较差，该脚本将运行得更快。如果睡眠时间很短，CPU 利用率较高，该脚本将运行得更快。"
+			},
+			menu_setting_standard_touch: {
+				message: "触摸操作设置"
+			},
+			menu_setting_standard_enable_input_touch: {
+				message: "启用触摸操作。"
+			},
+			menu_setting_standard_enable_double_touch_assist: {
+				message: "显示双触摸协助。"
+			},
+			menu_setting_standard_command: {
+				message: "执行菜单 (移动)"
+			},
+			menu_setting_standard_command_execute_button: {
+				message: "执行"
+			},
+			menu_setting_standard_command_execute_dialog: {
+				message: "执行菜单"
+			},
+			menu_setting_standard_command_execute_dialog_tab_list: {
+				message: "选择标签"
+			},
+			menu_setting_standard_command_execute_dialog_command_list: {
+				message: "选择命令"
+			},
+			menu_setting_standard_command_execute_dialog_confirm: {
+				message: "确定要执行吗?"
+			},
+			menu_setting_standard_export_import: {
+				message: "设置导出/导入"
+			},
+			menu_setting_standard_export_button: {
+				message: "导出"
+			},
+			menu_setting_standard_import_button: {
+				message: "导入"
+			},
+			menu_setting_standard_export_dialog: {
+				message: "导出设置"
+			},
+			menu_setting_standard_export_dialog_export: {
+				message: "导出"
+			},
+			menu_setting_standard_export_dialog_export_hint: {
+				message: "请复制文本区域的文本。"
+			},
+			menu_setting_standard_import_dialog: {
+				message: "导入设置"
+			},
+			menu_setting_standard_import_dialog_explanation: {
+				message: "关于导入的信息"
+			},
+			menu_setting_standard_import_dialog_explanation_0: {
+				message: "当前的所有设置都将丢失。"
+			},
+			menu_setting_standard_import_dialog_explanation_1: {
+				message: "建议你使用导出功能进行备份。"
+			},
+			menu_setting_standard_import_dialog_explanation_2: {
+				message: "请注意，它不包含恶意代码。"
+			},
+			menu_setting_standard_import_dialog_import: {
+				message: "导入"
+			},
+			menu_setting_standard_import_dialog_import_hint: {
+				message: "请粘贴从导出处输出的文本。"
+			},
+			menu_setting_standard_import_dialog_confirm: {
+				message: "确定要导入？"
+			},
+			menu_setting_standard_import_alert: {
+				message: "导入的结果"
+			},
+			menu_setting_standard_import_alert_success: {
+				message: "导入已经完成。"
+			},
+			menu_setting_standard_import_alert_failure: {
+				message: "导入失败！"
+			},
+			menu_setting_standard_storage_sync: {
+				message: "同步存储"
+			},
+			menu_setting_standard_storage_sync_load_button: {
+				message: "加载"
+			},
+			menu_setting_standard_storage_sync_save_button: {
+				message: "保存"
+			},
+			menu_setting_standard_storage_sync_delete_button: {
+				message: "删除"
+			},
+			menu_setting_standard_storage_sync_load_dialog: {
+				message: "从同步存储加载"
+			},
+			menu_setting_standard_storage_sync_load_dialog_explanation: {
+				message: "关于从同步存储加载的信息"
+			},
+			menu_setting_standard_storage_sync_load_dialog_explanation_0: {
+				message: "从同步存储加载数据，应用到 PageExpand 设置。"
+			},
+			menu_setting_standard_storage_sync_load_dialog_explanation_1: {
+				message: "当前的所有设置都将丢失。"
+			},
+			menu_setting_standard_storage_sync_load_dialog_explanation_2: {
+				message: "建议你使用导出功能进行备份"
+			},
+			menu_setting_standard_storage_sync_load_dialog_confirm: {
+				message: "确定从同步存储加载？"
+			},
+			menu_setting_standard_storage_sync_load_alert: {
+				message: "从同步存储加载的结果"
+			},
+			menu_setting_standard_storage_sync_load_alert_success: {
+				message: "从同步存储加载成功。"
+			},
+			menu_setting_standard_storage_sync_load_alert_failure: {
+				message: "从同步存储加载失败！"
+			},
+			menu_setting_standard_storage_sync_save_dialog: {
+				message: "保存到同步存储"
+			},
+			menu_setting_standard_storage_sync_save_dialog_explanation: {
+				message: "关于保存到同步存储的信息"
+			},
+			menu_setting_standard_storage_sync_save_dialog_explanation_0: {
+				message: "将当前设置保存到同步存储。"
+			},
+			menu_setting_standard_storage_sync_save_dialog_explanation_1: {
+				message: "需要启用浏览器的同步功能。"
+			},
+			menu_setting_standard_storage_sync_save_dialog_explanation_2: {
+				message: "有大小限制。如果数据太大，会失败。"
+			},
+			menu_setting_standard_storage_sync_save_dialog_confirm: {
+				message: "确定要保存到同步存储？"
+			},
+			menu_setting_standard_storage_sync_save_alert: {
+				message: "保存到同步存储的结果"
+			},
+			menu_setting_standard_storage_sync_save_alert_success: {
+				message: "保存到同步存储成功。"
+			},
+			menu_setting_standard_storage_sync_save_alert_failure: {
+				message: "保存到同步存储失败！"
+			},
+			menu_setting_standard_storage_sync_delete_dialog: {
+				message: "从同步存储删除"
+			},
+			menu_setting_standard_storage_sync_delete_dialog_explanation: {
+				message: "关于从同步存储区删除的信息"
+			},
+			menu_setting_standard_storage_sync_delete_dialog_explanation_0: {
+				message: "删除同步存储中存储的设置数据。"
+			},
+			menu_setting_standard_storage_sync_delete_dialog_confirm: {
+				message: "确定要从同步存储删除吗？"
+			},
+			menu_setting_standard_storage_sync_delete_alert: {
+				message: "关于从同步存储删除的结果"
+			},
+			menu_setting_standard_storage_sync_delete_alert_success: {
+				message: "从同步存储删除成功。"
+			},
+			menu_setting_standard_storage_sync_delete_alert_failure: {
+				message: "从同步存储删除失败！"
+			},
+			menu_setting_standard_reset: {
+				message: "设置初始化"
+			},
+			menu_setting_standard_reset_button: {
+				message: "删除所有的设置，返回到初始状态。"
+			},
+			menu_setting_standard_reset_dialog: {
+				message: "设置初始化"
+			},
+			menu_setting_standard_reset_dialog_explanation: {
+				message: "关于初始化的信息"
+			},
+			menu_setting_standard_reset_dialog_explanation_0: {
+				message: "将所有设置都返回到它们的默认状态。"
+			},
+			menu_setting_standard_reset_dialog_explanation_1: {
+				message: "当前的所有设置都将丢失。"
+			},
+			menu_setting_standard_reset_dialog_confirm: {
+				message: "确定要初始化吗？"
+			},
+			menu_setting_standard_reset_alert: {
+				message: "初始化的结果"
+			},
+			menu_setting_standard_reset_alert_success: {
+				message: "配置初始化已完成。"
+			},
+			menu_setting_standard_reset_alert_failure: {
+				message: "配置初始化失败！"
+			},
+			menu_setting_download: {
+				message: "下载设置"
+			},
+			menu_setting_download_load: {
+				message: "加载设置 (XHR)"
+			},
+			menu_setting_download_load_thread_max: {
+				message: "同时加载的最大数目"
+			},
+			menu_setting_download_load_timeout: {
+				message: "超时（毫秒）"
+			},
+			menu_setting_download_load_timeout_hint: {
+				message: "如果指定为 0，超时时间没有限制。"
+			},
+			menu_setting_download_download: {
+				message: "下载设置"
+			},
+			menu_setting_download_download_thread_max: {
+				message: "同时下载的最大数目"
+			},
+			menu_setting_download_download_conflict_type: {
+				message: "文件名冲突"
+			},
+			menu_setting_download_download_conflict_type_combo_box_item_rename: {
+				message: "重命名"
+			},
+			menu_setting_download_download_conflict_type_combo_box_item_overwrite: {
+				message: "覆盖"
+			},
+			menu_setting_expand_bbs: {
+				message: "BBS 设置"
+			},
+			menu_setting_expand_bbs_list: {
+				message: "BBS 设置列表"
+			},
+			menu_setting_expand_bbs_list_hint: {
+				message: "当你选择列表中的项目时，可以编辑较低的控制。条件脚本按照从上到下的顺序执行。可以选择多个进行编辑。灰色是预设设置。不能删除预设的设置。"
+			},
+			menu_setting_expand_bbs_button_add: {
+				message: "添加"
+			},
+			menu_setting_expand_bbs_button_delete: {
+				message: "删除"
+			},
+			menu_setting_expand_bbs_button_prio_up: {
+				message: "优先级+"
+			},
+			menu_setting_expand_bbs_button_prio_down: {
+				message: "优先级-"
+			},
+			menu_setting_expand_bbs_button_export: {
+				message: "导出"
+			},
+			menu_setting_expand_bbs_button_import: {
+				message: "导入"
+			},
+			menu_setting_expand_bbs_add_dialog: {
+				message: "创建新的 BBS 设置"
+			},
+			menu_setting_expand_bbs_add_dialog_name: {
+				message: "名称"
+			},
+			menu_setting_expand_bbs_add_dialog_copy_define: {
+				message: "从现有的设置复制。"
+			},
+			menu_setting_expand_bbs_add_dialog_define_list_box_item_new: {
+				message: "创建新的"
+			},
+			menu_setting_expand_bbs_export_dialog: {
+				message: "导出 BBS 设置"
+			},
+			menu_setting_expand_bbs_export_dialog_export: {
+				message: "导出"
+			},
+			menu_setting_expand_bbs_export_dialog_export_hint: {
+				message: "请复制文本区域的文本。"
+			},
+			menu_setting_expand_bbs_import_dialog: {
+				message: "导入 BBS 设置"
+			},
+			menu_setting_expand_bbs_import_dialog_explanation: {
+				message: "关于导入的信息"
+			},
+			menu_setting_expand_bbs_import_dialog_explanation_0: {
+				message: "预设的设置将被覆盖。将添加新的用户设置。"
+			},
+			menu_setting_expand_bbs_import_dialog_explanation_1: {
+				message: "建议你使用导出功能进行备份。"
+			},
+			menu_setting_expand_bbs_import_dialog_explanation_2: {
+				message: "请注意，它不包含恶意代码。"
+			},
+			menu_setting_expand_bbs_import_dialog_import: {
+				message: "导入"
+			},
+			menu_setting_expand_bbs_import_dialog_import_hint: {
+				message: "请粘贴从导出处输出的文本。"
+			},
+			menu_setting_expand_bbs_import_dialog_confirm: {
+				message: "确定要导入？"
+			},
+			menu_setting_expand_bbs_import_alert: {
+				message: "导入的结果"
+			},
+			menu_setting_expand_bbs_import_alert_success: {
+				message: "导入已经完成。"
+			},
+			menu_setting_expand_bbs_import_alert_failure: {
+				message: "导入失败！"
+			},
+			menu_setting_expand_bbs_name: {
+				message: "名称"
+			},
+			menu_setting_expand_bbs_check_box_container: {
+				message: "启用 / 禁用"
+			},
+			menu_setting_expand_bbs_enable_setting: {
+				message: "使用此设置。"
+			},
+			menu_setting_expand_bbs_filter_url: {
+				message: "URL 允许进行操作"
+			},
+			menu_setting_expand_bbs_popup_check_box_container: {
+				message: "弹窗设置"
+			},
+			menu_setting_expand_bbs_popup_enable_animation: {
+				message: "启用弹窗动画"
+			},
+			menu_setting_expand_bbs_popup_origin_type: {
+				message: "弹窗的起始位置"
+			},
+			menu_setting_expand_bbs_popup_origin_type_combo_box_item_adsorb_top_bottom: {
+				message: "吸附顶底"
+			},
+			menu_setting_expand_bbs_popup_origin_type_combo_box_item_adsorb_left_right: {
+				message: "吸附左右"
+			},
+			menu_setting_expand_bbs_popup_position_type: {
+				message: "弹窗的布置位置"
+			},
+			menu_setting_expand_bbs_popup_position_type_combo_box_item_absolute: {
+				message: "绝对"
+			},
+			menu_setting_expand_bbs_popup_position_type_combo_box_item_fixed: {
+				message: "固定"
+			},
+			menu_setting_expand_bbs_popup_percent: {
+				message: "弹窗的大小"
+			},
+			menu_setting_expand_bbs_popup_percent_h: {
+				message: "水平 % (0-100)"
+			},
+			menu_setting_expand_bbs_popup_percent_v: {
+				message: "垂直 % (0-100)"
+			},
+			menu_setting_expand_bbs_popup_time: {
+				message: "弹窗的时间"
+			},
+			menu_setting_expand_bbs_popup_time_wait_open: {
+				message: "打开前的等待时间 (毫秒)"
+			},
+			menu_setting_expand_bbs_popup_time_wait_close: {
+				message: "关闭后的等待时间 (毫秒)"
+			},
+			menu_setting_expand_bbs_popup_style_sheet: {
+				message: "弹窗的样式表"
+			},
+			menu_setting_expand_bbs_script_initialize: {
+				message: "初始化脚本"
+			},
+			menu_setting_expand_bbs_script_callback: {
+				message: "回调脚本"
+			},
+			menu_setting_urlmap: {
+				message: "URL 映射设置"
+			},
+			menu_setting_urlmap_list: {
+				message: "URL 映射设置列表"
+			},
+			menu_setting_urlmap_list_hint: {
+				message: "当你选择列表中的项目时，可以编辑较低的控制。按照从上到下的顺序进行比较。可以选择多个，可以进行多选编辑。灰色是预设设置。不能删除预设的设置。"
+			},
+			menu_setting_urlmap_button_add: {
+				message: "添加"
+			},
+			menu_setting_urlmap_button_delete: {
+				message: "删除"
+			},
+			menu_setting_urlmap_button_prio_up: {
+				message: "优先级+"
+			},
+			menu_setting_urlmap_button_prio_down: {
+				message: "优先级-"
+			},
+			menu_setting_urlmap_add_dialog: {
+				message: "创建新的 URL 映射"
+			},
+			menu_setting_urlmap_add_dialog_name: {
+				message: "名称"
+			},
+			menu_setting_urlmap_add_dialog_copy_define: {
+				message: "从现有的设置复制。"
+			},
+			menu_setting_urlmap_add_dialog_define_list_box_item_new: {
+				message: "创建新的"
+			},
+			menu_setting_urlmap_name: {
+				message: "名称"
+			},
+			menu_setting_urlmap_check_box_container: {
+				message: "启用 / 禁用"
+			},
+			menu_setting_urlmap_enable_setting: {
+				message: "使用此设置。"
+			},
+			menu_setting_urlmap_filter_url: {
+				message: "URL 允许进行操作"
+			},
+			menu_setting_urlmap_unsecure_check_box_container: {
+				message: "安全"
+			},
+			menu_setting_urlmap_enable_unsecure: {
+				message: "扩展 \" 资源到 http://\" 安全页。"
+			},
+			menu_setting_urlmap_enable_unsecure_hint: {
+				message: "当禁用时，扩展 \" 资源到 https://\"。当启用时，进一步扩展 \" 资源到 http://\" 。但是，总是显示加密警告。"
+			},
+			menu_setting_urlmap_enable_mixed_content: {
+				message: "尝试扩展 \"默认情况下阻止的混合内容\" 到安全页。"
+			},
+			menu_setting_urlmap_enable_mixed_content_hint: {
+				message: "浏览器将拦截 \"一些元素\" 的部署。当禁用时， \"被拦截的元素\" 将不会扩展。 当启用时，将尝试扩展所有元素。(除非在浏览器中更改设置否则会失败。)"
+			},
+			menu_setting_urlmap_define_button_edit: {
+				message: "编辑"
+			},
+			menu_setting_urlmap_define_button_add: {
+				message: "添加"
+			},
+			menu_setting_urlmap_define_button_remove: {
+				message: "移除"
+			},
+			menu_setting_urlmap_define_button_prio_up: {
+				message: "向上"
+			},
+			menu_setting_urlmap_define_button_prio_down: {
+				message: "向下"
+			},
+			menu_setting_urlmap_define_combo_box_item_no_use: {
+				message: "不使用定义"
+			},
+			menu_setting_define_multi_select_add_dialog: {
+				message: "添加定义"
+			},
+			menu_setting_define_multi_select_add_dialog_list: {
+				message: "选择要添加的定义。"
+			},
+			menu_setting_access_block: {
+				message: "拦截访问定义"
+			},
+			menu_setting_access_block_filter_url: {
+				message: "URL 拦截访问"
+			},
+			menu_setting_replacement_to_element: {
+				message: "替换元素定义"
+			},
+			menu_setting_replacement_to_element_script: {
+				message: "回调脚本"
+			},
+			menu_setting_replacement_to_text: {
+				message: "替换文本定义"
+			},
+			menu_setting_replacement_to_text_script: {
+				message: "回调脚本"
+			},
+			menu_setting_replacement_to_anchor: {
+				message: "替换锚点定义"
+			},
+			menu_setting_replacement_to_anchor_script: {
+				message: "回调脚本"
+			},
+			menu_setting_replacement_to_link: {
+				message: "替换链接定义"
+			},
+			menu_setting_replacement_to_link_filter_list: {
+				message: "筛选器列表"
+			},
+			menu_setting_replacement_to_link_filter_name: {
+				message: "筛选器名称"
+			},
+			menu_setting_replacement_to_link_filter: {
+				message: "筛选器设置"
+			},
+			menu_setting_replacement_to_link_filter_filter_url: {
+				message: "链接 URL，允许进行操作"
+			},
+			menu_setting_replacement_to_link_check_box_container: {
+				message: "设置链接"
+			},
+			menu_setting_replacement_to_link_enable_reflect_to_anchor: {
+				message: "反映到 HTML 锚点元素 href"
+			},
+			menu_setting_replacement_to_link_enable_cache: {
+				message: "缓存回调脚本的结果"
+			},
+			menu_setting_replacement_to_link_filter_script: {
+				message: "回调脚本"
+			},
+			menu_setting_replacement_to_referer: {
+				message: "替换 Referer 定义"
+			},
+			menu_setting_replacement_to_referer_filter_list: {
+				message: "筛选器列表"
+			},
+			menu_setting_replacement_to_referer_filter_name: {
+				message: "筛选器名称"
+			},
+			menu_setting_replacement_to_referer_filter: {
+				message: "筛选器设置"
+			},
+			menu_setting_replacement_to_referer_filter_filter_url: {
+				message: "链接 URL，允许进行操作"
+			},
+			menu_setting_replacement_to_referer_filter_send_type: {
+				message: "基本 Referer"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item: {
+				message: "基本 Referer 值"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item_default: {
+				message: "默认"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item_current_url: {
+				message: "当前 url"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item_link_url: {
+				message: "链接 url"
+			},
+			menu_setting_replacement_to_referer_filter_send_type_combo_box_item_custom: {
+				message: "自定义"
+			},
+			menu_setting_replacement_to_referer_filter_send_custom: {
+				message: "自定义字符串"
+			},
+			menu_setting_replacement_to_referer_filter_send_regexp: {
+				message: "通过正则表达式替换"
+			},
+			menu_setting_replacement_to_referer_filter_send_regexp_match: {
+				message: "匹配条件"
+			},
+			menu_setting_replacement_to_referer_filter_send_regexp_replacement: {
+				message: "替换字符串"
+			},
+			menu_setting_replacement_to_referer_filter_send_regexp_replacement_hint: {
+				message: "$0...整体匹配。 $1-$9...部分匹配。 $$…美元符号转义序列。"
+			},
+			menu_setting_replacement_to_useragent: {
+				message: "替换用户代理定义"
+			},
+			menu_setting_replacement_to_useragent_filter_list: {
+				message: "筛选器列表"
+			},
+			menu_setting_replacement_to_useragent_filter_name: {
+				message: "筛选器名称"
+			},
+			menu_setting_replacement_to_useragent_filter: {
+				message: "筛选器设置"
+			},
+			menu_setting_replacement_to_useragent_filter_filter_url: {
+				message: "链接 URL，允许进行操作"
+			},
+			menu_setting_replacement_to_useragent_filter_send: {
+				message: "基本用户代理"
+			},
+			menu_setting_replacement_to_useragent_filter_send_custom: {
+				message: "自定义字符串"
+			},
+			menu_setting_make_link_to_text: {
+				message: "文本转链接定义"
+			},
+			menu_setting_make_link_to_text_script: {
+				message: "回调脚本"
+			},
+			menu_setting_expand_short_url: {
+				message: "扩展短 Url 定义"
+			},
+			menu_setting_expand_short_url_filter_url: {
+				message: "URL 允许进行操作"
+			},
+			menu_setting_expand_text: {
+				message: "扩展文本定义"
+			},
+			menu_setting_expand_text_inline: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_text_inline_check_box_container: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_text_inline_disable_same_text: {
+				message: "如果 URL 相同，不扩展。"
+			},
+			menu_setting_expand_text_inline_script_allow: {
+				message: "从链接显示内联的条件"
+			},
+			menu_setting_expand_text_inline_script_insert: {
+				message: "文本插入"
+			},
+			menu_setting_expand_image: {
+				message: "扩展图片定义"
+			},
+			menu_setting_expand_image_thumbnail: {
+				message: "显示缩略图设置"
+			},
+			menu_setting_expand_image_thumbnail_enable_check_box_container: {
+				message: "启用 / 禁用"
+			},
+			menu_setting_expand_image_thumbnail_enable_thumbnail: {
+				message: "显示缩略图。"
+			},
+			menu_setting_expand_image_thumbnail_check_box_container: {
+				message: "显示缩略图设置"
+			},
+			menu_setting_expand_image_thumbnail_enable_popup_mouseover: {
+				message: "如果你的鼠标悬停在缩略图上，弹出窗口显示。"
+			},
+			menu_setting_expand_image_thumbnail_disable_same_thumbnail_image: {
+				message: "如果 URL 相同，不扩展。"
+			},
+			menu_setting_expand_image_thumbnail_script_allow: {
+				message: "从链接显示缩略图的条件"
+			},
+			menu_setting_expand_image_thumbnail_script_insert: {
+				message: "缩略图插入"
+			},
+			menu_setting_expand_image_popup: {
+				message: "显示弹窗设置"
+			},
+			menu_setting_expand_image_popup_enable_check_box_container: {
+				message: "启用 / 禁用"
+			},
+			menu_setting_expand_image_popup_enable_popup_mouseover: {
+				message: "如果你的鼠标悬停在锚点上，弹出窗口显示。"
+			},
+			menu_setting_expand_image_popup_check_box_container: {
+				message: "动画"
+			},
+			menu_setting_expand_image_popup_enable_animation_scale: {
+				message: "启用规模淡入淡出动画"
+			},
+			menu_setting_expand_image_popup_enable_animation_alpha: {
+				message: "启用透明淡入淡出动画"
+			},
+			menu_setting_expand_image_popup_origin_type: {
+				message: "弹窗的起始位置"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_center: {
+				message: "中央"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_upper_left: {
+				message: "左上角"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_upper_right: {
+				message: "右上角"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_client_center: {
+				message: "客户端中央"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_adsorb_element: {
+				message: "吸附元素"
+			},
+			menu_setting_expand_image_popup_origin_type_combo_box_item_adsorb_mouse: {
+				message: "吸附鼠标"
+			},
+			menu_setting_expand_image_popup_time: {
+				message: "弹窗的时间"
+			},
+			menu_setting_expand_image_popup_time_wait_open: {
+				message: "打开前的等待时间 (毫秒)"
+			},
+			menu_setting_expand_image_popup_time_wait_close: {
+				message: "关闭后的等待时间 (毫秒)"
+			},
+			menu_setting_expand_image_popup_position_type: {
+				message: "弹出图片的排列位置"
+			},
+			menu_setting_expand_image_popup_position_type_combo_box_item_absolute: {
+				message: "绝对"
+			},
+			menu_setting_expand_image_popup_position_type_combo_box_item_fixed: {
+				message: "固定"
+			},
+			menu_setting_expand_image_popup_size: {
+				message: "弹窗的大小"
+			},
+			menu_setting_expand_image_popup_size_scale: {
+				message: "比例 (%)"
+			},
+			menu_setting_expand_image_popup_script_allow: {
+				message: "从链接显示弹窗的条件"
+			},
+			menu_setting_expand_image_reduced_image: {
+				message: "小图片设置"
+			},
+			menu_setting_expand_image_reduced_image_check_box_container: {
+				message: "启用 / 禁用"
+			},
+			menu_setting_expand_image_popup_enable_popup: {
+				message: "如果你的鼠标悬停在小图片上，弹出窗口显示。"
+			},
+			menu_setting_expand_image_reduced_image_allow_slcale_less_then: {
+				message: "显示弹出窗口的条件"
+			},
+			menu_setting_expand_image_reduced_image_allow_slcale_less_then_text: {
+				message: "如果放大倍数小于"
+			},
+			menu_setting_expand_image_load: {
+				message: "加载图片设置"
+			},
+			menu_setting_expand_image_load_check_box_container: {
+				message: "加载图片设置"
+			},
+			menu_setting_expand_image_load_enable_notify: {
+				message: "显示进度。"
+			},
+			menu_setting_expand_image_load_start_type: {
+				message: "如何加载图片"
+			},
+			menu_setting_expand_image_load_start_type_preload: {
+				message: "预加载"
+			},
+			menu_setting_expand_image_load_start_type_scroll: {
+				message: "滚动结合"
+			},
+			menu_setting_expand_image_load_src_type: {
+				message: "图片源格式"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_url: {
+				message: "URL (所有)"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_mixed_content: {
+				message: "数据 URI 方案 (只有混合内容)"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_data_uri_scheme: {
+				message: "数据 URI 方案 (所有)"
+			},
+			menu_setting_expand_image_load_unload_check_box_container: {
+				message: "卸载图片设置"
+			},
+			menu_setting_expand_image_load_enable_unload: {
+				message: "启用卸载图片"
+			},
+			menu_setting_expand_image_load_unload: {
+				message: "卸载图片的条件"
+			},
+			menu_setting_expand_image_load_allow_unload_more_then_text: {
+				message: "如果加载超过指定的 MBytes，释放旧的图片。"
+			},
+			menu_setting_expand_sound: {
+				message: "扩展声音定义"
+			},
+			menu_setting_expand_sound_inline: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_sound_inline_check_box_container: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_sound_inline_disable_same_text: {
+				message: "如果 URL 相同，不扩展。"
+			},
+			menu_setting_expand_sound_inline_sound_max: {
+				message: "同时显示的最大数目"
+			},
+			menu_setting_expand_sound_inline_script_allow: {
+				message: "从链接显示内联的条件"
+			},
+			menu_setting_expand_sound_inline_script_insert: {
+				message: "音频插入"
+			},
+			menu_setting_expand_sound_inline_element: {
+				message: "HTML 音频元素设置"
+			},
+			menu_setting_expand_sound_inline_element_script_allow: {
+				message: "HTML 音频元素显示的条件"
+			},
+			menu_setting_expand_sound_inline_soundcloud: {
+				message: "soundcloud.com 设置"
+			},
+			menu_setting_expand_sound_inline_soundcloud_check_box_container: {
+				message: "soundcloud.com 设置"
+			},
+			menu_setting_expand_sound_inline_soundcloud_visible_player_flash: {
+				message: "启用播放器 (Flash)"
+			},
+			menu_setting_expand_sound_inline_soundcloud_visible_player_html5: {
+				message: "启用播放器 (HTML5)"
+			},
+			menu_setting_expand_sound_inline_mixcloud: {
+				message: "www.mixcloud.com 设置"
+			},
+			menu_setting_expand_sound_inline_mixcloud_check_box_container: {
+				message: "www.mixcloud.com 设置"
+			},
+			menu_setting_expand_sound_inline_mixcloud_visible_player: {
+				message: "启用播放器"
+			},
+			menu_setting_expand_video: {
+				message: "扩展视频定义"
+			},
+			menu_setting_expand_video_inline: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_video_inline_check_box_container: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_video_inline_disable_same_video: {
+				message: "如果 URL 相同，不扩展。"
+			},
+			menu_setting_expand_video_inline_video_max: {
+				message: "同时显示的最大数目"
+			},
+			menu_setting_expand_video_inline_script_allow: {
+				message: "从链接显示内联的条件"
+			},
+			menu_setting_expand_video_inline_script_insert: {
+				message: "元素插入"
+			},
+			menu_setting_expand_video_inline_element: {
+				message: "HTML 视频元素设置"
+			},
+			menu_setting_expand_video_inline_element_script_allow: {
+				message: " HTML 视频元素显示的条件"
+			},
+			menu_setting_expand_video_inline_youtube: {
+				message: "www.youtube.com 设置"
+			},
+			menu_setting_expand_video_inline_youtube_check_box_container: {
+				message: "www.youtube.com 设置"
+			},
+			menu_setting_expand_video_inline_youtube_visible_video: {
+				message: "启用视频"
+			},
+			menu_setting_expand_video_inline_nicovideo: {
+				message: "www.nicovideo.jp 设置"
+			},
+			menu_setting_expand_video_inline_nicovideo_check_box_container: {
+				message: "www.nicovideo.jp 设置"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_video: {
+				message: "启用视频"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_video: {
+				message: "启用视频缩略图"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_mylist: {
+				message: "启用 我的列表 缩略图"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_user: {
+				message: "启用 用户 缩略图"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_community: {
+				message: "启用 社区 缩略图"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_live: {
+				message: "启用 现场直播 缩略图"
+			},
+			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_seiga: {
+				message: "启用 世佳 缩略图"
+			},
+			menu_setting_expand_video_inline_ustream: {
+				message: "www.ustream.tv 设置"
+			},
+			menu_setting_expand_video_inline_ustream_check_box_container: {
+				message: "www.ustream.tv 设置"
+			},
+			menu_setting_expand_video_inline_ustream_visible_video_live: {
+				message: "启用传送视频"
+			},
+			menu_setting_expand_video_inline_ustream_visible_video_record: {
+				message: "启用录制的视频"
+			},
+			menu_setting_expand_video_inline_dailymotion: {
+				message: "www.dailymotion.com 设置"
+			},
+			menu_setting_expand_video_inline_dailymotion_check_box_container: {
+				message: "www.dailymotion.com 设置"
+			},
+			menu_setting_expand_video_inline_dailymotion_visible_video: {
+				message: "启用视频"
+			},
+			menu_setting_expand_video_inline_video: {
+				message: "vimeo.com 设置"
+			},
+			menu_setting_expand_video_inline_video_check_box_container: {
+				message: "vimeo.com 设置"
+			},
+			menu_setting_expand_video_inline_video_visible_video: {
+				message: "启用视频"
+			},
+			menu_setting_expand_video_inline_fc2video: {
+				message: "video.fc2.com 设置"
+			},
+			menu_setting_expand_video_inline_fc2video_check_box_container: {
+				message: "video.fc2.com 设置"
+			},
+			menu_setting_expand_video_inline_fc2video_visible_video: {
+				message: "启用视频"
+			},
+			menu_setting_expand_video_inline_liveleak: {
+				message: "www.liveleak.com 设置"
+			},
+			menu_setting_expand_video_inline_liveleak_check_box_container: {
+				message: "www.liveleak.com 设置"
+			},
+			menu_setting_expand_video_inline_liveleak_visible_video: {
+				message: "启用视频"
+			},
+			menu_setting_expand_iframe: {
+				message: "扩展 Iframe 定义"
+			},
+			menu_setting_expand_iframe_inline: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_iframe_inline_check_box_container: {
+				message: "显示内联设置"
+			},
+			menu_setting_expand_iframe_inline_disable_same_iframe: {
+				message: "如果 URL 相同，不扩展。"
+			},
+			menu_setting_expand_iframe_inline_script_allow: {
+				message: "从链接显示内联的条件"
+			},
+			menu_setting_expand_iframe_inline_script_insert: {
+				message: "HTML 内嵌框架元素插入"
+			},
+			menu_setting_style_sheet: {
+				message: "样式表定义"
+			},
+			menu_setting_style_sheet_expand_text: {
+				message: "扩展文本样式表"
+			},
+			menu_setting_style_sheet_expand_text_element: {
+				message: "HTML 文本区域元素设置"
+			},
+			menu_setting_style_sheet_expand_text_element_inline: {
+				message: "文本内联显示"
+			},
+			menu_setting_style_sheet_expand_image: {
+				message: "扩展图片样式表"
+			},
+			menu_setting_style_sheet_expand_image_element: {
+				message: "HTML 图片元素设置"
+			},
+			menu_setting_style_sheet_expand_image_element_inline: {
+				message: "图片缩略图显示"
+			},
+			menu_setting_style_sheet_expand_image_element_popup: {
+				message: "图片弹窗显示"
+			},
+			menu_setting_style_sheet_expand_sound: {
+				message: "扩展声音样式表"
+			},
+			menu_setting_style_sheet_expand_sound_element: {
+				message: "HTML 音频元素设置"
+			},
+			menu_setting_style_sheet_expand_sound_element_inline_audio: {
+				message: "音频内联显示"
+			},
+			menu_setting_style_sheet_expand_sound_soundcloud: {
+				message: "soundcloud.com 设置"
+			},
+			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_flash: {
+				message: "播放器 (Flash) 内联显示"
+			},
+			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_html5: {
+				message: "播放器 (HTML5) 内联显示"
+			},
+			menu_setting_style_sheet_expand_sound_mixcloud: {
+				message: "www.mixcloud.com 设置"
+			},
+			menu_setting_style_sheet_expand_sound_mixcloud_inline_player: {
+				message: "播放器内联显示"
+			},
+			menu_setting_style_sheet_expand_video: {
+				message: "扩展视频样式表"
+			},
+			menu_setting_style_sheet_expand_video_element: {
+				message: "HTML 视频元素设置"
+			},
+			menu_setting_style_sheet_expand_video_element_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_youtube: {
+				message: "www.youtube.com 设置"
+			},
+			menu_setting_style_sheet_expand_video_youtube_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo: {
+				message: "www.nicovideo.jp 设置"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_video: {
+				message: "视频缩略图内联显示"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_mylist: {
+				message: "我的列表 缩略图内联显示"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_user: {
+				message: "用户 缩略图内联显示"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_community: {
+				message: "社区 缩略图内联显示"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_live: {
+				message: "现场直播 缩略图内联显示"
+			},
+			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga: {
+				message: "世佳 缩略图内联显示"
+			},
+			menu_setting_style_sheet_expand_video_ustream: {
+				message: "www.ustream.tv 设置"
+			},
+			menu_setting_style_sheet_expand_video_ustream_inline_video_record: {
+				message: "传送视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_ustream_inline_video_live: {
+				message: "录制的视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_dailymotion: {
+				message: "www.dailymotion.com 设置"
+			},
+			menu_setting_style_sheet_expand_video_dailymotion_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_vimeo: {
+				message: "vimeo.com 设置"
+			},
+			menu_setting_style_sheet_expand_video_vimeo_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_fc2video: {
+				message: "video.fc2.com 设置"
+			},
+			menu_setting_style_sheet_expand_video_fc2video_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_liveleak: {
+				message: "www.liveleak.com 设置"
+			},
+			menu_setting_style_sheet_expand_video_liveleak_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_iframe: {
+				message: "扩展内嵌框架样式表"
+			},
+			menu_setting_style_sheet_expand_iframe_element: {
+				message: "HTML 内嵌框架样设置"
+			},
+			menu_setting_style_sheet_expand_iframe_element_inline: {
+				message: "内嵌框架样内联显示"
+			},
+			menu_setting_experimental: {
+				message: "实验定义"
+			},
+			menu_setting_experimental_revise_scroll: {
+				message: "修改滚动设置"
+			},
+			menu_setting_experimental_revise_scroll_check_box_container: {
+				message: "修改滚动设置"
+			},
+			menu_setting_experimental_revise_scroll_enable: {
+				message: "启用"
+			},
+			menu_setting_experimental_revise_scroll_threshold_vertical: {
+				message: "垂直阈值 ( 0 [顶部] ～ 100 [底部] )"
+			},
+			menu_setting_language: {
+				message: "LANGUAGE (语言设置)"
+			},
+			menu_credit: {
+				message: "致谢"
+			},
+			menu_credit_info_version: {
+				message: "版本"
+			},
+			menu_credit_info_copyright: {
+				message: "版权"
+			},
+			menu_credit_info_translator: {
+				message: "翻译者"
+			},
+			menu_setting_define_list: {
+				message: "定义列表"
+			},
+			menu_setting_define_list_hint: {
+				message: "当你选择列表中的项目时，可以编辑较低的控制。按照从上到下的顺序进行比较。可以选择多个，可以进行多选编辑。灰色是预设设置。不能删除预设的设置。"
+			},
+			menu_setting_define_button_add: {
+				message: "添加"
+			},
+			menu_setting_define_button_delete: {
+				message: "删除"
+			},
+			menu_setting_define_button_move_up: {
+				message: "上移"
+			},
+			menu_setting_define_button_move_down: {
+				message: "下移"
+			},
+			menu_setting_define_button_export: {
+				message: "导出"
+			},
+			menu_setting_define_button_import: {
+				message: "导入"
+			},
+			menu_setting_define_add_dialog: {
+				message: "创建新定义"
+			},
+			menu_setting_define_add_dialog_name: {
+				message: "名称"
+			},
+			menu_setting_define_add_dialog_copy_define: {
+				message: "从现有定义复制"
+			},
+			menu_setting_define_add_dialog_define_list_box_item_new: {
+				message: "创建新的"
+			},
+			menu_setting_define_delete_dialog: {
+				message: "删除定义"
+			},
+			menu_setting_define_delete_dialog_name: {
+				message: "定义名称 (被删除)"
+			},
+			menu_setting_define_delete_dialog_change_define: {
+				message: "替代选择"
+			},
+			menu_setting_define_delete_dialog_define_list_box_item_no_use: {
+				message: "不使用定义"
+			},
+			menu_setting_define_name: {
+				message: "定义名称"
+			},
+			menu_setting_define_export_dialog: {
+				message: "导出定义"
+			},
+			menu_setting_define_export_dialog_export: {
+				message: "导出"
+			},
+			menu_setting_define_export_dialog_export_hint: {
+				message: "请复制文本区域的文本。"
+			},
+			menu_setting_define_import_dialog: {
+				message: "导入定义"
+			},
+			menu_setting_define_import_dialog_explanation: {
+				message: "关于导入的信息"
+			},
+			menu_setting_define_import_dialog_explanation_0: {
+				message: "预设的设置将被覆盖。将添加新的用户设置。"
+			},
+			menu_setting_define_import_dialog_explanation_1: {
+				message: "建议你使用导出功能进行备份。"
+			},
+			menu_setting_define_import_dialog_explanation_2: {
+				message: "请注意，它不包含恶意代码。"
+			},
+			menu_setting_define_import_dialog_import: {
+				message: "导入"
+			},
+			menu_setting_define_import_dialog_import_hint: {
+				message: "请粘贴从导出处输出的文本。"
+			},
+			menu_setting_define_import_dialog_confirm: {
+				message: "确定要导入？"
+			},
+			menu_setting_define_import_alert: {
+				message: "导入的结果"
+			},
+			menu_setting_define_import_alert_success: {
+				message: "导入已经完成。"
+			},
+			menu_setting_define_import_alert_failure: {
+				message: "导入失败！"
+			},
+			menu_setting_define_wildcard_detail: {
+				message: "关于通配符的信息"
+			},
+			menu_setting_define_wildcard_detail_0: {
+				message: "\"通配符\" 是总在最后执行。"
+			},
+			menu_setting_define_wildcard_detail_1: {
+				message: "\"通配符\" 适用于所有通信。"
+			},
+			menu_setting_define_wildcard_detail_2: {
+				message: "\"通配符\" 不是的定义。不能用在 \"URL 映射设置\"。"
+			},
+			menu_setting_filter_list: {
+				message: "筛选器列表"
+			},
+			menu_setting_filter_list_hint: {
+				message: "当你选择列表中的项目时，可以编辑较低的控制。按照从上到下的顺序进行比较。可以选择多个，可以进行多选编辑。"
+			},
+			menu_setting_filter_button_add: {
+				message: "添加"
+			},
+			menu_setting_filter_button_delete: {
+				message: "删除"
+			},
+			menu_setting_filter_button_prio_up: {
+				message: "优先级+"
+			},
+			menu_setting_filter_button_prio_down: {
+				message: "优先级-"
+			},
+			menu_setting_filter_button_export: {
+				message: "导出"
+			},
+			menu_setting_filter_button_import: {
+				message: "导入"
+			},
+			menu_setting_filter_add_dialog: {
+				message: "创建新的筛选器设置"
+			},
+			menu_setting_filter_add_dialog_name: {
+				message: "名称"
+			},
+			menu_setting_filter_add_dialog_copy_define: {
+				message: "从现有的设置复制。"
+			},
+			menu_setting_filter_add_dialog_define_list_box_item_new: {
+				message: "创建新的"
+			},
+			menu_setting_filter_export_dialog: {
+				message: "导出过滤器"
+			},
+			menu_setting_filter_export_dialog_export: {
+				message: "导出"
+			},
+			menu_setting_filter_export_dialog_export_hint: {
+				message: "请复制文本区域的文本。"
+			},
+			menu_setting_filter_import_dialog: {
+				message: "导入过滤器"
+			},
+			menu_setting_filter_import_dialog_explanation: {
+				message: "关于导入的信息"
+			},
+			menu_setting_filter_import_dialog_explanation_0: {
+				message: "导入的数据被添加到列表的最后。"
+			},
+			menu_setting_filter_import_dialog_explanation_1: {
+				message: "建议你使用导出功能进行备份"
+			},
+			menu_setting_filter_import_dialog_explanation_2: {
+				message: "请注意，它不包含恶意代码。"
+			},
+			menu_setting_filter_import_dialog_import: {
+				message: "导入"
+			},
+			menu_setting_filter_import_dialog_import_hint: {
+				message: "请粘贴从导出处输出的文本。"
+			},
+			menu_setting_filter_import_dialog_confirm: {
+				message: "确定要导入？"
+			},
+			menu_setting_filter_import_alert: {
+				message: "导入的结果"
+			},
+			menu_setting_filter_import_alert_success: {
+				message: "导入已经完成。"
+			},
+			menu_setting_filter_import_alert_failure: {
+				message: "导入失败！"
+			},
+			menu_button_ok: {
+				message: "确定"
+			},
+			menu_button_yes: {
+				message: "是"
+			},
+			menu_button_no: {
+				message: "取消"
+			},
+			menu_scriptarea_hint: {
+				message: "用来描述到数组的匿名函数。请注意，它不包含恶意代码。"
+			},
+			menu_text_regexp_hint: {
+				message: "正则表达式字符串。 [标记] g...重复。 i...不包含。 case-敏感。"
+			},
+			menu_regexp_list_button_add: {
+				message: "添加"
+			},
+			menu_regexp_list_button_delete: {
+				message: "删除"
+			},
+			menu_regexp_list_button_move_up: {
+				message: "上移"
+			},
+			menu_regexp_list_button_move_down: {
+				message: "下移"
+			},
+			menu_setting_url_edit_container_combo_box_item_asterisk: {
+				message: "星号格式"
+			},
+			menu_setting_url_edit_container_combo_box_item_regexp: {
+				message: "正则表达式格式"
+			},
+			menu_setting_url_edit_container_type_asterisk_hint: {
+				message: "介绍 URL。可以使用一个星号。可以指定多行。"
+			},
+			page_expand_popup_menu: {
+				message: "PageExpand 菜单"
+			},
+			context_menu_pageexpand_config: {
+				message: "PageExpand 设置"
+			},
+			context_menu_batch_download_image: {
+				message: "批量下载 (图片)"
+			},
+			context_menu_batch_download_user: {
+				message: "批量下载 (用户)"
+			},
+			context_menu_pageexpand_config_current_page: {
+				message: "PageExpand 设置当前页"
+			},
+			context_menu_pageexpand_config_current_bbs: {
+				message: "PageExpand 设置当前 BBS"
+			},
+			context_menu_pageexpand_config_current_page_confirm: {
+				message: "PageExpand 设置将仅在以下页面中运行。 \n(目的是防止被注入恶意脚本)\n\n你想打开以下页面吗？\n"
+			},
+			context_menu_pageexpand_config_auto_run_confirm: {
+				message: "你想要在此页面中运行 PageExpand 设置吗？\n(如果此页面被污染，那么恶意脚本将被注入！)"
+			},
+			context_menu_pageexpand_execute: {
+				message: "执行 PageExpand"
+			},
+			context_menu_pageexpand_abort: {
+				message: "关于 PageExpand"
+			},
+			context_menu_pageexpand_debug: {
+				message: "PageExpand 调试"
+			}
 		}
 	};
 
@@ -58460,7 +58680,9 @@ function PageExpand(page_expand_arguments){
 			if(_time_handle === null){
 				_this.running = true;
 
-				_time_handle = setInterval(execute,_this.delay);
+				_time_handle = setInterval(function (){
+					execute();
+				},_this.delay);
 
 				_event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
 				_event_handler_release.setFunction(_this.release);
@@ -58671,9 +58893,9 @@ function PageExpand(page_expand_arguments){
 				queue._next = queue;
 			}
 
-			if(_time_handle !== undefined){
+			if(_time_handle !== null){
 				clearTimeout(_time_handle);
-				_time_handle = undefined;
+				_time_handle = null;
 			}
 		};
 
@@ -58853,15 +59075,20 @@ function PageExpand(page_expand_arguments){
 				_queue = _queue_list[_queue_pos];
 			}
 
-			if(_time_handle !== undefined) return;
+			if(_time_handle !== null) return;
 
-			_time_handle = setTimeout(execute , _time_sleep);
+			_time_handle = setTimeout(function (){
+				execute();
+			} , _time_sleep);
 		}
 
 		// --------------------------------------------------------------------------------
 		// 実行（内部用）
 		// --------------------------------------------------------------------------------
 		function execute (){
+			_time_handle = setTimeout(function (){
+				execute();
+			} , _time_sleep);
 			var time = _getTime();
 			do{
 				var o = _queue._next;
@@ -58887,12 +59114,13 @@ function PageExpand(page_expand_arguments){
 
 				_count -= 1;
 				if(_count <= 0){
-					clearTimeout(_time_handle);
-					_time_handle = undefined;
+					if(_time_handle !== null){
+						clearTimeout(_time_handle);
+						_time_handle = null;
+					}
 					return;
 				}
 			}while (_getTime() - time <= _time_occupancy);
-			_time_handle = setTimeout(execute , _time_sleep);
 		}
 
 		// --------------------------------------------------------------------------------
@@ -58958,7 +59186,7 @@ function PageExpand(page_expand_arguments){
 		_count = 0;
 		_success_count = 0;
 		_error_count = 0;
-		_time_handle = undefined;
+		_time_handle = null;
 		_time_occupancy = 5;
 		_time_sleep = 0;
 
@@ -64300,7 +64528,7 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function GoogleChromeExtensionOpenPageExpandConfig(query){
 
-		var current_url = chrome.extension.getURL("options.html");
+		var current_url = chrome.runtime.getURL("options.html");
 		var url = current_url;
 
 		if(query){
@@ -64315,20 +64543,16 @@ function PageExpand(page_expand_arguments){
 			}
 		}
 
-		chrome.windows.getAll({populate:true}, function(a){
+		chrome.tabs.query({},function(tabs){
 			var i;
-			var j;
-			var t;
-			var tab;
-			for(i in a){
-				t = a[i].tabs;
-				for(j in t){
-					tab = t[j];
-					if(tab.url.indexOf(current_url) == 0){
-						// 更新
-						chrome.tabs.update(tab.id,{url:url,selected:true});
-						return;
-					}
+			var num = tabs.length;
+			for(i=0;i<num;i++){
+				var tab = tabs[i];
+				if(tab.url.indexOf(current_url) == 0){
+					// 更新
+					chrome.windows.update(tab.windowId,{focused:true});
+					chrome.tabs.update(tab.id,{url:url,active:true,highlighted:true});
+					return;
 				}
 			}
 			// 新規
@@ -64483,8 +64707,8 @@ function PageExpand(page_expand_arguments){
 			var event_handler = _event_dispatcher.createEventHandler("message");
 			event_handler.setFunction(function(event){
 				var request = event.request;
-				var sender = event.sender;
-				f(request.data,sender,function(data,option){
+				var port = event.port;
+				f(request.data,port.sender,function(data,option){
 					var receive = new Object();
 					receive.phase = 1;
 					receive.id = request.id;
@@ -64492,7 +64716,7 @@ function PageExpand(page_expand_arguments){
 					receive.option = option;
 
 					// 返信
-					pushPortQueue(sender,receive);
+					pushPortQueue(port,receive);
 				});
 			});
 		};
@@ -64534,7 +64758,7 @@ function PageExpand(page_expand_arguments){
 			_unique ++;
 
 			// メッセージを送信
-			chrome.extension.sendMessage(request);
+			chrome.runtime.sendMessage(request);
 		};
 
 		// --------------------------------------------------------------------------------
@@ -64626,50 +64850,48 @@ function PageExpand(page_expand_arguments){
 			_port_queue_dictionary = new Object();
 			_event_dispatcher = new EventDispatcher();
 
-			// 受信用コールバック関数
-			var message_handler = function (request, sender, sendResponse) {
-
-				switch(request.phase){
-				// リクエストを受信
-				case 0:
-					// イベントを発火
-					_event_dispatcher.dispatchEvent("message",{request:request,sender:sender,sendResponse:sendResponse});
-					break;
-
-				// 返信を受信
-				case 1:
-					var callback = _callback_dictionary[request.id];
-
-					// コールバック関数を実行
-					if(callback){
-						callback(request.data);
-
-						// 辞書から外す
-						if(request.option.complete){
-							delete _callback_dictionary[request.id];
-						}
-					}
-					break;
-
-				// リクエストの完了
-				case 2:
-					popPortQueue(sender);
-					break;
-				}
-			};
-
 			// コンテンツから接続
 			chrome.runtime.onConnect.addListener(function (port){
 				initializePortQueue(port);
 
-				port.onMessage.addListener(message_handler);
+				port.onMessage.addListener(function(request){
+					switch(request.phase){
+					// リクエストを受信
+					case 0:
+						// イベントを発火
+						_event_dispatcher.dispatchEvent("message",{request:request,port:port});
+						break;
+
+					// 返信を受信
+					case 1:
+						var callback = _callback_dictionary[request.id];
+
+						// コールバック関数を実行
+						if(callback){
+							callback(request.data);
+
+							// 辞書から外す
+							if(request.option.complete){
+								delete _callback_dictionary[request.id];
+							}
+						}
+						break;
+
+					// リクエストの完了
+					case 2:
+						popPortQueue(port);
+						break;
+					}
+				});
 				port.onDisconnect.addListener(function (){
 					releasePortQueue(port);
 				});
 			});
 
 			// メッセージを受信する
-			chrome.extension.onMessage.addListener(message_handler);
+			chrome.runtime.onMessage.addListener(function (request,sender,sendResponse){
+			});
+
 		})();
 	}
 
@@ -67223,6 +67445,8 @@ function PageExpand(page_expand_arguments){
 				element = null;
 			}else{
 				_element = DocumentCreateElement("span");
+				_element.style.cursor = "pointer";
+				_element.title = "remove";
 			}
 
 			if(_element.addEventListener){
@@ -67261,14 +67485,24 @@ function PageExpand(page_expand_arguments){
 		var i;
 		var num = nodes.length;
 		for(i=0;i<num;i++){
-			// 解析ワーク取得
-			var work = analyze_work_dictionary.getAnalyzeWork(nodes[i]);
-			if(work){
-				var control = AnalyzeWorkGetBbsControl(work);
-				if(control){
-					if(control.getType() == "res_q"){
-						return true;
-					}
+			if(BbsControlQuoteEqual(nodes[i])){
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// --------------------------------------------------------------------------------
+	// 掲示板コントロール 引用 の確認
+	// --------------------------------------------------------------------------------
+	function BbsControlQuoteEqual(element){
+		// 解析ワーク取得
+		var work = analyze_work_dictionary.getAnalyzeWork(element);
+		if(work){
+			var control = AnalyzeWorkGetBbsControl(work);
+			if(control){
+				if(control.getType() == "res_q"){
+					return true;
 				}
 			}
 		}
@@ -67480,6 +67714,8 @@ function PageExpand(page_expand_arguments){
 				element = null;
 			}else{
 				_element = DocumentCreateElement("span");
+				_element.style.cursor = "pointer";
+				_element.title = "remove";
 			}
 
 			if(_element.addEventListener){
@@ -67737,6 +67973,8 @@ function PageExpand(page_expand_arguments){
 				element = null;
 			}else{
 				_element = DocumentCreateElement("span");
+				_element.style.cursor = "pointer";
+				_element.title = "remove";
 			}
 
 			if(_element.addEventListener){
@@ -67994,6 +68232,8 @@ function PageExpand(page_expand_arguments){
 				element = null;
 			}else{
 				_element = DocumentCreateElement("span");
+				_element.style.cursor = "pointer";
+				_element.title = "remove";
 			}
 
 			if(_element.addEventListener){
@@ -68232,6 +68472,8 @@ function PageExpand(page_expand_arguments){
 				element = null;
 			}else{
 				_element = DocumentCreateElement("span");
+				_element.style.cursor = "pointer";
+				_element.title = "remove";
 			}
 
 			if(_element.addEventListener){
@@ -68299,6 +68541,227 @@ function PageExpand(page_expand_arguments){
 				var control = AnalyzeWorkGetBbsControl(work);
 				if(control){
 					if(control.getType() == "follower"){
+						result = func(control);
+						if(result){
+							return result;
+						}
+					}
+				}
+			}
+		}
+		return result;
+	}
+
+	// --------------------------------------------------------------------------------
+	// 掲示板コントロール 返信
+	// --------------------------------------------------------------------------------
+	function BbsControlReply(element,outsider){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// タイプを取得
+		// --------------------------------------------------------------------------------
+		_this.getType = function(){
+			return "reply";
+		};
+
+		// --------------------------------------------------------------------------------
+		// レスポンスオブジェクトをセット
+		// --------------------------------------------------------------------------------
+		_this.setResponse = function(response){
+			if(!_response){
+				_response = response;
+
+				// 解放イベント
+				var event_dispatcher = response.getEventDispatcher();
+				_event_handler_release = event_dispatcher.createEventHandler("release");
+				_event_handler_release.setFunction(_this.release);
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// 要素を取得
+		// --------------------------------------------------------------------------------
+		_this.getElement = function(){
+			return _element;
+		};
+
+		// --------------------------------------------------------------------------------
+		// テキストノードを取得
+		// --------------------------------------------------------------------------------
+		_this.getTextNode = function(){
+			return _text_node;
+		};
+
+		// --------------------------------------------------------------------------------
+		// テキストノードをセット
+		// --------------------------------------------------------------------------------
+		_this.setTextNode = function(node){
+			_text_node = node;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 開放
+		// --------------------------------------------------------------------------------
+		_this.release = function(){
+
+			// イベント解放
+			if(_event_handler_release){
+				_event_handler_release.release();
+				_event_handler_release = null;
+			}
+			if(_event_handler_abort){
+				_event_handler_abort.release();
+				_event_handler_abort = null;
+			}
+
+			// リムーブ監視を破棄
+			if(_observer_remove){
+				_observer_remove.release();
+				_observer_remove = null;
+			}
+
+			if(_analyze_work){
+				// 解析辞書除外
+				AnalyzeWorkClearBbsControl(_analyze_work);
+				analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
+				_analyze_work = null;
+			}
+
+			if(_element){
+				removeEventClick();
+				if(outsider){
+					DomNodeRemove(_element);
+				}
+				_element = null;
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// クリック通知
+		// --------------------------------------------------------------------------------
+		_this.onclick = function(v){};
+
+		// --------------------------------------------------------------------------------
+		// マウスクリック時に実行される関数（内部用）
+		// --------------------------------------------------------------------------------
+		function mouseClick(e){
+			if(_this.onclick) _this.onclick(e);	
+			if(e.preventDefault){
+				e.preventDefault();
+			}else{
+				return false;
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// クリックイベントを外す（内部用）
+		// --------------------------------------------------------------------------------
+		function removeEventClick(){
+			if(_element.removeEventListener){
+				_element.removeEventListener("click",mouseClick);
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// プライベート変数
+		// --------------------------------------------------------------------------------
+		var _element;
+		var _text_node;
+		var _analyze_work;
+		var _observer_remove;
+		var _response;
+		var _event_handler_release;
+		var _event_handler_abort;
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		(function(){
+			if(element){
+				_element = element;
+				element = null;
+			}else{
+				_element = DocumentCreateElement("span");
+				_element.style.cursor = "pointer";
+				_element.title = "reply";
+			}
+
+			if(_element.addEventListener){
+				_element.addEventListener("click",mouseClick);
+			}
+
+			// 解析ワーク作成
+			_analyze_work = AnalyzeWorkCreate(_element);
+			// 掲示板コントロール登録
+			AnalyzeWorkSetBbsControl(_analyze_work,_this);
+			// 解析済み
+			AnalyzeWorkSetInvalid(_analyze_work);
+			// 解析辞書登録オプション
+			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+			if(outsider) attach_options.SetOutsider();
+			// 解析辞書登録
+			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
+
+			// リムーブ監視
+			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
+			_observer_remove.setFunction(_this.release);
+
+			// 開放イベント
+			_event_handler_abort = page_expand_event_dispatcher.createEventHandler("release");
+			_event_handler_abort.setFunction(function(){
+				_this.release();
+			});
+		})();
+	}
+
+	// --------------------------------------------------------------------------------
+	// 掲示板コントロール 返信 の存在確認
+	// --------------------------------------------------------------------------------
+	function BbsControlReplyExist(element){
+		var nodes = ElementGetElementsByTagName(element,"*");
+		var i;
+		var num = nodes.length;
+		for(i=0;i<num;i++){
+			if(BbsControlReplyEqual(nodes[i])){
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// --------------------------------------------------------------------------------
+	// 掲示板コントロール 返信 の確認
+	// --------------------------------------------------------------------------------
+	function BbsControlReplyEqual(element){
+		// 解析ワーク取得
+		var work = analyze_work_dictionary.getAnalyzeWork(element);
+		if(work){
+			var control = AnalyzeWorkGetBbsControl(work);
+			if(control){
+				if(control.getType() == "reply"){
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	// --------------------------------------------------------------------------------
+	// 掲示板コントロール 返信 の検索
+	// --------------------------------------------------------------------------------
+	function BbsControlReplySearch(element,func){
+		var result = null;
+		var nodes = ElementGetElementsByTagName(element,"*");
+		var i;
+		var num = nodes.length;
+		for(i=0;i<num;i++){
+			// 解析ワーク取得
+			var work = analyze_work_dictionary.getAnalyzeWork(nodes[i]);
+			if(work){
+				var control = AnalyzeWorkGetBbsControl(work);
+				if(control){
+					if(control.getType() == "reply"){
 						result = func(control);
 						if(result){
 							return result;
@@ -68956,6 +69419,11 @@ function PageExpand(page_expand_arguments){
 		};
 
 		// --------------------------------------------------------------------------------
+		// リセット通知
+		// --------------------------------------------------------------------------------
+		_this.onreset = function(v){};
+
+		// --------------------------------------------------------------------------------
 		// 開放
 		// --------------------------------------------------------------------------------
 		_this.release = function(){
@@ -68995,6 +69463,88 @@ function PageExpand(page_expand_arguments){
 		};
 
 		// --------------------------------------------------------------------------------
+		// 返信用ポップアップ
+		// --------------------------------------------------------------------------------
+		_this.popupForReply = function(element){
+			switch(_docking_type){
+			case "original":
+
+				// ポップアップ
+				update("popup");
+
+				// クライアントサイズ
+				var client_size = DocumentGetClientSize(document);
+
+				// バウンディングサイズ
+				var hit_bounding_size;
+				if(element){
+					if(DomNodeGetAttachedDocument(element)){
+						hit_bounding_size = ElementGetBoundingClientRect(element);
+					}
+				}
+				if(!hit_bounding_size){
+					var mouse_pos = ObjectCopy(input_mouse.getPositionClient());
+					hit_bounding_size = {
+						left  :mouse_pos.x,
+						right :mouse_pos.x,
+						top   :mouse_pos.y,
+						bottom:mouse_pos.y
+					};
+				}
+				hit_bounding_size.left   = Math.ceil(hit_bounding_size.left);
+				hit_bounding_size.top    = Math.ceil(hit_bounding_size.top);
+				hit_bounding_size.right  = Math.floor(hit_bounding_size.right);
+				hit_bounding_size.bottom = Math.floor(hit_bounding_size.bottom);
+
+				// バウンディングサイズ
+				var window_bounding_size = ElementGetBoundingClientRect(_element);
+
+				var sub_x;
+				var sub_y;
+				var cx = (hit_bounding_size.left + hit_bounding_size.right) * 0.5;
+				var cy = (hit_bounding_size.top + hit_bounding_size.bottom) * 0.5;
+				if((cx / client_size.width) < 0.5){
+					sub_x = hit_bounding_size.left - window_bounding_size.left;
+				}else{
+					sub_x = hit_bounding_size.right - window_bounding_size.right;
+				}
+				if((cy / client_size.height) < 0.5){
+					sub_y = hit_bounding_size.bottom - window_bounding_size.top;
+				}else{
+					sub_y = hit_bounding_size.top - window_bounding_size.bottom;
+				}
+
+				window_bounding_size.left   += sub_x;
+				window_bounding_size.right  += sub_x;
+				window_bounding_size.top    += sub_y;
+				window_bounding_size.bottom += sub_y;
+
+				var pos = {
+					x:window_bounding_size.left,
+					y:window_bounding_size.top
+				};
+
+				// サイズ補正
+				if(client_size.width  < window_bounding_size.right  + 1) pos.x += client_size.width  - 1 - window_bounding_size.right;
+				if(client_size.height < window_bounding_size.bottom + 1) pos.y += client_size.height - 1 - window_bounding_size.bottom;
+				if(pos.x < 1) pos.x = 1;
+				if(pos.y < 1) pos.y = 1;
+
+				var style = _element.style;
+				style.left = (pos.x) + "px";
+				style.top  = (pos.y) + "px";
+				break;
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// リセット通知（内部用）
+		// --------------------------------------------------------------------------------
+		function dispatchReset(e){
+			if(_this.onreset) _this.onreset();
+		}
+
+		// --------------------------------------------------------------------------------
 		// マウスダウン時に実行される関数（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseDown(e){
@@ -69025,6 +69575,7 @@ function PageExpand(page_expand_arguments){
 			// 戻す
 			if(MouseEventGetChangedButtons(e) & 0x04){
 				update("original");
+				dispatchReset();
 			}
 
 			if(e.preventDefault){
@@ -69069,7 +69620,7 @@ function PageExpand(page_expand_arguments){
 				case "bottom":
 					distance = client_size.height - mouse_pos.y;
 					break;
-				};
+				}
 
 				moveBorder(distance);
 
@@ -69114,6 +69665,7 @@ function PageExpand(page_expand_arguments){
 				break;
 			case "popup":
 				update("original");
+				dispatchReset();
 				break;
 			default:
 				if(_expand){
@@ -69122,7 +69674,7 @@ function PageExpand(page_expand_arguments){
 					moveBorder(_expand_distance);
 				}
 				break;
-			};
+			}
 		}
 
 		// --------------------------------------------------------------------------------
@@ -69240,7 +69792,7 @@ function PageExpand(page_expand_arguments){
 			case "bottom":
 				style_html.paddingBottom = "0px";
 				break;
-			};
+			}
 			_docking_type = type;
 			_docking_distance = 0;
 
@@ -69312,7 +69864,7 @@ function PageExpand(page_expand_arguments){
 				style_form.bottom = "0px";
 				style_border.bottom = "0px";
 				break;
-			};
+			}
 
 			switch(_docking_type){
 			case "left":
@@ -69335,7 +69887,7 @@ function PageExpand(page_expand_arguments){
 				style_border.height = "6px";
 				moveBorder(h);
 				break;
-			};
+			}
 		}
 
 		// --------------------------------------------------------------------------------

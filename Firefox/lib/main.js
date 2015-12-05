@@ -9,7 +9,7 @@ exports.main = function(options, callback) {
 			var iframe = hidden_frame.element;
 
 			// バックグラウンド実行
-			require("PageExpand").PageExpand({execute_type:"FirefoxExtensionBackGround",admin:this,window:iframe.contentWindow});
+			require("./PageExpand").PageExpand({execute_type:"FirefoxExtensionBackGround",admin:this,window:iframe.contentWindow});
 		}
 	});
 	hidden_frames.add(hidden_frame);

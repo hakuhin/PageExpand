@@ -83,22 +83,21 @@ function PageExpand(page_expand_arguments){
 			// 実行ループ
 			// --------------------------------------------------------------------------------
 			(function(){
-				var time_handle;
-
-				// タスクを毎サイクル実行
-				function TaskContainerExecute(){
-					task_container.execute(task_execute_level);
-				}
+				var time_handle = null;
 
 				// 開始関数をセット
 				task_container.setStartFunc(function(){
-					time_handle = setInterval(TaskContainerExecute, 1000 / 60);
+					if(time_handle !== null) return;
+					time_handle = setInterval(function (){
+						task_container.execute(task_execute_level);
+					}, 1000 / 60);
 				});
 
 				// 終了関数をセット
 				task_container.setEndFunc(function(){
+					if(time_handle === null) return;
 					clearInterval(time_handle);
-					time_handle = undefined;
+					time_handle = null;
 				});
 			})();
 		}

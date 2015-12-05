@@ -4,7 +4,6 @@ platform|get
 for Chromium|[download page](https://chrome.google.com/webstore/detail/bjnobgdfhefpilajplncgjjeopakpepc)
 for Firefox|[download page](https://addons.mozilla.org/addon/pageexpand/)
 for Opera|[download page](https://addons.opera.com/extensions/details/pageexpand/)
-for Safari|[install](http://hakuhin.jp/download/page_expand/release/safari/page_expand.safariextz)
 for Greasemonkey|[install](https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/PageExpand.user.js)
 
 ##Image All Download
@@ -51,14 +50,14 @@ for Greasemonkey|[install](https://raw.githubusercontent.com/hakuhin/PageExpand/
  - By setting the URL, Can blocking web access.
 
 ##Extend display BBS
- - support (2ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, kakiko.com, logsoku.com, mimizun.com, 2chan.net, 4chan.org, 8chan.co, reddit.com, dic.nicovideo.jp, open2ch.net)
+ - support (2ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, logsoku.com, mimizun.com, 2chan.net, 4chan.org, 8chan.co, reddit.com, dic.nicovideo.jp, open2ch.net)
  - Hovering the mouse cursor in URL of the "response number", Display popup.
  - Hovering the mouse cursor in URL of the "ID", Display popup. (Remove by click.)
  - Display the follower count. (Remove by click.)
 
 ##Change into Direct Link
  - Search sites (google, yahoo.co.jp)
- - BBS sites (2ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, kakiko.com, logsoku.com, atchs.jp)
+ - BBS sites (2ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, logsoku.com)
  - Other sites (twitter.com, facebook.com)
 
 ##Redirect to Image Link
