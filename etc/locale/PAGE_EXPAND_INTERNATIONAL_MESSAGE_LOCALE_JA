@@ -679,6 +679,18 @@
 			menu_setting_expand_image_thumbnail_disable_same_thumbnail_image: {
 				message: "同じイメージがすでに配置されている場合サムネイルを表示しない"
 			},
+			menu_setting_expand_image_thumbnail_size: {
+				message: "サムネイルの表示サイズ"
+			},
+			menu_setting_expand_image_thumbnail_size_min: {
+				message: "最小許容限界（ピクセル値）"
+			},
+			menu_setting_expand_image_thumbnail_size_scale: {
+				message: "基本拡大率（パーセント）"
+			},
+			menu_setting_expand_image_thumbnail_size_max: {
+				message: "最大許容限界（ピクセル値）"
+			},
 			menu_setting_expand_image_thumbnail_script_allow: {
 				message: "リンクからサムネイル化する条件"
 			},
@@ -1335,6 +1347,12 @@
 			},
 			menu_button_no: {
 				message: "キャンセル"
+			},
+			menu_script_obj_editer_edit_script: {
+				message: "スクリプトを編集する"
+			},
+			menu_script_obj_editer_delete_script: {
+				message: "スクリプトを削除する（デフォルトに戻す）"
 			},
 			menu_scriptarea_hint: {
 				message: "配列に格納して匿名関数を記述します。信頼の無い人物が作成したスクリプトを、絶対に書き込まないで下さい。悪意のあるスクリプトが含まれる恐れがあります。"

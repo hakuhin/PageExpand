@@ -228,6 +228,12 @@ function PageExpand(page_expand_arguments){
 			bbs_dictionary = null;
 		}
 
+		// プリセットスクリプト辞書
+		if(preset_script_dictionary){
+			preset_script_dictionary.release();
+			preset_script_dictionary = null;
+		}
+
 		// 解析辞書
 		if(analyze_work_dictionary){
 			analyze_work_dictionary.release();

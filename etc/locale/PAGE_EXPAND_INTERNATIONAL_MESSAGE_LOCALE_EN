@@ -679,6 +679,18 @@
 			menu_setting_expand_image_thumbnail_disable_same_thumbnail_image: {
 				message: "If the same URL, not to Expand."
 			},
+			menu_setting_expand_image_thumbnail_size: {
+				message: "Thumbnail Size"
+			},
+			menu_setting_expand_image_thumbnail_size_min: {
+				message: "Minimum allowed size (pixel)"
+			},
+			menu_setting_expand_image_thumbnail_size_scale: {
+				message: "Scale (Percent)"
+			},
+			menu_setting_expand_image_thumbnail_size_max: {
+				message: "Maximum allowed size (pixel)"
+			},
 			menu_setting_expand_image_thumbnail_script_allow: {
 				message: "Condition to display thumbnail from a link"
 			},
@@ -1335,6 +1347,12 @@
 			},
 			menu_button_no: {
 				message: "CANCEL"
+			},
+			menu_script_obj_editer_edit_script: {
+				message: "Edit Script"
+			},
+			menu_script_obj_editer_delete_script: {
+				message: "Delete Script (return to default)"
 			},
 			menu_scriptarea_hint: {
 				message: "To describe the anonymous function to array. Please note so that it does not contain malicious code."

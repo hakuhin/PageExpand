@@ -107,6 +107,9 @@ function PageExpand(page_expand_arguments){
 	// 掲示板拡張
 	var expand_bbs;
 
+	// プリセットスクリプト辞書
+	var preset_script_dictionary;
+
 	// 拡張機能通信
 	var extension_message;
 
@@ -364,6 +367,12 @@ function PageExpand(page_expand_arguments){
 		if(bbs_dictionary){
 			bbs_dictionary.release();
 			bbs_dictionary = null;
+		}
+
+		// プリセットスクリプト辞書
+		if(preset_script_dictionary){
+			preset_script_dictionary.release();
+			preset_script_dictionary = null;
 		}
 
 		// 解析辞書
@@ -2758,6 +2767,27 @@ function PageExpand(page_expand_arguments){
 		};
 
 		// --------------------------------------------------------------------------------
+		// サムネイルイメージの表示拡大率を取得
+		// --------------------------------------------------------------------------------
+		_this.getScalePercentThumbnailImage = function(){
+			return _proj_ins.expand_image.thumbnail.scale_percent;
+		};
+
+		// --------------------------------------------------------------------------------
+		// サムネイルイメージの最小許容限界値を取得
+		// --------------------------------------------------------------------------------
+		_this.getWidthMinThumbnailImage = function(){
+			return _proj_ins.expand_image.thumbnail.width_min;
+		};
+
+		// --------------------------------------------------------------------------------
+		// サムネイルイメージの最大許容限界値を取得
+		// --------------------------------------------------------------------------------
+		_this.getWidthMaxThumbnailImage = function(){
+			return _proj_ins.expand_image.thumbnail.width_max;
+		};
+
+		// --------------------------------------------------------------------------------
 		// イメージのサムネイル展開を許可するかコールバック関数
 		// --------------------------------------------------------------------------------
 		_this.executeScriptAllowThumbnailImage = function(request,response){
@@ -3548,8 +3578,8 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function ProjectObjectInstantiateExpandBbs(src){
 		var ins = ObjectCopy(src);
-		ins.script_initialize = StringEvalArrayFunction(ins.script_initialize);
-		ins.script_callback = StringEvalArrayFunction(ins.script_callback);
+		ins.script_initialize = PageExpandProjectScriptObject_EvalArrayFunction(ins.script_initialize);
+		ins.script_callback = PageExpandProjectScriptObject_EvalArrayFunction(ins.script_callback);
 		return ins;
 	}
 
@@ -3567,7 +3597,7 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function ProjectObjectInstantiateReplacementToElement(src){
 		return {
-			script:StringEvalArrayFunction(src.script)
+			script:PageExpandProjectScriptObject_EvalArrayFunction(src.script)
 		};
 
 	}
@@ -3577,7 +3607,7 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function ProjectObjectInstantiateReplacementToText(src){
 		return {
-			script:StringEvalArrayFunction(src.script)
+			script:PageExpandProjectScriptObject_EvalArrayFunction(src.script)
 		};
 	}
 
@@ -3586,7 +3616,7 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function ProjectObjectInstantiateReplacementToAnchor(src){
 		return {
-			script:StringEvalArrayFunction(src.script)
+			script:PageExpandProjectScriptObject_EvalArrayFunction(src.script)
 		};
 	}
 
@@ -3605,7 +3635,7 @@ function PageExpand(page_expand_arguments){
 				filter:ProjectObjectInstantiateUrlEditContainer(filter_src.filter),
 				enable_reflect_to_anchor:filter_src.enable_reflect_to_anchor,
 				enable_cache:filter_src.enable_cache,
-				script:StringEvalArrayFunction(filter_src.script)
+				script:PageExpandProjectScriptObject_EvalArrayFunction(filter_src.script)
 			};
 		}
 		return {
@@ -3660,7 +3690,7 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function ProjectObjectInstantiateMakeLinkToText(src){
 		return {
-			script:StringEvalArrayFunction(src.script)
+			script:PageExpandProjectScriptObject_EvalArrayFunction(src.script)
 		};
 	}
 
@@ -3678,8 +3708,8 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function ProjectObjectInstantiateExpandText(src){
 		var ins = ObjectCopy(src);
-		ins.inline.script_allow = StringEvalArrayFunction(ins.inline.script_allow);
-		ins.inline.script_insert = StringEvalArrayFunction(ins.inline.script_insert);
+		ins.inline.script_allow = PageExpandProjectScriptObject_EvalArrayFunction(ins.inline.script_allow);
+		ins.inline.script_insert = PageExpandProjectScriptObject_EvalArrayFunction(ins.inline.script_insert);
 		return ins;
 	}
 
@@ -3688,9 +3718,9 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function ProjectObjectInstantiateExpandImage(src){
 		var ins = ObjectCopy(src);
-		ins.thumbnail.script_allow = StringEvalArrayFunction(ins.thumbnail.script_allow);
-		ins.thumbnail.script_insert = StringEvalArrayFunction(ins.thumbnail.script_insert);
-		ins.popup.script_allow = StringEvalArrayFunction(ins.popup.script_allow);
+		ins.thumbnail.script_allow = PageExpandProjectScriptObject_EvalArrayFunction(ins.thumbnail.script_allow);
+		ins.thumbnail.script_insert = PageExpandProjectScriptObject_EvalArrayFunction(ins.thumbnail.script_insert);
+		ins.popup.script_allow = PageExpandProjectScriptObject_EvalArrayFunction(ins.popup.script_allow);
 		return ins;
 	}
 
@@ -3699,9 +3729,9 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function ProjectObjectInstantiateExpandSound(src){
 		var ins = ObjectCopy(src);
-		ins.inline.script_allow = StringEvalArrayFunction(ins.inline.script_allow);
-		ins.inline.script_insert = StringEvalArrayFunction(ins.inline.script_insert);
-		ins.audio_element.script_allow = StringEvalArrayFunction(ins.audio_element.script_allow);
+		ins.inline.script_allow = PageExpandProjectScriptObject_EvalArrayFunction(ins.inline.script_allow);
+		ins.inline.script_insert = PageExpandProjectScriptObject_EvalArrayFunction(ins.inline.script_insert);
+		ins.audio_element.script_allow = PageExpandProjectScriptObject_EvalArrayFunction(ins.audio_element.script_allow);
 		return ins;
 	}
 
@@ -3710,9 +3740,9 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function ProjectObjectInstantiateExpandVideo(src){
 		var ins = ObjectCopy(src);
-		ins.inline.script_allow = StringEvalArrayFunction(ins.inline.script_allow);
-		ins.inline.script_insert = StringEvalArrayFunction(ins.inline.script_insert);
-		ins.video_element.script_allow = StringEvalArrayFunction(ins.video_element.script_allow);
+		ins.inline.script_allow = PageExpandProjectScriptObject_EvalArrayFunction(ins.inline.script_allow);
+		ins.inline.script_insert = PageExpandProjectScriptObject_EvalArrayFunction(ins.inline.script_insert);
+		ins.video_element.script_allow = PageExpandProjectScriptObject_EvalArrayFunction(ins.video_element.script_allow);
 		return ins;
 	}
 
@@ -3721,8 +3751,8 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function ProjectObjectInstantiateExpandIframe(src){
 		var ins = ObjectCopy(src);
-		ins.inline.script_allow = StringEvalArrayFunction(ins.inline.script_allow);
-		ins.inline.script_insert = StringEvalArrayFunction(ins.inline.script_insert);
+		ins.inline.script_allow = PageExpandProjectScriptObject_EvalArrayFunction(ins.inline.script_allow);
+		ins.inline.script_insert = PageExpandProjectScriptObject_EvalArrayFunction(ins.inline.script_insert);
 		return ins;
 	}
 
@@ -4395,13 +4425,44 @@ function PageExpand(page_expand_arguments){
 		// プリセット更新
 		// --------------------------------------------------------------------------------
 		function updatePreset(ary,id,func){
+			var p;
 			var i;
-			var param;
 			var num = ary.length;
-			for(i=0;i<num;i++){
-				param = ary[i];
-				if(id == "*" || param.id == id){
-					if(param.preset)	func(param.preset);
+			if(id == "*"){
+				for(i=0;i<num;i++){
+					p = ary[i];
+					if(p.preset) func(p.preset,p);
+				}
+			}else{
+				for(i=0;i<num;i++){
+					p = ary[i];
+					if(p.id == id){
+						if(p.preset) func(p.preset,p);
+						break;
+					}
+				}
+			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// ユーザーデータ更新
+		// --------------------------------------------------------------------------------
+		function updateUser(ary,id,func){
+			var p;
+			var i;
+			var num = ary.length;
+			if(id == "*"){
+				for(i=0;i<num;i++){
+					p = ary[i];
+					if(p.user) func(p.user,p);
+				}
+			}else{
+				for(i=0;i<num;i++){
+					p = ary[i];
+					if(p.id == id){
+						if(p.user) func(p.user,p);
+						break;
+					}
 				}
 			}
 		}
@@ -4410,14 +4471,23 @@ function PageExpand(page_expand_arguments){
 		// 更新
 		// --------------------------------------------------------------------------------
 		function update(ary,id,func){
+			var p;
 			var i;
-			var param;
 			var num = ary.length;
-			for(i=0;i<num;i++){
-				param = ary[i];
-				if(id == "*" || param.id == id){
-					if(param.user)		func(param.user);
-					if(param.preset)	func(param.preset);
+			if(id == "*"){
+				for(i=0;i<num;i++){
+					p = ary[i];
+					if(p.user) func(p.user,p);
+					if(p.preset) func(p.preset,p);
+				}
+			}else{
+				for(i=0;i<num;i++){
+					p = ary[i];
+					if(p.id == id){
+						if(p.user) func(p.user,p);
+						if(p.preset) func(p.preset,p);
+						break;
+					}
 				}
 			}
 		}
@@ -4505,8 +4575,8 @@ function PageExpand(page_expand_arguments){
 				if(!(obj.name.locales))				obj.name.locales = new Object();
 
 				if(!(obj.enable))					obj.enable = false;
-				if(!(obj.script_allow))				obj.script_allow = "[]";
-				if(!(obj.script_callback))			obj.script_callback = "[]";
+				if(!(obj.script_allow))				obj.script_allow = "";
+				if(!(obj.script_callback))			obj.script_callback = "";
 
 				if(!(obj.popup))					obj.popup = new Object();
 				if(!(obj.popup.origin_type))		obj.popup.origin_type = "adsorb_top_down";
@@ -4948,7 +5018,7 @@ function PageExpand(page_expand_arguments){
 				if(!(obj.name.standard))			obj.name.standard = "";
 				if(!(obj.name.locales))				obj.name.locales = new Object();
 
-				if(!(obj.script))	obj.script = "[]";
+				if(!(obj.script))	obj.script = "";
 			});
 
 			// フォントの種類をメイリオに変更
@@ -4961,7 +5031,7 @@ function PageExpand(page_expand_arguments){
 						en:"Meiryo Font"
 					}
 				},
-				script:PresetScript_ReplacementToElement_MeiryoFont()
+				script:""
 			};
 
 			// --------------------------------------------------------------------------------
@@ -4975,7 +5045,7 @@ function PageExpand(page_expand_arguments){
 				if(!(obj.name.standard))			obj.name.standard = "";
 				if(!(obj.name.locales))				obj.name.locales = new Object();
 
-				if(!(obj.script))	obj.script = "[]";
+				if(!(obj.script))	obj.script = "";
 			});
 
 			// 英数字記号を半角、カタカナを全角に変更
@@ -4988,7 +5058,7 @@ function PageExpand(page_expand_arguments){
 						en:"String Convert From AlphanumericHalf To AlphanumericFull"
 					}
 				},
-				script:PresetScript_ReplacementToText_AlphanumericHalf()
+				script:""
 			};
 
 			// --------------------------------------------------------------------------------
@@ -5002,7 +5072,7 @@ function PageExpand(page_expand_arguments){
 				if(!(obj.name.standard))			obj.name.standard = "";
 				if(!(obj.name.locales))				obj.name.locales = new Object();
 
-				if(!(obj.script))	obj.script = "[]";
+				if(!(obj.script))	obj.script = "";
 			});
 
 			// ノーリファラ属性を追加
@@ -5015,7 +5085,7 @@ function PageExpand(page_expand_arguments){
 						en:"No Referer"
 					}
 				},
-				script:PresetScript_ReplacementToAnchor_NoReferrer()
+				script:""
 			};
 
 			// ソーシャルサービスのカウント数を表示
@@ -5094,7 +5164,7 @@ function PageExpand(page_expand_arguments){
 				if(!(obj.name.standard))			obj.name.standard = "";
 				if(!(obj.name.locales))				obj.name.locales = new Object();
 
-				if(!(obj.script))	obj.script = "[]";
+				if(!(obj.script))	obj.script = "";
 			});
 
 			// 空文字列に変更
@@ -5134,7 +5204,7 @@ function PageExpand(page_expand_arguments){
 				if(!(obj.name.standard))			obj.name.standard = "";
 				if(!(obj.name.locales))				obj.name.locales = new Object();
 
-				if(!(obj.script))	obj.script = "[]";
+				if(!(obj.script))	obj.script = "";
 			});
 
 			// iPhone4
@@ -5187,7 +5257,7 @@ function PageExpand(page_expand_arguments){
 				if(!(obj.name.standard))			obj.name.standard = "";
 				if(!(obj.name.locales))				obj.name.locales = new Object();
 
-				if(!(obj.script))	obj.script = "[]";
+				if(!(obj.script))	obj.script = "";
 			});
 
 			// 簡易
@@ -5346,8 +5416,8 @@ function PageExpand(page_expand_arguments){
 
 				if(!(obj.inline))					obj.inline = new Object();
 				if(!(obj.inline.disable_same_text))	obj.inline.disable_same_text = false;
-				if(!(obj.inline.script_allow))		obj.inline.script_allow = "[]";
-				if(!(obj.inline.script_insert))		obj.inline.script_insert = "[]";
+				if(!(obj.inline.script_allow))		obj.inline.script_allow = "";
+				if(!(obj.inline.script_insert))		obj.inline.script_insert = "";
 			});
 
 			// インライン表示
@@ -5381,8 +5451,8 @@ function PageExpand(page_expand_arguments){
 				if(!(obj.thumbnail))									obj.thumbnail = new Object();
 				if(!(obj.thumbnail.enable_popup_mouseover))				obj.thumbnail.enable_popup_mouseover = false;
 				if(!(obj.thumbnail.disable_same_image))					obj.thumbnail.disable_same_image = false;
-				if(!(obj.thumbnail.script_allow))						obj.thumbnail.script_allow = "[]";
-				if(!(obj.thumbnail.script_insert))						obj.thumbnail.script_insert = "[]";
+				if(!(obj.thumbnail.script_allow))						obj.thumbnail.script_allow = "";
+				if(!(obj.thumbnail.script_insert))						obj.thumbnail.script_insert = "";
 				if(!(obj.popup))										obj.popup = new Object();
 				if(!(obj.popup.origin_type))							obj.popup.origin_type = "center";
 				if(!(obj.popup.position_type))							obj.popup.position_type = "absolute";
@@ -5390,7 +5460,7 @@ function PageExpand(page_expand_arguments){
 				if(!(obj.popup.time_wait_close))						obj.popup.time_wait_close = 0;
 
 				if(!(obj.popup.enable_animation))						obj.popup.enable_animation = false;
-				if(!(obj.popup.script_allow))							obj.popup.script_allow = "[]";
+				if(!(obj.popup.script_allow))							obj.popup.script_allow = "";
 				if(!(obj.reduced_image))								obj.reduced_image = new Object();
 				if(!(obj.reduced_image.enable_popup))					obj.reduced_image.enable_popup = false;
 				if(!(obj.reduced_image.popup_allow_slcale_less_then))	obj.reduced_image.popup_allow_slcale_less_then = 0;
@@ -5469,8 +5539,8 @@ function PageExpand(page_expand_arguments){
 
 				if(!(obj.inline))						obj.inline = new Object();
 				if(!(obj.inline.disable_same_audio))	obj.inline.disable_same_audio = false;
-				if(!(obj.inline.script_allow))			obj.inline.script_allow = "[]";
-				if(!(obj.inline.script_insert))			obj.inline.script_insert = "[]";
+				if(!(obj.inline.script_allow))			obj.inline.script_allow = "";
+				if(!(obj.inline.script_insert))			obj.inline.script_insert = "";
 			});
 
 			// インライン表示
@@ -5503,10 +5573,10 @@ function PageExpand(page_expand_arguments){
 
 				if(!(obj.inline))									obj.inline = new Object();
 				if(!(obj.inline.disable_same_video))				obj.inline.disable_same_video = false;
-				if(!(obj.inline.script_allow))						obj.inline.script_allow = "[]";
-				if(!(obj.inline.script_insert))						obj.inline.script_insert = "[]";
+				if(!(obj.inline.script_allow))						obj.inline.script_allow = "";
+				if(!(obj.inline.script_insert))						obj.inline.script_insert = "";
 				if(!(obj.video_element))							obj.video_element = new Object();
-				if(!(obj.video_element.script_allow))				obj.video_element.script_allow = "[]";
+				if(!(obj.video_element.script_allow))				obj.video_element.script_allow = "";
 				if(!(obj.youtube))									obj.youtube = new Object();
 				if(!(obj.youtube.visible_video))					obj.youtube.visible_video = false;
 				if(!(obj.nicovideo))								obj.nicovideo = new Object();
@@ -5539,7 +5609,7 @@ function PageExpand(page_expand_arguments){
 				inline:{
 					disable_same_video:true,
 					video_max:10,
-					script_allow:PresetScript_ExpandVideo_InlineScriptAllow_Inline(),
+					script_allow:"",
 					script_insert:""
 				},
 				video_element:{
@@ -5584,8 +5654,8 @@ function PageExpand(page_expand_arguments){
 
 				if(!(obj.inline))						obj.inline = new Object();
 				if(!(obj.inline.disable_same_iframe))	obj.inline.disable_same_iframe = false;
-				if(!(obj.inline.script_allow))			obj.inline.script_allow = "[]";
-				if(!(obj.inline.script_insert))			obj.inline.script_insert = "[]";
+				if(!(obj.inline.script_allow))			obj.inline.script_allow = "";
+				if(!(obj.inline.script_insert))			obj.inline.script_insert = "";
 			});
 
 			// Flash のインライン表示
@@ -5897,7 +5967,7 @@ function PageExpand(page_expand_arguments){
 			// 追加
 			update(proj.expand_bbs,"*",function(obj){
 				if(!(obj.filter))				obj.filter = new Array();
-				if(!(obj.script_initialize))	obj.script_initialize = PresetScript_ExpandBbs_ScriptInitialize();
+				if(!(obj.script_initialize))	obj.script_initialize = "";
 			});
 
 			// 削除
@@ -6057,7 +6127,7 @@ function PageExpand(page_expand_arguments){
 						en:"Delete BR Tags Continuous"
 					}
 				},
-				script:PresetScript_ReplacementToElement_DeleteBrTags()
+				script:""
 			};
 
 
@@ -6547,7 +6617,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// インライン表示
 			var obj = addPreset(proj.expand_text,"inline",null);
-			obj.preset.inline.script_allow = PresetScript_ExpandText_InlineScriptAllow_Inline();
+			obj.preset.inline.script_allow = "";
 
 
 			// --------------------------------------------------------------------------------
@@ -6582,7 +6652,7 @@ function PageExpand(page_expand_arguments){
 
 			// インライン表示
 			var obj = addPreset(proj.expand_video,"inline",null);
-			obj.preset.video_element.script_allow = PresetScript_ExpandVideo_VideoElementScriptAllow_Inline();
+			obj.preset.video_element.script_allow = "";
 
 
 			// --------------------------------------------------------------------------------
@@ -6590,11 +6660,11 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// Flash のインライン表示
 			var obj = addPreset(proj.expand_iframe,"expand_flash_inline",null);
-			obj.preset.inline.script_allow = PresetScript_ExpandIframe_InlineScriptAllow_ExpandFlashInline();
+			obj.preset.inline.script_allow = "";
 
 			// PDF のインライン表示
 			var obj = addPreset(proj.expand_iframe,"expand_pdf_inline",null);
-			obj.preset.inline.script_allow = PresetScript_ExpandIframe_InlineScriptAllow_ExpandPdfInline();
+			obj.preset.inline.script_allow = "";
 
 
 			// --------------------------------------------------------------------------------
@@ -6737,31 +6807,8 @@ function PageExpand(page_expand_arguments){
 						en:"Visualize spaces and tabs"
 					}
 				},
-				script:PresetScript_ReplacementToText_VisualizeSpaceAndTab()
+				script:""
 			};
-
-			// --------------------------------------------------------------------------------
-			// アンカー置換定義
-			// --------------------------------------------------------------------------------
-			// 2ch.net 用
-			var preset = getPreset(proj.replacement_to_anchor,"direct_link_bbs");
-			preset.script = "";
-
-			// 検索用
-			var preset = getPreset(proj.replacement_to_anchor,"direct_link_search");
-			preset.script = PresetScript_ReplacementToAnchor_DirectLinkSearch();
-
-			// リアルタイム検索用
-			var preset = getPreset(proj.replacement_to_anchor,"direct_link_realtime_search");
-			preset.script = "";
-
-			// ツイッター用
-			var preset = getPreset(proj.replacement_to_anchor,"direct_link_twitter");
-			preset.script = "";
-
-			// イメージ検索用ポップアップ無効化
-			var preset = getPreset(proj.replacement_to_anchor,"disable_popup_image_search");
-			preset.script = PresetScript_ReplacementToAnchor_DisablePopupImageSearch();
 
 			// --------------------------------------------------------------------------------
 			// ハイパーリンク置換定義
@@ -6788,7 +6835,6 @@ function PageExpand(page_expand_arguments){
 
 				obj.filter[1].filter.push("*://*.images.search.yahoo.com/images/view;*");
 				obj.filter[1].filter.push("*://*.image.search.yahoo.com/images/view;*");
-				obj.filter[1].script = "";
 
 				obj.filter.splice(3,0,{
 					name:{
@@ -6952,7 +6998,7 @@ function PageExpand(page_expand_arguments){
 			// 追加
 			update(proj.expand_sound,"*",function(obj){
 				if(!obj.audio_element)	obj.audio_element = new Object();
-				obj.audio_element.script_allow = PresetScript_ExpandSound_AudioElementScriptAllow_Inline();
+				obj.audio_element.script_allow = "";
 
 				if(!obj.soundcloud)		obj.soundcloud = new Object();
 				obj.soundcloud.visible_player_flash = true;
@@ -6961,7 +7007,7 @@ function PageExpand(page_expand_arguments){
 				if(!obj.mixcloud)		obj.mixcloud = new Object();
 				obj.mixcloud.visible_player = true;
 
-				obj.inline.script_allow = PresetScript_ExpandSound_InlineScriptAllow_Inline();
+				obj.inline.script_allow = "";
 				obj.inline.script_insert = "";
 				obj.inline.sound_max = 10;
 			});
@@ -7246,13 +7292,6 @@ function PageExpand(page_expand_arguments){
 			};
 
 			// --------------------------------------------------------------------------------
-			// アンカー置換定義
-			// --------------------------------------------------------------------------------
-			// ツイッター用
-			var preset = getPreset(proj.replacement_to_anchor,"direct_link_twitter");
-			preset.script = PresetScript_ReplacementToAnchor_DirectLinkTwitter();
-
-			// --------------------------------------------------------------------------------
 			// ハイパーリンク置換定義
 			// --------------------------------------------------------------------------------
 			// 追加
@@ -7263,12 +7302,6 @@ function PageExpand(page_expand_arguments){
 				for(i=0;i<num;i++){
 					filter[i].enable_cache = true;
 				}
-			});
-			// 直リンク（汎用）
-			updatePreset(proj.replacement_to_link,"direct_link_generic",function(obj){
-				var filter = obj.filter;
-				// Facebook Photo
-				filter[4].script = "";
 			});
 
 			// --------------------------------------------------------------------------------
@@ -7304,15 +7337,6 @@ function PageExpand(page_expand_arguments){
 			// イメージ検索用
 			updatePreset(proj.replacement_to_link,"direct_link_image_search",function(obj){
 				var filter = obj.filter;
-
-				// Bing 画像検索
-				filter[4].script = "";
-
-				// Yandex 画像検索
-				filter[7].script = "";
-
-				// 百度
-				filter[9].script = "";
 
 				// naver.jp
 				filter[12].enable_cache = false;
@@ -7364,9 +7388,6 @@ function PageExpand(page_expand_arguments){
 				// OGP "twitter:*"
 				filter[1].filter.push("*://campl.us/*");
 
-				// Twitpic
-				filter[2].script = "";
-
 				// Giphy
 				filter.splice(6,0,{
 					name:{
@@ -7401,20 +7422,6 @@ function PageExpand(page_expand_arguments){
 					enable_cache:true,
 					script:""
 				});
-
-				// フォト蔵
-				filter[8].script = PresetScript_ReplacementToLink_DirectLinkGeneric_PhotozouPhoto();
-
-				// ピクシブ
-				filter[11].script = "";
-			});
-
-			// イメージ検索用
-			updatePreset(proj.replacement_to_link,"direct_link_image_search",function(obj){
-				var filter = obj.filter;
-
-				// Bing 画像検索
-				filter[4].script = "";
 			});
 
 			// --------------------------------------------------------------------------------
@@ -7469,26 +7476,8 @@ function PageExpand(page_expand_arguments){
 			];
 
 			// --------------------------------------------------------------------------------
-			// ハイパーリンク化定義
-			// --------------------------------------------------------------------------------
-			// 簡易
-			updatePreset(proj.make_link_to_text,"simple",function(obj){
-				obj.script = "";
-			});
-
-			// 詳細
-			updatePreset(proj.make_link_to_text,"detail",function(obj){
-				obj.script = "";
-			});
-
-			// --------------------------------------------------------------------------------
 			// アンカー置換定義
 			// --------------------------------------------------------------------------------
-			// 2ch.net 用
-			updatePreset(proj.replacement_to_anchor,"direct_link_bbs",function(obj){
-				obj.script = "";
-			});
-
 			// リンク先をツールチップで表示
 			var obj = addPreset(proj.replacement_to_anchor,"display_url_in_tooltip","attach_sns_counter");
 
@@ -7500,7 +7489,7 @@ function PageExpand(page_expand_arguments){
 						en:"Display URL in the ToolTip"
 					}
 				},
-				script:PresetScript_ReplacementToAnchor_DisplayUrlInTooltip()
+				script:""
 			};
 
 			// --------------------------------------------------------------------------------
@@ -7543,7 +7532,7 @@ function PageExpand(page_expand_arguments){
 					],
 					enable_reflect_to_anchor:false,
 					enable_cache:true,
-					script:PresetScript_ReplacementToLink_DirectLinkGeneric_PicasaPhoto()
+					script:""
 				});
 
 				// ついっぷる (直リンク)
@@ -7563,54 +7552,13 @@ function PageExpand(page_expand_arguments){
 						script:""
 				});
 
-				// Gyazo
-				filter[9].script = "";
-
-				// ニコニコ静画
-				filter[13].script = "";
-
 				// ピクシブ
 				filter[14].filter.push("*://touch.pixiv.net/member_illust.php?*illust_id*");
-				filter[14].script = "";
-			});
-
-			// イメージ検索用
-			updatePreset(proj.replacement_to_link,"direct_link_image_search",function(obj){
-				var filter = obj.filter;
-
-				// Bing 画像検索
-				filter[4].script = "";
-
-				// 百度
-				filter[9].script = PresetScript_ReplacementToLink_DirectLinkImageSearch_Baidu();
-			});
-
-			// --------------------------------------------------------------------------------
-			// テキスト展開定義
-			// --------------------------------------------------------------------------------
-			// インライン表示
-			updatePreset(proj.expand_text,"inline",function(obj){
-				obj.inline.script_insert = "";
 			});
 
 			// --------------------------------------------------------------------------------
 			// イメージ展開定義
 			// --------------------------------------------------------------------------------
-			// サムネイル表示
-			updatePreset(proj.expand_image,"thumbnail",function(obj){
-				obj.thumbnail.script_allow = "";
-			});
-
-			// ポップアップ表示
-			updatePreset(proj.expand_image,"popup",function(obj){
-				obj.popup.script_allow = "";
-			});
-
-			// サムネイル許可
-			updatePreset(proj.expand_image,"*",function(obj){
-				obj.thumbnail.script_insert = "";
-			});
-
 			// 画像掲示板用
 			var obj = addPreset(proj.expand_image,"image_bbs",null);
 			obj.preset = {
@@ -7636,7 +7584,7 @@ function PageExpand(page_expand_arguments){
 					enable_animation_scale:true,
 					enable_animation_alpha:true,
 					load_type:"preload",
-					script_allow:PresetScript_ExpandImage_PopupScriptAllow_ImageBbs()
+					script_allow:""
 				},
 				reduced_image:{
 					enable_popup:true,
@@ -7648,35 +7596,6 @@ function PageExpand(page_expand_arguments){
 					unload_allow_size_more_then:256
 				}
 			};
-
-			// --------------------------------------------------------------------------------
-			// サウンド展開定義
-			// --------------------------------------------------------------------------------
-			// インライン表示
-			updatePreset(proj.expand_sound,"inline",function(obj){
-				obj.inline.script_insert = "";
-			});
-
-			// --------------------------------------------------------------------------------
-			// ビデオ展開定義
-			// --------------------------------------------------------------------------------
-			// インライン表示
-			updatePreset(proj.expand_video,"inline",function(obj){
-				obj.inline.script_insert = "";
-			});
-
-			// --------------------------------------------------------------------------------
-			// インラインフレーム展開定義
-			// --------------------------------------------------------------------------------
-			// Flash のインライン表示
-			updatePreset(proj.expand_iframe,"expand_flash_inline",function(obj){
-				obj.inline.script_insert = "";
-			});
-
-			// PDF のインライン表示
-			updatePreset(proj.expand_iframe,"expand_pdf_inline",function(obj){
-				obj.inline.script_insert = "";
-			});
 
 			// --------------------------------------------------------------------------------
 			// URLマッピング設定
@@ -7707,7 +7626,7 @@ function PageExpand(page_expand_arguments){
 				if(!(obj.name.standard))			obj.name.standard = "";
 				if(!(obj.name.locales))				obj.name.locales = new Object();
 
-				if(!(obj.script))	obj.script = "[]";
+				if(!(obj.script))	obj.script = "";
 			});
 
 			// --------------------------------------------------------------------------------
@@ -7723,7 +7642,7 @@ function PageExpand(page_expand_arguments){
 						en:"Assist Expand (image search)"
 					}
 				},
-				script:PresetScript_ReplacementToElement_AssistImageSearch()
+				script:""
 			};
 
 			// 展開アシスト（ツイッター用）
@@ -7765,7 +7684,7 @@ function PageExpand(page_expand_arguments){
 						en:"Direct Link (facebook.com)"
 					}
 				},
-				script:PresetScript_ReplacementToAnchor_DirectLinkFacebook()
+				script:""
 			};
 
 			// イベントを無効化（フェイスブック用）
@@ -7790,19 +7709,6 @@ function PageExpand(page_expand_arguments){
 
 				// OGP "og:image"
 				filter[0].filter.push("*://seiga.nicovideo.jp/watch/bk*");
-				filter[0].script = "";
-
-				// OGP "twitter:*"
-				filter[1].script = PresetScript_ReplacementToLink_DirectLinkGeneric_OgpTwitter();
-
-				// Facebook Photo
-				filter[4].script = "";
-
-				// Tumblr
-				filter[7].script = PresetScript_ReplacementToLink_DirectLinkGeneric_Tumblr();
-
-				// ついっぷる
-				filter[11].script = "";
 
 				// blog.fc2.com
 				filter.splice(13,0,{
@@ -7837,47 +7743,11 @@ function PageExpand(page_expand_arguments){
 					enable_cache:true,
 					script:""
 				});
-
-				// ピクシブ
-				filter[15].script = "";
 			});
 
 			// イメージ検索用
 			updatePreset(proj.replacement_to_link,"direct_link_image_search",function(obj){
 				var filter = obj.filter;
-
-				// Google 画像検索
-				filter[0].script = PresetScript_ReplacementToLink_DirectLinkImageSearch_Google();
-
-				// Yahoo Image Search
-				filter[1].script = PresetScript_ReplacementToLink_DirectLinkImageSearch_YahooImageSearch();
-
-				// Yahoo! JAPAN 画像検索
-				filter[2].script = PresetScript_ReplacementToLink_DirectLinkImageSearch_YahooJapan();
-
-				// yahoo.cn
-				filter[3].script = "";
-
-				// Bing 画像検索
-				filter[4].script = PresetScript_ReplacementToLink_DirectLinkImageSearch_Bing();
-
-				// Ask 画像検索
-				filter[5].script = PresetScript_ReplacementToLink_DirectLinkImageSearch_Ask();
-
-				// AOL 画像検索
-				filter[6].script = PresetScript_ReplacementToLink_DirectLinkImageSearch_Aol();
-
-				// Yandex 画像検索
-				filter[7].script = "";
-
-				// goo 画像検索
-				filter[8].script = PresetScript_ReplacementToLink_DirectLinkImageSearch_Goo();
-
-				// Baidu.jp
-				filter[10].script = "";
-
-				// NAVER 画像検索
-				filter[11].script = PresetScript_ReplacementToLink_DirectLinkImageSearch_Naver();
 
 				// naver.jp
 				filter[12].filter = [
@@ -7885,14 +7755,11 @@ function PageExpand(page_expand_arguments){
 					"http://*search.naver.jp/jdanmi?*"
 				];
 				filter[12].enable_cache = true;
-				filter[12].script = PresetScript_ReplacementToLink_DirectLinkImageSearch_NaverJp();
 			});
 
 			// ウィキペディア用
 			updatePreset(proj.replacement_to_link,"direct_link_wikipedia",function(obj){
 				var filter = obj.filter;
-
-				filter[0].script = PresetScript_ReplacementToLink_DirectLinkWikipedia();
 
 				filter = filter[0].filter;
 				filter.push("*://*.m.wikipedia.org/wiki/*:*");
@@ -7973,8 +7840,8 @@ function PageExpand(page_expand_arguments){
 					enable_popup_mouseover:true,
 					disable_same_image:false,
 					load_type:"preload",
-					script_allow:PresetScript_ExpandImage_ThumbnailScriptAllow_PopupAll(),
-					script_insert:"[]"
+					script_allow:"",
+					script_insert:""
 				},
 				popup:{
 					origin_type:"center",
@@ -7985,7 +7852,7 @@ function PageExpand(page_expand_arguments){
 					enable_animation_alpha:true,
 					load_type:"preload",
 					scale_percent:100,
-					script_allow:PresetScript_ExpandImage_PopupScriptAllow_PopupAll()
+					script_allow:""
 				},
 				reduced_image:{
 					enable_popup:true,
@@ -8012,8 +7879,8 @@ function PageExpand(page_expand_arguments){
 					enable_popup_mouseover:true,
 					disable_same_image:false,
 					load_type:"preload",
-					script_allow:PresetScript_ExpandImage_ThumbnailScriptAllow_PopupIncludeImage(),
-					script_insert:"[]"
+					script_allow:"",
+					script_insert:""
 				},
 				popup:{
 					origin_type:"center",
@@ -8024,7 +7891,7 @@ function PageExpand(page_expand_arguments){
 					enable_animation_alpha:true,
 					load_type:"preload",
 					scale_percent:100,
-					script_allow:PresetScript_ExpandImage_PopupScriptAllow_PopupIncludeImage()
+					script_allow:""
 				},
 				reduced_image:{
 					enable_popup:true,
@@ -8051,8 +7918,8 @@ function PageExpand(page_expand_arguments){
 					enable_popup_mouseover:true,
 					disable_same_image:false,
 					load_type:"preload",
-					script_allow:PresetScript_ExpandImage_ThumbnailScriptAllow_ThumbnailAll(),
-					script_insert:"[]"
+					script_allow:"",
+					script_insert:""
 				},
 				popup:{
 					origin_type:"center",
@@ -8063,7 +7930,7 @@ function PageExpand(page_expand_arguments){
 					enable_animation_alpha:true,
 					load_type:"preload",
 					scale_percent:100,
-					script_allow:PresetScript_ExpandImage_PopupScriptAllow_ThumbnailAll()
+					script_allow:""
 				},
 				reduced_image:{
 					enable_popup:true,
@@ -8090,8 +7957,8 @@ function PageExpand(page_expand_arguments){
 					enable_popup_mouseover:true,
 					disable_same_image:false,
 					load_type:"preload",
-					script_allow:PresetScript_ExpandImage_ThumbnailScriptAllow_ThumbnailNotIncludeImage(),
-					script_insert:"[]"
+					script_allow:"",
+					script_insert:""
 				},
 				popup:{
 					origin_type:"center",
@@ -8102,7 +7969,7 @@ function PageExpand(page_expand_arguments){
 					enable_animation_alpha:true,
 					load_type:"preload",
 					scale_percent:100,
-					script_allow:PresetScript_ExpandImage_PopupScriptAllow_ThumbnailNotIncludeImage()
+					script_allow:""
 				},
 				reduced_image:{
 					enable_popup:true,
@@ -8130,7 +7997,7 @@ function PageExpand(page_expand_arguments){
 					disable_same_image:false,
 					load_type:"preload",
 					script_allow:"",
-					script_insert:"[]"
+					script_insert:""
 				},
 				popup:{
 					origin_type:"center",
@@ -8153,11 +8020,6 @@ function PageExpand(page_expand_arguments){
 					unload_allow_size_more_then:256
 				}
 			};
-
-			// サムネイル挿入
-			updatePreset(proj.expand_image,"*",function(obj){
-				obj.thumbnail.script_insert = PresetScript_ExpandImage_ThumbnailScriptInsert();
-			});
 
 			// --------------------------------------------------------------------------------
 			// URLマッピング設定
@@ -8333,8 +8195,6 @@ function PageExpand(page_expand_arguments){
 					flags:{i:true,g:false}
 				}
 			];
-			preset.script_initialize = "";
-			preset.script_callback = "";
 
 			// みみずん検索
 			var obj = addPreset(proj.expand_bbs,"mimizun",null);
@@ -8348,8 +8208,6 @@ function PageExpand(page_expand_arguments){
 					flags:{i:true,g:false}
 				}
 			];
-			preset.script_initialize = "";
-			preset.script_callback = "";
 
 			// unkar.org
 			var obj = addPreset(proj.expand_bbs,"unkar",null);
@@ -8360,8 +8218,6 @@ function PageExpand(page_expand_arguments){
 					flags:{i:true,g:false}
 				}
 			];
-			preset.script_initialize = "";
-			preset.script_callback = "";
 
 			// あっとちゃんねるず
 			var obj = addPreset(proj.expand_bbs,"atchs",null);
@@ -8372,8 +8228,6 @@ function PageExpand(page_expand_arguments){
 					flags:{i:true,g:false}
 				}
 			];
-			preset.script_initialize = "";
-			preset.script_callback = "";
 
 			// --------------------------------------------------------------------------------
 			// URLマッピング設定
@@ -8483,16 +8337,8 @@ function PageExpand(page_expand_arguments){
 						en:"Assist Expand (image in anchor)"
 					}
 				},
-				script:PresetScript_ReplacementToElement_AssistImageInAnchor()
+				script:""
 			};
-
-			// --------------------------------------------------------------------------------
-			// アンカー置換定義
-			// --------------------------------------------------------------------------------
-			// 2ch.net 用
-			updatePreset(proj.replacement_to_anchor,"direct_link_bbs",function(obj){
-				obj.script = "";
-			});
 
 			// --------------------------------------------------------------------------------
 			// イメージ展開定義
@@ -8507,22 +8353,18 @@ function PageExpand(page_expand_arguments){
 			// ポップアップ表示（すべてのリンク）
 			var preset_popup_all = getPreset(proj.expand_image,"popup_all");
 			preset_popup_all.thumbnail.enable_thumbnail = false;
-			preset_popup_all.thumbnail.script_allow = PresetScript_ExpandImage_ThumbnailScriptAllow_ThumbnailAll();
 
 			// ポップアップ表示（画像を含むリンク）
 			var preset_popup_include_image = getPreset(proj.expand_image,"popup_include_image");
 			preset_popup_include_image.thumbnail.enable_thumbnail = false;
-			preset_popup_include_image.thumbnail.script_allow = PresetScript_ExpandImage_ThumbnailScriptAllow_ThumbnailNotIncludeImage();
 
 			// サムネイル表示（すべて）
 			var preset_thumbnail_all = getPreset(proj.expand_image,"thumbnail_all");
 			preset_thumbnail_all.popup.enable_popup_mouseover = false;
-			preset_thumbnail_all.popup.script_allow = PresetScript_ExpandImage_PopupScriptAllow_PopupAll();
 
 			// サムネイル表示（画像を含まないリンク）
 			var preset_thumbnail_not_include_image = getPreset(proj.expand_image,"thumbnail_not_include_image");
 			preset_thumbnail_not_include_image.popup.enable_popup_mouseover = false;
-			preset_thumbnail_not_include_image.popup.script_allow = PresetScript_ExpandImage_PopupScriptAllow_PopupIncludeImage();
 
 			// ポップアップ表示（アシスト要素のみ）
 			var obj = addPreset(proj.expand_image,"popup_image_in_anchor","thumbnail_all");
@@ -8540,7 +8382,7 @@ function PageExpand(page_expand_arguments){
 					disable_same_image:false,
 					load_type:"preload",
 					script_allow:"",
-					script_insert:PresetScript_ExpandImage_ThumbnailScriptInsert()
+					script_insert:""
 				},
 				popup:{
 					enable_popup_mouseover:true,
@@ -8578,8 +8420,6 @@ function PageExpand(page_expand_arguments){
 					flags:{i:true,g:false}
 				}
 			];
-			preset.script_initialize = "";
-			preset.script_callback = "";
 
 			// chaika
 			var obj = addPreset(proj.expand_bbs,"chaika","atchs");
@@ -8722,8 +8562,6 @@ function PageExpand(page_expand_arguments){
 					]
 				}
 			};
-			preset.script_initialize = "";
-			preset.script_callback = "";
 
 			// ログ速
 			var obj = addPreset(proj.expand_bbs,"logsoku",null);
@@ -9013,65 +8851,6 @@ function PageExpand(page_expand_arguments){
 		if(proj.version < 16){
 			// バージョン値
 			proj.version = 16;
-
-			// --------------------------------------------------------------------------------
-			// アンカー置換定義
-			// --------------------------------------------------------------------------------
-			// リアルタイム検索用
-			updatePreset(proj.replacement_to_anchor,"direct_link_realtime_search",function(obj){
-				obj.script = PresetScript_ReplacementToAnchor_DirectLinkRealtimeSearch();
-			});
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク化定義
-			// --------------------------------------------------------------------------------
-			// 簡易
-			updatePreset(proj.make_link_to_text,"simple",function(obj){
-				obj.script = PresetScript_MakeLinkToText_Simple();
-			});
-
-			// 詳細
-			updatePreset(proj.make_link_to_text,"detail",function(obj){
-				obj.script = PresetScript_MakeLinkToText_Detail();
-			});
-
-			// --------------------------------------------------------------------------------
-			// テキスト展開定義
-			// --------------------------------------------------------------------------------
-			// インライン表示
-			updatePreset(proj.expand_text,"inline",function(obj){
-				obj.inline.script_insert = PresetScript_ExpandText_InlineScriptInsert_Inline();
-			});
-
-			// --------------------------------------------------------------------------------
-			// サウンド展開定義
-			// --------------------------------------------------------------------------------
-			// インライン表示
-			updatePreset(proj.expand_sound,"inline",function(obj){
-				obj.inline.script_insert = PresetScript_ExpandSound_InlineScriptInsert_Inline();
-			});
-
-			// --------------------------------------------------------------------------------
-			// ビデオ展開定義
-			// --------------------------------------------------------------------------------
-			// インライン表示
-			updatePreset(proj.expand_video,"inline",function(obj){
-				obj.inline.script_insert = PresetScript_ExpandVideo_InlineScriptInsert_Inline();
-			});
-
-			// --------------------------------------------------------------------------------
-			// インラインフレーム展開定義
-			// --------------------------------------------------------------------------------
-			// Flash のインライン表示
-			updatePreset(proj.expand_iframe,"expand_flash_inline",function(obj){
-				obj.inline.script_insert = PresetScript_ExpandIframe_InlineScriptInsert_ExpandFlashInline();
-			});
-
-			// PDF のインライン表示
-			updatePreset(proj.expand_iframe,"expand_pdf_inline",function(obj){
-				obj.inline.script_insert = PresetScript_ExpandIframe_InlineScriptInsert_ExpandPdfInline();
-			});
-
 		}
 		if(exit())	return proj;
 
@@ -9111,7 +8890,7 @@ function PageExpand(page_expand_arguments){
 						en:"Auto Download (all)"
 					}
 				},
-				script:PresetScript_ReplacementToAnchor_AutoDownloadAll()
+				script:""
 			};
 
 			// 自動ダウンロード（画像のみ）
@@ -9124,7 +8903,7 @@ function PageExpand(page_expand_arguments){
 						en:"Auto Download (image only)"
 					}
 				},
-				script:PresetScript_ReplacementToAnchor_AutoDownloadImage()
+				script:""
 			};
 
 			// ダウンロードリストに登録（すべて）
@@ -9137,7 +8916,7 @@ function PageExpand(page_expand_arguments){
 						en:"Add the DownloadList (all)"
 					}
 				},
-				script:PresetScript_ReplacementToAnchor_AddDownloadListAll()
+				script:""
 			};
 
 			// ダウンロードリストに登録（画像のみ）
@@ -9150,7 +8929,7 @@ function PageExpand(page_expand_arguments){
 						en:"Add the DownloadList (image only)"
 					}
 				},
-				script:PresetScript_ReplacementToAnchor_AddDownloadListImage()
+				script:""
 			};
 
 		}
@@ -9263,7 +9042,7 @@ function PageExpand(page_expand_arguments){
 						en:"Assist Expand (NICONICO SEIGA)"
 					}
 				},
-				script:PresetScript_ReplacementToElement_AssistNicoSeiga()
+				script:""
 			};
 
 			// --------------------------------------------------------------------------------
@@ -9275,21 +9054,12 @@ function PageExpand(page_expand_arguments){
 
 				// OGP "og:image"
 				filter[0].filter.asterisk.filter.splice(2,5);
-				filter[0].script = PresetScript_ReplacementToLink_DirectLinkGeneric_OgpOgImage();
-
-				// Twitpic
-				filter[2].script = PresetScript_ReplacementToLink_DirectLinkGeneric_Twitpic();
-
-				// Twitter Photo
-				filter[3].script = "";
 
 				// Facebook Photo
 				filter[4].filter.asterisk.filter.push("*://www.facebook.com/*/photos/*");
-				filter[4].script = PresetScript_ReplacementToLink_DirectLinkGeneric_FacebookPhoto();
 
 				// Google+ Photo
 				filter[5].filter.asterisk.filter.push("*://plus.google.com/*/posts/*");
-				filter[5].script = PresetScript_ReplacementToLink_DirectLinkGeneric_GooglePlusPhoto();
 
 				// Flickr
 				filter.splice(8,0,{
@@ -9314,7 +9084,7 @@ function PageExpand(page_expand_arguments){
 					},
 					enable_reflect_to_anchor:false,
 					enable_cache:true,
-					script:PresetScript_ReplacementToLink_DirectLinkGeneric_Flickr()
+					script:""
 				});
 
 				// yfrog.com
@@ -9340,23 +9110,8 @@ function PageExpand(page_expand_arguments){
 					},
 					enable_reflect_to_anchor:false,
 					enable_cache:true,
-					script:PresetScript_ReplacementToLink_DirectLinkGeneric_Yfrog()
+					script:""
 				});
-
-				// Giphy
-				filter[10].script = PresetScript_ReplacementToLink_DirectLinkGeneric_Giphy();
-
-				// Gyazo
-				filter[11].script = PresetScript_ReplacementToLink_DirectLinkGeneric_Gyazo();
-
-				// ついっぷる
-				filter[13].script = PresetScript_ReplacementToLink_DirectLinkGeneric_Twipple();
-
-				// ついっぷる (直リンク)
-				filter[14].script = PresetScript_ReplacementToLink_DirectLinkGeneric_TwippleDirectLink();
-
-				// blog.fc2.com
-				filter[15].script = PresetScript_ReplacementToLink_DirectLinkGeneric_BlogFc2Com();
 
 				// deviantART
 				filter.splice(16,0,{
@@ -9380,7 +9135,7 @@ function PageExpand(page_expand_arguments){
 					},
 					enable_reflect_to_anchor:false,
 					enable_cache:true,
-					script:PresetScript_ReplacementToLink_DirectLinkGeneric_DeviantArt()
+					script:""
 				});
 
 				// ニコニコ静画 イラスト
@@ -9391,7 +9146,6 @@ function PageExpand(page_expand_arguments){
 						en:"NICONICO SEIGA Illust"
 					}
 				};
-				filter[17].script = PresetScript_ReplacementToLink_DirectLinkGeneric_NicoSeigaIllust();
 
 				// ニコニコ静画 イラスト (直リンク)
 				filter.splice(18,0,{
@@ -9416,7 +9170,7 @@ function PageExpand(page_expand_arguments){
 					},
 					enable_reflect_to_anchor:false,
 					enable_cache:true,
-					script:PresetScript_ReplacementToLink_DirectLinkGeneric_NicoSeigaIllustDirectLink()
+					script:""
 				});
 
 				// ニコニコ静画 漫画 
@@ -9442,11 +9196,8 @@ function PageExpand(page_expand_arguments){
 					},
 					enable_reflect_to_anchor:false,
 					enable_cache:true,
-					script:PresetScript_ReplacementToLink_DirectLinkGeneric_NicoSeigaManga()
+					script:""
 				});
-
-				// Miiverse
-				filter[21].script = PresetScript_ReplacementToLink_DirectLinkGeneric_Miiverse();
 			});
 
 			// イメージ検索用
@@ -9472,7 +9223,6 @@ function PageExpand(page_expand_arguments){
 						]
 					}
 				};
-				filter[6].script = PresetScript_ReplacementToLink_DirectLinkImageSearch_Yandex();
 			});
 
 			// --------------------------------------------------------------------------------
@@ -9705,7 +9455,7 @@ function PageExpand(page_expand_arguments){
 					}
 				},
 				enable:true,
-				script_initialize:PresetScript_ExpandBbs_ScriptInitialize(),
+				script_initialize:"",
 				script_callback:"",
 				popup:{
 					origin_type:"adsorb_top_bottom",
@@ -9717,14 +9467,6 @@ function PageExpand(page_expand_arguments){
 					style_sheet:"padding:20px 10px; margin:0px; border:1px solid #000; overflow-y:auto; word-wrap:break-word; word-break:break-all; display:block;"
 				}
 			};
-
-			// --------------------------------------------------------------------------------
-			// イメージ展開定義
-			// --------------------------------------------------------------------------------
-			// 画像掲示板用
-			updatePreset(proj.expand_image,"image_bbs",function(obj){
-				obj.thumbnail.script_allow = PresetScript_ExpandImage_ThumbnailScriptAllow_ImageBbs();
-			});
 
 			// --------------------------------------------------------------------------------
 			// URLマッピング設定
@@ -9745,14 +9487,6 @@ function PageExpand(page_expand_arguments){
 		if(proj.version < 22){
 			// バージョン値
 			proj.version = 22;
-
-			// --------------------------------------------------------------------------------
-			// アンカー置換定義
-			// --------------------------------------------------------------------------------
-			// ソーシャルサービスのカウント数を表示
-			updatePreset(proj.replacement_to_anchor,"attach_sns_counter",function(obj){
-				obj.script = PresetScript_ReplacementToAnchor_AttachSnsCounter();
-			});
 
 			// --------------------------------------------------------------------------------
 			// ハイパーリンク置換定義
@@ -9792,7 +9526,7 @@ function PageExpand(page_expand_arguments){
 						},
 						enable_reflect_to_anchor:false,
 						enable_cache:true,
-						script:PresetScript_ReplacementToLink_DirectLinkFindImageInHTML_ImageOfTheLargestByte()
+						script:""
 					}
 				]
 			};
@@ -9806,54 +9540,6 @@ function PageExpand(page_expand_arguments){
 		if(proj.version < 23){
 			// バージョン値
 			proj.version = 23;
-
-			// --------------------------------------------------------------------------------
-			// エレメント置換定義
-			// --------------------------------------------------------------------------------
-			// 展開アシスト（ピクシブ用）
-			updatePreset(proj.replacement_to_element,"assist_pixiv",function(obj){
-				obj.script = PresetScript_ReplacementToElement_AssistPixiv();
-			});
-
-			// 展開アシスト（deviantART 用）
-			updatePreset(proj.replacement_to_element,"assist_deviant_art",function(obj){
-				obj.script = PresetScript_ReplacementToElement_AssistDeviantArt();
-			});
-
-			// --------------------------------------------------------------------------------
-			// アンカー置換定義
-			// --------------------------------------------------------------------------------
-			// イベントを無効化（フェイスブック用）
-			updatePreset(proj.replacement_to_anchor,"disable_event_facebook",function(obj){
-				obj.script = PresetScript_ReplacementToAnchor_DisableEventFacebook();
-			});
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義
-			// --------------------------------------------------------------------------------
-			// 直リンク（汎用）
-			updatePreset(proj.replacement_to_link,"direct_link_generic",function(obj){
-				var filter = obj.filter;
-
-				// ピクシブ
-				filter[20].script = PresetScript_ReplacementToLink_DirectLinkGeneric_PixivNet();
-			});
-
-			// --------------------------------------------------------------------------------
-			// イメージ展開定義
-			// --------------------------------------------------------------------------------
-			// ポップアップ表示（アシスト要素のみ）
-			updatePreset(proj.expand_image,"popup_image_in_anchor",function(obj){
-				obj.thumbnail.script_allow = PresetScript_ExpandImage_ThumbnailScriptAllow_PopupImageInAnchor();
-				obj.popup.script_allow = PresetScript_ExpandImage_PopupScriptAllow_PopupImageInAnchor();
-			});
-
-			// ツイッター用
-			updatePreset(proj.expand_image,"twitter",function(obj){
-				obj.thumbnail.script_allow = "";
-				obj.popup.script_allow = PresetScript_ExpandImage_PopupScriptAllow_Twitter();
-			});
-
 		}
 		if(exit())	return proj;
 
@@ -9945,8 +9631,8 @@ function PageExpand(page_expand_arguments){
 					enable_popup_mouseover:true,
 					disable_same_image:false,
 					load_type:"preload",
-					script_allow:PresetScript_ExpandImage_ThumbnailScriptAllow_ThumbnailNotIncludeImage(),
-					script_insert:PresetScript_ExpandImage_ThumbnailScriptInsert()
+					script_allow:"",
+					script_insert:""
 				},
 				popup:{
 					enable_popup_mouseover:true,
@@ -9958,7 +9644,7 @@ function PageExpand(page_expand_arguments){
 					enable_animation_alpha:true,
 					load_type:"preload",
 					scale_percent:100,
-					script_allow:PresetScript_ExpandImage_PopupScriptAllow_PopupImageInAnchor()
+					script_allow:""
 				},
 				reduced_image:{
 					enable_popup:true,
@@ -10003,7 +9689,7 @@ function PageExpand(page_expand_arguments){
 						en:"Assist Expand (reddit)"
 					}
 				},
-				script:PresetScript_ReplacementToElement_AssistReddit()
+				script:""
 			};
 
 			// --------------------------------------------------------------------------------
@@ -10035,8 +9721,8 @@ function PageExpand(page_expand_arguments){
 					enable_popup_mouseover:true,
 					disable_same_image:false,
 					load_type:"preload",
-					script_allow:PresetScript_ExpandImage_ThumbnailScriptAllow_Reddit(),
-					script_insert:PresetScript_ExpandImage_ThumbnailScriptInsert()
+					script_allow:"",
+					script_insert:""
 				},
 				popup:{
 					enable_popup_mouseover:true,
@@ -10048,7 +9734,7 @@ function PageExpand(page_expand_arguments){
 					enable_animation_alpha:true,
 					load_type:"preload",
 					scale_percent:100,
-					script_allow:PresetScript_ExpandImage_PopupScriptAllow_Reddit()
+					script_allow:""
 				},
 				reduced_image:{
 					enable_popup:true,
@@ -10078,11 +9764,11 @@ function PageExpand(page_expand_arguments){
 				inline:{
 					disable_same_audio:true,
 					sound_max:10,
-					script_allow:PresetScript_ExpandSound_InlineScriptAllow_InlineFromAssist(),
-					script_insert:PresetScript_ExpandSound_InlineScriptInsert_Inline()
+					script_allow:"",
+					script_insert:""
 				},
 				audio_element:{
-					script_allow:PresetScript_ExpandSound_AudioElementScriptAllow_Inline()
+					script_allow:""
 				},
 				soundcloud:{
 					visible_player_flash:true,
@@ -10109,11 +9795,11 @@ function PageExpand(page_expand_arguments){
 				inline:{
 					disable_same_video:true,
 					video_max:10,
-					script_allow:PresetScript_ExpandVideo_InlineScriptAllow_InlineFromAssist(),
-					script_insert:PresetScript_ExpandVideo_InlineScriptInsert_Inline()
+					script_allow:"",
+					script_insert:""
 				},
 				video_element:{
-					script_allow:PresetScript_ExpandVideo_VideoElementScriptAllow_Inline()
+					script_allow:""
 				},
 				youtube:{
 					visible_video:true
@@ -10215,7 +9901,7 @@ function PageExpand(page_expand_arguments){
 					}
 				},
 				enable:true,
-				script_initialize:PresetScript_ExpandBbs_ScriptInitialize(),
+				script_initialize:"",
 				script_callback:"",
 				popup:{
 					origin_type:"adsorb_top_bottom",
@@ -10316,33 +10002,6 @@ function PageExpand(page_expand_arguments){
 			};
 
 			// --------------------------------------------------------------------------------
-			// エレメント置換定義
-			// --------------------------------------------------------------------------------
-			// 展開アシスト（ツイッター用）
-			updatePreset(proj.replacement_to_element,"assist_twitter",function(obj){
-				obj.script = PresetScript_ReplacementToElement_AssistTwitter();
-			});
-
-			// --------------------------------------------------------------------------------
-			// アンカー置換定義
-			// --------------------------------------------------------------------------------
-			// 2ch.net 用
-			updatePreset(proj.replacement_to_anchor,"direct_link_bbs",function(obj){
-				obj.script = PresetScript_ReplacementToAnchor_DirectLinkBbs();
-			});
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義
-			// --------------------------------------------------------------------------------
-			// 直リンク（汎用）
-			updatePreset(proj.replacement_to_link,"direct_link_generic",function(obj){
-				var filter = obj.filter;
-
-				// Twitter Photo
-				filter[3].script = PresetScript_ReplacementToLink_DirectLinkGeneric_TwitterPhoto();
-			});
-
-			// --------------------------------------------------------------------------------
 			// 短縮 URL 展開
 			// --------------------------------------------------------------------------------
 			var f = function(obj){
@@ -10360,14 +10019,6 @@ function PageExpand(page_expand_arguments){
 			updatePreset(proj.expand_short_url,"detail",f);
 			// 簡易
 			updatePreset(proj.expand_short_url,"simple",f);
-
-			// --------------------------------------------------------------------------------
-			// イメージ展開定義
-			// --------------------------------------------------------------------------------
-			// ツイッター用
-			updatePreset(proj.expand_image,"twitter",function(obj){
-				obj.thumbnail.script_allow = PresetScript_ExpandImage_ThumbnailScriptAllow_Twitter();
-			});
 
 			// --------------------------------------------------------------------------------
 			// URLマッピング設定
@@ -10424,8 +10075,6 @@ function PageExpand(page_expand_arguments){
 			var filter = preset.filter.regexp.filter;
 			filter.splice(7,1);
 			filter.splice(6,1);
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_2ch();
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2ch();
 
 			// ログ速
 			var obj = addPreset(proj.expand_bbs,"logsoku",null);
@@ -10434,47 +10083,6 @@ function PageExpand(page_expand_arguments){
 				pattern:"^http://www\\.logsoku\\.com/r/[^/]+/[^/]+/[0-9]+.*$",
 				flags:{i:true,g:false}
 			});
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Logsoku();
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Logsoku();
-
-			// みみずん検索
-			var obj = addPreset(proj.expand_bbs,"mimizun",null);
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Mimizun();
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Mimizun();
-
-			// おーぷん２ちゃんねる
-			var obj = addPreset(proj.expand_bbs,"open2ch",null);
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_Open2ch();
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_Open2ch();
-
-			// ふたば☆ちゃんねる
-			var obj = addPreset(proj.expand_bbs,"2chan",null);
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_2chan();
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_2chan();
-
-			// 4chan.org
-			var obj = addPreset(proj.expand_bbs,"4chan",null);
-			var preset = obj.preset;
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_4chan();
-
-			// 8chan.co
-			var obj = addPreset(proj.expand_bbs,"8chan",null);
-			var preset = obj.preset;
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_8chan();
-
-			// reddit.com
-			var obj = addPreset(proj.expand_bbs,"reddit",null);
-			var preset = obj.preset;
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_reddit();
-
-			// ニコニコ大百科
-			var obj = addPreset(proj.expand_bbs,"nicovideo_dictionary",null);
-			var preset = obj.preset;
-			preset.script_initialize = PresetScript_ExpandBbs_ScriptInitialize_NicovideoDictionary();
-			preset.script_callback = PresetScript_ExpandBbs_ScriptCallback_NicovideoDictionary();
 
 			// あっとちゃんねるず
 			removePreset("expand_bbs","atchs");
@@ -10507,8 +10115,8 @@ function PageExpand(page_expand_arguments){
 					}
 				},
 				enable:true,
-				script_initialize:PresetScript_ExpandBbs_ScriptInitialize_2ch_v6(),
-				script_callback:PresetScript_ExpandBbs_ScriptCallback_2ch_v6(),
+				script_initialize:"",
+				script_callback:"",
 				popup:{
 					origin_type:"adsorb_top_bottom",
 					position_type:"absolute",
@@ -10523,16 +10131,628 @@ function PageExpand(page_expand_arguments){
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.29
+		// --------------------------------------------------------------------------------
+		if(proj.version < 29){
+			// バージョン値
+			proj.version = 29;
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義
+			// --------------------------------------------------------------------------------
+			var dic = {
+				"delete_br_tags":{
+					script:"ReplacementToElement_DeleteBrTags"
+				},
+				"meiryo_font":{
+					script:"ReplacementToElement_MeiryoFont"
+				},
+				"assist_image_in_anchor":{
+					script:"ReplacementToElement_AssistImageInAnchor"
+				},
+				"assist_image_search":{
+					script:"ReplacementToElement_AssistImageSearch"
+				},
+				"assist_twitter":{
+					script:"ReplacementToElement_AssistTwitter"
+				},
+				"assist_reddit":{
+					script:"ReplacementToElement_AssistReddit"
+				},
+				"assist_deviant_art":{
+					script:"ReplacementToElement_AssistDeviantArt"
+				},
+				"assist_nico_seiga":{
+					script:"ReplacementToElement_AssistNicoSeiga"
+				},
+				"assist_pixiv":{
+					script:"ReplacementToElement_AssistPixiv"
+				}
+			};
+			updatePreset(proj.replacement_to_element,"*",function(obj,def){
+				var p = dic[def.id];
+				obj.script = PageExpandProjectScriptObject_Create(p.script);
+			});
+			updateUser(proj.replacement_to_element,"*",function(obj,def){
+				var p = dic[def.id];
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.script):"ReplacementToElement_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj,obj.script);
+				obj.script = script_obj;
+			});
+
+			// --------------------------------------------------------------------------------
+			// テキスト置換定義
+			// --------------------------------------------------------------------------------
+			var dic = {
+				"alphanumeric_half":{
+					script:"ReplacementToText_AlphanumericHalf"
+				},
+				"visualize_space_and_tab":{
+					script:"ReplacementToText_VisualizeSpaceAndTab"
+				}
+			};
+			updatePreset(proj.replacement_to_text,"*",function(obj,def){
+				var p = dic[def.id];
+				obj.script = PageExpandProjectScriptObject_Create(p.script);
+			});
+			updateUser(proj.replacement_to_text,"*",function(obj,def){
+				var p = dic[def.id];
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.script):"ReplacementToText_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj,obj.script);
+				obj.script = script_obj;
+			});
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義
+			// --------------------------------------------------------------------------------
+			var dic = {
+				"auto_download_all":{
+					script:"ReplacementToAnchor_AutoDownloadAll"
+				},
+				"auto_download_image":{
+					script:"ReplacementToAnchor_AutoDownloadImage"
+				},
+				"add_download_list_all":{
+					script:"ReplacementToAnchor_AddDownloadListAll"
+				},
+				"add_download_list_image":{
+					script:"ReplacementToAnchor_AddDownloadListImage"
+				},
+				"disable_popup_image_search":{
+					script:"ReplacementToAnchor_DisablePopupImageSearch"
+				},
+				"disable_event_facebook":{
+					script:"ReplacementToAnchor_DisableEventFacebook"
+				},
+				"direct_link_twitter":{
+					script:"ReplacementToAnchor_DirectLinkTwitter"
+				},
+				"direct_link_facebook":{
+					script:"ReplacementToAnchor_DirectLinkFacebook"
+				},
+				"direct_link_realtime_search":{
+					script:"ReplacementToAnchor_DirectLinkRealtimeSearch"
+				},
+				"direct_link_search":{
+					script:"ReplacementToAnchor_DirectLinkSearch"
+				},
+				"direct_link_bbs":{
+					script:"ReplacementToAnchor_DirectLinkBbs"
+				},
+				"display_url_in_tooltip":{
+					script:"ReplacementToAnchor_DisplayUrlInTooltip"
+				},
+				"attach_sns_counter":{
+					script:"ReplacementToAnchor_AttachSnsCounter"
+				},
+				"no_referrer":{
+					script:"ReplacementToAnchor_NoReferrer"
+				}
+			};
+			updatePreset(proj.replacement_to_anchor,"*",function(obj,def){
+				var p = dic[def.id];
+				obj.script = PageExpandProjectScriptObject_Create(p.script);
+			});
+			updateUser(proj.replacement_to_anchor,"*",function(obj,def){
+				var p = dic[def.id];
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.script):"ReplacementToAnchor_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj,obj.script);
+				obj.script = script_obj;
+			});
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義
+			// --------------------------------------------------------------------------------
+			updateUser(proj.replacement_to_link,"*",function(obj,def){
+				var filters = obj.filter;
+				var i;
+				var num = filters.length;
+				for(i=0;i<num;i++){
+					var filter = filters[i];
+					var script_obj = PageExpandProjectScriptObject_Create("ReplacementToLink_Default");
+					PageExpandProjectScriptObject_SetUserScript(script_obj,filter.script);
+					filter.script = script_obj;
+				}
+			});
+
+			// 直リンク（汎用）
+			updatePreset(proj.replacement_to_link,"direct_link_generic",function(obj,def){
+				var assets = [
+					"ReplacementToLink_DirectLinkGeneric_OgpOgImage",
+					"ReplacementToLink_DirectLinkGeneric_OgpTwitter",
+					"ReplacementToLink_DirectLinkGeneric_Twitpic",
+					"ReplacementToLink_DirectLinkGeneric_TwitterPhoto",
+					"ReplacementToLink_DirectLinkGeneric_FacebookPhoto",
+					"ReplacementToLink_DirectLinkGeneric_GooglePlusPhoto",
+					"ReplacementToLink_DirectLinkGeneric_PicasaPhoto",
+					"ReplacementToLink_DirectLinkGeneric_Tumblr",
+					"ReplacementToLink_DirectLinkGeneric_Flickr",
+					"ReplacementToLink_DirectLinkGeneric_Yfrog",
+					"ReplacementToLink_DirectLinkGeneric_Giphy",
+					"ReplacementToLink_DirectLinkGeneric_Gyazo",
+					"ReplacementToLink_DirectLinkGeneric_PhotozouPhoto",
+					"ReplacementToLink_DirectLinkGeneric_Twipple",
+					"ReplacementToLink_DirectLinkGeneric_TwippleDirectLink",
+					"ReplacementToLink_DirectLinkGeneric_BlogFc2Com",
+					"ReplacementToLink_DirectLinkGeneric_DeviantArt",
+					"ReplacementToLink_DirectLinkGeneric_NicoSeigaIllust",
+					"ReplacementToLink_DirectLinkGeneric_NicoSeigaIllustDirectLink",
+					"ReplacementToLink_DirectLinkGeneric_NicoSeigaManga",
+					"ReplacementToLink_DirectLinkGeneric_PixivNet",
+					"ReplacementToLink_DirectLinkGeneric_Miiverse"
+				];
+				var filters = obj.filter;
+				var i;
+				var num = filters.length;
+				for(i=0;i<num;i++){
+					var filter = filters[i];
+					filter.script = PageExpandProjectScriptObject_Create(assets[i]);
+				}
+			});
+
+			// イメージ検索用
+			updatePreset(proj.replacement_to_link,"direct_link_image_search",function(obj,def){
+				var assets = [
+					"ReplacementToLink_DirectLinkImageSearch_Google",
+					"ReplacementToLink_DirectLinkImageSearch_YahooImageSearch",
+					"ReplacementToLink_DirectLinkImageSearch_YahooJapan",
+					"ReplacementToLink_DirectLinkImageSearch_Bing",
+					"ReplacementToLink_DirectLinkImageSearch_Ask",
+					"ReplacementToLink_DirectLinkImageSearch_Aol",
+					"ReplacementToLink_DirectLinkImageSearch_Yandex",
+					"ReplacementToLink_DirectLinkImageSearch_Goo",
+					"ReplacementToLink_DirectLinkImageSearch_Baidu",
+					"ReplacementToLink_DirectLinkImageSearch_Naver",
+					"ReplacementToLink_DirectLinkImageSearch_NaverJp"
+				];
+				var filters = obj.filter;
+				var i;
+				var num = filters.length;
+				for(i=0;i<num;i++){
+					var filter = filters[i];
+					filter.script = PageExpandProjectScriptObject_Create(assets[i]);
+				}
+			});
+
+			// ウィキペディア用
+			updatePreset(proj.replacement_to_link,"direct_link_wikipedia",function(obj,def){
+				var filter = obj.filter[0];
+				filter.script = PageExpandProjectScriptObject_Create("ReplacementToLink_DirectLinkWikipedia");
+			});
+
+			// 直リンク（HTML 内の画像を検索）
+			updatePreset(proj.replacement_to_link,"direct_link_find_image_in_html",function(obj,def){
+				var filter = obj.filter[0];
+				filter.script = PageExpandProjectScriptObject_Create("ReplacementToLink_DirectLinkFindImageInHTML_ImageOfTheLargestByte");
+			});
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク化定義
+			// --------------------------------------------------------------------------------
+			var dic = {
+				"detail":{
+					script:"MakeLinkToText_Detail"
+				},
+				"simple":{
+					script:"MakeLinkToText_Simple"
+				}
+			};
+			updatePreset(proj.make_link_to_text,"*",function(obj,def){
+				var p = dic[def.id];
+				obj.script = PageExpandProjectScriptObject_Create(p.script);
+			});
+			updateUser(proj.make_link_to_text,"*",function(obj,def){
+				var p = dic[def.id];
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.script):"MakeLinkToText_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj,obj.script);
+				obj.script = script_obj;
+			});
+
+			// --------------------------------------------------------------------------------
+			// テキスト展開定義
+			// --------------------------------------------------------------------------------
+			var dic = {
+				"inline":{
+					script_allow:"ExpandText_InlineScriptAllow_Inline",
+					script_insert:"ExpandText_InlineScriptInsert_Inline"
+				}
+			};
+			updatePreset(proj.expand_text,"*",function(obj,def){
+				var p = dic[def.id];
+				obj.inline.script_allow  = PageExpandProjectScriptObject_Create(p.script_allow);
+				obj.inline.script_insert = PageExpandProjectScriptObject_Create(p.script_insert);
+			});
+			updateUser(proj.expand_text,"*",function(obj,def){
+				var p = dic[def.id];
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.script_allow):"ExpandText_InlineScriptAllow_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.inline.script_allow);
+				obj.inline.script_allow = script_obj;
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.script_insert):"ExpandText_InlineScriptInsert_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.inline.script_insert);
+				obj.inline.script_insert = script_obj;
+			});
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義
+			// --------------------------------------------------------------------------------
+			var dic = {
+				"popup_all":{
+					thumbnail:{
+						script_allow:"ExpandImage_ThumbnailScriptAllow_PopupAll",
+						script_insert:"ExpandImage_ThumbnailScriptInsert"
+					},
+					popup:{
+						script_allow:"ExpandImage_PopupScriptAllow_PopupAll"
+					}
+				},
+				"popup_include_image":{
+					thumbnail:{
+						script_allow:"ExpandImage_ThumbnailScriptAllow_PopupIncludeImage",
+						script_insert:"ExpandImage_ThumbnailScriptInsert"
+					},
+					popup:{
+						script_allow:"ExpandImage_PopupScriptAllow_PopupIncludeImage"
+					}
+				},
+				"popup_image_in_anchor":{
+					thumbnail:{
+						script_allow:"ExpandImage_ThumbnailScriptAllow_PopupImageInAnchor",
+						script_insert:"ExpandImage_ThumbnailScriptInsert"
+					},
+					popup:{
+						script_allow:"ExpandImage_PopupScriptAllow_PopupImageInAnchor"
+					}
+				},
+				"thumbnail_all":{
+					thumbnail:{
+						script_allow:"ExpandImage_ThumbnailScriptAllow_ThumbnailAll",
+						script_insert:"ExpandImage_ThumbnailScriptInsert"
+					},
+					popup:{
+						script_allow:"ExpandImage_PopupScriptAllow_ThumbnailAll"
+					}
+				},
+				"thumbnail_not_include_image":{
+					thumbnail:{
+						script_allow:"ExpandImage_ThumbnailScriptAllow_ThumbnailNotIncludeImage",
+						script_insert:"ExpandImage_ThumbnailScriptInsert"
+					},
+					popup:{
+						script_allow:"ExpandImage_PopupScriptAllow_ThumbnailNotIncludeImage"
+					}
+				},
+				"image_bbs":{
+					thumbnail:{
+						script_allow:"ExpandImage_ThumbnailScriptAllow_ImageBbs",
+						script_insert:"ExpandImage_ThumbnailScriptInsert"
+					},
+					popup:{
+						script_allow:"ExpandImage_PopupScriptAllow_ImageBbs"
+					}
+				},
+				"bbs":{
+					thumbnail:{
+						script_allow:"ExpandImage_ThumbnailScriptAllow_ThumbnailNotIncludeImage",
+						script_insert:"ExpandImage_ThumbnailScriptInsert"
+					},
+					popup:{
+						script_allow:"ExpandImage_PopupScriptAllow_PopupImageInAnchor"
+					}
+				},
+				"twitter":{
+					thumbnail:{
+						script_allow:"ExpandImage_ThumbnailScriptAllow_Twitter",
+						script_insert:"ExpandImage_ThumbnailScriptInsert"
+					},
+					popup:{
+						script_allow:"ExpandImage_PopupScriptAllow_Twitter"
+					}
+				},
+				"reddit":{
+					thumbnail:{
+						script_allow:"ExpandImage_ThumbnailScriptAllow_Reddit",
+						script_insert:"ExpandImage_ThumbnailScriptInsert"
+					},
+					popup:{
+						script_allow:"ExpandImage_PopupScriptAllow_Reddit"
+					}
+				}
+			};
+			updatePreset(proj.expand_image,"*",function(obj,def){
+				var p = dic[def.id];
+				obj.thumbnail.script_allow  = PageExpandProjectScriptObject_Create(p.thumbnail.script_allow);
+				obj.thumbnail.script_insert = PageExpandProjectScriptObject_Create(p.thumbnail.script_insert);
+				obj.popup.script_allow = PageExpandProjectScriptObject_Create(p.popup.script_allow);
+			});
+			updateUser(proj.expand_image,"*",function(obj,def){
+				var p = dic[def.id];
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.thumbnail.script_allow):"ExpandImage_ThumbnailScriptAllow_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.thumbnail.script_allow);
+				obj.thumbnail.script_allow = script_obj;
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.thumbnail.script_insert):"ExpandImage_ThumbnailScriptInsert_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.thumbnail.script_insert);
+				obj.thumbnail.script_insert = script_obj;
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.popup.script_allow):"ExpandImage_PopupScriptAllow_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.popup.script_allow);
+				obj.popup.script_allow = script_obj;
+			});
+
+			// 追加
+			update(proj.expand_image,"*",function(obj){
+				var thumbnail = obj.thumbnail;
+				if(!(thumbnail.scale_percent)) thumbnail.scale_percent = 20;
+				if(!(thumbnail.width_min)) thumbnail.width_min = 50;
+				if(!(thumbnail.width_max)) thumbnail.width_max = 300;
+			});
+
+			// --------------------------------------------------------------------------------
+			// サウンド展開定義
+			// --------------------------------------------------------------------------------
+			var dic = {
+				"inline":{
+					inline:{
+						script_allow:"ExpandSound_InlineScriptAllow_Inline",
+						script_insert:"ExpandSound_InlineScriptInsert_Inline"
+					},
+					audio_element:{
+						script_allow:"ExpandSound_AudioElementScriptAllow_Inline"
+					}
+				},
+				"inline_from_assist":{
+					inline:{
+						script_allow:"ExpandSound_InlineScriptAllow_InlineFromAssist",
+						script_insert:"ExpandSound_InlineScriptInsert_Inline"
+					},
+					audio_element:{
+						script_allow:"ExpandSound_AudioElementScriptAllow_Inline"
+					}
+				}
+			};
+			updatePreset(proj.expand_sound,"*",function(obj,def){
+				var p = dic[def.id];
+				obj.inline.script_allow  = PageExpandProjectScriptObject_Create(p.inline.script_allow);
+				obj.inline.script_insert = PageExpandProjectScriptObject_Create(p.inline.script_insert);
+				obj.audio_element.script_allow = PageExpandProjectScriptObject_Create(p.audio_element.script_allow);
+			});
+			updateUser(proj.expand_sound,"*",function(obj,def){
+				var p = dic[def.id];
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.inline.script_allow):"ExpandSound_InlineScriptAllow_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.inline.script_allow);
+				obj.inline.script_allow = script_obj;
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.inline.script_insert):"ExpandSound_InlineScriptInsert_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.inline.script_insert);
+				obj.inline.script_insert = script_obj;
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.audio_element.script_allow):"ExpandSound_AudioElementScriptAllow_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.audio_element.script_allow);
+				obj.audio_element.script_allow = script_obj;
+			});
+
+			// --------------------------------------------------------------------------------
+			// ビデオ展開定義
+			// --------------------------------------------------------------------------------
+			var dic = {
+				"inline":{
+					inline:{
+						script_allow:"ExpandVideo_InlineScriptAllow_Inline",
+						script_insert:"ExpandVideo_InlineScriptInsert_Inline"
+					},
+					video_element:{
+						script_allow:"ExpandVideo_VideoElementScriptAllow_Inline"
+					}
+				},
+				"inline_from_assist":{
+					inline:{
+						script_allow:"ExpandVideo_InlineScriptAllow_InlineFromAssist",
+						script_insert:"ExpandVideo_InlineScriptInsert_Inline"
+					},
+					video_element:{
+						script_allow:"ExpandVideo_VideoElementScriptAllow_Inline"
+					}
+				}
+			};
+			updatePreset(proj.expand_video,"*",function(obj,def){
+				var p = dic[def.id];
+				obj.inline.script_allow  = PageExpandProjectScriptObject_Create(p.inline.script_allow);
+				obj.inline.script_insert = PageExpandProjectScriptObject_Create(p.inline.script_insert);
+				obj.video_element.script_allow = PageExpandProjectScriptObject_Create(p.video_element.script_allow);
+			});
+			updateUser(proj.expand_video,"*",function(obj,def){
+				var p = dic[def.id];
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.inline.script_allow):"ExpandVideo_InlineScriptAllow_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.inline.script_allow);
+				obj.inline.script_allow = script_obj;
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.inline.script_insert):"ExpandVideo_InlineScriptInsert_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.inline.script_insert);
+				obj.inline.script_insert = script_obj;
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.video_element.script_allow):"ExpandVideo_VideoElementScriptAllow_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.video_element.script_allow);
+				obj.video_element.script_allow = script_obj;
+			});
+
+			// --------------------------------------------------------------------------------
+			// インラインフレーム展開定義
+			// --------------------------------------------------------------------------------
+			var dic = {
+				"expand_pdf_inline":{
+					script_allow:"ExpandIframe_InlineScriptAllow_ExpandPdfInline",
+					script_insert:"ExpandIframe_InlineScriptInsert_ExpandPdfInline"
+				},
+				"expand_flash_inline":{
+					script_allow:"ExpandIframe_InlineScriptAllow_ExpandFlashInline",
+					script_insert:"ExpandIframe_InlineScriptInsert_ExpandFlashInline"
+				}
+			};
+			updatePreset(proj.expand_iframe,"*",function(obj,def){
+				var p = dic[def.id];
+				obj.inline.script_allow  = PageExpandProjectScriptObject_Create(p.script_allow);
+				obj.inline.script_insert = PageExpandProjectScriptObject_Create(p.script_insert);
+			});
+			updateUser(proj.expand_iframe,"*",function(obj,def){
+				var p = dic[def.id];
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.script_allow):"ExpandIframe_InlineScriptAllow_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.inline.script_allow);
+				obj.inline.script_allow = script_obj;
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.script_insert):"ExpandIframe_InlineScriptInsert_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.inline.script_insert);
+				obj.inline.script_insert = script_obj;
+			});
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			var dic = {
+				"nicovideo_dictionary":{
+					script_initialize:"ExpandBbs_ScriptInitialize_NicovideoDictionary",
+					script_callback:"ExpandBbs_ScriptCallback_NicovideoDictionary"
+				},
+				"reddit":{
+					script_initialize:"ExpandBbs_ScriptInitialize",
+					script_callback:"ExpandBbs_ScriptCallback_reddit"
+				},
+				"8chan":{
+					script_initialize:"ExpandBbs_ScriptInitialize",
+					script_callback:"ExpandBbs_ScriptCallback_8chan"
+				},
+				"4chan":{
+					script_initialize:"ExpandBbs_ScriptInitialize",
+					script_callback:"ExpandBbs_ScriptCallback_4chan"
+				},
+				"2chan":{
+					script_initialize:"ExpandBbs_ScriptInitialize_2chan",
+					script_callback:"ExpandBbs_ScriptCallback_2chan"
+				},
+				"open2ch":{
+					script_initialize:"ExpandBbs_ScriptInitialize_Open2ch",
+					script_callback:"ExpandBbs_ScriptCallback_Open2ch"
+				},
+				"mimizun":{
+					script_initialize:"ExpandBbs_ScriptInitialize_Mimizun",
+					script_callback:"ExpandBbs_ScriptCallback_Mimizun"
+				},
+				"logsoku":{
+					script_initialize:"ExpandBbs_ScriptInitialize_Logsoku",
+					script_callback:"ExpandBbs_ScriptCallback_Logsoku"
+				},
+				"2ch_v6":{
+					script_initialize:"ExpandBbs_ScriptInitialize_2ch_v6",
+					script_callback:"ExpandBbs_ScriptCallback_2ch_v6"
+				},
+				"2ch":{
+					script_initialize:"ExpandBbs_ScriptInitialize_2ch",
+					script_callback:"ExpandBbs_ScriptCallback_2ch"
+				}
+			};
+			updatePreset(proj.expand_bbs,"*",function(obj,def){
+				var p = dic[def.id];
+				obj.script_initialize  = PageExpandProjectScriptObject_Create(p.script_initialize);
+				obj.script_callback = PageExpandProjectScriptObject_Create(p.script_callback);
+			});
+			updateUser(proj.expand_bbs,"*",function(obj,def){
+				var p = dic[def.id];
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.script_initialize):"ExpandBbs_ScriptInitialize_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.script_initialize);
+				obj.script_initialize = script_obj;
+
+				var script_obj = PageExpandProjectScriptObject_Create((p) ? (p.script_callback):"ExpandBbs_ScriptCallback_Default");
+				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.script_callback);
+				obj.script_callback = script_obj;
+			});
+
+			// ２ちゃんねる掲示板 v.06
+			var obj = getPreset(proj.expand_bbs,"2ch_v6");
+			var filter = obj.filter.regexp.filter;
+			filter.push({
+				pattern:"^http://hanabi\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			});
+			filter.push({
+				pattern:"^http://tamae\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			});
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
 
 	// --------------------------------------------------------------------------------
-	// エレメント置換定義「連続するBRタグを削除」
+	// プリセットスクリプト辞書
 	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToElement_DeleteBrTags(){
-		return "" +
-"[\n\t" + 
+	function PresetScriptDictionary(){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// 開放
+		// --------------------------------------------------------------------------------
+		_this.release = function(){
+			_dictionary = null;
+		};
+
+		// --------------------------------------------------------------------------------
+		// アイテムを取得
+		// --------------------------------------------------------------------------------
+		_this.getItem = function(asset){
+			return _dictionary[asset];
+		};
+
+		// --------------------------------------------------------------------------------
+		// アイテムを登録（内部用）
+		// --------------------------------------------------------------------------------
+		function attachItem(asset,script_obj){
+			_dictionary[asset] = script_obj;
+		}
+
+		// --------------------------------------------------------------------------------
+		// プライベート変数
+		// --------------------------------------------------------------------------------
+		var _dictionary = new Object();
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		(function(){
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義「連続するBRタグを削除」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToElement_DeleteBrTags" , [
+	
 	function(info,response){
 		var element = info.element;
 
@@ -10573,21 +10793,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// エレメント置換定義「フォントの種類をメイリオに変更」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToElement_MeiryoFont(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義「フォントの種類をメイリオに変更」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToElement_MeiryoFont" , [
+	
 	function(info,response){
 		var element = info.element;
 		var style = element.style;
@@ -10609,21 +10827,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// エレメント置換定義「展開アシスト（アンカー内画像用）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToElement_AssistImageInAnchor(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義「展開アシスト（アンカー内画像用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToElement_AssistImageInAnchor" , [
+	
 	function(info,response){
 		var element = info.element;
 		var result = (function(){
@@ -10655,21 +10871,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// エレメント置換定義「展開アシスト（画像検索用）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToElement_AssistImageSearch(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義「展開アシスト（画像検索用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToElement_AssistImageSearch" , [
+	
 	function(info,response){
 		var element = info.element;
 
@@ -10693,21 +10907,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// エレメント置換定義「展開アシスト（ツイッター用）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToElement_AssistTwitter(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義「展開アシスト（ツイッター用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToElement_AssistTwitter" , [
+	
 	function(info,response){
 		var element = info.element;
 
@@ -10719,14 +10931,13 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var element = info.element;
 
 		// タイムライン上の画像サムネイル（twimg.com）
 		try{
-			var m = element.className.match(new RegExp("(^| )OldMedia-photoContainer( |$)","i"));
+			var m = ElementGetClassName(element).match(new RegExp("(^| |\t|\n|-)(photoContainer)( |\t|\n|$)","i"));
 			if(m){
 				var image_url = element.getAttribute("data-image-url");
 				if(image_url){
@@ -10740,21 +10951,19 @@ function PageExpand(page_expand_arguments){
 		}		
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// エレメント置換定義「展開アシスト（reddit 用）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToElement_AssistReddit(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義「展開アシスト（reddit 用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToElement_AssistReddit" , [
+	
 	function(info,response){
 		var element = info.element;
 		var result = (function(){
@@ -10781,21 +10990,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// エレメント置換定義「展開アシスト（deviantART 用）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToElement_AssistDeviantArt(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義「展開アシスト（deviantART 用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToElement_AssistDeviantArt" , [
+	
 	function(info,response){
 		var element = info.element;
 		var result = (function(){
@@ -10829,21 +11036,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// エレメント置換定義「展開アシスト（ピクシブ用）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToElement_AssistPixiv(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義「展開アシスト（ピクシブ用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToElement_AssistPixiv" , [
+	
 	function(info,response){
 		var element = info.element;
 
@@ -10865,8 +11070,7 @@ function PageExpand(page_expand_arguments){
 
 		response({url:"http://www.pixiv.net/member_illust.php?mode=manga_big&illust_id=" + query.illust_id + "&page=" + pos});
 		return true;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var element = info.element;
 		var result = (function(){
@@ -10894,8 +11098,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var element = info.element;
 		var result = (function(){
@@ -10930,21 +11133,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// エレメント置換定義「展開アシスト（ニコニコ静画用）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToElement_AssistNicoSeiga(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義「展開アシスト（ニコニコ静画用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToElement_AssistNicoSeiga" , [
+	
 	function(info,response){
 		var element = info.element;
 		var result = (function(){
@@ -10973,22 +11174,51 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
+			]);
 
-	// --------------------------------------------------------------------------------
-	// テキスト置換定義「英数字記号を半角、カタカナを全角に変更」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToText_AlphanumericHalf(){
-		return "" +
-"[\n\t" + 
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToElement_Default" , [
+	
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// element:HTMLElement オブジェクト
+		// --------------------------------------------------------------------------------
+		var element = info.element;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:Object 型
+		// url:String 型（省略可、展開先のアドレスを指定）
+		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response({});
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+
+			// --------------------------------------------------------------------------------
+			// テキスト置換定義「英数字記号を半角、カタカナを全角に変更」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToText_AlphanumericHalf" , [
+	
 	function(info,response){
 		var text_node = info.text_node;
 
@@ -11044,21 +11274,19 @@ function PageExpand(page_expand_arguments){
 		DomNodeSetNodeValue(text_node,str);
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// テキスト置換定義「空白とタブを可視化」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToText_VisualizeSpaceAndTab(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// テキスト置換定義「空白とタブを可視化」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToText_VisualizeSpaceAndTab" , [
+	
 	function(info,response){
 		var text_node = info.text_node;
 
@@ -11113,22 +11341,50 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
+			]);
 
-	// --------------------------------------------------------------------------------
-	// アンカー置換定義「自動ダウンロード（すべて）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToAnchor_AutoDownloadAll(){
-		return "" +
-"[\n\t" + 
+			// --------------------------------------------------------------------------------
+			// テキスト置換定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToText_Default" , [
+	
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// text_node:Text オブジェクト (DOM)
+		// --------------------------------------------------------------------------------
+		var text_node = info.text_node;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:なし
+		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response();
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「自動ダウンロード（すべて）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_AutoDownloadAll" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11148,21 +11404,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// アンカー置換定義「自動ダウンロード（画像のみ）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToAnchor_AutoDownloadImage(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「自動ダウンロード（画像のみ）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_AutoDownloadImage" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11197,21 +11451,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// アンカー置換定義「ダウンロードリストに登録（すべて）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToAnchor_AddDownloadListAll(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「ダウンロードリストに登録（すべて）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_AddDownloadListAll" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11227,21 +11479,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// アンカー置換定義「ダウンロードリストに登録（画像のみ）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToAnchor_AddDownloadListImage(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「ダウンロードリストに登録（画像のみ）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_AddDownloadListImage" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11272,21 +11522,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// アンカー置換定義「ポップアップを無効化（イメージ検索用）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToAnchor_DisablePopupImageSearch(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「ポップアップを無効化（イメージ検索用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_DisablePopupImageSearch" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11308,8 +11556,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11331,8 +11578,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11354,8 +11600,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11377,8 +11622,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11400,8 +11644,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11423,21 +11666,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// アンカー置換定義「イベントを無効化（フェイスブック用）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToAnchor_DisableEventFacebook(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「イベントを無効化（フェイスブック用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_DisableEventFacebook" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var parent = anchor_element.parentNode;
@@ -11452,21 +11693,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// アンカー置換定義「直リンクに変更（ツイッター用）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToAnchor_DirectLinkTwitter(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「直リンクに変更（ツイッター用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_DirectLinkTwitter" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11478,21 +11717,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// アンカー置換定義「直リンクに変更（フェイスブック用）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToAnchor_DirectLinkFacebook(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「直リンクに変更（フェイスブック用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_DirectLinkFacebook" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11506,21 +11743,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// アンカー置換定義「直リンクに変更（リアルタイム検索用）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToAnchor_DirectLinkRealtimeSearch(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「直リンクに変更（リアルタイム検索用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_DirectLinkRealtimeSearch" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11532,21 +11767,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// アンカー置換定義「直リンクに変更（検索用）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToAnchor_DirectLinkSearch(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「直リンクに変更（検索用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_DirectLinkSearch" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var r;
@@ -11566,8 +11799,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11583,8 +11815,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -11596,21 +11827,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// アンカー置換定義「直リンクに変更（スレッド掲示板用）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToAnchor_DirectLinkBbs(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「直リンクに変更（スレッド掲示板用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_DirectLinkBbs" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var r;
@@ -11649,21 +11878,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// アンカー置換定義「ツールチップにリンク先を表示」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToAnchor_DisplayUrlInTooltip(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「ツールチップにリンク先を表示」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_DisplayUrlInTooltip" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var event_dispatcher = info.event_dispatcher;
@@ -11697,21 +11924,19 @@ function PageExpand(page_expand_arguments){
 
 		change();
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// アンカー置換定義「ソーシャルサービスのカウント数を表示」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToAnchor_AttachSnsCounter(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「ソーシャルサービスのカウント数を表示」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_AttachSnsCounter" , [
+	
 	function(info,response){
 		// Twitterボタンを追加
 		var anchor_element = info.anchor_element;
@@ -11976,21 +12201,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// アンカー置換定義「ノーリファラ属性を追加」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToAnchor_NoReferrer(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「ノーリファラ属性を追加」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_NoReferrer" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -12006,22 +12229,52 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
+			]);
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「OGP "og:image"」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_OgpOgImage(){
-		return "" +
-"[\n\t" + 
+			// --------------------------------------------------------------------------------
+			// アンカー置換定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToAnchor_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// anchor_element:HTMLAnchorElement オブジェクト
+		// event_dispatcher:EventDispatcher オブジェクト
+		// --------------------------------------------------------------------------------
+		var anchor_element = info.anchor_element;
+		var event_dispatcher = info.event_dispatcher;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:なし
+		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response();
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「OGP "og:image"」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_OgpOgImage" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -12053,16 +12306,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「OGP "twitter:*"」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_OgpTwitter(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「OGP "twitter:*"」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_OgpTwitter" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -12110,16 +12362,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「Twitpic」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_Twitpic(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「Twitpic」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_Twitpic" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -12147,16 +12398,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「Twitter Photo」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_TwitterPhoto(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「Twitter Photo」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_TwitterPhoto" , [
+	
 	function (info,response){
 		var anchor_element = info.anchor_element;
 
@@ -12166,8 +12416,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		var anchor_element = info.anchor_element;
 
@@ -12216,16 +12465,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「Facebook Photo」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_FacebookPhoto(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「Facebook Photo」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_FacebookPhoto" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -12267,16 +12515,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「Google+ Photo」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_GooglePlusPhoto(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「Google+ Photo」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_GooglePlusPhoto" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -12332,16 +12579,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「Picasa Photo」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_PicasaPhoto(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「Picasa Photo」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_PicasaPhoto" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		if(anchor_element.href.match("^(http|https)://picasaweb\\.google\\.com/lh/photo/[0-9a-zA-Z]+(|[?].*)$","i")){
@@ -12376,8 +12622,7 @@ function PageExpand(page_expand_arguments){
 		}
 		
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		var anchor_element = info.anchor_element;
 		if(anchor_element.href.match("^(http|https)://picasaweb\\.google\\.com/[0-9]+/[0-9a-zA-Z]+(|[?].*)#([0-9]+)$","i")){
@@ -12417,16 +12662,15 @@ function PageExpand(page_expand_arguments){
 		}
 		
 		return false;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「Tumblr」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_Tumblr(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「Tumblr」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_Tumblr" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -12478,16 +12722,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「Flickr」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_Flickr(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「Flickr」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_Flickr" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -12535,16 +12778,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「yfrog.com」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_Yfrog(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「yfrog.com」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_Yfrog" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -12589,16 +12831,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「Giphy」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_Giphy(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「Giphy」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_Giphy" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -12634,16 +12875,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「Gyazo」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_Gyazo(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「Gyazo」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_Gyazo" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -12655,10 +12895,23 @@ function PageExpand(page_expand_arguments){
 		loader.onload = function(str){
 			var image_url;
 
-			var m = str.match(new RegExp("<meta[^>]+?name[ \n\r\t]*=[ \n\r\t]*\"twitter:image\"[^>]*>","i"));
-			if(m){
-				m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
-				if(m) image_url = m[1];
+			if(!image_url){
+				var m = str.match(new RegExp("<meta[^>]+?name[ \n\r\t]*=[ \n\r\t]*\"twitter:image\"[^>]*>","i"));
+				if(m){
+					m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
+					if(m) image_url = m[1];
+				}
+			}
+
+			if(!image_url){
+				var m = str.match(new RegExp('<img[^>]+class[ \n\r\t]*=[ \n\r\t]*"image"[^>]+>',"i"));
+				if(m){
+					m = m[0].match(new RegExp('src[ \n\r\t]*=[ \n\r\t]*"([^"]+?)"',"i"));
+					if(m){
+						m = m[1].match(new RegExp('(http|https)://i\\.gyazo\\.com/[0-9a-zA-Z]+\\.(bmp|jpg|jpeg|png)',"i"));
+						if(m) image_url = m[0];
+					}
+				}
 			}
 
 			if(image_url){
@@ -12679,16 +12932,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「Photozou Photo」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_PhotozouPhoto(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「Photozou Photo」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_PhotozouPhoto" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -12722,16 +12974,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「ついっぷる」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_Twipple(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「ついっぷる」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_Twipple" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -12772,16 +13023,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「ついっぷる (直リンク)」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_TwippleDirectLink(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「ついっぷる (直リンク)」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_TwippleDirectLink" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -12793,16 +13043,15 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「blog.fc2.com」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_BlogFc2Com(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「blog.fc2.com」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_BlogFc2Com" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		if(anchor_element.href.match("^(http|https)://[a-z0-9]+?\\.blog\\.fc2\\.com/img/.+?./$","i")){
@@ -12840,16 +13089,15 @@ function PageExpand(page_expand_arguments){
 		}
 		
 		return false;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「deviantART」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_DeviantArt(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「deviantART」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_DeviantArt" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -12890,16 +13138,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「ニコニコ静画 イラスト」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_NicoSeigaIllust(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「ニコニコ静画 イラスト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_NicoSeigaIllust" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -12982,16 +13229,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「ニコニコ静画 イラスト (直リンク)」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_NicoSeigaIllustDirectLink(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「ニコニコ静画 イラスト (直リンク)」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_NicoSeigaIllustDirectLink" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -13026,16 +13272,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadFinalURL();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「ニコニコ静画 漫画」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_NicoSeigaManga(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「ニコニコ静画 漫画」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_NicoSeigaManga" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -13079,16 +13324,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「pixiv.net」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_PixivNet(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「pixiv.net」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_PixivNet" , [
+	
 	function (info,response){
 
 		var anchor_element = info.anchor_element;
@@ -13265,16 +13509,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「直リンク（汎用）」「Miiverse」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkGeneric_Miiverse(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「Miiverse」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_Miiverse" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -13325,16 +13568,15 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return false;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「イメージ検索用」「Google 画像検索」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkImageSearch_Google(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「イメージ検索用」「Google 画像検索」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkImageSearch_Google" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -13350,21 +13592,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「イメージ検索用」「Yahoo Image Search」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkImageSearch_YahooImageSearch(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「イメージ検索用」「Yahoo Image Search」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkImageSearch_YahooImageSearch" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -13380,21 +13620,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「イメージ検索用」「Yahoo! JAPAN 画像検索」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkImageSearch_YahooJapan(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「イメージ検索用」「Yahoo! JAPAN 画像検索」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkImageSearch_YahooJapan" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -13406,21 +13644,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「イメージ検索用」「Bing 画像検索」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkImageSearch_Bing(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「イメージ検索用」「Bing 画像検索」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkImageSearch_Bing" , [
+	
 	function (info,response){
 		var anchor_element = info.anchor_element;
 
@@ -13467,8 +13703,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		var anchor_element = info.anchor_element;
 
@@ -13500,21 +13735,19 @@ function PageExpand(page_expand_arguments){
 		loader.loadText();
 
 		return true;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「イメージ検索用」「Ask 画像検索」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkImageSearch_Ask(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「イメージ検索用」「Ask 画像検索」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkImageSearch_Ask" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -13529,21 +13762,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「イメージ検索用」「AOL 画像検索」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkImageSearch_Aol(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「イメージ検索用」「AOL 画像検索」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkImageSearch_Aol" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -13555,21 +13786,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「イメージ検索用」「Yandex 画像検索」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkImageSearch_Yandex(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「イメージ検索用」「Yandex 画像検索」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkImageSearch_Yandex" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -13589,21 +13818,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「イメージ検索用」「goo 画像検索」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkImageSearch_Goo(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「イメージ検索用」「goo 画像検索」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkImageSearch_Goo" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -13615,21 +13842,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「イメージ検索用」「百度」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkImageSearch_Baidu(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「イメージ検索用」「百度」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkImageSearch_Baidu" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -13691,16 +13916,15 @@ function PageExpand(page_expand_arguments){
 
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「イメージ検索用」「NAVER 画像検索」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkImageSearch_Naver(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「イメージ検索用」「NAVER 画像検索」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkImageSearch_Naver" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -13719,21 +13943,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「イメージ検索用」「naver.jp」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkImageSearch_NaverJp(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「イメージ検索用」「naver.jp」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkImageSearch_NaverJp" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -13746,21 +13968,19 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「ウィキペディア用」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkWikipedia(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「ウィキペディア用」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkWikipedia" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -13819,16 +14039,15 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク置換定義「HTML 内の画像を検索」「最大バイトの画像」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ReplacementToLink_DirectLinkFindImageInHTML_ImageOfTheLargestByte(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「HTML 内の画像を検索」「最大バイトの画像」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkFindImageInHTML_ImageOfTheLargestByte" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var url = anchor_element.href;
@@ -13954,21 +14173,53 @@ function PageExpand(page_expand_arguments){
 		loader.loadResponseHeader();
 
 		return true;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク化定義「簡易」
-	// --------------------------------------------------------------------------------
-	function PresetScript_MakeLinkToText_Simple(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// anchor_element:HTMLAnchorElement オブジェクト
+		// --------------------------------------------------------------------------------
+		var anchor_element = info.anchor_element;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:Object 型
+		// result:Boolean 型（true で許可、false で拒否）
+		// url:String 型（省略可、展開先のアドレスを変更したい場合に指定）
+		// content_type:Array 型（省略可、展開先のコンテンツタイプを通知したい場合に指定）
+		// 必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response({result:false});
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク化定義「簡易」
+			// --------------------------------------------------------------------------------
+			attachItem( "MakeLinkToText_Simple" , [
+	
 	function(info,response){
 		var text_node = info.text_node;
 
@@ -14142,21 +14393,19 @@ function PageExpand(page_expand_arguments){
 		});
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ハイパーリンク化定義「詳細」
-	// --------------------------------------------------------------------------------
-	function PresetScript_MakeLinkToText_Detail(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク化定義「詳細」
+			// --------------------------------------------------------------------------------
+			attachItem( "MakeLinkToText_Detail" , [
+	
 	function(info,response){
 		var text_node = info.text_node;
 
@@ -14342,22 +14591,50 @@ function PageExpand(page_expand_arguments){
 		});
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		response({});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
+			]);
 
-	// --------------------------------------------------------------------------------
-	// テキスト展開定義「インライン表示」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandText_InlineScriptAllow_Inline(){
-		return "" +
-"[\n\t" + 
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク化定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "MakeLinkToText_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// text_node:Text オブジェクト (DOM)
+		// --------------------------------------------------------------------------------
+		var text_node = info.text_node;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:なし
+		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response();
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+
+			// --------------------------------------------------------------------------------
+			// テキスト展開定義「インライン表示」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandText_InlineScriptAllow_Inline" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var parent = anchor_element.parentNode;
@@ -14372,8 +14649,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var url = info.url;
@@ -14393,22 +14669,20 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// インライン表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// テキスト展開定義「インライン表示」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandText_InlineScriptInsert_Inline(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// テキスト展開定義「インライン表示」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandText_InlineScriptInsert_Inline" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -14487,17 +14761,85 @@ function PageExpand(page_expand_arguments){
 
 		response();
 		return false;
-	}.toString() +
-"\n]";
 	}
 
+			]);
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「サムネイル挿入」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_ThumbnailScriptInsert(){
-		return "" +
-"[\n\t" + 
+			// --------------------------------------------------------------------------------
+			// テキスト展開定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandText_InlineScriptAllow_Default" , [
+ 
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// current_element:HTMLElement オブジェクト
+		// url:String 型（展開先のアドレス）
+		// content_type:Array 型（コンテンツタイプ）
+		// --------------------------------------------------------------------------------
+		var current_element = info.current_element;
+		var url = info.url;
+		var content_type = info.content_type;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:Object 型
+		// result:Boolean 型（true で許可、false で拒否）
+		// 必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response({result:false});
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+			// --------------------------------------------------------------------------------
+			// テキスト展開定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandText_InlineScriptInsert_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// current_element:HTMLElement オブジェクト
+		// textarea_element:HTMLTextAreaElement オブジェクト
+		// event_dispatcher:EventDispatcher オブジェクト
+		// --------------------------------------------------------------------------------
+		var current_element = info.current_element;
+		var textarea = info.textarea_element;
+		var event_dispatcher = info.event_dispatcher;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:なし
+		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response();
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「サムネイル挿入」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_ThumbnailScriptInsert" , [
+	
 	function(info,response){
 
 		var current_element = info.current_element;
@@ -14532,21 +14874,14 @@ function PageExpand(page_expand_arguments){
 		// デフォルトの画像サイズを取得
 		var natural_size = ImageGetNaturalSize(image);
 
-
 		// サムネイルの最小サイズ
-		var width_min  = 50;
-		var height_min = 50;
+		var width_min  = project.getWidthMinThumbnailImage();
 
 		// サムネイルの最大サイズ
-		var width_max  = 300;
-		var height_max = 300;
-
-		// ピクセル値によるサイズ指定
-		//width  = 200;
-		//height = 200;
+		var width_max  = project.getWidthMaxThumbnailImage();
 
 		// パーセントによるサイズ指定
-		var percent = 20;
+		var percent = project.getScalePercentThumbnailImage();
 		width  = natural_size.width  / 100 * percent;
 		height = natural_size.height / 100 * percent;
 
@@ -14589,7 +14924,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// 最小高補正
-		var h = height_min - style_h;
+		var h = width_min - style_h;
 		if(h > height){
 			width *= h / height;
 			height = h;
@@ -14603,7 +14938,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// 最大高補正
-		h = height_max - style_h;
+		h = width_max - style_h;
 		if(h < height){
 			width *= h / height;
 			height = h;
@@ -14639,30 +14974,28 @@ function PageExpand(page_expand_arguments){
 
 		response();
 		return false;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「ポップアップ表示（すべてのリンク）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_ThumbnailScriptAllow_PopupAll(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「ポップアップ表示（すべてのリンク）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_ThumbnailScriptAllow_PopupAll" , [
+	
 	function(info,response){
 		// サムネイル表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「ポップアップ表示（すべてのリンク）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_PopupScriptAllow_PopupAll(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「ポップアップ表示（すべてのリンク）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_PopupScriptAllow_PopupAll" , [
+	
 	function(info,response){
 		var current_element = info.current_element;
 		var url = info.url;
@@ -14687,8 +15020,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var content_type = info.content_type;
@@ -14700,36 +15032,33 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// ポップアップ表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「ポップアップ表示（画像を含むリンク）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_ThumbnailScriptAllow_PopupIncludeImage(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「ポップアップ表示（画像を含むリンク）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_ThumbnailScriptAllow_PopupIncludeImage" , [
+	
 	function(info,response){
 		// サムネイル表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「ポップアップ表示（画像を含むリンク）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_PopupScriptAllow_PopupIncludeImage(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「ポップアップ表示（画像を含むリンク）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_PopupScriptAllow_PopupIncludeImage" , [
+	
 	function(info,response){
 		var current_element = info.current_element;
 		var result = (function(){
@@ -14760,8 +15089,7 @@ function PageExpand(page_expand_arguments){
 
 		response({result:false});
 		return true;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var url = info.url;
@@ -14786,8 +15114,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var content_type = info.content_type;
@@ -14799,22 +15126,20 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// ポップアップ表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「ポップアップ表示（アシスト要素のみ）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_ThumbnailScriptAllow_PopupImageInAnchor(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「ポップアップ表示（アシスト要素のみ）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_ThumbnailScriptAllow_PopupImageInAnchor" , [
+	
 	function(info,response){
 		var current_element = info.current_element;
 		if(!info.is_overridden_url){
@@ -14823,8 +15148,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var parent = current_element.parentNode;
@@ -14839,8 +15163,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var url = info.url;
@@ -14865,8 +15188,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var content_type = info.content_type;
@@ -14878,22 +15200,20 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// サムネイル表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「ポップアップ表示（アシスト要素のみ）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_PopupScriptAllow_PopupImageInAnchor(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「ポップアップ表示（アシスト要素のみ）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_PopupScriptAllow_PopupImageInAnchor" , [
+	
 	function(info,response){
 		var current_element = info.current_element;
 		if(!info.is_overridden_url){
@@ -14902,8 +15222,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var url = info.url;
@@ -14928,8 +15247,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var content_type = info.content_type;
@@ -14941,22 +15259,20 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// ポップアップ表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「サムネイル表示（すべてのリンク）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_ThumbnailScriptAllow_ThumbnailAll(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「サムネイル表示（すべてのリンク）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_ThumbnailScriptAllow_ThumbnailAll" , [
+	
 	function(info,response){
 		var current_element = info.current_element;
 		var parent = current_element.parentNode;
@@ -14971,8 +15287,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var url = info.url;
@@ -14997,8 +15312,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var content_type = info.content_type;
@@ -15010,36 +15324,33 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// サムネイル表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「サムネイル表示（すべてのリンク）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_PopupScriptAllow_ThumbnailAll(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「サムネイル表示（すべてのリンク）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_PopupScriptAllow_ThumbnailAll" , [
+	
 	function(info,response){
 		// ポップアップ表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「サムネイル表示（画像を含まないリンク）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_ThumbnailScriptAllow_ThumbnailNotIncludeImage(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「サムネイル表示（画像を含まないリンク）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_ThumbnailScriptAllow_ThumbnailNotIncludeImage" , [
+	
 	function(info,response){
 		var current_element = info.current_element;
 		var parent = current_element.parentNode;
@@ -15054,8 +15365,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var result = (function(){
@@ -15093,8 +15403,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var url = info.url;
@@ -15119,8 +15428,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var content_type = info.content_type;
@@ -15132,36 +15440,33 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// サムネイル表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「サムネイル表示（画像を含まないリンク）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_PopupScriptAllow_ThumbnailNotIncludeImage(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「サムネイル表示（画像を含まないリンク）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_PopupScriptAllow_ThumbnailNotIncludeImage" , [
+	
 	function(info,response){
 		// ポップアップ表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「画像掲示板用」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_ThumbnailScriptAllow_ImageBbs(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「画像掲示板用」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_ThumbnailScriptAllow_ImageBbs" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -15178,8 +15483,7 @@ function PageExpand(page_expand_arguments){
 
 		response({result:false});
 		return true;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var parent = anchor_element.parentNode;
@@ -15208,8 +15512,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var url = info.url;
@@ -15234,8 +15537,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var content_type = info.content_type;
@@ -15247,22 +15549,20 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// サムネイル表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「画像掲示板用」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_PopupScriptAllow_ImageBbs(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「画像掲示板用」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_PopupScriptAllow_ImageBbs" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
@@ -15280,8 +15580,7 @@ function PageExpand(page_expand_arguments){
 
 		response({result:false});
 		return true;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var url = info.url;
@@ -15306,8 +15605,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var content_type = info.content_type;
@@ -15319,22 +15617,20 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// ポップアップ表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「ツイッター用」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_ThumbnailScriptAllow_Twitter(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「ツイッター用」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_ThumbnailScriptAllow_Twitter" , [
+	
 	function(info,response){
 		var current_element = info.current_element;
 		var url = info.url;
@@ -15383,8 +15679,7 @@ function PageExpand(page_expand_arguments){
 
 		response({result:false});
 		return true;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var parent = current_element.parentNode;
@@ -15399,8 +15694,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var result = (function(){
@@ -15438,8 +15732,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var url = info.url;
@@ -15464,8 +15757,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var content_type = info.content_type;
@@ -15477,22 +15769,20 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// サムネイル表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「ツイッター用」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_PopupScriptAllow_Twitter(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「ツイッター用」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_PopupScriptAllow_Twitter" , [
+	
 	function(info,response){
 		var current_element = info.current_element;
 		var result = (function(){
@@ -15535,8 +15825,7 @@ function PageExpand(page_expand_arguments){
 
 		response({result:false});
 		return true;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var url = info.url;
@@ -15561,8 +15850,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var content_type = info.content_type;
@@ -15574,22 +15862,20 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// ポップアップ表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「reddit 用」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_ThumbnailScriptAllow_Reddit(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「reddit 用」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_ThumbnailScriptAllow_Reddit" , [
+	
 	function(info,response){
 		var current_element = info.current_element;
 		if(!info.is_overridden_url){
@@ -15598,8 +15884,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var parent = current_element.parentNode;
@@ -15614,8 +15899,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var result = (function(){
@@ -15653,8 +15937,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var url = info.url;
@@ -15679,8 +15962,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var content_type = info.content_type;
@@ -15692,22 +15974,20 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// サムネイル表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// イメージ展開定義「reddit 用」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandImage_PopupScriptAllow_Reddit(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「reddit 用」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_PopupScriptAllow_Reddit" , [
+	
 	function(info,response){
 		var current_element = info.current_element;
 		var result = (function(){
@@ -15738,8 +16018,7 @@ function PageExpand(page_expand_arguments){
 
 		response({result:false});
 		return true;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var url = info.url;
@@ -15764,8 +16043,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var current_element = info.current_element;
 		var content_type = info.content_type;
@@ -15777,23 +16055,127 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// ポップアップ表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
+			]);
 
-	// --------------------------------------------------------------------------------
-	// サウンド展開定義「インライン表示」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandSound_InlineScriptAllow_Inline(){
-		return "" +
-"[\n\t" + 
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_ThumbnailScriptInsert_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// current_element:HTMLElement オブジェクト
+		// image_element:HTMLImageElement オブジェクト
+		// event_dispatcher:EventDispatcher オブジェクト
+		// --------------------------------------------------------------------------------
+		var current_element = info.current_element;
+		var image = info.image_element;
+		var event_dispatcher = info.event_dispatcher;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:なし
+		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response();
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_ThumbnailScriptAllow_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// current_element:HTMLElement オブジェクト
+		// url:String 型（展開先のアドレス）
+		// content_type:Array 型（コンテンツタイプ）
+		// is_overridden_url:Boolean 型（URL がオーバーライドされているか）
+		// --------------------------------------------------------------------------------
+		var current_element = info.current_element;
+		var url = info.url;
+		var content_type = info.content_type;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:Object 型
+		// result:Boolean 型（true で許可、false で拒否）
+		// 必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response({result:false});
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+			// --------------------------------------------------------------------------------
+			// イメージ展開定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandImage_PopupScriptAllow_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// current_element:HTMLElement オブジェクト
+		// url:String 型（展開先のアドレス）
+		// content_type:Array 型（コンテンツタイプ）
+		// is_overridden_url:Boolean 型（URL がオーバーライドされているか）
+		// --------------------------------------------------------------------------------
+		var current_element = info.current_element;
+		var url = info.url;
+		var content_type = info.content_type;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:Object 型
+		// result:Boolean 型（true で許可、false で拒否）
+		// 必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response({result:false});
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+
+			// --------------------------------------------------------------------------------
+			// サウンド展開定義「インライン表示」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandSound_InlineScriptAllow_Inline" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var parent = anchor_element.parentNode;
@@ -15808,23 +16190,21 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// インライン表示する
 		response({result:true});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
+			]);
 
-	// --------------------------------------------------------------------------------
-	// サウンド展開定義「インライン表示」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandSound_InlineScriptInsert_Inline(){
-		return "" +
-"[\n\t" + 
+
+			// --------------------------------------------------------------------------------
+			// サウンド展開定義「インライン表示」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandSound_InlineScriptInsert_Inline" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -15904,16 +16284,15 @@ function PageExpand(page_expand_arguments){
 
 		response();
 		return false;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// サウンド展開定義「インライン表示」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandSound_AudioElementScriptAllow_Inline(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// サウンド展開定義「インライン表示」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandSound_AudioElementScriptAllow_Inline" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var url = info.url;
@@ -15939,22 +16318,20 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// インライン表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// サウンド展開定義「インライン表示（アシスト要素のみ）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandSound_InlineScriptAllow_InlineFromAssist(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// サウンド展開定義「インライン表示（アシスト要素のみ）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandSound_InlineScriptAllow_InlineFromAssist" , [
+	
 	function(info,response){
 		var current_element = info.current_element;
 		if(!info.is_overridden_url){
@@ -15963,8 +16340,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var parent = anchor_element.parentNode;
@@ -15979,23 +16355,132 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// インライン表示する
 		response({result:true});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
+			]);
 
-	// --------------------------------------------------------------------------------
-	// ビデオ展開定義「インライン表示」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandVideo_InlineScriptAllow_Inline(){
-		return "" +
-"[\n\t" + 
+			// --------------------------------------------------------------------------------
+			// サウンド展開定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandSound_InlineScriptAllow_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// current_element:HTMLElement オブジェクト
+		// url:String 型（展開先のアドレス）
+		// content_type:Array 型（コンテンツタイプ）
+		// is_overridden_url:Boolean 型（URL がオーバーライドされているか）
+		// --------------------------------------------------------------------------------
+		var current_element = info.current_element;
+		var url = info.url;
+		var content_type = info.content_type;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:Object 型
+		// result:Boolean 型（true で許可、false で拒否）
+		// 必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response({result:false});
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+
+			// --------------------------------------------------------------------------------
+			// サウンド展開定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandSound_InlineScriptInsert_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// current_element:HTMLElement オブジェクト
+		// element:HTMLElement オブジェクト（オーディオ）
+		// event_dispatcher:EventDispatcher オブジェクト
+		// --------------------------------------------------------------------------------
+		var current_element = info.current_element;
+		var audio = info.element;
+		var event_dispatcher = info.event_dispatcher;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:なし
+		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response();
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+			// --------------------------------------------------------------------------------
+			// サウンド展開定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandSound_AudioElementScriptAllow_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// current_element:HTMLElement オブジェクト
+		// url:String 型（展開先のアドレス）
+		// content_type:Array 型（コンテンツタイプ）
+		// --------------------------------------------------------------------------------
+		var current_element = info.current_element;
+		var url = info.url;
+		var content_type = info.content_type;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:Object 型
+		// result:Boolean 型（true で許可、false で拒否）
+		// 必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response({result:false});
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+
+
+
+
+
+
+			// --------------------------------------------------------------------------------
+			// ビデオ展開定義「インライン表示」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandVideo_InlineScriptAllow_Inline" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var parent = anchor_element.parentNode;
@@ -16010,22 +16495,20 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// インライン表示する
 		response({result:true});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ビデオ展開定義「インライン表示」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandVideo_InlineScriptInsert_Inline(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ビデオ展開定義「インライン表示」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandVideo_InlineScriptInsert_Inline" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -16106,16 +16589,15 @@ function PageExpand(page_expand_arguments){
 
 		response();
 		return false;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ビデオ展開定義「インライン表示」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandVideo_VideoElementScriptAllow_Inline(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ビデオ展開定義「インライン表示」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandVideo_VideoElementScriptAllow_Inline" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var url = info.url;
@@ -16141,22 +16623,20 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// インライン表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// ビデオ展開定義「インライン表示（アシスト要素のみ）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandVideo_InlineScriptAllow_InlineFromAssist(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ビデオ展開定義「インライン表示（アシスト要素のみ）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandVideo_InlineScriptAllow_InlineFromAssist" , [
+	
 	function(info,response){
 		var current_element = info.current_element;
 		if(!info.is_overridden_url){
@@ -16165,8 +16645,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var parent = anchor_element.parentNode;
@@ -16181,23 +16660,126 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// インライン表示する
 		response({result:true});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
+			]);
 
-	// --------------------------------------------------------------------------------
-	// インラインフレーム展開定義「PDF のインライン表示」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandIframe_InlineScriptAllow_ExpandPdfInline(){
-		return "" +
-"[\n\t" + 
+			// --------------------------------------------------------------------------------
+			// ビデオ展開定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandVideo_InlineScriptAllow_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// current_element:HTMLElement オブジェクト
+		// url:String 型（展開先のアドレス）
+		// content_type:Array 型（コンテンツタイプ）
+		// is_overridden_url:Boolean 型（URL がオーバーライドされているか）
+		// --------------------------------------------------------------------------------
+		var current_element = info.current_element;
+		var url = info.url;
+		var content_type = info.content_type;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:Object 型
+		// result:Boolean 型（true で許可、false で拒否）
+		// 必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response({result:false});
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ビデオ展開定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandVideo_InlineScriptInsert_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// current_element:HTMLElement オブジェクト
+		// element:HTMLElement オブジェクト（ビデオ）
+		// event_dispatcher:EventDispatcher オブジェクト
+		// --------------------------------------------------------------------------------
+		var current_element = info.current_element;
+		var video = info.element;
+		var event_dispatcher = info.event_dispatcher;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:なし
+		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response();
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ビデオ展開定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandVideo_VideoElementScriptAllow_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// current_element:HTMLElement オブジェクト
+		// url:String 型（展開先のアドレス）
+		// content_type:Array 型（コンテンツタイプ）
+		// --------------------------------------------------------------------------------
+		var current_element = info.current_element;
+		var url = info.url;
+		var content_type = info.content_type;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:Object 型
+		// result:Boolean 型（true で許可、false で拒否）
+		// 必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response({result:false});
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+
+			// --------------------------------------------------------------------------------
+			// インラインフレーム展開定義「PDF のインライン表示」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandIframe_InlineScriptAllow_ExpandPdfInline" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var parent = anchor_element.parentNode;
@@ -16212,8 +16794,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var url = info.url;
@@ -16233,22 +16814,20 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// インライン表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// インラインフレーム展開定義「PDF のインライン表示」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandIframe_InlineScriptInsert_ExpandPdfInline(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// インラインフレーム展開定義「PDF のインライン表示」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandIframe_InlineScriptInsert_ExpandPdfInline" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -16324,16 +16903,15 @@ function PageExpand(page_expand_arguments){
 
 		response();
 		return false;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// インラインフレーム展開定義「Flash のインライン表示」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandIframe_InlineScriptAllow_ExpandFlashInline(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// インラインフレーム展開定義「Flash のインライン表示」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandIframe_InlineScriptAllow_ExpandFlashInline" , [
+	
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var parent = anchor_element.parentNode;
@@ -16348,8 +16926,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		var anchor_element = info.anchor_element;
 		var url = info.url;
@@ -16369,22 +16946,20 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function(info,response){
 		// インライン表示しない
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// インラインフレーム展開定義「Flash のインライン表示」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandIframe_InlineScriptInsert_ExpandFlashInline(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// インラインフレーム展開定義「Flash のインライン表示」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandIframe_InlineScriptInsert_ExpandFlashInline" , [
+	
 	function(info,response){
 
 		var anchor_element = info.anchor_element;
@@ -16489,32 +17064,99 @@ function PageExpand(page_expand_arguments){
 
 		response();
 		return false;
-	}.toString() +
-"\n]";
 	}
 
+			]);
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「初期化」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptInitialize(){
-		return "" +
-"[\n\t" + 
+			// --------------------------------------------------------------------------------
+			// インラインフレーム展開定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandIframe_InlineScriptAllow_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// current_element:HTMLElement オブジェクト
+		// url:String 型（展開先のアドレス）
+		// content_type:Array 型（コンテンツタイプ）
+		// --------------------------------------------------------------------------------
+		var current_element = info.current_element;
+		var url = info.url;
+		var content_type = info.content_type;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:Object 型
+		// result:Boolean 型（true で許可、false で拒否）
+		// 必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response({result:false});
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+			// --------------------------------------------------------------------------------
+			// インラインフレーム展開定義「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandIframe_InlineScriptInsert_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// current_element:HTMLElement オブジェクト
+		// iframe_element:HTMLIFrameElement オブジェクト
+		// event_dispatcher:EventDispatcher オブジェクト
+		// --------------------------------------------------------------------------------
+		var current_element = info.current_element;
+		var iframe = info.iframe_element;
+		var event_dispatcher = info.event_dispatcher;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:なし
+		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response();
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「初期化」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptInitialize" , [
+	
 	function(info,response){
 		var work = info.work;
 
 		response({result:true});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「ニコニコ大百科」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptInitialize_NicovideoDictionary(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「ニコニコ大百科」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptInitialize_NicovideoDictionary" , [
+	
 	function(info,response){
 		var work = info.work;
 
@@ -16541,8 +17183,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		var work = info.work;
 		if(!(work.bbs_name)){
@@ -17022,21 +17663,19 @@ function PageExpand(page_expand_arguments){
 
 		response({result:true});
 		return true;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「ニコニコ大百科」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptCallback_NicovideoDictionary(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「ニコニコ大百科」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptCallback_NicovideoDictionary" , [
+	
 	function(info,response){
 		var element = info.element;
 		var work = info.work;
@@ -17734,16 +18373,15 @@ function PageExpand(page_expand_arguments){
 
 		response({useful:useful});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「reddit.com」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptCallback_reddit(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「reddit.com」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptCallback_reddit" , [
+	
 	function(info,response){
 		var element = info.element;
 
@@ -18170,16 +18808,15 @@ function PageExpand(page_expand_arguments){
 
 		response({useful:useful});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「8chan.co」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptCallback_8chan(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「8chan.co」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptCallback_8chan" , [
+	
 	function(info,response){
 		var element = info.element;
 
@@ -19093,16 +19730,15 @@ function PageExpand(page_expand_arguments){
 
 		response({useful:useful});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「4chan.org」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptCallback_4chan(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「4chan.org」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptCallback_4chan" , [
+	
 	function(info,response){
 		var element = info.element;
 
@@ -19927,16 +20563,15 @@ function PageExpand(page_expand_arguments){
 
 		response({useful:useful});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「ふたば☆ちゃんねる」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptInitialize_2chan(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「ふたば☆ちゃんねる」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptInitialize_2chan" , [
+	
 	function(info,response){
 		var work = info.work;
 
@@ -19960,8 +20595,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		var work = info.work;
 		if(!(work.bbs_name)){
@@ -20639,21 +21273,19 @@ function PageExpand(page_expand_arguments){
 			execute_queue.attachFirst(f,null);
 			return true;
 		})();
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「ふたば☆ちゃんねる」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptCallback_2chan(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「ふたば☆ちゃんねる」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptCallback_2chan" , [
+	
 	function(info,response){
 		var element = info.element;
 		var work = info.work;
@@ -22310,16 +22942,15 @@ function PageExpand(page_expand_arguments){
 
 		response({useful:useful});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「おーぷん２ちゃんねる」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptInitialize_Open2ch(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「おーぷん２ちゃんねる」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptInitialize_Open2ch" , [
+	
 	function(info,response){
 		var work = info.work;
 
@@ -22346,8 +22977,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		var work = info.work;
 		if(!(work.bbs_name)){
@@ -22949,21 +23579,19 @@ function PageExpand(page_expand_arguments){
 
 		response({result:true});
 		return true;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「おーぷん２ちゃんねる」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptCallback_Open2ch(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「おーぷん２ちゃんねる」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptCallback_Open2ch" , [
+	
 	function(info,response){
 		var element = info.element;
 		var work = info.work;
@@ -24006,16 +24634,15 @@ function PageExpand(page_expand_arguments){
 
 		response({useful:useful});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「みみずん検索」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptInitialize_Mimizun(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「みみずん検索」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptInitialize_Mimizun" , [
+	
 	function(info,response){
 		var work = info.work;
 
@@ -24042,8 +24669,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		var work = info.work;
 		if(!(work.bbs_name)){
@@ -24495,21 +25121,19 @@ function PageExpand(page_expand_arguments){
 
 		response({result:true});
 		return true;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「みみずん検索」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptCallback_Mimizun(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「みみずん検索」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptCallback_Mimizun" , [
+	
 	function(info,response){
 		var element = info.element;
 		var work = info.work;
@@ -25511,16 +26135,15 @@ function PageExpand(page_expand_arguments){
 
 		response({useful:useful});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「ログ速」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptInitialize_Logsoku(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「ログ速」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptInitialize_Logsoku" , [
+	
 	function(info,response){
 		var work = info.work;
 
@@ -25548,8 +26171,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		var work = info.work;
 		if(!(work.bbs_name)){
@@ -26013,21 +26635,19 @@ function PageExpand(page_expand_arguments){
 		response({result:true});
 		return true;
 
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「ログ速」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptCallback_Logsoku(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「ログ速」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptCallback_Logsoku" , [
+	
 	function(info,response){
 		var element = info.element;
 		var work = info.work;
@@ -27107,16 +27727,15 @@ function PageExpand(page_expand_arguments){
 
 		response({useful:useful});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「２ちゃんねる掲示板（v.06）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptInitialize_2ch_v6(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「２ちゃんねる掲示板（v.06）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptInitialize_2ch_v6" , [
+	
 	function(info,response){
 		var work = info.work;
 
@@ -27142,8 +27761,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		var work = info.work;
 		if(!(work.bbs_name)){
@@ -27945,21 +28563,19 @@ function PageExpand(page_expand_arguments){
 
 		response({result:true});
 		return true;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「２ちゃんねる掲示板（v.06）」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptCallback_2ch_v6(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「２ちゃんねる掲示板（v.06）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptCallback_2ch_v6" , [
+	
 	function(info,response){
 		var element = info.element;
 		var work = info.work;
@@ -29033,16 +29649,15 @@ function PageExpand(page_expand_arguments){
 
 		response({useful:useful});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「２ちゃんねる掲示板」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptInitialize_2ch(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「２ちゃんねる掲示板」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptInitialize_2ch" , [
+	
 	function(info,response){
 		var work = info.work;
 
@@ -29074,8 +29689,7 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		var work = info.work;
 		if(!(work.bbs_name)){
@@ -30299,21 +30913,19 @@ function PageExpand(page_expand_arguments){
 
 		response({result:true});
 		return true;
-	}.toString() +
-	",\n\n\t" +
+	},
 	function (info,response){
 		response({result:false});
 		return true;
-	}.toString() +
-"\n]";
 	}
 
-	// --------------------------------------------------------------------------------
-	// 掲示板設定「２ちゃんねる掲示板」
-	// --------------------------------------------------------------------------------
-	function PresetScript_ExpandBbs_ScriptCallback_2ch(){
-		return "" +
-"[\n\t" + 
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「２ちゃんねる掲示板」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptCallback_2ch" , [
+	
 	function(info,response){
 		var element = info.element;
 		var work = info.work;
@@ -31438,8 +32050,75 @@ function PageExpand(page_expand_arguments){
 
 		response({useful:useful});
 		return true;
-	}.toString() +
-"\n]";
+	}
+
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptInitialize_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// work:Object 型（自由に書き込み可能）
+		// --------------------------------------------------------------------------------
+		var work = info.work;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:Object 型
+		// result:Boolean 型（true で許可、false で拒否）
+		// 必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response({result:false});
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定「デフォルト」
+			// --------------------------------------------------------------------------------
+			attachItem( "ExpandBbs_ScriptCallback_Default" , [
+
+	function(info,response){
+
+		// --------------------------------------------------------------------------------
+		// 第01引数 Object 型
+		// element:Element オブジェクト
+		// work:Object 型（自由に書き込み可能）
+		// --------------------------------------------------------------------------------
+		var element = info.element;
+		var work = info.work;
+
+		// --------------------------------------------------------------------------------
+		// 第02引数 function
+		// 引数:Object 型
+		// useful:Boolean 型（エレメントが有用であった場合に true を指定）
+		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
+		// --------------------------------------------------------------------------------
+		response({useful:false});
+
+		// --------------------------------------------------------------------------------
+		// 戻り値 Boolean 型
+		// true :関数の実行を完了
+		// false:次の関数を実行
+		// --------------------------------------------------------------------------------
+		return true;
+	}
+
+			]);
+
+		})();
 	}
 
 
@@ -33938,7 +34617,7 @@ function PageExpand(page_expand_arguments){
 				_check_box_enable_expand_bbs.setValue(c.enable);
 				_form_container_enable.setVisible(c.enable);
 				_url_edit_container.attachObject(c.filter);
-				_text_area_script_initialize.setValue(c.script_initialize);
+				_script_obj_editer_initialize.setScriptObject(c.script_initialize);
 				_check_box_popup_enable_animation.setValue(c.popup.enable_animation);
 				_combo_box_popup_origin_type.setValue(c.popup.origin_type);
 				_combo_box_popup_position_type.setValue(c.popup.position_type);
@@ -33947,7 +34626,7 @@ function PageExpand(page_expand_arguments){
 				_stepper_popup_time_wait_open.setValue(c.popup.time_wait_open);
 				_stepper_popup_time_wait_close.setValue(c.popup.time_wait_close);
 				_text_input_popup_style_sheet.setValue(c.popup.style_sheet);
-				_text_area_script_callback.setValue(c.script_callback);
+				_script_obj_editer_callback.setScriptObject(c.script_callback);
 			}
 
 			// --------------------------------------------------------------------------------
@@ -33984,7 +34663,7 @@ function PageExpand(page_expand_arguments){
 			var _text_input_name;
 			var _check_box_enable_expand_bbs;
 			var _url_edit_container;
-			var _text_area_script_initialize;
+			var _script_obj_editer_initialize;
 			var _check_box_popup_enable_animation;
 			var _combo_box_popup_origin_type;
 			var _combo_box_popup_position_type;
@@ -33993,7 +34672,7 @@ function PageExpand(page_expand_arguments){
 			var _stepper_popup_time_wait_open;
 			var _stepper_popup_time_wait_close;
 			var _text_input_popup_style_sheet;
-			var _text_area_script_callback;
+			var _script_obj_editer_callback;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -34182,10 +34861,10 @@ function PageExpand(page_expand_arguments){
 				// 初期化スクリプト
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_script_initialize"));
 				var parent = container.getElement();
-				_text_area_script_initialize = new UI_ScriptArea(parent);
-				_text_area_script_initialize.oninput = function(v){
+				_script_obj_editer_initialize = new UI_ScriptObjectEditer(parent);
+				_script_obj_editer_initialize.onchange = function(v){
 					getSelectedExpandBbs(function(c){
-						c.script_initialize = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.script_initialize , v);
 					});
 					_expand_bbs_list.update();
 					projectModify();
@@ -34194,10 +34873,10 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_script_callback"));
 				var parent = container.getElement();
-				_text_area_script_callback = new UI_ScriptArea(parent);
-				_text_area_script_callback.oninput = function(v){
+				_script_obj_editer_callback = new UI_ScriptObjectEditer(parent);
+				_script_obj_editer_callback.onchange = function(v){
 					getSelectedExpandBbs(function(c){
-						c.script_callback = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.script_callback , v);
 					});
 					_expand_bbs_list.update();
 					projectModify();
@@ -34889,7 +35568,7 @@ function PageExpand(page_expand_arguments){
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
-			var _text_area_script;
+			var _script_obj_editer;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -34909,10 +35588,10 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_element_script"));
 				var parent = container.getElement();
-				_text_area_script = new UI_ScriptArea(parent);
-				_text_area_script.oninput = function(v){
+				_script_obj_editer = new UI_ScriptObjectEditer(parent);
+				_script_obj_editer.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.script = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.script , v);
 					});
 
 					_setting_define.update();
@@ -34923,7 +35602,7 @@ function PageExpand(page_expand_arguments){
 				// データの関連付け
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_element");
-				_setting_define.setFunctionForNewData(createPlacementToElementData);
+				_setting_define.setFunctionForNewData(createReplacementToElementData);
 
 				// リスト選択
 				_setting_define.onselect = function(id){
@@ -34931,7 +35610,7 @@ function PageExpand(page_expand_arguments){
 					if(!c)	return;
 
 					// コールバックスクリプト
-					_text_area_script.setValue(c.script);
+					_script_obj_editer.setScriptObject(c.script);
 				};
 
 				// リロード
@@ -34973,7 +35652,7 @@ function PageExpand(page_expand_arguments){
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
-			var _text_area_script;
+			var _script_obj_editer;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -34993,10 +35672,10 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_text_script"));
 				var parent = container.getElement();
-				_text_area_script = new UI_ScriptArea(parent);
-				_text_area_script.oninput = function(v){
+				_script_obj_editer = new UI_ScriptObjectEditer(parent);
+				_script_obj_editer.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.script = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.script , v);
 					});
 
 					_setting_define.update();
@@ -35007,7 +35686,7 @@ function PageExpand(page_expand_arguments){
 				// データの関連付け
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_text");
-				_setting_define.setFunctionForNewData(createPlacementToTextData);
+				_setting_define.setFunctionForNewData(createReplacementToTextData);
 
 				// リスト選択
 				_setting_define.onselect = function(id){
@@ -35015,7 +35694,7 @@ function PageExpand(page_expand_arguments){
 					if(!c)	return;
 
 					// コールバックスクリプト
-					_text_area_script.setValue(c.script);
+					_script_obj_editer.setScriptObject(c.script);
 				};
 
 				// リロード
@@ -35058,7 +35737,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			var _setting_define;
 			var _form_container;
-			var _text_area_allow_url;
+			var _script_obj_editer_allow_url;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -35078,10 +35757,10 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_anchor_script"));
 				var parent = container.getElement();
-				_text_area_allow_url = new UI_ScriptArea(parent);
-				_text_area_allow_url.oninput = function(v){
+				_script_obj_editer_allow_url = new UI_ScriptObjectEditer(parent);
+				_script_obj_editer_allow_url.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.script = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.script , v);
 					});
 
 					_setting_define.update();
@@ -35092,7 +35771,7 @@ function PageExpand(page_expand_arguments){
 				// データの関連付け
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_anchor");
-				_setting_define.setFunctionForNewData(createPlacementToAnchorData);
+				_setting_define.setFunctionForNewData(createReplacementToAnchorData);
 
 				// リスト選択
 				_setting_define.onselect = function(id){
@@ -35100,7 +35779,7 @@ function PageExpand(page_expand_arguments){
 					if(!c)	return;
 
 					// コールバックスクリプト
-					_text_area_allow_url.setValue(c.script);
+					_script_obj_editer_allow_url.setScriptObject(c.script);
 				};
 
 				// リロード
@@ -35153,7 +35832,7 @@ function PageExpand(page_expand_arguments){
 			var _filter_list;
 			var _text_input_name;
 			var _url_edit_container;
-			var _text_area_script;
+			var _script_obj_editer;
 			var _check_box_enable_reflect_to_anchor;
 			var _check_box_enable_cache;
 			var _form_container_filter_inner;
@@ -35183,7 +35862,7 @@ function PageExpand(page_expand_arguments){
 							var filter = filter[id];
 							_text_input_name.setValue(LocaleObjectGetString(filter.name));
 							_url_edit_container.attachObject(filter.filter);
-							_text_area_script.setValue(filter.script);
+							_script_obj_editer.setScriptObject(filter.script);
 							_check_box_enable_reflect_to_anchor.setValue(filter.enable_reflect_to_anchor);
 							_check_box_enable_cache.setValue(filter.enable_cache);
 
@@ -35281,10 +35960,10 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_link_filter_script"));
 				var parent = container.getElement();
-				_text_area_script = new UI_ScriptArea(parent);
-				_text_area_script.oninput = function(v){
+				_script_obj_editer = new UI_ScriptObjectEditer(parent);
+				_script_obj_editer.onchange = function(v){
 					_filter_list.writeFilters(function(c){
-						c.script = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.script , v);
 					});
 
 					_setting_define.update();
@@ -35295,9 +35974,9 @@ function PageExpand(page_expand_arguments){
 				// データの関連付け
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_link");
-				_setting_define.setFunctionForNewData(createPlacementToLinkData);
-				_filter_list.setFunctionForNewDefineData(createPlacementToLinkData);
-				_filter_list.setFunctionForNewFilterData(createPlacementToLinkFilterItemData);
+				_setting_define.setFunctionForNewData(createReplacementToLinkData);
+				_filter_list.setFunctionForNewDefineData(createReplacementToLinkData);
+				_filter_list.setFunctionForNewFilterData(createReplacementToLinkFilterItemData);
 				_filter_list.setDefineAssetName("replacement_to_link");
 
 				// リスト選択
@@ -35536,9 +36215,9 @@ function PageExpand(page_expand_arguments){
 				// データの関連付け
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_referer");
-				_setting_define.setFunctionForNewData(createPlacementToRefererData);
-				_filter_list.setFunctionForNewDefineData(createPlacementToRefererData);
-				_filter_list.setFunctionForNewFilterData(createPlacementToRefererFilterItemData);
+				_setting_define.setFunctionForNewData(createReplacementToRefererData);
+				_filter_list.setFunctionForNewDefineData(createReplacementToRefererData);
+				_filter_list.setFunctionForNewFilterData(createReplacementToRefererFilterItemData);
 				_filter_list.setDefineAssetName("replacement_to_referer");
 
 				// リスト選択
@@ -35720,9 +36399,9 @@ function PageExpand(page_expand_arguments){
 				// データの関連付け
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_useragent");
-				_setting_define.setFunctionForNewData(createPlacementToUserAgentData);
-				_filter_list.setFunctionForNewDefineData(createPlacementToUserAgentData);
-				_filter_list.setFunctionForNewFilterData(createPlacementToUserAgentFilterItemData);
+				_setting_define.setFunctionForNewData(createReplacementToUserAgentData);
+				_filter_list.setFunctionForNewDefineData(createReplacementToUserAgentData);
+				_filter_list.setFunctionForNewFilterData(createReplacementToUserAgentFilterItemData);
 				_filter_list.setDefineAssetName("replacement_to_useragent");
 
 				// リスト選択
@@ -35781,7 +36460,7 @@ function PageExpand(page_expand_arguments){
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
-			var _text_area_script;
+			var _script_obj_editer;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -35801,10 +36480,10 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_make_link_to_text_script"));
 				var parent = container.getElement();
-				_text_area_script = new UI_ScriptArea(parent);
-				_text_area_script.oninput = function(v){
+				_script_obj_editer = new UI_ScriptObjectEditer(parent);
+				_script_obj_editer.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.script = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.script , v);
 					});
 
 					_setting_define.update();
@@ -35823,7 +36502,7 @@ function PageExpand(page_expand_arguments){
 					if(!c)	return;
 
 					// コールバックスクリプト
-					_text_area_script.setValue(c.script);
+					_script_obj_editer.setScriptObject(c.script);
 				};
 
 				// リロード
@@ -35988,10 +36667,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_text_inline_script_allow"));
 				var parent = container.getElement();
-				var text_area_inline_script_allow = new UI_ScriptArea(parent);
-				text_area_inline_script_allow.oninput = function(v){
+				var script_obj_editer_inline_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -36001,10 +36680,10 @@ function PageExpand(page_expand_arguments){
 				// テキストの挿入位置
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_text_inline_script_insert"));
 				var parent = container.getElement();
-				var text_area_inline_script_insert = new UI_ScriptArea(parent);
-				text_area_inline_script_insert.oninput = function(v){
+				var script_obj_editer_inline_script_insert = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_insert.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_insert = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_insert , v);
 					});
 
 					_setting_define.update();
@@ -36025,9 +36704,9 @@ function PageExpand(page_expand_arguments){
 					// 同じURLは展開しない
 					check_box_disable_same_text.setValue(c.inline.disable_same_text);
 					// リンクからインライン表示する条件
-					text_area_inline_script_allow.setValue(c.inline.script_allow);
+					script_obj_editer_inline_script_allow.setScriptObject(c.inline.script_allow);
 					// テキストの挿入位置
-					text_area_inline_script_insert.setValue(c.inline.script_insert);
+					script_obj_editer_inline_script_insert.setScriptObject(c.inline.script_insert);
 				};
 
 				// リロード
@@ -36197,6 +36876,49 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
+				// サムネイルの表示サイズ
+				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_thumbnail_size"));
+				var parent = container.getElement();
+				// 最小許容限界（ピクセル値）
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_size_min"));
+				var stepper_thumbnail_width_min = new UI_NumericStepper(parent);
+				stepper_thumbnail_width_min.setMinimum(0);
+				stepper_thumbnail_width_min.setMaximum(9999999);
+				stepper_thumbnail_width_min.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.thumbnail.width_min = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
+				// 基本拡大率（パーセント）
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_size_scale"));
+				var stepper_thumbnail_scale_percent = new UI_NumericStepper(parent);
+				stepper_thumbnail_scale_percent.setMinimum(0);
+				stepper_thumbnail_scale_percent.setMaximum(9999999);
+				stepper_thumbnail_scale_percent.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.thumbnail.scale_percent = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
+				// 最大許容限界（ピクセル値）
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_size_max"));
+				var stepper_thumbnail_width_max = new UI_NumericStepper(parent);
+				stepper_thumbnail_width_max.setMinimum(0);
+				stepper_thumbnail_width_max.setMaximum(9999999);
+				stepper_thumbnail_width_max.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.thumbnail.width_max = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
+
 				// イメージのロード設定
 				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_load_start_type"));
 				var parent = container.getElement();
@@ -36215,10 +36937,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからサムネイル化する条件
 				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_thumbnail_script_allow"));
 				var parent = container.getElement();
-				var text_area_thumbnail_script_allow = new UI_ScriptArea(parent);
-				text_area_thumbnail_script_allow.oninput = function(v){
+				var script_obj_editer_thumbnail_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_thumbnail_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.thumbnail.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.thumbnail.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -36228,10 +36950,10 @@ function PageExpand(page_expand_arguments){
 				// サムネイルの挿入位置
 				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_thumbnail_script_insert"));
 				var parent = container.getElement();
-				var text_area_thumbnail_script_insert = new UI_ScriptArea(parent);
-				text_area_thumbnail_script_insert.oninput = function(v){
+				var script_obj_editer_thumbnail_script_insert = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_thumbnail_script_insert.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.thumbnail.script_insert = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.thumbnail.script_insert , v);
 					});
 
 					_setting_define.update();
@@ -36390,10 +37112,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからポップアップ表示する条件
 				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_script_allow"));
 				var parent = container.getElement();
-				var text_area_popup_script_allow = new UI_ScriptArea(parent);
-				text_area_popup_script_allow.oninput = function(v){
+				var script_obj_editer_popup_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_popup_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.popup.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.popup.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -36493,12 +37215,18 @@ function PageExpand(page_expand_arguments){
 					check_box_enable_popup_mouseover.setValue(c.thumbnail.enable_popup_mouseover);
 					// 同じイメージがすでに配置されている場合サムネイルを表示しない
 					check_box_disable_same_thumbnail_image.setValue(c.thumbnail.disable_same_image);
+					// 最小許容限界（ピクセル値）
+					stepper_thumbnail_width_min.setValue(c.thumbnail.width_min);
+					// 基本拡大率（パーセント）
+					stepper_thumbnail_scale_percent.setValue(c.thumbnail.scale_percent);
+					// 最大許容限界（ピクセル値）
+					stepper_thumbnail_width_max.setValue(c.thumbnail.width_max);
 					// サムネイルイメージの読み込み設定
 					combo_box_thumbnail_load_type.setValue(c.thumbnail.load_type);
 					// リンクからサムネイル化する条件
-					text_area_thumbnail_script_allow.setValue(c.thumbnail.script_allow);
+					script_obj_editer_thumbnail_script_allow.setScriptObject(c.thumbnail.script_allow);
 					// サムネイルの挿入位置
-					text_area_thumbnail_script_insert.setValue(c.thumbnail.script_insert);
+					script_obj_editer_thumbnail_script_insert.setScriptObject(c.thumbnail.script_insert);
 					// ポップアップ表示の有無
 					check_box_popup_enable_popup_mouseover.setValue(c.popup.enable_popup_mouseover);
 					// ポップアップ時のアニメーション動作を有効
@@ -36517,7 +37245,7 @@ function PageExpand(page_expand_arguments){
 					// 閉じるまでに待機する時間（ミリ秒）
 					stepper_popup_time_wait_close.setValue(c.popup.time_wait_close);
 					// リンクからポップアップ表示する条件
-					text_area_popup_script_allow.setValue(c.popup.script_allow);
+					script_obj_editer_popup_script_allow.setScriptObject(c.popup.script_allow);
 					// 縮小されたイメージをマウスオーバーするとポップアップ表示
 					check_box_reduced_image_enable_popup.setValue(c.reduced_image.enable_popup);
 					// 縮小率
@@ -36629,10 +37357,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_script_allow"));
 				var parent = container.getElement();
-				var text_area_inline_script_allow = new UI_ScriptArea(parent);
-				text_area_inline_script_allow.oninput = function(v){
+				var script_obj_editer_inline_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -36642,10 +37370,10 @@ function PageExpand(page_expand_arguments){
 				// オーディオの挿入位置
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_script_insert"));
 				var parent = container.getElement();
-				var text_area_inline_script_insert = new UI_ScriptArea(parent);
-				text_area_inline_script_insert.oninput = function(v){
+				var script_obj_editer_inline_script_insert = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_insert.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_insert = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_insert , v);
 					});
 
 					_setting_define.update();
@@ -36663,10 +37391,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_element_script_allow"));
 				var parent = container.getElement();
-				var text_area_audio_element_script_allow = new UI_ScriptArea(parent);
-				text_area_audio_element_script_allow.oninput = function(v){
+				var script_obj_editer_audio_element_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_audio_element_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.audio_element.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.audio_element.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -36746,11 +37474,11 @@ function PageExpand(page_expand_arguments){
 					// 最大同時表示数
 					stepper_inline_sound_max.setValue(c.inline.sound_max);
 					// リンクからインライン表示する条件
-					text_area_inline_script_allow.setValue(c.inline.script_allow);
+					script_obj_editer_inline_script_allow.setScriptObject(c.inline.script_allow);
 					// サウンドの挿入位置
-					text_area_inline_script_insert.setValue(c.inline.script_insert);
+					script_obj_editer_inline_script_insert.setScriptObject(c.inline.script_insert);
 					// HTMLAudioElement を表示する条件
-					text_area_audio_element_script_allow.setValue(c.audio_element.script_allow);
+					script_obj_editer_audio_element_script_allow.setScriptObject(c.audio_element.script_allow);
 					// soundcloud プレイヤー表示
 					check_box_soundcloud_visible_player_flash.setValue(c.soundcloud.visible_player_flash);
 					check_box_soundcloud_visible_player_html5.setValue(c.soundcloud.visible_player_html5);
@@ -36851,10 +37579,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_script_allow"));
 				var parent = container.getElement();
-				var text_area_inline_script_allow = new UI_ScriptArea(parent);
-				text_area_inline_script_allow.oninput = function(v){
+				var script_obj_editer_inline_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -36864,10 +37592,10 @@ function PageExpand(page_expand_arguments){
 				// エレメントの挿入位置
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_script_insert"));
 				var parent = container.getElement();
-				var text_area_inline_script_insert = new UI_ScriptArea(parent);
-				text_area_inline_script_insert.oninput = function(v){
+				var script_obj_editer_inline_script_insert = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_insert.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_insert = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_insert , v);
 					});
 
 					_setting_define.update();
@@ -36885,10 +37613,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_element_script_allow"));
 				var parent = container.getElement();
-				var text_area_video_element_script_allow = new UI_ScriptArea(parent);
-				text_area_video_element_script_allow.oninput = function(v){
+				var script_obj_editer_video_element_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_video_element_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.video_element.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.video_element.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -37149,11 +37877,11 @@ function PageExpand(page_expand_arguments){
 					// 最大同時表示数
 					stepper_inline_video_max.setValue(c.inline.video_max);
 					// リンクからインライン表示する条件
-					text_area_inline_script_allow.setValue(c.inline.script_allow);
+					script_obj_editer_inline_script_allow.setScriptObject(c.inline.script_allow);
 					// エレメントの挿入位置
-					text_area_inline_script_insert.setValue(c.inline.script_insert);
+					script_obj_editer_inline_script_insert.setScriptObject(c.inline.script_insert);
 					// HTMLVideoElement を表示する条件
-					text_area_video_element_script_allow.setValue(c.video_element.script_allow);
+					script_obj_editer_video_element_script_allow.setScriptObject(c.video_element.script_allow);
 					// youtube ビデオ表示
 					check_box_youtube_visible_video.setValue(c.youtube.visible_video);
 					// nicovideo ビデオ表示
@@ -37261,10 +37989,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_iframe_inline_script_allow"));
 				var parent = container.getElement();
-				var text_area_inline_script_allow = new UI_ScriptArea(parent);
-				text_area_inline_script_allow.oninput = function(v){
+				var script_obj_editer_inline_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -37274,10 +38002,10 @@ function PageExpand(page_expand_arguments){
 				// HTMLIFrameElement の挿入位置
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_iframe_inline_script_insert"));
 				var parent = container.getElement();
-				var text_area_inline_script_insert = new UI_ScriptArea(parent);
-				text_area_inline_script_insert.oninput = function(v){
+				var script_obj_editer_inline_script_insert = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_insert.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_insert = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_insert , v);
 					});
 
 					_setting_define.update();
@@ -37298,9 +38026,9 @@ function PageExpand(page_expand_arguments){
 					// 同じURLは展開しない
 					check_box_disable_same_iframe.setValue(c.inline.disable_same_iframe);
 					// リンクからインライン表示する条件
-					text_area_inline_script_allow.setValue(c.inline.script_allow);
-					// サウンドの挿入位置
-					text_area_inline_script_insert.setValue(c.inline.script_insert);
+					script_obj_editer_inline_script_allow.setScriptObject(c.inline.script_allow);
+					// インラインフレームの挿入位置
+					script_obj_editer_inline_script_insert.setScriptObject(c.inline.script_insert);
 				};
 
 				// リロード
@@ -37849,7 +38577,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.4.9");
+				new UI_Text(parent,"PageExpand ver.1.4.10");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -37872,6 +38600,7 @@ function PageExpand(page_expand_arguments){
 				new UI_Text(tr.insertCell(-1),'中文（简体中文）');
 				new UI_Text(tr.insertCell(-1),'by');
 				new UI_AnchorText(tr.insertCell(-1),"weiq530","https://github.com/weiq530");
+				new UI_Text(tr.insertCell(-1),'(ver.1.4.9)');
 			})();
 		}
 
@@ -38865,6 +39594,88 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
+		// スクリプトオブジェクトエディタ
+		// --------------------------------------------------------------------------------
+		function UI_ScriptObjectEditer(parent){
+			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// スクリプトオブジェクトをセット
+			// --------------------------------------------------------------------------------
+			_this.setScriptObject = function(v){
+				_script_obj = ObjectCopy(v);
+				update();
+			};
+
+			// --------------------------------------------------------------------------------
+			// 更新イベント
+			// --------------------------------------------------------------------------------
+			_this.onchange = function(){};
+
+			// --------------------------------------------------------------------------------
+			// 更新イベント発行
+			// --------------------------------------------------------------------------------
+			function dispatchChange(){
+				if(_this.onchange){
+					_this.onchange(ObjectCopy(_script_obj));
+				}
+			}
+
+			// --------------------------------------------------------------------------------
+			// 更新
+			// --------------------------------------------------------------------------------
+			function update(){
+				var enable = PageExpandProjectScriptObject_HasUserScript(_script_obj);
+				if(enable){
+					_button.setLabel(_i18n.getMessage("menu_script_obj_editer_delete_script"));
+					var script = PageExpandProjectScriptObject_ToString(_script_obj);
+					_script_area.setValue(script);
+				}else{
+					_button.setLabel(_i18n.getMessage("menu_script_obj_editer_edit_script"));
+				}
+				_script_area.setVisible(enable);
+			}
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _body;
+			var _script_obj;
+			var _button;
+			var _script_area;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_visible = false;
+
+				_body = DocumentCreateElement("div");
+				ElementSetStyle(_body,"margin:0px 8px 0px 0px;");
+				parent.appendChild(_body);
+
+				_button = new UI_InlineButton(_body,"");
+				_button.onclick = function(){
+					if(PageExpandProjectScriptObject_HasUserScript(_script_obj)){
+						PageExpandProjectScriptObject_ReturnPreset(_script_obj);
+					}else{
+						var script = PageExpandProjectScriptObject_ToString(_script_obj);
+						PageExpandProjectScriptObject_SetUserScript(_script_obj,script);
+					}
+					update();
+					dispatchChange();
+				};
+
+				_script_area = new UI_ScriptArea(_body);
+				_script_area.oninput = function(v){
+					PageExpandProjectScriptObject_SetUserScript(_script_obj,v);
+					dispatchChange();
+				};
+
+			})();
+		}
+
+		// --------------------------------------------------------------------------------
 		// スクリプトエリア
 		// --------------------------------------------------------------------------------
 		function UI_ScriptArea(parent){
@@ -38888,6 +39699,17 @@ function PageExpand(page_expand_arguments){
 			// 更新イベント
 			// --------------------------------------------------------------------------------
 			_this.oninput = function(){};
+
+			// --------------------------------------------------------------------------------
+			// 可視状態セット
+			// --------------------------------------------------------------------------------
+			_this.setVisible = function(type){
+				if(type){
+					_body.style.display = "";
+				}else{
+					_body.style.display = "none";
+				}
+			};
 
 			// --------------------------------------------------------------------------------
 			// 可視状態セット
@@ -38947,7 +39769,7 @@ function PageExpand(page_expand_arguments){
 				ElementSetStyle(_input,"width:100%; font-size:12px; padding:2px; background:#f88;");
 				_input_container.appendChild(_input);
 
-				new UI_TextHint(parent,_i18n.getMessage("menu_scriptarea_hint"));
+				new UI_TextHint(_body,_i18n.getMessage("menu_scriptarea_hint"));
 			})();
 		}
 
@@ -38958,9 +39780,23 @@ function PageExpand(page_expand_arguments){
 			var _this = this;
 
 			// --------------------------------------------------------------------------------
+			// 値取得
+			// --------------------------------------------------------------------------------
+			_this.getValue = function(){
+				var v = parseInt(_input.value);
+				if(isNaN(v)) v = 0;
+				if(v < _min) v = _min;
+				if(v > _max) v = _max;
+				return v;
+			};
+
+			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
 			_this.setValue = function(v){
+				if(isNaN(v)) v = 0;
+				if(v < _min) v = _min;
+				if(v > _max) v = _max;
 				_input.value = v;
 			};
 
@@ -38969,6 +39805,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			_this.setMinimum = function(v){
 				_min = v;
+				_input.min = v;
 			};
 
 			// --------------------------------------------------------------------------------
@@ -38976,12 +39813,22 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			_this.setMaximum = function(v){
 				_max = v;
+				_input.max = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
 			_this.oninput = function(){};
+
+			// --------------------------------------------------------------------------------
+			// 更新イベント発行
+			// --------------------------------------------------------------------------------
+			function dispatchInput(v){
+				if(_this.oninput){
+					_this.oninput(v);
+				}
+			}
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -39004,12 +39851,13 @@ function PageExpand(page_expand_arguments){
 				container.appendChild(_input);
 
 				_input.oninput = function(){
-					var v = parseInt(_input.value);
-					if(isNaN(v)){v = 0;}
-					if(v < _min)	v = _min;
-					if(v > _max)	v = _max;
-					_input.value = v;
-					_this.oninput(v);
+					var v = _this.getValue();
+					dispatchInput(v);
+				};
+				_input.onchange = function(){
+					var v = _this.getValue();
+					_this.setValue(v);
+					dispatchInput(v);
 				};
 
 				_this.setMinimum(-0x80000000);
@@ -39022,6 +39870,13 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function UI_LineButton(parent,label){
 			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// ラベルを編集
+			// --------------------------------------------------------------------------------
+			_this.setLabel = function(label){
+				_input.value = label;
+			};
 
 			// --------------------------------------------------------------------------------
 			// クリックイベント
@@ -39061,6 +39916,13 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function UI_InlineButton(parent,label){
 			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// ラベルを編集
+			// --------------------------------------------------------------------------------
+			_this.setLabel = function(label){
+				_input.value = label;
+			};
 
 			// --------------------------------------------------------------------------------
 			// クリックイベント
@@ -43174,60 +44036,8 @@ function PageExpand(page_expand_arguments){
 							filter:[]
 						}
 					},
-					script_initialize:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// work:Object 型（自由に書き込み可能）
-		// --------------------------------------------------------------------------------
-		var work = info.work;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]",
-					script_callback:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// element:Element オブジェクト
-		// work:Object 型（自由に書き込み可能）
-		// --------------------------------------------------------------------------------
-		var element = info.element;
-		var work = info.work;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// useful:Boolean 型（エレメントが有用であった場合に true を指定）
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({useful:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]",
+					script_initialize:PageExpandProjectScriptObject_Create("ExpandBbs_ScriptInitialize_Default"),
+					script_callback:PageExpandProjectScriptObject_Create("ExpandBbs_ScriptCallback_Default"),
 					popup:{
 						origin_type:"adsorb_top_bottom",
 						position_type:"absolute",
@@ -43311,7 +44121,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// エレメント置換設定を生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToElementData(){
+		function createReplacementToElementData(){
 			return {
 				id:null,
 				user:{
@@ -43319,32 +44129,7 @@ function PageExpand(page_expand_arguments){
 						standard:"",
 						locales:{}
 					},
-					script:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// element:HTMLElement オブジェクト
-		// --------------------------------------------------------------------------------
-		var element = info.element;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// url:String 型（省略可、展開先のアドレスを指定）
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+					script:PageExpandProjectScriptObject_Create("ReplacementToElement_Default")
 				}
 			};
 		}
@@ -43352,7 +44137,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// テキスト置換設定を生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToTextData(){
+		function createReplacementToTextData(){
 			return {
 				id:null,
 				user:{
@@ -43360,31 +44145,7 @@ function PageExpand(page_expand_arguments){
 						standard:"",
 						locales:{}
 					},
-					script:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// text_node:Text オブジェクト (DOM)
-		// --------------------------------------------------------------------------------
-		var text_node = info.text_node;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+					script:PageExpandProjectScriptObject_Create("ReplacementToText_Default")
 				}
 			};
 		}
@@ -43392,7 +44153,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// アンカー置換設定を生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToAnchorData(){
+		function createReplacementToAnchorData(){
 			return {
 				id:null,
 				user:{
@@ -43400,33 +44161,7 @@ function PageExpand(page_expand_arguments){
 						standard:"",
 						locales:{}
 					},
-					script:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// anchor_element:HTMLAnchorElement オブジェクト
-		// event_dispatcher:EventDispatcher オブジェクト
-		// --------------------------------------------------------------------------------
-		var anchor_element = info.anchor_element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+					script:PageExpandProjectScriptObject_Create("ReplacementToAnchor_Default")
 				}
 			};
 		}
@@ -43434,7 +44169,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ハイパーリンク置換設定を生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToLinkData(){
+		function createReplacementToLinkData(){
 			return {
 				id:null,
 				user:{
@@ -43450,7 +44185,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ハイパーリンク置換設定のフィルタアイテムを生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToLinkFilterItemData(){
+		function createReplacementToLinkFilterItemData(){
 			return {
 				name:{
 					standard:"",
@@ -43470,41 +44205,14 @@ function PageExpand(page_expand_arguments){
 				},
 				enable_reflect_to_anchor:false,
 				enable_cache:false,
-				script:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// anchor_element:HTMLAnchorElement オブジェクト
-		// --------------------------------------------------------------------------------
-		var anchor_element = info.anchor_element;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// url:String 型（省略可、展開先のアドレスを変更したい場合に指定）
-		// content_type:Array 型（省略可、展開先のコンテンツタイプを通知したい場合に指定）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+				script:PageExpandProjectScriptObject_Create("ReplacementToLink_Default")
 			};
 		}
 
 		// --------------------------------------------------------------------------------
 		// リファラ置換設定を生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToRefererData(){
+		function createReplacementToRefererData(){
 			return {
 				id:null,
 				user:{
@@ -43520,7 +44228,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// リファラ置換設定のフィルタアイテムを生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToRefererFilterItemData(){
+		function createReplacementToRefererFilterItemData(){
 			return {
 				name:{
 					standard:"",
@@ -43553,7 +44261,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ユーザーエージェント置換設定を生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToUserAgentData(){
+		function createReplacementToUserAgentData(){
 			return {
 				id:null,
 				user:{
@@ -43569,7 +44277,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ユーザーエージェント置換設定のフィルタアイテムを生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToUserAgentFilterItemData(){
+		function createReplacementToUserAgentFilterItemData(){
 			return {
 				name:{
 					standard:"",
@@ -43604,31 +44312,7 @@ function PageExpand(page_expand_arguments){
 						standard:"",
 						locales:{}
 					},
-					script:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// text_node:Text オブジェクト (DOM)
-		// --------------------------------------------------------------------------------
-		var text_node = info.text_node;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+					script:PageExpandProjectScriptObject_Create("MakeLinkToText_Default")
 				}
 			};
 		}
@@ -43670,65 +44354,8 @@ function PageExpand(page_expand_arguments){
 					},
 					inline:{
 						disable_same_text:false,
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]",
-						script_insert:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// textarea_element:HTMLTextAreaElement オブジェクト
-		// event_dispatcher:EventDispatcher オブジェクト
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var textarea = info.textarea_element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandText_InlineScriptAllow_Default"),
+						script_insert:PageExpandProjectScriptObject_Create("ExpandText_InlineScriptInsert_Default")
 					}
 				}
 			};
@@ -43748,68 +44375,13 @@ function PageExpand(page_expand_arguments){
 					thumbnail:{
 						enable_thumbnail:false,
 						enable_popup_mouseover:false,
+						scale_percent:50,
+						width_min:0,
+						width_max:300,
 						disable_same_image:false,
 						load_type:"preload",
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// is_overridden_url:Boolean 型（URL がオーバーライドされているか）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]",
-						script_insert:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// image_element:HTMLImageElement オブジェクト
-		// event_dispatcher:EventDispatcher オブジェクト
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var image = info.image_element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandImage_ThumbnailScriptAllow_Default"),
+						script_insert:PageExpandProjectScriptObject_Create("ExpandImage_ThumbnailScriptInsert_Default")
 					},
 					popup:{
 						enable_popup_mouseover:false,
@@ -43821,37 +44393,7 @@ function PageExpand(page_expand_arguments){
 						scale_percent:100,
 						time_wait_open:0,
 						time_wait_close:0,
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// is_overridden_url:Boolean 型（URL がオーバーライドされているか）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandImage_PopupScriptAllow_Default")
 					},
 					reduced_image:{
 						enable_popup:false,
@@ -43881,98 +44423,11 @@ function PageExpand(page_expand_arguments){
 					inline:{
 						disable_same_audio:false,
 						sound_max:10,
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// is_overridden_url:Boolean 型（URL がオーバーライドされているか）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]",
-						script_insert:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// element:HTMLElement オブジェクト（オーディオ）
-		// event_dispatcher:EventDispatcher オブジェクト
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var audio = info.element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandSound_InlineScriptAllow_Default"),
+						script_insert:PageExpandProjectScriptObject_Create("ExpandSound_InlineScriptInsert_Default")
 					},
 					audio_element:{
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandSound_AudioElementScriptAllow_Default")
 					},
 					soundcloud:{
 						visible_player_flash:false,
@@ -43999,98 +44454,11 @@ function PageExpand(page_expand_arguments){
 					inline:{
 						disable_same_video:false,
 						video_max:10,
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// is_overridden_url:Boolean 型（URL がオーバーライドされているか）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]",
-						script_insert:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// element:HTMLElement オブジェクト（ビデオ）
-		// event_dispatcher:EventDispatcher オブジェクト
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var video = info.element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandVideo_InlineScriptAllow_Default"),
+						script_insert:PageExpandProjectScriptObject_Create("ExpandVideo_InlineScriptInsert_Default")
 					},
 					video_element:{
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandVideo_VideoElementScriptAllow_Default")
 					},
 					youtube:{
 						visible_video:false
@@ -44137,65 +44505,8 @@ function PageExpand(page_expand_arguments){
 					},
 					inline:{
 						disable_same_iframe:false,
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]",
-						script_insert:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// iframe_element:HTMLIFrameElement オブジェクト
-		// event_dispatcher:EventDispatcher オブジェクト
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var iframe = info.iframe_element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandIframe_InlineScriptAllow_Default"),
+						script_insert:PageExpandProjectScriptObject_Create("ExpandIframe_InlineScriptInsert_Default")
 					}
 				}
 			};
@@ -50941,6 +51252,104 @@ function PageExpand(page_expand_arguments){
 	}
 
 	// --------------------------------------------------------------------------------
+	// スクリプトオブジェクトを生成
+	// --------------------------------------------------------------------------------
+	function PageExpandProjectScriptObject_Create(preset_asset){
+		var obj = {
+			has_preset:Boolean(preset_asset),
+			has_user:false,
+			preset:{
+				asset:(preset_asset || "")
+			},
+			user:{
+				script:""
+			}
+		};
+		return obj;
+	}
+
+	// --------------------------------------------------------------------------------
+	// スクリプトオブジェクトがユーザースクリプトを所有しているか調べる
+	// --------------------------------------------------------------------------------
+	function PageExpandProjectScriptObject_HasUserScript(obj){
+		return obj.has_user;
+	}
+
+	// --------------------------------------------------------------------------------
+	// スクリプトオブジェクトをプリセットに戻す
+	// --------------------------------------------------------------------------------
+	function PageExpandProjectScriptObject_ReturnPreset(obj){
+		obj.has_preset = true;
+		obj.has_user = false;
+		obj.user.script = "";
+	}
+
+	// --------------------------------------------------------------------------------
+	// スクリプトオブジェクトにユーザースクリプトをセット
+	// --------------------------------------------------------------------------------
+	function PageExpandProjectScriptObject_SetUserScript(obj,script){
+		obj.has_user = true;
+		obj.user.script = script;
+	}
+
+	// --------------------------------------------------------------------------------
+	// スクリプトオブジェクトのユーザースクリプトをコピー
+	// --------------------------------------------------------------------------------
+	function PageExpandProjectScriptObject_CopyUserScript(out,src){
+		out.has_user = src.has_user;
+		out.user.script = src.user.script;
+	}
+
+	// --------------------------------------------------------------------------------
+	// スクリプトオブジェクトから配列関数を作成
+	// --------------------------------------------------------------------------------
+	function PageExpandProjectScriptObject_EvalArrayFunction(obj){
+		if(obj.has_user){
+			return StringEvalArrayFunction(obj.user.script);
+		}
+		if(obj.has_preset){
+
+			// プリセットスクリプト辞書
+			if(!preset_script_dictionary){
+				preset_script_dictionary = new PresetScriptDictionary();
+			}
+
+			var item = preset_script_dictionary.getItem(obj.preset.asset);
+			if(item) return item;
+		}
+		return [];		
+	}
+
+	// --------------------------------------------------------------------------------
+	// スクリプトオブジェクトからスクリプトを出力
+	// --------------------------------------------------------------------------------
+	function PageExpandProjectScriptObject_ToString(obj){
+		if(obj.has_user){
+			return (obj.user.script);
+		}
+		if(obj.has_preset){
+
+			// プリセットスクリプト辞書
+			if(!preset_script_dictionary){
+				preset_script_dictionary = new PresetScriptDictionary();
+			}
+
+			var ary = ["[\n"];
+			var list = preset_script_dictionary.getItem(obj.preset.asset);
+			var i;
+			var num = list.length;
+			for(i=0;i<num;i++){
+				ary.push("\t");
+				ary.push(list[i].toString());
+				ary.push(",\n");
+			}
+			ary.pop();
+			ary.push("\n]");
+			return ary.join("");
+		}
+	}
+
+	// --------------------------------------------------------------------------------
 	// ポップアップイメージ
 	// --------------------------------------------------------------------------------
 	function PopupImage(image){
@@ -55379,6 +55788,18 @@ function PageExpand(page_expand_arguments){
 			menu_setting_expand_image_thumbnail_disable_same_thumbnail_image: {
 				message: "同じイメージがすでに配置されている場合サムネイルを表示しない"
 			},
+			menu_setting_expand_image_thumbnail_size: {
+				message: "サムネイルの表示サイズ"
+			},
+			menu_setting_expand_image_thumbnail_size_min: {
+				message: "最小許容限界（ピクセル値）"
+			},
+			menu_setting_expand_image_thumbnail_size_scale: {
+				message: "基本拡大率（パーセント）"
+			},
+			menu_setting_expand_image_thumbnail_size_max: {
+				message: "最大許容限界（ピクセル値）"
+			},
 			menu_setting_expand_image_thumbnail_script_allow: {
 				message: "リンクからサムネイル化する条件"
 			},
@@ -56035,6 +56456,12 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_button_no: {
 				message: "キャンセル"
+			},
+			menu_script_obj_editer_edit_script: {
+				message: "スクリプトを編集する"
+			},
+			menu_script_obj_editer_delete_script: {
+				message: "スクリプトを削除する（デフォルトに戻す）"
 			},
 			menu_scriptarea_hint: {
 				message: "配列に格納して匿名関数を記述します。信頼の無い人物が作成したスクリプトを、絶対に書き込まないで下さい。悪意のあるスクリプトが含まれる恐れがあります。"
@@ -56778,6 +57205,18 @@ function PageExpand(page_expand_arguments){
 			menu_setting_expand_image_thumbnail_disable_same_thumbnail_image: {
 				message: "If the same URL, not to Expand."
 			},
+			menu_setting_expand_image_thumbnail_size: {
+				message: "Thumbnail Size"
+			},
+			menu_setting_expand_image_thumbnail_size_min: {
+				message: "Minimum allowed size (pixel)"
+			},
+			menu_setting_expand_image_thumbnail_size_scale: {
+				message: "Scale (Percent)"
+			},
+			menu_setting_expand_image_thumbnail_size_max: {
+				message: "Maximum allowed size (pixel)"
+			},
 			menu_setting_expand_image_thumbnail_script_allow: {
 				message: "Condition to display thumbnail from a link"
 			},
@@ -57434,6 +57873,12 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_button_no: {
 				message: "CANCEL"
+			},
+			menu_script_obj_editer_edit_script: {
+				message: "Edit Script"
+			},
+			menu_script_obj_editer_delete_script: {
+				message: "Delete Script (return to default)"
 			},
 			menu_scriptarea_hint: {
 				message: "To describe the anonymous function to array. Please note so that it does not contain malicious code."
@@ -58175,6 +58620,18 @@ function PageExpand(page_expand_arguments){
 			menu_setting_expand_image_thumbnail_disable_same_thumbnail_image: {
 				message: "如果 URL 相同，不扩展。"
 			},
+			menu_setting_expand_image_thumbnail_size: {
+				message: "缩略图的大小"
+			},
+			menu_setting_expand_image_thumbnail_size_min: {
+				message: "Minimum allowed size (pixel)"
+			},
+			menu_setting_expand_image_thumbnail_size_scale: {
+				message: "比例 (%)"
+			},
+			menu_setting_expand_image_thumbnail_size_max: {
+				message: "Maximum allowed size (pixel)"
+			},
 			menu_setting_expand_image_thumbnail_script_allow: {
 				message: "从链接显示缩略图的条件"
 			},
@@ -58831,6 +59288,12 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_button_no: {
 				message: "取消"
+			},
+			menu_script_obj_editer_edit_script: {
+				message: "Edit Script"
+			},
+			menu_script_obj_editer_delete_script: {
+				message: "Delete Script (return to default)"
 			},
 			menu_scriptarea_hint: {
 				message: "用来描述到数组的匿名函数。请注意，它不包含恶意代码。"

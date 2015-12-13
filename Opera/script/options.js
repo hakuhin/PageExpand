@@ -1024,7 +1024,7 @@ function PageExpand(page_expand_arguments){
 				_check_box_enable_expand_bbs.setValue(c.enable);
 				_form_container_enable.setVisible(c.enable);
 				_url_edit_container.attachObject(c.filter);
-				_text_area_script_initialize.setValue(c.script_initialize);
+				_script_obj_editer_initialize.setScriptObject(c.script_initialize);
 				_check_box_popup_enable_animation.setValue(c.popup.enable_animation);
 				_combo_box_popup_origin_type.setValue(c.popup.origin_type);
 				_combo_box_popup_position_type.setValue(c.popup.position_type);
@@ -1033,7 +1033,7 @@ function PageExpand(page_expand_arguments){
 				_stepper_popup_time_wait_open.setValue(c.popup.time_wait_open);
 				_stepper_popup_time_wait_close.setValue(c.popup.time_wait_close);
 				_text_input_popup_style_sheet.setValue(c.popup.style_sheet);
-				_text_area_script_callback.setValue(c.script_callback);
+				_script_obj_editer_callback.setScriptObject(c.script_callback);
 			}
 
 			// --------------------------------------------------------------------------------
@@ -1070,7 +1070,7 @@ function PageExpand(page_expand_arguments){
 			var _text_input_name;
 			var _check_box_enable_expand_bbs;
 			var _url_edit_container;
-			var _text_area_script_initialize;
+			var _script_obj_editer_initialize;
 			var _check_box_popup_enable_animation;
 			var _combo_box_popup_origin_type;
 			var _combo_box_popup_position_type;
@@ -1079,7 +1079,7 @@ function PageExpand(page_expand_arguments){
 			var _stepper_popup_time_wait_open;
 			var _stepper_popup_time_wait_close;
 			var _text_input_popup_style_sheet;
-			var _text_area_script_callback;
+			var _script_obj_editer_callback;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -1268,10 +1268,10 @@ function PageExpand(page_expand_arguments){
 				// 初期化スクリプト
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_script_initialize"));
 				var parent = container.getElement();
-				_text_area_script_initialize = new UI_ScriptArea(parent);
-				_text_area_script_initialize.oninput = function(v){
+				_script_obj_editer_initialize = new UI_ScriptObjectEditer(parent);
+				_script_obj_editer_initialize.onchange = function(v){
 					getSelectedExpandBbs(function(c){
-						c.script_initialize = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.script_initialize , v);
 					});
 					_expand_bbs_list.update();
 					projectModify();
@@ -1280,10 +1280,10 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_script_callback"));
 				var parent = container.getElement();
-				_text_area_script_callback = new UI_ScriptArea(parent);
-				_text_area_script_callback.oninput = function(v){
+				_script_obj_editer_callback = new UI_ScriptObjectEditer(parent);
+				_script_obj_editer_callback.onchange = function(v){
 					getSelectedExpandBbs(function(c){
-						c.script_callback = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.script_callback , v);
 					});
 					_expand_bbs_list.update();
 					projectModify();
@@ -1975,7 +1975,7 @@ function PageExpand(page_expand_arguments){
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
-			var _text_area_script;
+			var _script_obj_editer;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -1995,10 +1995,10 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_element_script"));
 				var parent = container.getElement();
-				_text_area_script = new UI_ScriptArea(parent);
-				_text_area_script.oninput = function(v){
+				_script_obj_editer = new UI_ScriptObjectEditer(parent);
+				_script_obj_editer.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.script = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.script , v);
 					});
 
 					_setting_define.update();
@@ -2009,7 +2009,7 @@ function PageExpand(page_expand_arguments){
 				// データの関連付け
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_element");
-				_setting_define.setFunctionForNewData(createPlacementToElementData);
+				_setting_define.setFunctionForNewData(createReplacementToElementData);
 
 				// リスト選択
 				_setting_define.onselect = function(id){
@@ -2017,7 +2017,7 @@ function PageExpand(page_expand_arguments){
 					if(!c)	return;
 
 					// コールバックスクリプト
-					_text_area_script.setValue(c.script);
+					_script_obj_editer.setScriptObject(c.script);
 				};
 
 				// リロード
@@ -2059,7 +2059,7 @@ function PageExpand(page_expand_arguments){
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
-			var _text_area_script;
+			var _script_obj_editer;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -2079,10 +2079,10 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_text_script"));
 				var parent = container.getElement();
-				_text_area_script = new UI_ScriptArea(parent);
-				_text_area_script.oninput = function(v){
+				_script_obj_editer = new UI_ScriptObjectEditer(parent);
+				_script_obj_editer.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.script = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.script , v);
 					});
 
 					_setting_define.update();
@@ -2093,7 +2093,7 @@ function PageExpand(page_expand_arguments){
 				// データの関連付け
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_text");
-				_setting_define.setFunctionForNewData(createPlacementToTextData);
+				_setting_define.setFunctionForNewData(createReplacementToTextData);
 
 				// リスト選択
 				_setting_define.onselect = function(id){
@@ -2101,7 +2101,7 @@ function PageExpand(page_expand_arguments){
 					if(!c)	return;
 
 					// コールバックスクリプト
-					_text_area_script.setValue(c.script);
+					_script_obj_editer.setScriptObject(c.script);
 				};
 
 				// リロード
@@ -2144,7 +2144,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			var _setting_define;
 			var _form_container;
-			var _text_area_allow_url;
+			var _script_obj_editer_allow_url;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -2164,10 +2164,10 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_anchor_script"));
 				var parent = container.getElement();
-				_text_area_allow_url = new UI_ScriptArea(parent);
-				_text_area_allow_url.oninput = function(v){
+				_script_obj_editer_allow_url = new UI_ScriptObjectEditer(parent);
+				_script_obj_editer_allow_url.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.script = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.script , v);
 					});
 
 					_setting_define.update();
@@ -2178,7 +2178,7 @@ function PageExpand(page_expand_arguments){
 				// データの関連付け
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_anchor");
-				_setting_define.setFunctionForNewData(createPlacementToAnchorData);
+				_setting_define.setFunctionForNewData(createReplacementToAnchorData);
 
 				// リスト選択
 				_setting_define.onselect = function(id){
@@ -2186,7 +2186,7 @@ function PageExpand(page_expand_arguments){
 					if(!c)	return;
 
 					// コールバックスクリプト
-					_text_area_allow_url.setValue(c.script);
+					_script_obj_editer_allow_url.setScriptObject(c.script);
 				};
 
 				// リロード
@@ -2239,7 +2239,7 @@ function PageExpand(page_expand_arguments){
 			var _filter_list;
 			var _text_input_name;
 			var _url_edit_container;
-			var _text_area_script;
+			var _script_obj_editer;
 			var _check_box_enable_reflect_to_anchor;
 			var _check_box_enable_cache;
 			var _form_container_filter_inner;
@@ -2269,7 +2269,7 @@ function PageExpand(page_expand_arguments){
 							var filter = filter[id];
 							_text_input_name.setValue(LocaleObjectGetString(filter.name));
 							_url_edit_container.attachObject(filter.filter);
-							_text_area_script.setValue(filter.script);
+							_script_obj_editer.setScriptObject(filter.script);
 							_check_box_enable_reflect_to_anchor.setValue(filter.enable_reflect_to_anchor);
 							_check_box_enable_cache.setValue(filter.enable_cache);
 
@@ -2367,10 +2367,10 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_link_filter_script"));
 				var parent = container.getElement();
-				_text_area_script = new UI_ScriptArea(parent);
-				_text_area_script.oninput = function(v){
+				_script_obj_editer = new UI_ScriptObjectEditer(parent);
+				_script_obj_editer.onchange = function(v){
 					_filter_list.writeFilters(function(c){
-						c.script = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.script , v);
 					});
 
 					_setting_define.update();
@@ -2381,9 +2381,9 @@ function PageExpand(page_expand_arguments){
 				// データの関連付け
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_link");
-				_setting_define.setFunctionForNewData(createPlacementToLinkData);
-				_filter_list.setFunctionForNewDefineData(createPlacementToLinkData);
-				_filter_list.setFunctionForNewFilterData(createPlacementToLinkFilterItemData);
+				_setting_define.setFunctionForNewData(createReplacementToLinkData);
+				_filter_list.setFunctionForNewDefineData(createReplacementToLinkData);
+				_filter_list.setFunctionForNewFilterData(createReplacementToLinkFilterItemData);
 				_filter_list.setDefineAssetName("replacement_to_link");
 
 				// リスト選択
@@ -2622,9 +2622,9 @@ function PageExpand(page_expand_arguments){
 				// データの関連付け
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_referer");
-				_setting_define.setFunctionForNewData(createPlacementToRefererData);
-				_filter_list.setFunctionForNewDefineData(createPlacementToRefererData);
-				_filter_list.setFunctionForNewFilterData(createPlacementToRefererFilterItemData);
+				_setting_define.setFunctionForNewData(createReplacementToRefererData);
+				_filter_list.setFunctionForNewDefineData(createReplacementToRefererData);
+				_filter_list.setFunctionForNewFilterData(createReplacementToRefererFilterItemData);
 				_filter_list.setDefineAssetName("replacement_to_referer");
 
 				// リスト選択
@@ -2806,9 +2806,9 @@ function PageExpand(page_expand_arguments){
 				// データの関連付け
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("replacement_to_useragent");
-				_setting_define.setFunctionForNewData(createPlacementToUserAgentData);
-				_filter_list.setFunctionForNewDefineData(createPlacementToUserAgentData);
-				_filter_list.setFunctionForNewFilterData(createPlacementToUserAgentFilterItemData);
+				_setting_define.setFunctionForNewData(createReplacementToUserAgentData);
+				_filter_list.setFunctionForNewDefineData(createReplacementToUserAgentData);
+				_filter_list.setFunctionForNewFilterData(createReplacementToUserAgentFilterItemData);
 				_filter_list.setDefineAssetName("replacement_to_useragent");
 
 				// リスト選択
@@ -2867,7 +2867,7 @@ function PageExpand(page_expand_arguments){
 			// プライベート変数
 			// --------------------------------------------------------------------------------
 			var _setting_define;
-			var _text_area_script;
+			var _script_obj_editer;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -2887,10 +2887,10 @@ function PageExpand(page_expand_arguments){
 				// コールバックスクリプト
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_make_link_to_text_script"));
 				var parent = container.getElement();
-				_text_area_script = new UI_ScriptArea(parent);
-				_text_area_script.oninput = function(v){
+				_script_obj_editer = new UI_ScriptObjectEditer(parent);
+				_script_obj_editer.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.script = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.script , v);
 					});
 
 					_setting_define.update();
@@ -2909,7 +2909,7 @@ function PageExpand(page_expand_arguments){
 					if(!c)	return;
 
 					// コールバックスクリプト
-					_text_area_script.setValue(c.script);
+					_script_obj_editer.setScriptObject(c.script);
 				};
 
 				// リロード
@@ -3074,10 +3074,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_text_inline_script_allow"));
 				var parent = container.getElement();
-				var text_area_inline_script_allow = new UI_ScriptArea(parent);
-				text_area_inline_script_allow.oninput = function(v){
+				var script_obj_editer_inline_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -3087,10 +3087,10 @@ function PageExpand(page_expand_arguments){
 				// テキストの挿入位置
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_text_inline_script_insert"));
 				var parent = container.getElement();
-				var text_area_inline_script_insert = new UI_ScriptArea(parent);
-				text_area_inline_script_insert.oninput = function(v){
+				var script_obj_editer_inline_script_insert = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_insert.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_insert = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_insert , v);
 					});
 
 					_setting_define.update();
@@ -3111,9 +3111,9 @@ function PageExpand(page_expand_arguments){
 					// 同じURLは展開しない
 					check_box_disable_same_text.setValue(c.inline.disable_same_text);
 					// リンクからインライン表示する条件
-					text_area_inline_script_allow.setValue(c.inline.script_allow);
+					script_obj_editer_inline_script_allow.setScriptObject(c.inline.script_allow);
 					// テキストの挿入位置
-					text_area_inline_script_insert.setValue(c.inline.script_insert);
+					script_obj_editer_inline_script_insert.setScriptObject(c.inline.script_insert);
 				};
 
 				// リロード
@@ -3283,6 +3283,49 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
+				// サムネイルの表示サイズ
+				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_thumbnail_size"));
+				var parent = container.getElement();
+				// 最小許容限界（ピクセル値）
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_size_min"));
+				var stepper_thumbnail_width_min = new UI_NumericStepper(parent);
+				stepper_thumbnail_width_min.setMinimum(0);
+				stepper_thumbnail_width_min.setMaximum(9999999);
+				stepper_thumbnail_width_min.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.thumbnail.width_min = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
+				// 基本拡大率（パーセント）
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_size_scale"));
+				var stepper_thumbnail_scale_percent = new UI_NumericStepper(parent);
+				stepper_thumbnail_scale_percent.setMinimum(0);
+				stepper_thumbnail_scale_percent.setMaximum(9999999);
+				stepper_thumbnail_scale_percent.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.thumbnail.scale_percent = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
+				// 最大許容限界（ピクセル値）
+				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_size_max"));
+				var stepper_thumbnail_width_max = new UI_NumericStepper(parent);
+				stepper_thumbnail_width_max.setMinimum(0);
+				stepper_thumbnail_width_max.setMaximum(9999999);
+				stepper_thumbnail_width_max.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.thumbnail.width_max = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
+
 				// イメージのロード設定
 				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_load_start_type"));
 				var parent = container.getElement();
@@ -3301,10 +3344,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからサムネイル化する条件
 				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_thumbnail_script_allow"));
 				var parent = container.getElement();
-				var text_area_thumbnail_script_allow = new UI_ScriptArea(parent);
-				text_area_thumbnail_script_allow.oninput = function(v){
+				var script_obj_editer_thumbnail_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_thumbnail_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.thumbnail.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.thumbnail.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -3314,10 +3357,10 @@ function PageExpand(page_expand_arguments){
 				// サムネイルの挿入位置
 				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_thumbnail_script_insert"));
 				var parent = container.getElement();
-				var text_area_thumbnail_script_insert = new UI_ScriptArea(parent);
-				text_area_thumbnail_script_insert.oninput = function(v){
+				var script_obj_editer_thumbnail_script_insert = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_thumbnail_script_insert.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.thumbnail.script_insert = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.thumbnail.script_insert , v);
 					});
 
 					_setting_define.update();
@@ -3476,10 +3519,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからポップアップ表示する条件
 				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_script_allow"));
 				var parent = container.getElement();
-				var text_area_popup_script_allow = new UI_ScriptArea(parent);
-				text_area_popup_script_allow.oninput = function(v){
+				var script_obj_editer_popup_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_popup_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.popup.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.popup.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -3579,12 +3622,18 @@ function PageExpand(page_expand_arguments){
 					check_box_enable_popup_mouseover.setValue(c.thumbnail.enable_popup_mouseover);
 					// 同じイメージがすでに配置されている場合サムネイルを表示しない
 					check_box_disable_same_thumbnail_image.setValue(c.thumbnail.disable_same_image);
+					// 最小許容限界（ピクセル値）
+					stepper_thumbnail_width_min.setValue(c.thumbnail.width_min);
+					// 基本拡大率（パーセント）
+					stepper_thumbnail_scale_percent.setValue(c.thumbnail.scale_percent);
+					// 最大許容限界（ピクセル値）
+					stepper_thumbnail_width_max.setValue(c.thumbnail.width_max);
 					// サムネイルイメージの読み込み設定
 					combo_box_thumbnail_load_type.setValue(c.thumbnail.load_type);
 					// リンクからサムネイル化する条件
-					text_area_thumbnail_script_allow.setValue(c.thumbnail.script_allow);
+					script_obj_editer_thumbnail_script_allow.setScriptObject(c.thumbnail.script_allow);
 					// サムネイルの挿入位置
-					text_area_thumbnail_script_insert.setValue(c.thumbnail.script_insert);
+					script_obj_editer_thumbnail_script_insert.setScriptObject(c.thumbnail.script_insert);
 					// ポップアップ表示の有無
 					check_box_popup_enable_popup_mouseover.setValue(c.popup.enable_popup_mouseover);
 					// ポップアップ時のアニメーション動作を有効
@@ -3603,7 +3652,7 @@ function PageExpand(page_expand_arguments){
 					// 閉じるまでに待機する時間（ミリ秒）
 					stepper_popup_time_wait_close.setValue(c.popup.time_wait_close);
 					// リンクからポップアップ表示する条件
-					text_area_popup_script_allow.setValue(c.popup.script_allow);
+					script_obj_editer_popup_script_allow.setScriptObject(c.popup.script_allow);
 					// 縮小されたイメージをマウスオーバーするとポップアップ表示
 					check_box_reduced_image_enable_popup.setValue(c.reduced_image.enable_popup);
 					// 縮小率
@@ -3715,10 +3764,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_script_allow"));
 				var parent = container.getElement();
-				var text_area_inline_script_allow = new UI_ScriptArea(parent);
-				text_area_inline_script_allow.oninput = function(v){
+				var script_obj_editer_inline_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -3728,10 +3777,10 @@ function PageExpand(page_expand_arguments){
 				// オーディオの挿入位置
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_script_insert"));
 				var parent = container.getElement();
-				var text_area_inline_script_insert = new UI_ScriptArea(parent);
-				text_area_inline_script_insert.oninput = function(v){
+				var script_obj_editer_inline_script_insert = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_insert.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_insert = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_insert , v);
 					});
 
 					_setting_define.update();
@@ -3749,10 +3798,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_element_script_allow"));
 				var parent = container.getElement();
-				var text_area_audio_element_script_allow = new UI_ScriptArea(parent);
-				text_area_audio_element_script_allow.oninput = function(v){
+				var script_obj_editer_audio_element_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_audio_element_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.audio_element.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.audio_element.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -3832,11 +3881,11 @@ function PageExpand(page_expand_arguments){
 					// 最大同時表示数
 					stepper_inline_sound_max.setValue(c.inline.sound_max);
 					// リンクからインライン表示する条件
-					text_area_inline_script_allow.setValue(c.inline.script_allow);
+					script_obj_editer_inline_script_allow.setScriptObject(c.inline.script_allow);
 					// サウンドの挿入位置
-					text_area_inline_script_insert.setValue(c.inline.script_insert);
+					script_obj_editer_inline_script_insert.setScriptObject(c.inline.script_insert);
 					// HTMLAudioElement を表示する条件
-					text_area_audio_element_script_allow.setValue(c.audio_element.script_allow);
+					script_obj_editer_audio_element_script_allow.setScriptObject(c.audio_element.script_allow);
 					// soundcloud プレイヤー表示
 					check_box_soundcloud_visible_player_flash.setValue(c.soundcloud.visible_player_flash);
 					check_box_soundcloud_visible_player_html5.setValue(c.soundcloud.visible_player_html5);
@@ -3937,10 +3986,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_script_allow"));
 				var parent = container.getElement();
-				var text_area_inline_script_allow = new UI_ScriptArea(parent);
-				text_area_inline_script_allow.oninput = function(v){
+				var script_obj_editer_inline_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -3950,10 +3999,10 @@ function PageExpand(page_expand_arguments){
 				// エレメントの挿入位置
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_script_insert"));
 				var parent = container.getElement();
-				var text_area_inline_script_insert = new UI_ScriptArea(parent);
-				text_area_inline_script_insert.oninput = function(v){
+				var script_obj_editer_inline_script_insert = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_insert.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_insert = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_insert , v);
 					});
 
 					_setting_define.update();
@@ -3971,10 +4020,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_element_script_allow"));
 				var parent = container.getElement();
-				var text_area_video_element_script_allow = new UI_ScriptArea(parent);
-				text_area_video_element_script_allow.oninput = function(v){
+				var script_obj_editer_video_element_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_video_element_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.video_element.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.video_element.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -4235,11 +4284,11 @@ function PageExpand(page_expand_arguments){
 					// 最大同時表示数
 					stepper_inline_video_max.setValue(c.inline.video_max);
 					// リンクからインライン表示する条件
-					text_area_inline_script_allow.setValue(c.inline.script_allow);
+					script_obj_editer_inline_script_allow.setScriptObject(c.inline.script_allow);
 					// エレメントの挿入位置
-					text_area_inline_script_insert.setValue(c.inline.script_insert);
+					script_obj_editer_inline_script_insert.setScriptObject(c.inline.script_insert);
 					// HTMLVideoElement を表示する条件
-					text_area_video_element_script_allow.setValue(c.video_element.script_allow);
+					script_obj_editer_video_element_script_allow.setScriptObject(c.video_element.script_allow);
 					// youtube ビデオ表示
 					check_box_youtube_visible_video.setValue(c.youtube.visible_video);
 					// nicovideo ビデオ表示
@@ -4347,10 +4396,10 @@ function PageExpand(page_expand_arguments){
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_iframe_inline_script_allow"));
 				var parent = container.getElement();
-				var text_area_inline_script_allow = new UI_ScriptArea(parent);
-				text_area_inline_script_allow.oninput = function(v){
+				var script_obj_editer_inline_script_allow = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_allow.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_allow = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_allow , v);
 					});
 
 					_setting_define.update();
@@ -4360,10 +4409,10 @@ function PageExpand(page_expand_arguments){
 				// HTMLIFrameElement の挿入位置
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_iframe_inline_script_insert"));
 				var parent = container.getElement();
-				var text_area_inline_script_insert = new UI_ScriptArea(parent);
-				text_area_inline_script_insert.oninput = function(v){
+				var script_obj_editer_inline_script_insert = new UI_ScriptObjectEditer(parent);
+				script_obj_editer_inline_script_insert.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
-						c.inline.script_insert = v;
+						PageExpandProjectScriptObject_CopyUserScript(c.inline.script_insert , v);
 					});
 
 					_setting_define.update();
@@ -4384,9 +4433,9 @@ function PageExpand(page_expand_arguments){
 					// 同じURLは展開しない
 					check_box_disable_same_iframe.setValue(c.inline.disable_same_iframe);
 					// リンクからインライン表示する条件
-					text_area_inline_script_allow.setValue(c.inline.script_allow);
-					// サウンドの挿入位置
-					text_area_inline_script_insert.setValue(c.inline.script_insert);
+					script_obj_editer_inline_script_allow.setScriptObject(c.inline.script_allow);
+					// インラインフレームの挿入位置
+					script_obj_editer_inline_script_insert.setScriptObject(c.inline.script_insert);
 				};
 
 				// リロード
@@ -4935,7 +4984,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.4.9");
+				new UI_Text(parent,"PageExpand ver.1.4.10");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -4958,6 +5007,7 @@ function PageExpand(page_expand_arguments){
 				new UI_Text(tr.insertCell(-1),'中文（简体中文）');
 				new UI_Text(tr.insertCell(-1),'by');
 				new UI_AnchorText(tr.insertCell(-1),"weiq530","https://github.com/weiq530");
+				new UI_Text(tr.insertCell(-1),'(ver.1.4.9)');
 			})();
 		}
 
@@ -5963,6 +6013,88 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
+		// スクリプトオブジェクトエディタ
+		// --------------------------------------------------------------------------------
+		function UI_ScriptObjectEditer(parent){
+			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// スクリプトオブジェクトをセット
+			// --------------------------------------------------------------------------------
+			_this.setScriptObject = function(v){
+				_script_obj = ObjectCopy(v);
+				update();
+			};
+
+			// --------------------------------------------------------------------------------
+			// 更新イベント
+			// --------------------------------------------------------------------------------
+			_this.onchange = function(){};
+
+			// --------------------------------------------------------------------------------
+			// 更新イベント発行
+			// --------------------------------------------------------------------------------
+			function dispatchChange(){
+				if(_this.onchange){
+					_this.onchange(ObjectCopy(_script_obj));
+				}
+			}
+
+			// --------------------------------------------------------------------------------
+			// 更新
+			// --------------------------------------------------------------------------------
+			function update(){
+				var enable = PageExpandProjectScriptObject_HasUserScript(_script_obj);
+				if(enable){
+					_button.setLabel(_i18n.getMessage("menu_script_obj_editer_delete_script"));
+					var script = PageExpandProjectScriptObject_ToString(_script_obj);
+					_script_area.setValue(script);
+				}else{
+					_button.setLabel(_i18n.getMessage("menu_script_obj_editer_edit_script"));
+				}
+				_script_area.setVisible(enable);
+			}
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _body;
+			var _script_obj;
+			var _button;
+			var _script_area;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_visible = false;
+
+				_body = DocumentCreateElement("div");
+				ElementSetStyle(_body,"margin:0px 8px 0px 0px;");
+				parent.appendChild(_body);
+
+				_button = new UI_InlineButton(_body,"");
+				_button.onclick = function(){
+					if(PageExpandProjectScriptObject_HasUserScript(_script_obj)){
+						PageExpandProjectScriptObject_ReturnPreset(_script_obj);
+					}else{
+						var script = PageExpandProjectScriptObject_ToString(_script_obj);
+						PageExpandProjectScriptObject_SetUserScript(_script_obj,script);
+					}
+					update();
+					dispatchChange();
+				};
+
+				_script_area = new UI_ScriptArea(_body);
+				_script_area.oninput = function(v){
+					PageExpandProjectScriptObject_SetUserScript(_script_obj,v);
+					dispatchChange();
+				};
+
+			})();
+		}
+
+		// --------------------------------------------------------------------------------
 		// スクリプトエリア
 		// --------------------------------------------------------------------------------
 		function UI_ScriptArea(parent){
@@ -5986,6 +6118,17 @@ function PageExpand(page_expand_arguments){
 			// 更新イベント
 			// --------------------------------------------------------------------------------
 			_this.oninput = function(){};
+
+			// --------------------------------------------------------------------------------
+			// 可視状態セット
+			// --------------------------------------------------------------------------------
+			_this.setVisible = function(type){
+				if(type){
+					_body.style.display = "";
+				}else{
+					_body.style.display = "none";
+				}
+			};
 
 			// --------------------------------------------------------------------------------
 			// 可視状態セット
@@ -6045,7 +6188,7 @@ function PageExpand(page_expand_arguments){
 				ElementSetStyle(_input,"width:100%; font-size:12px; padding:2px; background:#f88;");
 				_input_container.appendChild(_input);
 
-				new UI_TextHint(parent,_i18n.getMessage("menu_scriptarea_hint"));
+				new UI_TextHint(_body,_i18n.getMessage("menu_scriptarea_hint"));
 			})();
 		}
 
@@ -6056,9 +6199,23 @@ function PageExpand(page_expand_arguments){
 			var _this = this;
 
 			// --------------------------------------------------------------------------------
+			// 値取得
+			// --------------------------------------------------------------------------------
+			_this.getValue = function(){
+				var v = parseInt(_input.value);
+				if(isNaN(v)) v = 0;
+				if(v < _min) v = _min;
+				if(v > _max) v = _max;
+				return v;
+			};
+
+			// --------------------------------------------------------------------------------
 			// 値をセット
 			// --------------------------------------------------------------------------------
 			_this.setValue = function(v){
+				if(isNaN(v)) v = 0;
+				if(v < _min) v = _min;
+				if(v > _max) v = _max;
 				_input.value = v;
 			};
 
@@ -6067,6 +6224,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			_this.setMinimum = function(v){
 				_min = v;
+				_input.min = v;
 			};
 
 			// --------------------------------------------------------------------------------
@@ -6074,12 +6232,22 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			_this.setMaximum = function(v){
 				_max = v;
+				_input.max = v;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 更新イベント
 			// --------------------------------------------------------------------------------
 			_this.oninput = function(){};
+
+			// --------------------------------------------------------------------------------
+			// 更新イベント発行
+			// --------------------------------------------------------------------------------
+			function dispatchInput(v){
+				if(_this.oninput){
+					_this.oninput(v);
+				}
+			}
 
 			// --------------------------------------------------------------------------------
 			// プライベート変数
@@ -6102,12 +6270,13 @@ function PageExpand(page_expand_arguments){
 				container.appendChild(_input);
 
 				_input.oninput = function(){
-					var v = parseInt(_input.value);
-					if(isNaN(v)){v = 0;}
-					if(v < _min)	v = _min;
-					if(v > _max)	v = _max;
-					_input.value = v;
-					_this.oninput(v);
+					var v = _this.getValue();
+					dispatchInput(v);
+				};
+				_input.onchange = function(){
+					var v = _this.getValue();
+					_this.setValue(v);
+					dispatchInput(v);
 				};
 
 				_this.setMinimum(-0x80000000);
@@ -6120,6 +6289,13 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function UI_LineButton(parent,label){
 			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// ラベルを編集
+			// --------------------------------------------------------------------------------
+			_this.setLabel = function(label){
+				_input.value = label;
+			};
 
 			// --------------------------------------------------------------------------------
 			// クリックイベント
@@ -6159,6 +6335,13 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function UI_InlineButton(parent,label){
 			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// ラベルを編集
+			// --------------------------------------------------------------------------------
+			_this.setLabel = function(label){
+				_input.value = label;
+			};
 
 			// --------------------------------------------------------------------------------
 			// クリックイベント
@@ -10272,60 +10455,8 @@ function PageExpand(page_expand_arguments){
 							filter:[]
 						}
 					},
-					script_initialize:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// work:Object 型（自由に書き込み可能）
-		// --------------------------------------------------------------------------------
-		var work = info.work;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]",
-					script_callback:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// element:Element オブジェクト
-		// work:Object 型（自由に書き込み可能）
-		// --------------------------------------------------------------------------------
-		var element = info.element;
-		var work = info.work;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// useful:Boolean 型（エレメントが有用であった場合に true を指定）
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({useful:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]",
+					script_initialize:PageExpandProjectScriptObject_Create("ExpandBbs_ScriptInitialize_Default"),
+					script_callback:PageExpandProjectScriptObject_Create("ExpandBbs_ScriptCallback_Default"),
 					popup:{
 						origin_type:"adsorb_top_bottom",
 						position_type:"absolute",
@@ -10409,7 +10540,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// エレメント置換設定を生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToElementData(){
+		function createReplacementToElementData(){
 			return {
 				id:null,
 				user:{
@@ -10417,32 +10548,7 @@ function PageExpand(page_expand_arguments){
 						standard:"",
 						locales:{}
 					},
-					script:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// element:HTMLElement オブジェクト
-		// --------------------------------------------------------------------------------
-		var element = info.element;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// url:String 型（省略可、展開先のアドレスを指定）
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+					script:PageExpandProjectScriptObject_Create("ReplacementToElement_Default")
 				}
 			};
 		}
@@ -10450,7 +10556,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// テキスト置換設定を生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToTextData(){
+		function createReplacementToTextData(){
 			return {
 				id:null,
 				user:{
@@ -10458,31 +10564,7 @@ function PageExpand(page_expand_arguments){
 						standard:"",
 						locales:{}
 					},
-					script:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// text_node:Text オブジェクト (DOM)
-		// --------------------------------------------------------------------------------
-		var text_node = info.text_node;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+					script:PageExpandProjectScriptObject_Create("ReplacementToText_Default")
 				}
 			};
 		}
@@ -10490,7 +10572,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// アンカー置換設定を生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToAnchorData(){
+		function createReplacementToAnchorData(){
 			return {
 				id:null,
 				user:{
@@ -10498,33 +10580,7 @@ function PageExpand(page_expand_arguments){
 						standard:"",
 						locales:{}
 					},
-					script:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// anchor_element:HTMLAnchorElement オブジェクト
-		// event_dispatcher:EventDispatcher オブジェクト
-		// --------------------------------------------------------------------------------
-		var anchor_element = info.anchor_element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+					script:PageExpandProjectScriptObject_Create("ReplacementToAnchor_Default")
 				}
 			};
 		}
@@ -10532,7 +10588,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ハイパーリンク置換設定を生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToLinkData(){
+		function createReplacementToLinkData(){
 			return {
 				id:null,
 				user:{
@@ -10548,7 +10604,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ハイパーリンク置換設定のフィルタアイテムを生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToLinkFilterItemData(){
+		function createReplacementToLinkFilterItemData(){
 			return {
 				name:{
 					standard:"",
@@ -10568,41 +10624,14 @@ function PageExpand(page_expand_arguments){
 				},
 				enable_reflect_to_anchor:false,
 				enable_cache:false,
-				script:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// anchor_element:HTMLAnchorElement オブジェクト
-		// --------------------------------------------------------------------------------
-		var anchor_element = info.anchor_element;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// url:String 型（省略可、展開先のアドレスを変更したい場合に指定）
-		// content_type:Array 型（省略可、展開先のコンテンツタイプを通知したい場合に指定）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+				script:PageExpandProjectScriptObject_Create("ReplacementToLink_Default")
 			};
 		}
 
 		// --------------------------------------------------------------------------------
 		// リファラ置換設定を生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToRefererData(){
+		function createReplacementToRefererData(){
 			return {
 				id:null,
 				user:{
@@ -10618,7 +10647,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// リファラ置換設定のフィルタアイテムを生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToRefererFilterItemData(){
+		function createReplacementToRefererFilterItemData(){
 			return {
 				name:{
 					standard:"",
@@ -10651,7 +10680,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ユーザーエージェント置換設定を生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToUserAgentData(){
+		function createReplacementToUserAgentData(){
 			return {
 				id:null,
 				user:{
@@ -10667,7 +10696,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ユーザーエージェント置換設定のフィルタアイテムを生成（内部）
 		// --------------------------------------------------------------------------------
-		function createPlacementToUserAgentFilterItemData(){
+		function createReplacementToUserAgentFilterItemData(){
 			return {
 				name:{
 					standard:"",
@@ -10702,31 +10731,7 @@ function PageExpand(page_expand_arguments){
 						standard:"",
 						locales:{}
 					},
-					script:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// text_node:Text オブジェクト (DOM)
-		// --------------------------------------------------------------------------------
-		var text_node = info.text_node;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+					script:PageExpandProjectScriptObject_Create("MakeLinkToText_Default")
 				}
 			};
 		}
@@ -10768,65 +10773,8 @@ function PageExpand(page_expand_arguments){
 					},
 					inline:{
 						disable_same_text:false,
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]",
-						script_insert:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// textarea_element:HTMLTextAreaElement オブジェクト
-		// event_dispatcher:EventDispatcher オブジェクト
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var textarea = info.textarea_element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandText_InlineScriptAllow_Default"),
+						script_insert:PageExpandProjectScriptObject_Create("ExpandText_InlineScriptInsert_Default")
 					}
 				}
 			};
@@ -10846,68 +10794,13 @@ function PageExpand(page_expand_arguments){
 					thumbnail:{
 						enable_thumbnail:false,
 						enable_popup_mouseover:false,
+						scale_percent:50,
+						width_min:0,
+						width_max:300,
 						disable_same_image:false,
 						load_type:"preload",
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// is_overridden_url:Boolean 型（URL がオーバーライドされているか）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]",
-						script_insert:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// image_element:HTMLImageElement オブジェクト
-		// event_dispatcher:EventDispatcher オブジェクト
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var image = info.image_element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandImage_ThumbnailScriptAllow_Default"),
+						script_insert:PageExpandProjectScriptObject_Create("ExpandImage_ThumbnailScriptInsert_Default")
 					},
 					popup:{
 						enable_popup_mouseover:false,
@@ -10919,37 +10812,7 @@ function PageExpand(page_expand_arguments){
 						scale_percent:100,
 						time_wait_open:0,
 						time_wait_close:0,
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// is_overridden_url:Boolean 型（URL がオーバーライドされているか）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandImage_PopupScriptAllow_Default")
 					},
 					reduced_image:{
 						enable_popup:false,
@@ -10979,98 +10842,11 @@ function PageExpand(page_expand_arguments){
 					inline:{
 						disable_same_audio:false,
 						sound_max:10,
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// is_overridden_url:Boolean 型（URL がオーバーライドされているか）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]",
-						script_insert:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// element:HTMLElement オブジェクト（オーディオ）
-		// event_dispatcher:EventDispatcher オブジェクト
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var audio = info.element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandSound_InlineScriptAllow_Default"),
+						script_insert:PageExpandProjectScriptObject_Create("ExpandSound_InlineScriptInsert_Default")
 					},
 					audio_element:{
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandSound_AudioElementScriptAllow_Default")
 					},
 					soundcloud:{
 						visible_player_flash:false,
@@ -11097,98 +10873,11 @@ function PageExpand(page_expand_arguments){
 					inline:{
 						disable_same_video:false,
 						video_max:10,
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// is_overridden_url:Boolean 型（URL がオーバーライドされているか）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]",
-						script_insert:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// element:HTMLElement オブジェクト（ビデオ）
-		// event_dispatcher:EventDispatcher オブジェクト
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var video = info.element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandVideo_InlineScriptAllow_Default"),
+						script_insert:PageExpandProjectScriptObject_Create("ExpandVideo_InlineScriptInsert_Default")
 					},
 					video_element:{
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandVideo_VideoElementScriptAllow_Default")
 					},
 					youtube:{
 						visible_video:false
@@ -11235,65 +10924,8 @@ function PageExpand(page_expand_arguments){
 					},
 					inline:{
 						disable_same_iframe:false,
-						script_allow:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// url:String 型（展開先のアドレス）
-		// content_type:Array 型（コンテンツタイプ）
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var url = info.url;
-		var content_type = info.content_type;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:Object 型
-		// result:Boolean 型（true で許可、false で拒否）
-		// 必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response({result:false});
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]",
-						script_insert:
-"[\n\t" + 
-	function(info,response){
-
-		// --------------------------------------------------------------------------------
-		// 第01引数 Object 型
-		// current_element:HTMLElement オブジェクト
-		// iframe_element:HTMLIFrameElement オブジェクト
-		// event_dispatcher:EventDispatcher オブジェクト
-		// --------------------------------------------------------------------------------
-		var current_element = info.current_element;
-		var iframe = info.iframe_element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// --------------------------------------------------------------------------------
-		// 第02引数 function
-		// 引数:なし
-		// 処理が完了したタイミングで必ず１度実行する必要がある。非同期実行可能。
-		// --------------------------------------------------------------------------------
-		response();
-
-		// --------------------------------------------------------------------------------
-		// 戻り値 Boolean 型
-		// true :関数の実行を完了
-		// false:次の関数を実行
-		// --------------------------------------------------------------------------------
-		return true;
-	}.toString() +
-"\n]"
+						script_allow:PageExpandProjectScriptObject_Create("ExpandIframe_InlineScriptAllow_Default"),
+						script_insert:PageExpandProjectScriptObject_Create("ExpandIframe_InlineScriptInsert_Default")
 					}
 				}
 			};

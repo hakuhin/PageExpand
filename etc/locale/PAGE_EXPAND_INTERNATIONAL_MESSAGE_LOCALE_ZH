@@ -677,6 +677,18 @@
 			menu_setting_expand_image_thumbnail_disable_same_thumbnail_image: {
 				message: "如果 URL 相同，不扩展。"
 			},
+			menu_setting_expand_image_thumbnail_size: {
+				message: "缩略图的大小"
+			},
+			menu_setting_expand_image_thumbnail_size_min: {
+				message: "Minimum allowed size (pixel)"
+			},
+			menu_setting_expand_image_thumbnail_size_scale: {
+				message: "比例 (%)"
+			},
+			menu_setting_expand_image_thumbnail_size_max: {
+				message: "Maximum allowed size (pixel)"
+			},
 			menu_setting_expand_image_thumbnail_script_allow: {
 				message: "从链接显示缩略图的条件"
 			},
@@ -1333,6 +1345,12 @@
 			},
 			menu_button_no: {
 				message: "取消"
+			},
+			menu_script_obj_editer_edit_script: {
+				message: "Edit Script"
+			},
+			menu_script_obj_editer_delete_script: {
+				message: "Delete Script (return to default)"
 			},
 			menu_scriptarea_hint: {
 				message: "用来描述到数组的匿名函数。请注意，它不包含恶意代码。"
