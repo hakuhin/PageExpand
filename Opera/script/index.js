@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2015  http://hakuhin.jp
+// Hakuhin 2010-2016  http://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -100,6 +100,11 @@ function PageExpand(page_expand_arguments){
 					time_handle = null;
 				});
 			})();
+		}
+
+		// 最速実行
+		if(!page_expand_execute_faster){
+			page_expand_execute_faster = new PageExpandExecuteFaster();
 		}
 
 		// デバッグ
@@ -302,6 +307,26 @@ function PageExpand(page_expand_arguments){
 					type: "line"
 				}));
 
+				// 掲示板ボードを開く
+				item_folder.addItem(context_menu.createItem({
+					title: _i18n.getMessage("context_menu_pageexpand_open_bbs_board"),
+					onclick: function (e) {
+						var query = new Object();
+						var tab = OperaExtensionGetSelectedTab();
+						if(tab){
+							if(tab.url){
+								query.referer = encodeURIComponent(tab.url);
+							}
+						}
+						OperaExtensionOpenBbsBoard(query);
+					}
+				}));
+				_context_menu_items[2] = true;
+
+				item_folder.addItem(context_menu.createItem({
+					type: "line"
+				}));
+
 				// 現在のページの設定を編集
 				item_folder.addItem(context_menu.createItem({
 					title: _i18n.getMessage("context_menu_pageexpand_config_current_page"),
@@ -317,7 +342,7 @@ function PageExpand(page_expand_arguments){
 						OperaExtensionOpenPageExpandConfig(query);
 					}
 				}));
-				_context_menu_items[2] = true;
+				_context_menu_items[3] = true;
 
 				// 現在の掲示板の設定を編集
 				if(project.getEnableExpandBbs()){
@@ -335,25 +360,25 @@ function PageExpand(page_expand_arguments){
 							OperaExtensionOpenPageExpandConfig(query);
 						}
 					}));
-					_context_menu_items[3] = true;
+					_context_menu_items[4] = true;
 				}
 
 				item_folder.addItem(context_menu.createItem({
 					type: "line"
 				}));
 
-				// PageExpand の実行
+				// PageExpand の開始
 				if(!(project.getEnableStartup())){
 					item_folder.addItem(context_menu.createItem({
-						title: _i18n.getMessage("context_menu_pageexpand_execute"),
+						title: _i18n.getMessage("context_menu_pageexpand_start"),
 						onclick: function (e) {
 							var tab = OperaExtensionGetSelectedTab();
 							if(tab){
-								extension_message.sendRequestToContent(tab, {command: "executePageExpand"});
+								extension_message.sendRequestToContent(tab, {command: "startPageExpand"});
 							}
 						}
 					}));
-					_context_menu_items[4] = true;
+					_context_menu_items[5] = true;
 				}
 
 				// PageExpand の中止
@@ -366,7 +391,19 @@ function PageExpand(page_expand_arguments){
 						}
 					}
 				}));
-				_context_menu_items[5] = true;
+				_context_menu_items[6] = true;
+
+				// PageExpand の最速実行
+				item_folder.addItem(context_menu.createItem({
+					title: _i18n.getMessage("context_menu_pageexpand_execute_fastest"),
+					onclick: function (e) {
+						var tab = OperaExtensionGetSelectedTab();
+						if(tab){
+							extension_message.sendRequestToContent(tab, {command: "executeFastest"});
+						}
+					}
+				}));
+				_context_menu_items[7] = true;
 
 				// PageExpand デバッグ
 				item_folder.addItem(context_menu.createItem({
@@ -378,7 +415,7 @@ function PageExpand(page_expand_arguments){
 						}
 					}
 				}));
-				_context_menu_items[6] = true;
+				_context_menu_items[8] = true;
 
 			}
 		}
@@ -395,14 +432,16 @@ function PageExpand(page_expand_arguments){
 				items[0] = true;
 				items[1] = true;
 				items[2] = true;
+				items[3] = true;
 				if(project.getEnableExpandBbs()){
-					items[3] = true;
-				}
-				if(!(project.getEnableStartup())){
 					items[4] = true;
 				}
-				items[5] = true;
+				if(!(project.getEnableStartup())){
+					items[5] = true;
+				}
 				items[6] = true;
+				items[7] = true;
+				items[8] = true;
 			}
 
 			var i;
@@ -448,7 +487,7 @@ function PageExpand(page_expand_arguments){
 					popup:{
 						href: "popup.html",
 						width: 300,
-						height: 250
+						height: 300
 					}
 				};
 				_toolbar_button = toolbar.createItem(tool_bar_param);
@@ -713,6 +752,18 @@ function PageExpand(page_expand_arguments){
 				}
 			};
 
+			// 掲示板ボードを開く
+			command_dictionary["openBbsBoard"] = function(param,sender,sendResponse){
+				var query = new Object();
+				var tab = OperaExtensionGetSelectedTab();
+				if(tab){
+					if(tab.url){
+						query.referer = encodeURIComponent(tab.url);
+					}
+				}
+				OperaExtensionOpenBbsBoard(query);
+			};
+
 			// 現在のページの設定を編集
 			command_dictionary["configCurrentPage"] = function(param,sender,sendResponse){
 				var query = new Object();
@@ -740,8 +791,9 @@ function PageExpand(page_expand_arguments){
 			};
 
 			// コマンド
-			command_dictionary["executePageExpand"] =
+			command_dictionary["startPageExpand"] =
 			command_dictionary["abortPageExpand"] =
+			command_dictionary["executeFastest"] =
 			command_dictionary["executeDebug"] =
 			command_dictionary["batchDownloadImage"] =
 			command_dictionary["batchDownloadUser"] = function(param,sender,sendResponse){

@@ -1,0 +1,1 @@
+exports.PageExpand({execute_type:"FirefoxExtensionBbsBoard",admin:window,window:window});

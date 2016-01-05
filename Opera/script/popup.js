@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2015  http://hakuhin.jp
+// Hakuhin 2010-2016  http://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -100,6 +100,11 @@ function PageExpand(page_expand_arguments){
 					time_handle = null;
 				});
 			})();
+		}
+
+		// 最速実行
+		if(!page_expand_execute_faster){
+			page_expand_execute_faster = new PageExpandExecuteFaster();
 		}
 
 		// デバッグ
@@ -246,6 +251,9 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function click(command){
 			switch(command){
+			case "openBbsBoard":
+				extension_message.sendRequest({command: "openBbsBoard"});
+				break;
 			case "configCurrentPage":
 				extension_message.sendRequest({command: "configCurrentPage"});
 				break;
@@ -315,8 +323,7 @@ function PageExpand(page_expand_arguments){
 				_item = DocumentCreateElement("a");
 				_item.href = "javascript:void(0);";
 				_style = _item.style;
-//				ElementSetStyle(_item,"font-size:12px; color:#000; margin:0px 0px 2px; padding:2px 20px; border-radius:5px; box-shadow:0px 0px 2px #888;");
-				ElementSetStyle(_item,"display:block; text-decoration: none; font-size:13px; color:#000; margin:0px 0px 2px; padding:4px 20px; border-radius:5px;");
+				ElementSetStyle(_item,"display:block; text-decoration: none; font-size:13px; color:#000; margin:0px 0px 2px; padding:2px 20px; border-radius:5px;");
 				ElementSetTextContent(_item,label);
 				parent.appendChild(_item);
 
@@ -413,6 +420,14 @@ function PageExpand(page_expand_arguments){
 
 			new UI_Separator(_menu_window);
 
+			// 掲示板ボードを開く
+			var button_open_bbs_board = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_open_bbs_board"));
+			button_open_bbs_board.onclick = function(){
+				click("openBbsBoard");
+			};
+
+			new UI_Separator(_menu_window);
+
 			// 現在のページの設定を編集
 			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_page"));
 			button_config.onclick = function(){
@@ -429,11 +444,11 @@ function PageExpand(page_expand_arguments){
 
 			new UI_Separator(_menu_window);
 
-			// PageExpand の実行
+			// PageExpand の開始
 			if(!(project.getEnableStartup())){
-				var button_execute_pageexpand = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_execute"));
-				button_execute_pageexpand.onclick = function(){
-					click("executePageExpand");
+				var button_start_pageexpand = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_start"));
+				button_start_pageexpand.onclick = function(){
+					click("startPageExpand");
 				};
 			}
 
@@ -441,6 +456,12 @@ function PageExpand(page_expand_arguments){
 			var button_abort_pageexpand = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_abort"));
 			button_abort_pageexpand.onclick = function(){
 				click("abortPageExpand");
+			};
+
+			// PageExpand の最速実行
+			var button_execute_pageexpand_fastest = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_execute_fastest"));
+			button_execute_pageexpand_fastest.onclick = function(){
+				click("executeFastest");
 			};
 
 			// PageExpand デバッグ

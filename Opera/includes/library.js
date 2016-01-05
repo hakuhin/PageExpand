@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2015  http://hakuhin.jp
+// Hakuhin 2010-2016  http://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -56,6 +56,9 @@
 	// タスク関連
 	var task_container;
 	var task_execute_level;
+
+	// 最速実行
+	var page_expand_execute_faster;
 
 	// デバッグ関連
 	var page_expand_debug;
@@ -10006,6 +10009,24 @@
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.30
+		// --------------------------------------------------------------------------------
+		if(proj.version < 30){
+			// バージョン値
+			proj.version = 30;
+			
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義
+			// --------------------------------------------------------------------------------
+			// イメージ検索用
+			var obj = getPreset(proj.replacement_to_link,"direct_link_image_search");
+			var filter = obj.filter[8];
+			filter.filter.asterisk.filter[0] = "http://image.baidu.com/search/detail?*";
+
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
@@ -13162,54 +13183,14 @@
 		if(images.length == 1){
 			var image = images[0];
 
-			var str = anchor_element.getAttribute("data-clickstr");
-			if(!str){
-				str = anchor_element.getAttribute("onclick");
-			}
-			if(str){
-				if(str.match(new RegExp("u:\'(.*?)\'","i"))){
-					if(RegExp.$1.indexOf("http") == 0){
-						response({result:true,url:RegExp.$1,content_type:["image"]});
-						return true;
-					}
-				}
-			}
-
-			var str = image.getAttribute("obj_url");
-			if(str){
-				response({result:true,url:str,content_type:["image"]});
-				return true;
-			}
-
-			var str = image.getAttribute("data-origin");
-			if(str){
-				try{
-					var uncompile = function (i) {
-						var g = {
-							w:"a",k:"b",v:"c","1":"d",j:"e",u:"f","2":"g",i:"h",t:"i","3":"j",
-							h:"k",s:"l","4":"m",g:"n","5":"o",r:"p",q:"q","6":"r",f:"s",p:"t",
-							"7":"u",e:"v",o:"w","8":"1",d:"2",n:"3","9":"4",c:"5",m:"6","0":"7",
-							b:"8",l:"9",a:"0","_z2C$q":":","_z&e3B":".",AzdH3F:"/"};
-						var e = /([a-w\d])/g;
-						var b = /(_z2C\$q|_z&e3B|AzdH3F)/g;
-
-						if (!i || i.indexOf("http") === 0) {
-							return i;
-						}
-						var h = i.replace(b, function (k, j) {
-							return g[j];
-						});
-						return h.replace(e, function (k, j) {
-							return g[j];
-						});
-					};
-
-					str = uncompile(str);
-
+			try{
+				var li = image.parentNode.parentNode.parentNode;
+				var str = li.getAttribute("data-objurl");
+				if(str){
 					response({result:true,url:str,content_type:["image"]});
 					return true;
-
-				}catch(e){}
+				}
+			}catch(e){
 			}
 		}
 
@@ -37300,6 +37281,12 @@
 			context_menu_batch_download_user: {
 				message: "一括ダウンロード（ユーザー）"
 			},
+			context_menu_pageexpand_open_bbs_board: {
+				message: "掲示板ボードを開く"
+			},
+			context_menu_pageexpand_open_bbs_board_run_confirm: {
+				message: "このページ内で掲示板ボードを実行しますか？"
+			},
 			context_menu_pageexpand_config_current_page: {
 				message: "現在のページの設定を編集"
 			},
@@ -37312,8 +37299,11 @@
 			context_menu_pageexpand_config_auto_run_confirm: {
 				message: "このページ内で PageExpand 設定を実行しますか？\n（もしこのページが汚染されている場合、悪意のあるスクリプトが注入されます）\n\n"
 			},
-			context_menu_pageexpand_execute: {
-				message: "PageExpand の実行"
+			context_menu_pageexpand_start: {
+				message: "PageExpand の開始"
+			},
+			context_menu_pageexpand_execute_fastest: {
+				message: "PageExpand の最速実行"
 			},
 			context_menu_pageexpand_abort: {
 				message: "PageExpand の中止"
@@ -38717,6 +38707,12 @@
 			context_menu_batch_download_user: {
 				message: "Batch Download (user)"
 			},
+			context_menu_pageexpand_open_bbs_board: {
+				message: "Open BBS Board"
+			},
+			context_menu_pageexpand_open_bbs_board_run_confirm: {
+				message: "Do you want to run the BBS Board in this page?"
+			},
 			context_menu_pageexpand_config_current_page: {
 				message: "PageExpand Setting Current Page"
 			},
@@ -38729,8 +38725,11 @@
 			context_menu_pageexpand_config_auto_run_confirm: {
 				message: "Do you want to run the PageExpand Setting in this page?\n(If this page is contaminated, then the malicious script will be injected)"
 			},
-			context_menu_pageexpand_execute: {
-				message: "Execute PageExpand"
+			context_menu_pageexpand_start: {
+				message: "Start PageExpand"
+			},
+			context_menu_pageexpand_execute_fastest: {
+				message: "Execute PageExpand (fastest)"
 			},
 			context_menu_pageexpand_abort: {
 				message: "Abort PageExpand"
@@ -40132,6 +40131,12 @@
 			context_menu_batch_download_user: {
 				message: "批量下载 (用户)"
 			},
+			context_menu_pageexpand_open_bbs_board: {
+				message: "Open BBS Board"
+			},
+			context_menu_pageexpand_open_bbs_board_run_confirm: {
+				message: "Do you want to run the BBS Board in this page?"
+			},
 			context_menu_pageexpand_config_current_page: {
 				message: "PageExpand 设置当前页"
 			},
@@ -40144,8 +40149,11 @@
 			context_menu_pageexpand_config_auto_run_confirm: {
 				message: "你想要在此页面中运行 PageExpand 设置吗？\n(如果此页面被污染，那么恶意脚本将被注入！)"
 			},
-			context_menu_pageexpand_execute: {
-				message: "执行 PageExpand"
+			context_menu_pageexpand_start: {
+				message: "开始 PageExpand"
+			},
+			context_menu_pageexpand_execute_fastest: {
+				message: "执行 PageExpand (最快)"
 			},
 			context_menu_pageexpand_abort: {
 				message: "关于 PageExpand"
@@ -46020,6 +46028,35 @@
 			_queue_count = 0;
 			_queue_max = 16;
 		})();
+	}
+
+
+
+	// --------------------------------------------------------------------------------
+	// Opera 拡張機能 から BBS Board を開く
+	// --------------------------------------------------------------------------------
+	function OperaExtensionOpenBbsBoard(query){
+
+		var current_url = "bbs_board.html";
+		var url = current_url;
+
+		if(query){
+			var query_count = 0;
+			for(var name in query){
+				if(query_count == 0){
+					url += "?" + name + "=" + query[name];
+				}else{
+					url += "&" + name + "=" + query[name];
+				}
+				query_count += 1;
+			}
+		}
+
+		// 新規
+		opera.extension.tabs.create({
+			url: url,
+			focused: true
+		});
 	}
 
 
@@ -52878,6 +52915,47 @@
 	}
 
 	// --------------------------------------------------------------------------------
+	// タイムスタンプから日付を取得
+	// --------------------------------------------------------------------------------
+	function Timestamp_ToString_JP(time){
+		var date = new Date(time);
+		var year = date.getFullYear();
+		var mon = date.getMonth() + 1;
+		var day = date.getDate();
+		var hou = date.getHours();
+		var min = date.getMinutes();
+		var sec = date.getSeconds();
+		var str = "";
+		if(year < 1000) str += "0";
+		if(year < 100) str += "0";
+		if(year < 10) str += "0";
+		str += year;
+		str += "/";
+		if(mon < 10) str += "0";
+		str += mon;
+		str += "/";
+		if(day < 10) str += "0";
+		str += day;
+		str += " ";
+		if(hou < 10) str += "0";
+		str += hou;
+		str += ":";
+		if(min < 10) str += "0";
+		str += min;
+		str += ":";
+		if(sec < 10) str += "0";
+		str += sec;
+		return str;
+	}
+
+	// --------------------------------------------------------------------------------
+	// UNIXTIME から日付を取得
+	// --------------------------------------------------------------------------------
+	function UNIXTIME_ToString_JP(unix_time){
+		return Timestamp_ToString_JP(unix_time * 1000);
+	}
+
+	// --------------------------------------------------------------------------------
 	// 属性辞書 HTML5
 	// --------------------------------------------------------------------------------
 	var DICTIONARY_ATTRIBUTE_HTML5 = {
@@ -56356,6 +56434,18 @@
 	}
 
 	// --------------------------------------------------------------------------------
+	// DOM ノードのすべての子を外す
+	// --------------------------------------------------------------------------------
+	function DomNodeRemoveChildren(node){
+		var nodes = node.childNodes;
+		var i;
+		var num = nodes.length;
+		for(i=num-1;i>=0;i--){
+			node.removeChild(nodes[i]);
+		}
+	}
+
+	// --------------------------------------------------------------------------------
 	// DOM ノードが document に登録されているか調べる
 	// --------------------------------------------------------------------------------
 	function DomNodeGetAttachedDocument(node){
@@ -56642,6 +56732,21 @@
 			style_sheet.addRule(selector,style,index);
 		}
 		return index;
+	}
+
+	// --------------------------------------------------------------------------------
+	// スタイルシートから CSSRuleList オブジェクトを取得する関数
+	// --------------------------------------------------------------------------------
+	function CSSStyleSheetGetCSSRuleList(style_sheet){
+		try{
+			if(style_sheet.cssRules !== undefined){
+				return style_sheet.cssRules;
+			}else if(style_sheet.rules !== undefined){
+				return style_sheet.rules;
+			}
+		}catch(e){
+		}
+		return null;
 	}
 
 	// --------------------------------------------------------------------------------

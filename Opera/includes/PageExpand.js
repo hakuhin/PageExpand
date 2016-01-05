@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2015  http://hakuhin.jp
+// Hakuhin 2010-2016  http://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -100,6 +100,11 @@ function PageExpand(page_expand_arguments){
 					time_handle = null;
 				});
 			})();
+		}
+
+		// 最速実行
+		if(!page_expand_execute_faster){
+			page_expand_execute_faster = new PageExpandExecuteFaster();
 		}
 
 		// デバッグ
@@ -214,6 +219,12 @@ function PageExpand(page_expand_arguments){
 		if(extension_message){
 			extension_message.release();
 			extension_message = null;
+		}
+
+		// 最速実行
+		if(page_expand_execute_faster){
+			page_expand_execute_faster.release();
+			page_expand_execute_faster = null;
 		}
 
 		// デバッグ関連
@@ -683,13 +694,98 @@ function PageExpand(page_expand_arguments){
 
 			// 解析開始
 			execute_queue.attachLastForInsertDomNode(DomNodeAnalyzeRoot,document.documentElement);
+			page_expand_execute_faster.startedAnalyze();
 		}
 
 		// DOM 構築完了
 		DocumentGetLoadedDomContent(document,function(){
 			DocumentLoaded();
 		});
+	}
 
+	// --------------------------------------------------------------------------------
+	// PageExpand 最速実行
+	// --------------------------------------------------------------------------------
+	function PageExpandExecuteFaster(){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// 解放
+		// --------------------------------------------------------------------------------
+		_this.release = function (){
+			if(_task){
+				_task.release();
+				_task = null;
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// 開始
+		// --------------------------------------------------------------------------------
+		_this.start = function (){
+			if(!_started_analyze){
+				_request = true;
+				return;
+			}
+			start();	
+		};
+
+		// --------------------------------------------------------------------------------
+		// 解析を開始
+		// --------------------------------------------------------------------------------
+		_this.startedAnalyze = function (){
+			_started_analyze = true;
+			if(_request){
+				_request = false;
+				start();
+			}
+		};
+		
+		// --------------------------------------------------------------------------------
+		// 開始
+		// --------------------------------------------------------------------------------
+		function start(){
+			if(_executing) return;
+			_executing = true;
+			var scroll_pos = WindowGetScrollPosition(window);
+			var html = document.documentElement;
+			var style_display = html.style.display;
+			html.style.display = "none";
+
+			setTimeout(function(){
+				execute_queue.setOccupancyTime(1000);
+				execute_queue.setSleepTime(0);
+
+				_task = task_container.createTask();
+				_task.setExecuteFunc(function(task){
+					if(execute_queue.getCountQueue() <= 0){
+						task.release();
+					}
+				});
+				_task.setDestructorFunc(function(task){
+					if(style_display === undefined){
+						StyleDeclarationRemoveProperty(html.style,"display");
+					}else{
+						StyleDeclarationSetProperty(html.style,"display",style_display);
+					}
+					WindowSetScrollPosition(window,scroll_pos);
+					execute_queue.setOccupancyTime(project.getExecuteQueueOccupancyTime());
+					execute_queue.setSleepTime(project.getExecuteQueueSleepTime());
+					_executing = false;
+					_task = null;
+				});
+			},0);
+		};
+		
+		var _started_analyze = false;
+		var _request = false;
+		var _executing = false;
+		var _task = null;
+	}
+	function PageExpandExecuteFastest(){
+		if(page_expand_execute_faster){
+			page_expand_execute_faster.start();
+		}
 	}
 
 
@@ -6470,7 +6566,7 @@ function PageExpand(page_expand_arguments){
 						}
 
 						if(trim_rect){
-							var natural_size　= ImageGetNaturalSize(element);
+							var natural_size = ImageGetNaturalSize(element);
 							var computed_style = ElementGetComputedStyle(element,null);
 							var boader_rect = ComputedStyleGetBoaderWidth(computed_style);
 							var padding_rect = ComputedStyleGetPaddingWidth(computed_style);
@@ -6670,12 +6766,16 @@ function PageExpand(page_expand_arguments){
 					var param = request;
 
 					switch(param.command){
-					case "executePageExpand":
+					case "startPageExpand":
 						PageExpandStart();
 						break;
 
 					case "abortPageExpand":
 						PageExpandRelease();
+						break;
+
+					case "executeFastest":
+						PageExpandExecuteFastest();
 						break;
 
 					case "executeDebug":

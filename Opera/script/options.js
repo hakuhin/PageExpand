@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2015  http://hakuhin.jp
+// Hakuhin 2010-2016  http://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -100,6 +100,11 @@ function PageExpand(page_expand_arguments){
 					time_handle = null;
 				});
 			})();
+		}
+
+		// 最速実行
+		if(!page_expand_execute_faster){
+			page_expand_execute_faster = new PageExpandExecuteFaster();
 		}
 
 		// デバッグ
@@ -4984,7 +4989,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.4.10");
+				new UI_Text(parent,"PageExpand ver.1.5.0");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -4994,7 +4999,7 @@ function PageExpand(page_expand_arguments){
 				var tr = table.insertRow(-1);
 				new UI_Text(tr.insertCell(-1),'by');
 				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","http://hakuhin.jp/");
-				new UI_Text(tr.insertCell(-1),'2010-2015');
+				new UI_Text(tr.insertCell(-1),'2010-2016');
 				new UI_AnchorText(parent,"https://github.com/hakuhin/PageExpand","https://github.com/hakuhin/PageExpand");
 
 				// 翻訳者
@@ -11112,7 +11117,7 @@ function PageExpand(page_expand_arguments){
 			{asset:"menu_setting_style_sheet",callback:ContentSettingStyleSheet,bgcolor:0xFFE0E0FF},
 			{asset:"menu_setting_experimental",callback:ContentSettingExperimental,bgcolor:0xFFE0E0FF},
 			{asset:"menu_setting_urlmap",callback:ContentSettingUrlMap,bgcolor:0xFFFFF0D8},
-			{asset:"menu_setting_expand_bbs",callback:ContentSettingExpandBbs,bgcolor:0xFFFFFFFF},
+			{asset:"menu_setting_expand_bbs",callback:ContentSettingExpandBbs,bgcolor:0xFFE0FDE0},
 			{asset:"menu_setting_download",callback:ContentSettingDownload,bgcolor:0xFFFFFFFF},
 			{asset:"menu_setting_language",callback:ContentSettingLanguage,bgcolor:0xFFFFFFFF},
 			{asset:"menu_credit",callback:ContentCredit,bgcolor:0xFFFFFFFF}
@@ -11166,6 +11171,10 @@ function PageExpand(page_expand_arguments){
 			// HTML
 			var html = DocumentCreateElement("html");
 			document.appendChild(html);
+
+			// ヘッダ
+			var head = DocumentCreateElement("head");
+			html.appendChild(head);
 
 			// ボディ
 			var body = DocumentCreateElement("body");
