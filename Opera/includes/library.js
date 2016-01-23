@@ -120,6 +120,93 @@
 	var TASK_EXECUTE_LEVEL_POPUP = 0x00000001;
 
 
+
+	// --------------------------------------------------------------------------------
+	// PageExpand 最速実行
+	// --------------------------------------------------------------------------------
+	function PageExpandExecuteFaster(){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// 解放
+		// --------------------------------------------------------------------------------
+		_this.release = function (){
+			if(_task){
+				_task.release();
+				_task = null;
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// 開始
+		// --------------------------------------------------------------------------------
+		_this.start = function (){
+			if(!_started_analyze){
+				_request = true;
+				return;
+			}
+			start();	
+		};
+
+		// --------------------------------------------------------------------------------
+		// 解析を開始
+		// --------------------------------------------------------------------------------
+		_this.startedAnalyze = function (){
+			_started_analyze = true;
+			if(_request){
+				_request = false;
+				start();
+			}
+		};
+		
+		// --------------------------------------------------------------------------------
+		// 開始
+		// --------------------------------------------------------------------------------
+		function start(){
+			if(_executing) return;
+			_executing = true;
+			var scroll_pos = WindowGetScrollPosition(window);
+			var html = document.documentElement;
+			var style_display = html.style.display;
+			html.style.display = "none";
+
+			setTimeout(function(){
+				execute_queue.setOccupancyTime(1000);
+				execute_queue.setSleepTime(0);
+
+				_task = task_container.createTask();
+				_task.setExecuteFunc(function(task){
+					if(execute_queue.getCountQueue() <= 0){
+						task.release();
+					}
+				});
+				_task.setDestructorFunc(function(task){
+					if(style_display === undefined){
+						StyleDeclarationRemoveProperty(html.style,"display");
+					}else{
+						StyleDeclarationSetProperty(html.style,"display",style_display);
+					}
+					WindowSetScrollPosition(window,scroll_pos);
+					execute_queue.setOccupancyTime(project.getExecuteQueueOccupancyTime());
+					execute_queue.setSleepTime(project.getExecuteQueueSleepTime());
+					_executing = false;
+					_task = null;
+				});
+			},0);
+		};
+		
+		var _started_analyze = false;
+		var _request = false;
+		var _executing = false;
+		var _task = null;
+	}
+	function PageExpandExecuteFastest(){
+		if(page_expand_execute_faster){
+			page_expand_execute_faster.start();
+		}
+	}
+
+
 	// --------------------------------------------------------------------------------
 	// PageExpand プロジェクト
 	// --------------------------------------------------------------------------------
@@ -10023,6 +10110,24 @@
 			var obj = getPreset(proj.replacement_to_link,"direct_link_image_search");
 			var filter = obj.filter[8];
 			filter.filter.asterisk.filter[0] = "http://image.baidu.com/search/detail?*";
+
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.31
+		// --------------------------------------------------------------------------------
+		if(proj.version < 31){
+			// バージョン値
+			proj.version = 31;
+			
+			// ２ちゃんねる掲示板 v.06
+			var obj = getPreset(proj.expand_bbs,"2ch_v6");
+			var filter = obj.filter.regexp.filter;
+			filter.push({
+				pattern:"^http://hayabusa8\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			});
 
 		}
 		if(exit())	return proj;
@@ -46058,6 +46163,7 @@
 			focused: true
 		});
 	}
+
 
 
 

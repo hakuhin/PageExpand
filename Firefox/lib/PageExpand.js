@@ -819,6 +819,8 @@ function PageExpand(page_expand_arguments){
 		});
 	}
 
+
+
 	// --------------------------------------------------------------------------------
 	// PageExpand 最速実行
 	// --------------------------------------------------------------------------------
@@ -10820,6 +10822,24 @@ function PageExpand(page_expand_arguments){
 			var obj = getPreset(proj.replacement_to_link,"direct_link_image_search");
 			var filter = obj.filter[8];
 			filter.filter.asterisk.filter[0] = "http://image.baidu.com/search/detail?*";
+
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.31
+		// --------------------------------------------------------------------------------
+		if(proj.version < 31){
+			// バージョン値
+			proj.version = 31;
+			
+			// ２ちゃんねる掲示板 v.06
+			var obj = getPreset(proj.expand_bbs,"2ch_v6");
+			var filter = obj.filter.regexp.filter;
+			filter.push({
+				pattern:"^http://hayabusa8\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			});
 
 		}
 		if(exit())	return proj;
@@ -38728,7 +38748,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.0");
+				new UI_Text(parent,"PageExpand ver.1.5.1");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -44906,7 +44926,7 @@ function PageExpand(page_expand_arguments){
 
 			// ボディ
 			var body = DocumentCreateElement("body");
-			ElementSetStyle(body,'background-color:#CCC; font-family:"Meiryo"; margin:0px; padding:0px; overflow-y:scroll;');
+			ElementSetStyle(body,'background-color:#CCC; font-family:"Meiryo","sans-serif"; margin:0px; padding:0px; overflow-y:scroll;');
 			html.appendChild(body);
 
 			// ロケール
@@ -45239,7 +45259,7 @@ function PageExpand(page_expand_arguments){
 
 			// ボディ
 			var body = document.body;
-			ElementSetStyle(body,'background-color:#ccc; font-family:"Meiryo"; margin:0px; padding:0px; width:300px; border:0px solid #000;');
+			ElementSetStyle(body,'background-color:#ccc; font-family:"Meiryo","sans-serif"; margin:0px; padding:0px; width:300px; border:0px solid #000; overflow-x:hidden;');
 
 			// ヘッダ
 			var head_window = DocumentCreateElement("div");
@@ -45698,8 +45718,8 @@ function PageExpand(page_expand_arguments){
 				column.setWidthMax(150);
 				column.setTextAlign("center");
 
-				_ui_catalog.sort("number",false);
 				_ui_catalog.setBlockSize(180,180 * (1/2));
+				_ui_catalog.sort("number",false);
 				break;
 
 			case "2chan":
@@ -45865,8 +45885,8 @@ function PageExpand(page_expand_arguments){
 				column.setWidthMax(150);
 				column.setTextAlign("center");
 
-				_ui_catalog.sort("number",false);
 				_ui_catalog.setBlockSize(140,140 * (4/3));
+				_ui_catalog.sort("number",false);
 				break;
 
 			case "4chan":
@@ -46038,8 +46058,181 @@ function PageExpand(page_expand_arguments){
 				column.setWidthMax(150);
 				column.setTextAlign("center");
 
-				_ui_catalog.sort("number",false);
 				_ui_catalog.setBlockSize(140,140 * (4/3));
+				_ui_catalog.sort("number",false);
+				break;
+
+			case "8chan":
+				_category_title.nodeValue = _current_site;
+				disableCategoryContainer(false);
+				openSplitterLeft(true);
+
+				var convert_list = new Object();
+				convert_list["ppd"] = function(value){
+					value = Math.floor(value * 100) / 100;
+					return value.toFixed(2);
+				};
+				convert_list["date_new"] = UNIXTIME_ToString_JP;
+
+				_ui_catalog.onUpdateItem = function (info){
+					var parent = info.parent;
+					var data = info.data;
+
+					var get_title = function(size){
+						if(data.title.length > size){
+							return data.title.substr(0,size) + "...";
+						}
+						return data.title;
+					};
+					var get_date = function(){
+						return convert_list["date_new"](data.date_new);
+					};
+					var get_ppd = function(){
+						return convert_list["ppd"](data.ppd);
+					};
+
+					switch(info.layout_mode){
+					case "list":
+						var container = DocumentCreateElement("div");
+						ElementSetStyle(container,"position:relative; margin:2px; margin-left:4px; margin-right:4px; min-height:60px;");
+						parent.appendChild(container);
+
+						var img_block = DocumentCreateElement("div");
+						ElementSetStyle(img_block,"position:absolute; width:60px; height:60px; text-align:right;");
+						container.appendChild(img_block);
+
+						var image = data.image;
+						if(image){
+							ElementSetStyle(image,"max-width:100%; max-height:60px;");
+							img_block.appendChild(image);
+						}
+
+						var text_container = DocumentCreateElement("div");
+						ElementSetStyle(text_container,"margin-left:65px;");
+						container.appendChild(text_container);
+
+						var text_block0 = DocumentCreateElement("div");
+						ElementSetStyle(text_block0,"");
+						text_container.appendChild(text_block0);
+						var inline_text0 = DocumentCreateElement("span");
+						ElementSetStyle(inline_text0,"word-break: break-all;");
+						text_block0.appendChild(inline_text0);
+						var text_node0 = document.createTextNode("");
+						inline_text0.appendChild(text_node0);
+
+						var text_block1 = DocumentCreateElement("div");
+						ElementSetStyle(text_block1,"margin-top:2px;");
+						text_container.appendChild(text_block1);
+						var inline_text1 = DocumentCreateElement("span");
+						ElementSetStyle(inline_text1,"color:#888;");
+						text_block1.appendChild(inline_text1);
+						var text_node1 = document.createTextNode("");
+						inline_text1.appendChild(text_node1);
+
+						info.onupdate = function(){
+							text_node0.nodeValue = data.number + ":" + data.title;
+							text_node1.nodeValue = "R:" + data.replies + " I:" + data.images + " [" + get_ppd() + "/d] [" + get_date() + "]";
+						};
+						break;
+
+					case "small_icon":
+						var inline_text = DocumentCreateElement("span");
+						ElementSetStyle(inline_text,"text-decoration:underline; word-break:break-all;");
+						parent.appendChild(inline_text);
+						var text_node = document.createTextNode("");
+						inline_text.appendChild(text_node);
+
+						info.onupdate = function(){
+							text_node.nodeValue = data.number + ":" + get_title(100) + " (" + data.replies + ")";
+						};
+						break;
+
+					case "large_icon":
+						var img_block = DocumentCreateElement("div");
+						ElementSetStyle(img_block,"margin:4px; margin-bottom:0px; text-align:center;");
+						parent.appendChild(img_block);
+
+						var image = data.image;
+						if(image){
+							ElementSetStyle(image,"max-width:100%; max-height:140px;");
+							img_block.appendChild(image);
+						}
+
+						var text_block = DocumentCreateElement("div");
+						ElementSetStyle(text_block,"margin:4px; margin-top:2px;");
+						parent.appendChild(text_block);
+						var inline_text = DocumentCreateElement("span");
+						ElementSetStyle(inline_text,"word-break:break-all;");
+						text_block.appendChild(inline_text);
+						var text_node = document.createTextNode("");
+						inline_text.appendChild(text_node);
+
+						info.onupdate = function(){
+							text_node.nodeValue = data.number + ":" + get_title(50) + " (" + data.replies + ")";
+						};
+						break;
+					}
+				};
+
+				_ui_catalog.onUpdateCell = function (info){
+					var callback = convert_list[info.key];
+					var parent = info.parent;
+					var data = info.data;
+					var text_node = document.createTextNode("");
+					parent.appendChild(text_node);
+
+					info.onupdate = function(){
+						if(callback){
+							text_node.nodeValue = callback(data[info.key]);
+						}else{
+							text_node.nodeValue = data[info.key];
+						}
+					}
+				};
+
+				var column;
+				column = _ui_catalog.createColumn("number");
+				column.setLabel("No");
+				column.setWidthMin(50);
+				column.setWidthMax(50);
+				column.setTextAlign("center");
+
+				column = _ui_catalog.createColumn("title");
+				column.setLabel("Title");
+				column.setWidthMin(300);
+
+				column = _ui_catalog.createColumn("replies");
+				column.setLabel("Replies");
+				column.setWidthMin(50);
+				column.setWidthMax(70);
+				column.setTextAlign("right");
+
+				column = _ui_catalog.createColumn("images");
+				column.setLabel("Images");
+				column.setWidthMin(50);
+				column.setWidthMax(70);
+				column.setTextAlign("right");
+
+				column = _ui_catalog.createColumn("ppd");
+				column.setLabel("P/d");
+				column.setWidthMin(70);
+				column.setWidthMax(70);
+				column.setTextAlign("right");
+
+				column = _ui_catalog.createColumn("id");
+				column.setLabel("id");
+				column.setWidthMin(100);
+				column.setWidthMax(100);
+				column.setTextAlign("center");
+
+				column = _ui_catalog.createColumn("date_new");
+				column.setLabel("Since");
+				column.setWidthMin(150);
+				column.setWidthMax(150);
+				column.setTextAlign("center");
+
+				_ui_catalog.setBlockSize(140,140 * (4/3));
+				_ui_catalog.sort("number",false);
 				break;
 
 			case "reddit":
@@ -46205,8 +46398,8 @@ function PageExpand(page_expand_arguments){
 				column.setWidthMax(150);
 				column.setTextAlign("center");
 
-				_ui_catalog.sort("number",false);
 				_ui_catalog.setBlockSize(140,140 * (4/3));
+				_ui_catalog.sort("number",false);
 				break;
 
 			default:
@@ -46655,7 +46848,7 @@ function PageExpand(page_expand_arguments){
 
 							var item = folder.createItem(board.board);
 							item.setLabel(board.title);
-							item.setURL("http://boards.4chan.org/" + (board.board) + "/");
+							item.setURL("https://boards.4chan.org/" + (board.board) + "/");
 
 							execute_queue.attachFirst(f,null);
 						}catch(e){
@@ -46675,6 +46868,49 @@ function PageExpand(page_expand_arguments){
 				// テキストの読み込み
 				loader.setMethod("GET");
 				loader.setURL("https://a.4cdn.org/boards.json");
+				loader.loadText();
+				break;
+
+			case "8chan":
+
+				// 成功
+				loader.onload = function(str){
+					var boards = JsonParse(str);
+
+					var folder = _ui_category.createFolder("8chan");
+					folder.setLabel("8chan");
+
+					var p = 0;
+					var n = boards.length;
+					if(n > 2000) n = 2000;
+					function f(){
+						try{
+							if(p >= n) throw 0;
+							var board = boards[p];
+							p += 1;
+
+							var item = folder.createItem(board.title);
+							item.setLabel(board.uri);
+							item.setURL("https://8ch.net/" + (board.uri) + "/");
+
+							execute_queue.attachFirst(f,null);
+						}catch(e){
+						}
+
+						complete({result:true});
+					}
+
+					execute_queue.attachLast(f,null);
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					complete({result:false});
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL("https://8ch.net/boards.json");
 				loader.loadText();
 				break;
 
@@ -47103,6 +47339,126 @@ function PageExpand(page_expand_arguments){
 				// テキストの読み込み
 				loader.setMethod("GET");
 				loader.setURL("https://a.4cdn.org/" + directory + "/catalog.json");
+				loader.loadText();
+				break;
+
+			case "8chan":
+				var domain;
+				var directory;
+				if(!domain){
+					var m = _catalog_url.match(new RegExp("(http|https)://(8ch[.]net)/([^/]+)","i"));
+					if(m){
+						domain = m[2];
+						directory = m[3];
+					}
+				}
+				if(domain){
+					_catalog_title.nodeValue = "https://" + domain + "/" + directory + "/";
+				}else{
+					complete({result:false});
+					return;
+				}
+
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
+
+				// 成功
+				loader.onload = function(str){
+					var item_list = _ui_catalog.getItemList();
+					var i;
+					var num = item_list.length;
+					for(i=0;i<num;i++){
+						var data = item_list[i].getData();
+						data.number = "x";
+						data.ppd = (function(){
+							var now = new Date();
+							var old = new Date(data.date_new * 1000);
+							var sub = now.getTime() - old.getTime();
+							var ppd = 0;
+							if(sub > 0){
+								ppd = data.replies / (sub / 1000 / 60 / 60 / 24);
+							}
+							return ppd;
+						})();
+					}
+
+					var index = 1;
+					try{
+						var pages = JsonParse(str);
+
+						var i,j;
+						for(i=0;i<pages.length;i++){
+							var threads = pages[i].threads;
+							for(j=0;j<threads.length;j++){
+								var thread = threads[j];
+
+								var item = _ui_catalog.createItem(thread.no);
+								item.setURL("https://" + domain + "/" + directory + "/res/" + thread.no + ".html");
+								var data = item.getData();
+								data.number = index;
+								data.id = thread.no;
+								data.title = (function(){
+									if(thread.sub) return thread.sub;
+									try{
+										var dom_parser = new DOMParser();
+										var document_obj = dom_parser.parseFromString(thread.com , "text/html");
+										return ElementGetTextContent(document_obj.body);
+									}catch(e){
+									}
+									return (thread.com || "");
+								})();
+								data.replies = thread.replies;
+								data.images = thread.images;
+								data.date_new = thread.time;
+								data.image_url = (function(){
+									var thumb = (function(){
+										if(!(thread.tim)) return null;
+										return thread.tim + ".jpg";
+									})();
+									if(thumb){
+										return "https://8ch.net/" + directory + "/thumb/" + thumb;
+									}
+									if(thread.embed){
+										var m = thread.embed.match(new RegExp("//img[.]youtube[.]com/vi/[^/]+/[0-9]+[.]jpg","i"));
+										if(m) return "https:" + m[0];
+									}
+									return null;
+								})();
+								if(data.image_url){
+									var image = new Image();
+									image.src = data.image_url;
+									data.image = image;
+								}
+								data.ppd = (function(){
+									var now = new Date();
+									var old = new Date(data.date_new * 1000);
+									var sub = now.getTime() - old.getTime();
+									var ppd = 0;
+									if(sub > 0){
+										ppd = data.replies / (sub / 1000 / 60 / 60 / 24);
+									}
+									return ppd;
+								})();
+
+								index += 1;
+							}
+						}
+
+					}catch(e){
+					}
+
+					_ui_catalog.commit();
+					complete({result:true});
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					complete({result:false});
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL("https://8ch.net/" + directory + "/catalog.json");
 				loader.loadText();
 				break;
 
@@ -47576,6 +47932,8 @@ function PageExpand(page_expand_arguments){
 				site = "2chan";
 			}else if(domain.match(new RegExp("4chan[.]org","i"))){
 				site = "4chan";
+			}else if(domain.match(new RegExp("8ch[.]net|8chan.co","i"))){
+				site = "8chan";
 			}else if(domain.match(new RegExp("reddit[.]com$","i"))){
 				site = "reddit";
 			}
@@ -47619,7 +47977,7 @@ function PageExpand(page_expand_arguments){
 
 			// ボディ
 			var body = DocumentCreateElement("body");
-			ElementSetStyle(body,'font-family:"Meiryo"; margin:0px; padding:0px; background-color:#ccc; overflow:hidden; user-select:none; -moz-user-select:none; -webkit-user-select:none;');
+			ElementSetStyle(body,'font-family:"Meiryo","sans-serif"; margin:0px; padding:0px; background-color:#ccc; overflow:hidden; user-select:none; -moz-user-select:none; -webkit-user-select:none;');
 			html.appendChild(body);
 
 			// タイトル
@@ -47677,6 +48035,11 @@ function PageExpand(page_expand_arguments){
 					var option = DocumentCreateElement("option");
 					ElementSetTextContent(option,"4chan.org");
 					option.value = "4chan";
+					_select_site.appendChild(option);
+
+					var option = DocumentCreateElement("option");
+					ElementSetTextContent(option,"8ch.net (experimental)");
+					option.value = "8chan";
 					_select_site.appendChild(option);
 
 				// カテゴリボタン
@@ -48289,7 +48652,7 @@ function PageExpand(page_expand_arguments){
 				style.wordBreak = "break-all";
 				style.wordWrap = "break-word";
 				style = _style_item_separator.style;
-				style.display = "inline-block";
+				style.display = "inline";
 				break;
 			case "block":
 				style = _style_item.style;
@@ -48899,7 +49262,7 @@ function PageExpand(page_expand_arguments){
 				style.margin  = "0px";
 				style.width = "auto";
 				style.height = "auto";
-				style.minHeight = "audo";
+				style.minHeight = "0";
 				style.whiteSpace = "nowrap";
 				style.border = "hidden";
 
@@ -48914,7 +49277,7 @@ function PageExpand(page_expand_arguments){
 				style.marginBottom  = "2px";
 				style.width = "auto";
 				style.height = "auto";
-				style.minHeight = "0px";
+				style.minHeight = "0";
 				style.whiteSpace = "normal";
 				style.border = "1px solid #ddd";
 
@@ -48948,7 +49311,7 @@ function PageExpand(page_expand_arguments){
 				style.marginRight = "8px";
 				style.width = "auto";
 				style.height = "auto";
-				style.minHeight = "auto";
+				style.minHeight = "0";
 				style.whiteSpace = "normal";
 				style.border = "hidden";
 
@@ -69491,6 +69854,7 @@ function PageExpand(page_expand_arguments){
 		var tabs = FirefoxAddonGetTabs();
 		tabs.open({url:url});
 	}
+
 
 
 

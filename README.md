@@ -4,6 +4,7 @@ platform|get
 for Chromium|[download page](https://chrome.google.com/webstore/detail/bjnobgdfhefpilajplncgjjeopakpepc)
 for Firefox|[download page](https://addons.mozilla.org/addon/pageexpand/)
 for Opera|[download page](https://addons.opera.com/extensions/details/pageexpand/)
+for Safari|[install](http://hakuhin.jp/download/page_expand/release/safari/page_expand.safariextz)
 for Greasemonkey|[install](https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/PageExpand.user.js)
 
 ##Image All Download
@@ -48,6 +49,13 @@ for Greasemonkey|[install](https://raw.githubusercontent.com/hakuhin/PageExpand/
 ##Blocking Web Access
  - (In the initial setting, disable.)
  - By setting the URL, Can blocking web access.
+
+##BBS Board
+ - support (2ch.net, open2ch.net, jbbs.livedoor.jp, 2chan.net, 4chan.org, reddit.com)
+ - You can open the BBS Board from menu.
+ - This works as the app. (tab and sidebar)
+ - Is displayed the board list. (Category Panel)
+ - Is displayed the thread list. (Catalog Panel)
 
 ##Extend display BBS
  - support (2ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, logsoku.com, mimizun.com, 2chan.net, 4chan.org, 8chan.co, reddit.com, dic.nicovideo.jp, open2ch.net)

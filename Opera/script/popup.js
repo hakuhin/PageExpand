@@ -378,7 +378,7 @@ function PageExpand(page_expand_arguments){
 
 			// ボディ
 			var body = document.body;
-			ElementSetStyle(body,'background-color:#ccc; font-family:"Meiryo"; margin:0px; padding:0px; width:300px; border:0px solid #000;');
+			ElementSetStyle(body,'background-color:#ccc; font-family:"Meiryo","sans-serif"; margin:0px; padding:0px; width:300px; border:0px solid #000; overflow-x:hidden;');
 
 			// ヘッダ
 			var head_window = DocumentCreateElement("div");

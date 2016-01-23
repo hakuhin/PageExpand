@@ -4989,7 +4989,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.0");
+				new UI_Text(parent,"PageExpand ver.1.5.1");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -11178,7 +11178,7 @@ function PageExpand(page_expand_arguments){
 
 			// ボディ
 			var body = DocumentCreateElement("body");
-			ElementSetStyle(body,'background-color:#CCC; font-family:"Meiryo"; margin:0px; padding:0px; overflow-y:scroll;');
+			ElementSetStyle(body,'background-color:#CCC; font-family:"Meiryo","sans-serif"; margin:0px; padding:0px; overflow-y:scroll;');
 			html.appendChild(body);
 
 			// ロケール
