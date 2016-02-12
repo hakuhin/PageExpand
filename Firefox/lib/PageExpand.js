@@ -10844,6 +10844,24 @@ function PageExpand(page_expand_arguments){
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.32
+		// --------------------------------------------------------------------------------
+		if(proj.version < 32){
+			// バージョン値
+			proj.version = 32;
+			
+			// ２ちゃんねる掲示板 v.06
+			var obj = getPreset(proj.expand_bbs,"2ch_v6");
+			var filter = obj.filter.regexp.filter;
+			filter.push({
+				pattern:"^http://raptor\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			});
+
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
@@ -38748,7 +38766,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.1");
+				new UI_Text(parent,"PageExpand ver.1.5.3");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));

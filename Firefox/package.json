@@ -20,6 +20,6 @@
     "fennec": ">=38.0"
   },
   "id": "PageExpand@hakuhin.jp",
-  "version": "1.5.1",
+  "version": "1.5.3",
   "main": "lib/main.js"
 }
