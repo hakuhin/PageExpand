@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.5.3
+// @version        1.5.4
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @description:ja 画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、掲示板の拡張表示など...
@@ -10884,6 +10884,92 @@
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.33
+		// --------------------------------------------------------------------------------
+		if(proj.version < 33){
+			// バージョン値
+			proj.version = 33;
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義
+			// --------------------------------------------------------------------------------
+			// 直リンク（汎用）
+			updatePreset(proj.replacement_to_link,"direct_link_generic",function(obj){
+				var filter = obj.filter;
+
+				// OGP "twitter:*"
+				filter[1].filter.asterisk.filter.splice(1,1);
+                
+				// Imgur
+				filter.splice(9,0,{
+					name:{
+						standard:"Imgur",
+						locales:{
+							ja:"Imgur",
+							en:"Imgur"
+						}
+					},
+					filter:{
+						type:"regexp",
+						asterisk:{
+							filter:[]
+						},
+						regexp:{
+							filter:[
+								{
+									pattern:"(http|https)://imgur\\.com/[a-zA-Z0-9]+(|[?#].*)$",
+									flags:{i:true,g:false}
+								},{
+									pattern:"^(http|https)://i\\.imgur\\.com/[a-zA-Z0-9]+\\.gifv(|[?#].*)$",
+									flags:{i:true,g:false}
+								}
+							]
+						}
+					},
+					enable_reflect_to_anchor:false,
+					enable_cache:true,
+					script:PageExpandProjectScriptObject_Create("ReplacementToLink_DirectLinkGeneric_Imgur")
+				});
+			});
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// ２ちゃんねる掲示板 v.06
+			var obj = getPreset(proj.expand_bbs,"2ch_v6");
+			var filter = obj.filter.regexp.filter;
+			filter.push({
+				pattern:"^http://agree\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			});
+			filter.push({
+				pattern:"^http://echo\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			});
+			filter.push({
+				pattern:"^http://hitomi\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			});
+			filter.push({
+				pattern:"^http://karma\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			});
+			filter.push({
+				pattern:"^http://shiba\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			});
+			filter.push({
+				pattern:"^http://tanuki\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			});
+			filter.push({
+				pattern:"^http://mercury\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			});
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
@@ -12941,6 +13027,79 @@
 				response({result:true,url:image_url,content_type:["image"]});
 				return;
 			}
+			response({result:false});
+		};
+
+		// 失敗
+		loader.onerror = function(){
+			response({result:false});
+		};
+
+		// テキストの読み込み
+		loader.setMethod("GET");
+		loader.setURL(anchor_element.href);
+		loader.loadText();
+
+		return true;
+	}
+
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「Imgur」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_Imgur" , [
+	
+	function(info,response){
+		var anchor_element = info.anchor_element;
+
+		// ローダーオブジェクトを作成
+		var loader = new Loader();
+
+		// 成功
+		loader.onload = function(str){
+
+			var content_url = "";
+			var content_type = new Array();
+
+			if(!content_url){
+				var m = str.match(new RegExp("<meta[ \n\r\t]+?name[ \n\r\t]*?=[ \n\r\t]*?\"twitter:player\"[ \n\r\t]+?content[ \n\r\t]*?=[ \n\r\t]*?\"([^\"]+?)\"","i"));
+				if(m){
+					var m = m[1].match(new RegExp("(.*?\\.gif)v","i"));
+					if(m){
+						content_url = m[1];
+						content_type.push("image");
+					}
+				}
+			}
+
+			if(!content_url){
+				var m = str.match(new RegExp("<meta[ \n\r\t]+?name[ \n\r\t]*?=[ \n\r\t]*?\"twitter:stream\"[ \n\r\t]+?content[ \n\r\t]*?=[ \n\r\t]*?\"([^\"]+?)\"","i"));
+				if(m){
+					content_url = m[1];
+				}
+			}
+
+			if(!content_url){
+				var m = str.match(new RegExp("<link[ \n\r\t]+?rel[ \n\r\t]*?=[ \n\r\t]*?\"image_src\"[ \n\r\t]+?href[ \n\r\t]*?=[ \n\r\t]*?\"([^\"]+?)\"","i"));
+				if(m){
+					content_url = m[1];
+					content_type.push("image");
+				}
+			}
+
+			if(!content_url){
+				var m = str.match(new RegExp("<meta[ \n\r\t]+?name[ \n\r\t]*?=[ \n\r\t]*?\"twitter:image\"[ \n\r\t]+?content[ \n\r\t]*?=[ \n\r\t]*?\"([^\"]+?)\"","i"));
+				if(m){
+					content_url = m[1];
+					content_type.push("image");
+				}
+			}
+
+			if(content_url){
+				response({result:true,url:content_url,content_type:content_type});
+			}
+
 			response({result:false});
 		};
 
@@ -27881,7 +28040,8 @@
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"(http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch_v6"}
+			{url:"(http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch_v6"},
+			{url:"(http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch_v6"}
 		];
 
 		var i;
@@ -37470,7 +37630,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.3");
+				new UI_Text(parent,"PageExpand ver.1.5.4");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
