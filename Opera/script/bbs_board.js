@@ -3338,7 +3338,7 @@ function PageExpand(page_expand_arguments){
 				_select_site = DocumentCreateElement("select");
 				_select_site.size = 1;
 				_select_site.onchange = changeSelectSite;
-				ElementSetStyle(_select_site,"height:24px; vertical-align:top;");
+				ElementSetStyle(_select_site,"height:24px; box-sizing:border-box; vertical-align:top;");
 				container_left.appendChild(_select_site);
 
 					var option = DocumentCreateElement("option");

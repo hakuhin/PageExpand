@@ -908,13 +908,6 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// インラインフレーム内コンテンツ
 		// --------------------------------------------------------------------------------
-		if(0){
-			// 解析済みチェック
-			if(!AnalyzeWorkGetAnalyzedExpandIframeContent(work)){
-				AnalyzeWorkSetAnalyzedExpandIframeContent(work);
-				execute_queue.attachForExpandElement(ElementAnalyzePhaseExpandIframeContent,param);
-			}
-		}
 
 		// --------------------------------------------------------------------------------
 		// 掲示板解析

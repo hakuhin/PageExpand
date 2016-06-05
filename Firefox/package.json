@@ -7,6 +7,10 @@
   "homepage": "http://hakuhin.jp",
   "icon": "data/icon48.png",
   "icon64": "data/icon64.png",
+  "permissions": {
+    "private-browsing": true,
+    "multiprocess": true
+  },
   "preferences": [
     {
       "name": "PreferenceControl",
@@ -20,6 +24,6 @@
     "fennec": ">=38.0"
   },
   "id": "PageExpand@hakuhin.jp",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "main": "lib/main.js"
 }

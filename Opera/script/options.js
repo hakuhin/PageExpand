@@ -4989,7 +4989,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.4");
+				new UI_Text(parent,"PageExpand ver.1.5.5");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -5538,7 +5538,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function UI_TextHint(parent,label){
 			var div = DocumentCreateElement("div");
-			ElementSetStyle(div,"margin:-2px 0px 5px; font-size:11px; color:#aaa;");
+			ElementSetStyle(div,"margin:-3px 0px 5px 0px; font-size:11px; color:#aaa;");
 			ElementSetTextContent(div,label);
 			parent.appendChild(div);
 			return div;
@@ -6004,11 +6004,11 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			(function(){
 				var container = DocumentCreateElement("div");
-				ElementSetStyle(container,"margin:0px 8px 0px 0px;");
+				ElementSetStyle(container,"margin:0px 0px 5px 0px;");
 				parent.appendChild(container);
 
 				_textarea = DocumentCreateElement("textarea");
-				ElementSetStyle(_textarea,"width:100%; height:100px;");
+				ElementSetStyle(_textarea,"width:100%; height:100px; box-sizing:border-box; display:block;");
 				container.appendChild(_textarea);
 
 				_textarea.oninput = function(){
@@ -6075,7 +6075,7 @@ function PageExpand(page_expand_arguments){
 				_visible = false;
 
 				_body = DocumentCreateElement("div");
-				ElementSetStyle(_body,"margin:0px 8px 0px 0px;");
+				ElementSetStyle(_body,"margin:0px 0px 0px 0px;");
 				parent.appendChild(_body);
 
 				_button = new UI_InlineButton(_body,"");
@@ -6165,11 +6165,11 @@ function PageExpand(page_expand_arguments){
 				_visible = false;
 
 				_body = DocumentCreateElement("div");
-				ElementSetStyle(_body,"margin:0px 8px 0px 0px;");
+				ElementSetStyle(_body,"margin:0px 0px 5px 0px;");
 				parent.appendChild(_body);
 
 				_textarea = DocumentCreateElement("textarea");
-				ElementSetStyle(_textarea,"width:100%; height:300px; background-color:#fff;");
+				ElementSetStyle(_textarea,"width:100%; height:300px; box-sizing:border-box; display:block; background-color:#fff; margin-bottom:5px;");
 				_body.appendChild(_textarea);
 				_textarea.oninput = function(){
 
@@ -6186,11 +6186,11 @@ function PageExpand(page_expand_arguments){
 				};
 
 				_input_container = DocumentCreateElement("div");
-				ElementSetStyle(_input_container,"margin:-4px 8px 5px 0px;");
+				ElementSetStyle(_input_container,"margin:0px 0px 5px 0px;");
 
 				_input = DocumentCreateElement("input");
 				_input.readOnly = "readonly";
-				ElementSetStyle(_input,"width:100%; font-size:12px; padding:2px; background:#f88;");
+				ElementSetStyle(_input,"width:100%; box-sizing:border-box; display:block; font-size:12px; padding:2px; background:#f88;");
 				_input_container.appendChild(_input);
 
 				new UI_TextHint(_body,_i18n.getMessage("menu_scriptarea_hint"));
@@ -6363,7 +6363,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			(function(){
 				_input = DocumentCreateElement("input");
-				ElementSetStyle(_input,"padding:4px 10px; margin:0px 2px 5px -1px;");
+				ElementSetStyle(_input,"padding:4px 10px; margin:0px 2px 5px 0px; box-sizing:border-box;");
 				_input.type = "button";
 				_input.value = label;
 				parent.appendChild(_input);
@@ -6394,7 +6394,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			(function(){
 				var container = DocumentCreateElement("div");
-				ElementSetStyle(container,"margin:0px -1px 5px 0px; text-align:center;");
+				ElementSetStyle(container,"margin:0px 0px 5px 0px; text-align:center;");
 				parent.appendChild(container);
 
 				function ButtonOnClick(result){
@@ -6404,7 +6404,7 @@ function PageExpand(page_expand_arguments){
 				}
 
 				var input_yes = DocumentCreateElement("input");
-				ElementSetStyle(input_yes,"padding:10px; width:200px;");
+				ElementSetStyle(input_yes,"padding:10px; width:200px; box-sizing:border-box;");
 				input_yes.type = "button";
 				input_yes.value = _i18n.getMessage("menu_button_yes");
 				container.appendChild(input_yes);
@@ -6413,7 +6413,7 @@ function PageExpand(page_expand_arguments){
 				};
 
 				var input_no = DocumentCreateElement("input");
-				ElementSetStyle(input_no,"padding:10px; width:200px;");
+				ElementSetStyle(input_no,"padding:10px; width:200px; box-sizing:border-box;");
 				input_no.type = "button";
 				input_no.value = _i18n.getMessage("menu_button_no");
 				container.appendChild(input_no);
@@ -6451,7 +6451,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			(function(){
 				var container = DocumentCreateElement("div");
-				ElementSetStyle(container,"margin:0px -1px 5px 0px; text-align:center;");
+				ElementSetStyle(container,"margin:0px 0px 5px 0px; text-align:center;");
 				parent.appendChild(container);
 
 				function ButtonOnClick(){
@@ -6460,7 +6460,7 @@ function PageExpand(page_expand_arguments){
 				}
 
 				input_ok = DocumentCreateElement("input");
-				ElementSetStyle(input_ok,"padding:10px; width:200px;");
+				ElementSetStyle(input_ok,"padding:10px; width:200px; box-sizing:border-box;");
 				input_ok.type = "button";
 				input_ok.value = _i18n.getMessage("menu_button_ok");
 				container.appendChild(input_ok);
@@ -6520,7 +6520,7 @@ function PageExpand(page_expand_arguments){
 				parent.appendChild(container);
 
 				_combo_box = DocumentCreateElement("select");
-				ElementSetStyle(_combo_box,"width:auto; min-width:200px; height:22px; font-size:14px;");
+				ElementSetStyle(_combo_box,"width:auto; min-width:200px; height:22px; font-size:14px; box-sizing:border-box; display:block;");
 				container.appendChild(_combo_box);
 
 				_combo_box.onchange = function(){
@@ -6618,7 +6618,7 @@ function PageExpand(page_expand_arguments){
 
 				_list = DocumentCreateElement("select");
 				_list.size = 10;
-				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
+				ElementSetStyle(_list,"width:100%; box-sizing:border-box; display:block; font-size:14px; background:#fff;");
 				container.appendChild(_list);
 
 				_list.onchange = function(){
@@ -6902,7 +6902,7 @@ function PageExpand(page_expand_arguments){
 				_list = DocumentCreateElement("select");
 				_list.size = 8;
 				_list.multiple = true;
-				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
+				ElementSetStyle(_list,"width:100%; box-sizing:border-box; display:block; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
 					_select_id = _list.selectedIndex;
@@ -7043,7 +7043,7 @@ function PageExpand(page_expand_arguments){
 				container.appendChild(combo_box_container);
 
 				_combo_box = DocumentCreateElement("select");
-				ElementSetStyle(_combo_box,"width:100%; height:22px; font-size:14px;");
+				ElementSetStyle(_combo_box,"width:100%; height:22px; box-sizing:border-box; display:block; font-size:14px;");
 				combo_box_container.appendChild(_combo_box);
 				_combo_box.onchange = function(){
 					_this.onchange(_combo_box.value);
@@ -7620,7 +7620,7 @@ function PageExpand(page_expand_arguments){
 				_list = DocumentCreateElement("select");
 				_list.size = 10;
 				_list.multiple = true;
-				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
+				ElementSetStyle(_list,"width:100%; box-sizing:border-box; display:block; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
 					_select_id = _list.selectedIndex;
@@ -8078,7 +8078,7 @@ function PageExpand(page_expand_arguments){
 				_list = DocumentCreateElement("select");
 				_list.size = 10;
 				_list.multiple = true;
-				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
+				ElementSetStyle(_list,"width:100%; box-sizing:border-box; display:block; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
 					_select_id = _list.selectedIndex;
@@ -8895,7 +8895,7 @@ function PageExpand(page_expand_arguments){
 				_list = DocumentCreateElement("select");
 				_list.size = 10;
 				_list.multiple = true;
-				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
+				ElementSetStyle(_list,"width:100%; box-sizing:border-box; display:block; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
 					_select_id = _list.selectedIndex;
@@ -9642,7 +9642,7 @@ function PageExpand(page_expand_arguments){
 				_list = DocumentCreateElement("select");
 				_list.size = 10;
 				_list.multiple = true;
-				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
+				ElementSetStyle(_list,"width:100%; box-sizing:border-box; display:block; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
 					_select_id = _list.selectedIndex;
@@ -10234,7 +10234,7 @@ function PageExpand(page_expand_arguments){
 				// リスト
 				_list = DocumentCreateElement("select");
 				_list.multiple = true;
-				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
+				ElementSetStyle(_list,"width:100%; box-sizing:border-box; display:block; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
 					_select_id = _list.selectedIndex;

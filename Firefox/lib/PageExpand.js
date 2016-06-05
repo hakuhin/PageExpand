@@ -30,7 +30,6 @@ function PageExpand(page_expand_arguments){
 	// Document オブジェクト
 	var document = window.document;
 
-
 	// PageExpand プロジェクト
 	var page_expand_project;
 
@@ -10948,6 +10947,41 @@ function PageExpand(page_expand_arguments){
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.34
+		// --------------------------------------------------------------------------------
+		if(proj.version < 34){
+			// バージョン値
+			proj.version = 34;
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// ふたば☆ちゃんねる
+			var obj = addPreset(proj.expand_bbs,"2chan",null);
+			var filter = obj.preset.filter.regexp.filter;
+			filter.push({
+				pattern:"^http://(futalog|imgbako)\\.com/[0-9]+\\.htm$",
+				flags:{i:true,g:false}
+			},{
+				pattern:"^http://[^.]+\\.ftbucket\\.info/.*/cont/.*$",
+				flags:{i:true,g:false}
+			});
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			// 画像掲示板
+			updatePreset(proj.urlmap,"image_bbs",function(obj){
+				var filter = obj.filter.asterisk.filter;
+				filter.push("*://futalog.com/*");
+				filter.push("*://imgbako.com/*");
+				filter.push("*://*.ftbucket.info/*");
+			});
+
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
@@ -20854,7 +20888,9 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"^http://[^.]+\\.2chan\\.net/[^/]+/res/[0-9]+.htm",name:"2chan"}
+			{url:"^http://[^.]+\\.2chan\\.net/[^/]+/res/[0-9]+.htm",name:"2chan"},
+			{url:"^http://(futalog|imgbako)\\.com/[0-9]+.htm",name:"futalog"},
+			{url:"^http://[^.]+\.ftbucket\\.info/.*/cont/.*$",name:"ftbucket"}
 		];
 
 		var i;
@@ -21062,452 +21098,485 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
-		// テーブル解析
+		// ノードリストから解析
 		// --------------------------------------------------------------------------------
-		work.analyzeTable = function(table){
+		work.analyzeNodeList = function(node_list){
 			var re_number = new RegExp("No\\.([0-9]+)","i");
-			var re_image = new RegExp(".*/([0-9]+)\\.(bmp|gif|jpeg|jpe|jpg|png)","i");
+			var re_image = new RegExp(".*/([0-9]+)(|s)\\.(bmp|gif|jpeg|jpe|jpg|png)","i");
+
+			var node_num = node_list.length;
+			var info_text = "";
+			var i;
+			for(i=0;i<node_num;i++){
+				info_text += ElementGetTextContent(node_list[i]);
+			}
 
 			// ナンバーを取得
-			var info_text = ElementGetTextContent(table);
 			var m = info_text.match(re_number);
-			if(m){
-				var id = parseInt(m[1]);
-				if(work.futaba_dictionary.getResponse(id)) return;
-				var response = work.futaba_dictionary.createResponse(id);
+			if(!m) return;
+			var id = parseInt(m[1]);
 
-				try{
-					var blockquote = ElementGetElementsByTagName(table,"BLOCKQUOTE")[0];
+			if(work.futaba_dictionary.getResponse(id)) return;
+			var response = work.futaba_dictionary.createResponse(id);
 
-					// 画像 ID
-					var anchor = blockquote.previousSibling;
-					while(anchor){
-						if(anchor.tagName == "A"){
-							if(anchor.href.match(re_image)){
-								response.setImageId(RegExp.$1);
-								break;
-							}
-						}
-						anchor = anchor.previousSibling;
+			try{
+				var blockquote = null;
+				var i;
+				for(i=node_num-1;i>=0;i--){
+					var node = node_list[i];
+					if(node.tagName == "BLOCKQUOTE"){
+						blockquote = node;
+						break;
 					}
-
-					// 本文
-					var nodes = blockquote.childNodes;
-					var node_num = nodes.length;
-					var i;
-					var s = "";
-					for(i=0;i<node_num;i++){
-						var node = nodes[i];
-						switch(node.nodeType){
-						case 1:
-							if(node.tagName == "BR"){
-								if(s){
-									response.attachText(s);
-								}
-								s = "";
-							}else{
-								s += ElementGetTextContent(node);
-							}
-							break;
-						case 3:
-							s += node.nodeValue;
-							break;
-						}
-					}
-					if(s){
-						response.attachText(s);
-					}
-				}catch(e){
 				}
+
+				// 画像 ID
+				var node = DomNodeGetPreviousElementSibling(blockquote);
+				while(node){
+					var img = ElementGetElementsByTagName(node,"IMG")[0];
+					if(img){
+						if(img.src.match(re_image)){
+							response.setImageId(RegExp.$1);
+							break;
+						}
+					}
+					node = DomNodeGetPreviousElementSibling(node);
+				}
+
+				// 本文
+				var nodes;
+				switch(work.bbs_name){
+				case "futalog":
+					nodes = DomNodeGetFirstElementChild(blockquote).childNodes;
+					break;
+				default:
+					nodes = blockquote.childNodes;
+					break;
+				}
+				var node_num = nodes.length;
+				var i;
+				var s = "";
+				for(i=0;i<node_num;i++){
+					var node = nodes[i];
+					switch(node.nodeType){
+					case 1:
+						if(node.tagName == "BR"){
+							if(s){
+								response.attachText(s);
+							}
+							s = "";
+						}else{
+							s += ElementGetTextContent(node);
+						}
+						break;
+					case 3:
+						s += node.nodeValue;
+						break;
+					}
+				}
+				if(s){
+					response.attachText(s);
+				}
+			}catch(e){
 			}
 		};
 
 		// --------------------------------------------------------------------------------
-		// フォーム位置補正
+		// レスポンス親要素
 		// --------------------------------------------------------------------------------
-		function revisePositionForm(){
-			try{
-				var ftbl = document.getElementById("ftbl");
-				var ufm = document.getElementById("ufm");
-				if(ftbl.style.position == "absolute"){
-					var p = DocumentGetScrollPos();
-					var r = ufm.getBoundingClientRect();
-					ftbl.style.top = (p.y + r.top) + "px";
+		switch(work.bbs_name){
+		case "futalog":
+			element_parent = document.body;
+			break;
+		default:
+			var i;
+			var nodes = ElementGetElementsByTagName(document.body,"form");
+			var num = nodes.length;
+			for(i=0;i<num;i++){
+				var node = nodes[i];
+				if(node.action.indexOf("futaba.php") != -1){
+					if(ElementGetElementsByTagName(node,"blockquote").length){
+						element_parent = node;
+						break;
+					}
 				}
-			}catch(e){}
+			}
+			if(!element_parent) return false;
+			break;
 		}
 
-		// --------------------------------------------------------------------------------
-		// 継ぎ足し読み込み
-		// --------------------------------------------------------------------------------
-		function readMore(callback){
-			var element_result = document.getElementById("contdisp");
+		if(work.bbs_name == "2chan"){
 
-			// ローダーオブジェクトを作成
-			var loader = new Loader();
+			// --------------------------------------------------------------------------------
+			// フォーム位置補正
+			// --------------------------------------------------------------------------------
+			function revisePositionForm(){
+				try{
+					var ftbl = document.getElementById("ftbl");
+					var ufm = document.getElementById("ufm");
+					if(ftbl.style.position == "absolute"){
+						var p = DocumentGetScrollPos();
+						var r = ufm.getBoundingClientRect();
+						ftbl.style.top = (p.y + r.top) + "px";
+					}
+				}catch(e){}
+			}
 
-			// 成功
-			loader.onload = function(str){
-				var re_number = new RegExp("Name[ ].*?No\\.([0-9]+)","i");
-				var re_result = new RegExp("<span id=\"contdisp\">(.*?)<\\\\/span>","i");
-				var element_last = null;
+			// --------------------------------------------------------------------------------
+			// 継ぎ足し読み込み
+			// --------------------------------------------------------------------------------
+			function readMore(callback){
+				var element_result = document.getElementById("contdisp");
 
-				var p = 0;
-				var n = str.length;
-				var add_count = 0;
-				function f(){
-					try{
-						if(p >= n) throw 0;
-						p = str.indexOf("<table border=0>",p);
-						if(p < 0) throw 0;
-						var e = str.indexOf("</td>",p);
-						if(e >= 0){
-							e = str.indexOf("</tr>",e + 5);
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
+
+				// 成功
+				loader.onload = function(str){
+					var re_number = new RegExp("Name[ ].*?No\\.([0-9]+)","i");
+					var re_result = new RegExp("<span id=\"contdisp\">(.*?)<\\\\/span>","i");
+					var element_last = null;
+
+					var p = 0;
+					var n = str.length;
+					var add_count = 0;
+					function f(){
+						try{
+							if(p >= n) throw 0;
+							p = str.indexOf("<table border=0>",p);
+							if(p < 0) throw 0;
+							var e = str.indexOf("</td>",p);
 							if(e >= 0){
-								e = str.indexOf("</table>",e + 5);
-								if(e >= 0) e += 8;
-							}
-						}
-						var s = str.substring(p,e);
-						var m = s.match(re_number);
-						if(m){
-							var id = parseInt(m[1]);
-							if(last_id < id){
-								var response = bbs_dictionary.getResponse(id);
-								response.clearAnalyzed();
-								response.clearOriginalElements();
-								response.clearFollowing();
-
-								var nodes = StringHtmlCreateDomNodesSafe(s);
-								var j;
-								var node_num = nodes.length;
-								for(j=0;j<node_num;j++){
-									DomNode_InsertAfter(element_last,nodes[j]);
-									element_last = nodes[j];
+								e = str.indexOf("</tr>",e + 5);
+								if(e >= 0){
+									e = str.indexOf("</table>",e + 5);
+									if(e >= 0) e += 8;
 								}
+							}
+							var s = str.substring(p,e);
+							var m = s.match(re_number);
+							if(m){
+								var id = parseInt(m[1]);
+								if(last_id < id){
+									var response = bbs_dictionary.getResponse(id);
+									response.clearAnalyzed();
+									response.clearOriginalElements();
+									response.clearFollowing();
 
-								// フォーム位置補正
-								revisePositionForm();
+									var nodes = StringHtmlCreateDomNodesSafe(s);
+									var j;
+									var node_num = nodes.length;
+									for(j=0;j<node_num;j++){
+										DomNode_InsertAfter(element_last,nodes[j]);
+										element_last = nodes[j];
+									}
 
-								add_count += 1;
-								last_id = id;
+									// フォーム位置補正
+									revisePositionForm();
+
+									add_count += 1;
+									last_id = id;
+								}
+							}
+
+							if(p < e){
+								p = e;
+								execute_queue.attachFirst(f,null);
+								return;
+							}
+						}catch(e){
+						}
+
+						if(element_result){
+							var m = str.match(re_result);
+							if(m){
+								ElementSetTextContent(element_result,m[1]);
+							}else{
+								ElementSetTextContent(element_result,"not found!");
 							}
 						}
 
-						if(p < e){
-							p = e;
-							execute_queue.attachFirst(f,null);
-							return;
-						}
-					}catch(e){
+						// フォーム位置補正
+						revisePositionForm();
+
+						callback({result:true,add_count:add_count});
 					}
 
-					if(element_result){
-						var m = str.match(re_result);
-						if(m){
-							ElementSetTextContent(element_result,m[1]);
-						}else{
-							ElementSetTextContent(element_result,"not found!");
-						}
-					}
-
-					// フォーム位置補正
-					revisePositionForm();
-
-					callback({result:true,add_count:add_count});
-				}
-
-				var nodes = ElementGetElementsByTagName(element_parent,"table");
-				if(nodes.length){
-					element_last = nodes[nodes.length-1];
-				}
-				if(!element_last){
-					var nodes = ElementGetElementsByTagName(element_parent,"blockquote");
+					var nodes = ElementGetElementsByTagName(element_parent,"table");
 					if(nodes.length){
 						element_last = nodes[nodes.length-1];
 					}
-				}
+					if(!element_last){
+						var nodes = ElementGetElementsByTagName(element_parent,"blockquote");
+						if(nodes.length){
+							element_last = nodes[nodes.length-1];
+						}
+					}
 
-				execute_queue.attachFirst(f,null);
-			};
+					execute_queue.attachFirst(f,null);
+				};
 
-			// 失敗
-			loader.onerror = function(){
-				if(element_result){
-					ElementSetTextContent(element_result,"not found!");
-				}
-				callback({result:false});
-			};
+				// 失敗
+				loader.onerror = function(){
+					if(element_result){
+						ElementSetTextContent(element_result,"not found!");
+					}
+					callback({result:false});
+				};
 
-			// テキストの読み込み
-			loader.setMethod("GET");
-			loader.setURL(resource_url);
-			loader.overrideMimeType("text/plain; charset=Shift_JIS");
-			loader.loadText();
-		}
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL(resource_url);
+				loader.overrideMimeType("text/plain; charset=Shift_JIS");
+				loader.loadText();
+			}
 
-		// --------------------------------------------------------------------------------
-		// レスポンス親要素
-		// --------------------------------------------------------------------------------
-		var i;
-		var nodes = ElementGetElementsByTagName(document.body,"form");
-		var num = nodes.length;
-		for(i=0;i<num;i++){
-			var node = nodes[i];
-			if(node.action.indexOf("futaba.php") != -1){
-				if(ElementGetElementsByTagName(node,"blockquote").length){
-					element_parent = node;
+			// --------------------------------------------------------------------------------
+			// 最後尾 ID
+			// --------------------------------------------------------------------------------
+			var nodes = ElementGetElementsByTagName(element_parent,"table");
+			var i;
+			var node_num = nodes.length;
+			for(i=node_num-1;i>=0;i--){
+				var node = nodes[i];
+				var m = ElementGetTextContent(node).match(new RegExp("No\\.([0-9]+)","i"));
+				if(m){
+					last_id = parseInt(m[1]);
 					break;
 				}
 			}
-		}
 
-		if(!element_parent) return false;
+			// --------------------------------------------------------------------------------
+			// アクセス先 URL
+			// --------------------------------------------------------------------------------
+			resource_url = base_url;
 
-		// --------------------------------------------------------------------------------
-		// 最後尾 ID
-		// --------------------------------------------------------------------------------
-		var nodes = ElementGetElementsByTagName(element_parent,"table");
-		var i;
-		var node_num = nodes.length;
-		for(i=node_num-1;i>=0;i--){
-			var node = nodes[i];
-			var m = ElementGetTextContent(node).match(new RegExp("No\\.([0-9]+)","i"));
-			if(m){
-				last_id = parseInt(m[1]);
-				break;
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// アクセス先 URL
-		// --------------------------------------------------------------------------------
-		resource_url = base_url;
-
-		// --------------------------------------------------------------------------------
-		// BbsControlDockingForm 作成
-		// --------------------------------------------------------------------------------
-		(function(){
-			var node = document.getElementById("ftbl");
-			if(node){
-				var nodes = node.getElementsByTagName("tbody");
-				var num = nodes.length;
-				if(num){
-					var docking_form = new BbsControlDockingForm(nodes[0],false);
-					docking_form.setStyle("background:#e8e8ec; background-image:linear-gradient(to bottom, #f8f8fc, #e8e8ec); padding:20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px; display:block; visibility:visible");
-					work.docking_form = docking_form;
-				}
-			}
-		})();
-
-		// --------------------------------------------------------------------------------
-		// BbsControlReadMoreButton 作成
-		// --------------------------------------------------------------------------------
-		read_more_button = new BbsControlReadMoreButton();
-		read_more_button.setWaitTime(2 * 1000);
-		read_more_button.onclick = readMore;
-		var nodes = ElementGetElementsByTagName(element_parent,"hr");
-		if(nodes.length){
-			DomNode_InsertBefore(nodes[nodes.length-1],read_more_button.getElement());
-		}
-
-		// --------------------------------------------------------------------------------
-		// 書き込みをポップアップ化
-		// --------------------------------------------------------------------------------
-		(function(){
-			var element_form;
-			var input_submit;
-			var element_textarea;
-			var event_handler_release;
-			var task;
-
+			// --------------------------------------------------------------------------------
+			// BbsControlDockingForm 作成
+			// --------------------------------------------------------------------------------
 			(function(){
-				// フォーム
 				var node = document.getElementById("ftbl");
-				while(node){
-					if(node.tagName == "FORM"){
-						element_form = node;
-						break;
-					}
-					node = node.parentNode;
-				}
-
-				// サブミットボタン
-				if(element_form){
-					var nodes = ElementGetElementsByTagName(element_form,"input");
-					for(i=0;i<nodes.length;i++){
-						if(nodes[i].type.toLowerCase() == "submit"){
-							input_submit = nodes[i];
-							break;
-						}
-					}
-					var nodes = ElementGetElementsByTagName(element_form,"textarea");
-					if(nodes.length){
-						element_textarea = nodes[0];
-						work.form_textarea = element_textarea;
+				if(node){
+					var nodes = node.getElementsByTagName("tbody");
+					var num = nodes.length;
+					if(num){
+						var docking_form = new BbsControlDockingForm(nodes[0],false);
+						docking_form.setStyle("background:#e8e8ec; background-image:linear-gradient(to bottom, #f8f8fc, #e8e8ec); padding:20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px; display:block; visibility:visible");
+						work.docking_form = docking_form;
 					}
 				}
 			})();
 
-			// 開放
-			function release(){
-				if(event_handler_release){
-					event_handler_release.release();
-					event_handler_release = null;
-				}
-
-				removeEvent();
-
-				if(task){
-					task.release();
-				}
+			// --------------------------------------------------------------------------------
+			// BbsControlReadMoreButton 作成
+			// --------------------------------------------------------------------------------
+			read_more_button = new BbsControlReadMoreButton();
+			read_more_button.setWaitTime(2 * 1000);
+			read_more_button.onclick = readMore;
+			var nodes = ElementGetElementsByTagName(element_parent,"hr");
+			if(nodes.length){
+				DomNode_InsertBefore(nodes[nodes.length-1],read_more_button.getElement());
 			}
 
-			// クリア
-			function clear(){
-				var ary = new Array();
-				var i;
-				var num = element_form.length;
-				for(i=0;i<num;i++){
-					ary.push({e:element_form[i],v:element_form[i].value});
-				}
-				element_form.reset();
-				for(i=0;i<num;i++){
-					try{
-						var item = ary[i];
-						item.e.value = item.v;
-					}catch(e){}
-				}
-				element_textarea.value = "";
-			}
-
-			// 有効セット
-			function setEnable(type){
-				input_submit.disabled = !(type);
-			}
-
-			// イベント追加
-			function addEvent(){
-				if(window.addEventListener){
-					input_submit.addEventListener("click",EventClickButton);
-					element_form.addEventListener("submit",EventSubmitForm);
-				}else if(window.attachEvent){
-					input_submit.attachEvent("onclick",EventClickButton);
-					element_form.attachEvent("onsubmit",EventSubmitForm);
-				}
-			}
-
-			// イベント除外
-			function removeEvent(){
-				if(window.removeEventListener){
-					input_submit.removeEventListener("click",EventClickButton);
-					element_form.removeEventListener("submit",EventSubmitForm);
-				}else if(window.detachEvent){
-					input_submit.detachEvent("onclick",EventClickButton);
-					element_form.detachEvent("onsubmit",EventSubmitForm);
-				}
-			}
-
-			// サブミット直前に実行されるイベント
-			function EventSubmitForm(e){
-				setEnable(false);
-			}
-
-			// クリック時に実行されるイベント
-			function EventClickButton(e){
-				var w = 600;
-				var h = 400;
-
-				var window_name = "_pageexpand_" + Math.floor(Math.random() * 0x7FFFFFFF);
-				var popup_iframe = new BbsControlPopupIframe(window_name);
-				popup_iframe.setWindowSize(w,h);
-				popup_iframe.onclose = function(){
-					setEnable(true);
-				};
-
-				var element_iframe = popup_iframe.getIFrameElement();
-				element_form.target = window_name;
+			// --------------------------------------------------------------------------------
+			// 書き込みをポップアップ化
+			// --------------------------------------------------------------------------------
+			(function(){
+				var element_form;
+				var input_submit;
+				var element_textarea;
+				var event_handler_release;
+				var task;
 
 				(function(){
-					var closed = false;
-					var timer = null;
+					// フォーム
+					var node = document.getElementById("ftbl");
+					while(node){
+						if(node.tagName == "FORM"){
+							element_form = node;
+							break;
+						}
+						node = node.parentNode;
+					}
 
-					// タスク生成
-					task = task_container.createTask();
-					task.setDestructorFunc(function(){
-						task = null;
-					});
-					task.setExecuteFunc(function(){
-						try{
-							var href = "";
-							var window_obj = element_iframe.contentWindow;
-							if(window_obj.document){
-								href = window_obj.document.URL;
+					// サブミットボタン
+					if(element_form){
+						var nodes = ElementGetElementsByTagName(element_form,"input");
+						for(i=0;i<nodes.length;i++){
+							if(nodes[i].type.toLowerCase() == "submit"){
+								input_submit = nodes[i];
+								break;
 							}
-							if(href.indexOf("http://") == 0){
-								if(href.indexOf("/res/") >= 0){
-									closed = true;
-								}else if(href.indexOf("/futaba.php") == -1){
-									closed = true;
-								}else{
-									var body = window_obj.document.body;
-									if(body){
-										if(ElementGetTextContent(body).indexOf("切り替えます") != -1){
-											if(!timer){
-												timer = (new Date()).getTime();
+						}
+						var nodes = ElementGetElementsByTagName(element_form,"textarea");
+						if(nodes.length){
+							element_textarea = nodes[0];
+							work.form_textarea = element_textarea;
+						}
+					}
+				})();
+
+				// 開放
+				function release(){
+					if(event_handler_release){
+						event_handler_release.release();
+						event_handler_release = null;
+					}
+
+					removeEvent();
+
+					if(task){
+						task.release();
+					}
+				}
+
+				// クリア
+				function clear(){
+					var ary = new Array();
+					var i;
+					var num = element_form.length;
+					for(i=0;i<num;i++){
+						ary.push({e:element_form[i],v:element_form[i].value});
+					}
+					element_form.reset();
+					for(i=0;i<num;i++){
+						try{
+							var item = ary[i];
+							item.e.value = item.v;
+						}catch(e){}
+					}
+					element_textarea.value = "";
+				}
+
+				// 有効セット
+				function setEnable(type){
+					input_submit.disabled = !(type);
+				}
+
+				// イベント追加
+				function addEvent(){
+					if(window.addEventListener){
+						input_submit.addEventListener("click",EventClickButton);
+						element_form.addEventListener("submit",EventSubmitForm);
+					}else if(window.attachEvent){
+						input_submit.attachEvent("onclick",EventClickButton);
+						element_form.attachEvent("onsubmit",EventSubmitForm);
+					}
+				}
+
+				// イベント除外
+				function removeEvent(){
+					if(window.removeEventListener){
+						input_submit.removeEventListener("click",EventClickButton);
+						element_form.removeEventListener("submit",EventSubmitForm);
+					}else if(window.detachEvent){
+						input_submit.detachEvent("onclick",EventClickButton);
+						element_form.detachEvent("onsubmit",EventSubmitForm);
+					}
+				}
+
+				// サブミット直前に実行されるイベント
+				function EventSubmitForm(e){
+					setEnable(false);
+				}
+
+				// クリック時に実行されるイベント
+				function EventClickButton(e){
+					var w = 600;
+					var h = 400;
+
+					var window_name = "_pageexpand_" + Math.floor(Math.random() * 0x7FFFFFFF);
+					var popup_iframe = new BbsControlPopupIframe(window_name);
+					popup_iframe.setWindowSize(w,h);
+					popup_iframe.onclose = function(){
+						setEnable(true);
+					};
+
+					var element_iframe = popup_iframe.getIFrameElement();
+					element_form.target = window_name;
+
+					(function(){
+						var closed = false;
+						var timer = null;
+
+						// タスク生成
+						task = task_container.createTask();
+						task.setDestructorFunc(function(){
+							task = null;
+						});
+						task.setExecuteFunc(function(){
+							try{
+								var href = "";
+								var window_obj = element_iframe.contentWindow;
+								if(window_obj.document){
+									href = window_obj.document.URL;
+								}
+								if(href.indexOf("http://") == 0){
+									if(href.indexOf("/res/") >= 0){
+										closed = true;
+									}else if(href.indexOf("/futaba.php") == -1){
+										closed = true;
+									}else{
+										var body = window_obj.document.body;
+										if(body){
+											if(ElementGetTextContent(body).indexOf("切り替えます") != -1){
+												if(!timer){
+													timer = (new Date()).getTime();
+												}
 											}
 										}
 									}
 								}
+								if(timer){
+									if((new Date()).getTime() - timer > 1000 * 1.0){
+										closed = true;
+									}
+								}
+							}catch(e){
+								closed = true;
 							}
-							if(timer){
-								if((new Date()).getTime() - timer > 1000 * 1.0){
-									closed = true;
+
+							if(closed){
+								if(task){
+									task.release();
+								}
+								popup_iframe.close();
+								setEnable(true);
+								if(timer){
+									readMore(function(){});
+									clear();
 								}
 							}
-						}catch(e){
-							closed = true;
-						}
-
-						if(closed){
-							if(task){
-								task.release();
-							}
-							popup_iframe.close();
-							setEnable(true);
-							if(timer){
-								readMore(function(){});
-								clear();
-							}
-						}
-					});
-				})();
-			}
-
-			(function(){
-				if(!element_form) return;
-				if(!input_submit) return;
-				if(!element_textarea) return;
-
-				addEvent();
-
-				event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
-				event_handler_release.setFunction(function(){
-					release();
-				});
-				
-				if(work.docking_form){
-					work.docking_form.onreset = clear;
+						});
+					})();
 				}
-			})();
-		})();
 
-		// --------------------------------------------------------------------------------
-		// 完了後フォーム位置補正
-		// --------------------------------------------------------------------------------
-		execute_queue.attachLast(function(){
-			revisePositionForm();
-		},null);
+				(function(){
+					if(!element_form) return;
+					if(!input_submit) return;
+					if(!element_textarea) return;
+
+					addEvent();
+
+					event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
+					event_handler_release.setFunction(function(){
+						release();
+					});
+
+					if(work.docking_form){
+						work.docking_form.onreset = clear;
+					}
+				})();
+			})();
+
+			// --------------------------------------------------------------------------------
+			// 完了後フォーム位置補正
+			// --------------------------------------------------------------------------------
+			execute_queue.attachLast(function(){
+				revisePositionForm();
+			},null);
+
+		}
 
 		// --------------------------------------------------------------------------------
 		// 双葉辞書を生成
@@ -21519,19 +21588,24 @@ function PageExpand(page_expand_arguments){
 			var p = 0;
 
 			(function(){
-				var post_message = ElementGetElementsByTagName(document.body,"blockquote")[0];
-				var post_container = post_message.parentNode;
-				if(post_container.tagName == "FORM"){
-					work.analyzeTable(post_container);
+				var node = ElementGetElementsByTagName(document.body,"blockquote")[0];
+				if(!node) return;
+
+				var ary = new Array();
+				while(node){
+					if(node.tagName == "HR") break;
+					ary.unshift(node);					
+					node = node.previousSibling;
 				}
+				work.analyzeNodeList(ary);
 			})();
 
 			function f(){
 				try{
 					var node = nodes[p];
 					if(!node) throw 0;
-
-					work.analyzeTable(node);
+					var cells = node.rows[0].cells;
+					work.analyzeNodeList(cells[cells.length - 1].childNodes);
 				}catch(e){
 				}
 
@@ -21545,8 +21619,9 @@ function PageExpand(page_expand_arguments){
 			}
 
 			execute_queue.attachFirst(f,null);
-			return true;
 		})();
+
+		return true;
 	},
 	function (info,response){
 		response({result:false});
@@ -21679,6 +21754,11 @@ function PageExpand(page_expand_arguments){
 					var numbers_new = null;
 					var i;
 					var nodes = target.childNodes;
+
+					if(work.bbs_name == "futalog"){
+						nodes = nodes[0].childNodes;
+					}
+
 					var num = nodes.length;
 					for(i=num-1;i>=0;i--){
 						var node = nodes[i];
@@ -22743,68 +22823,56 @@ function PageExpand(page_expand_arguments){
 		// エレメントを解析
 		// --------------------------------------------------------------------------------
 		var useful = (function(){
-			var post_container;
 			var post_file;
 			var post_message = element;
+			var post_list = new Array();
 			var post_info_list = new Array();
 			var post_file_list = new Array();
 			var post_file_info_list = new Array();
 			var post_message_list = new Array();
 
 			try{
-				if(post_message.tagName != "BLOCKQUOTE")	return false;
+				if(post_message.tagName != "BLOCKQUOTE") return false;
 			}catch(e){
 				return false;
 			}
 
+			// 掲示板ポップアップ内の要素
+			if(BbsResponseDialogContains(post_message)) return false;
+			// document に未登録
+			if(!DomNodeGetAttachedDocument(post_message)) return false;
+
 			// コンテナ取得
-			try{
-				post_container = post_message.parentNode;
-				if(post_container.tagName == "FORM"){
-				}else if(post_container.tagName == "TD"){
-					while(post_container){
-						if(post_container.tagName == "TABLE"){
-							break;
-						}
-						post_container = post_container.parentNode;
-					}
-					if(!post_container){
-						return false;
-					}
-				}else{
-					return false;
-				}
-			}catch(e){
-				return false;
+			var node = post_message;
+			while(node){
+				if(node.tagName == "HR") break;
+				post_list.unshift(node);
+				node = node.previousSibling;
 			}
 
 			// 画像取得
 			try{
-				var anchor = post_message.previousSibling;
-				while(anchor){
-					if(anchor.tagName == "A"){
-						var images = ElementGetElementsByTagName(anchor,"img");
-						if(images.length == 1){
-							post_file = anchor;
-							break;
-						}
+				var node = DomNodeGetPreviousElementSibling(post_message);
+				while(node){
+					var images = ElementGetElementsByTagName(node,"img");
+					if(images.length == 1){
+						post_file = node;
+						break;
 					}
-					anchor = anchor.previousSibling;
+					node = DomNodeGetPreviousElementSibling(node);
 				}
 			}catch(e){
 			}
 
-			// document に未登録
-			if(!DomNodeGetAttachedDocument(post_message))	return;
-
 			// ファイル情報リスト
 			try{
-				var node = post_file.previousSibling;
+				var node = DomNodeGetPreviousElementSibling(post_file);
 				if(node.tagName == "BR"){
+					var dic = {"BR":1,"HR":1};
 					node = node.previousSibling;
 					while(node){
-						if(node.tagName == "BR") break;
-						post_file_info_list.push(node);
+						if(dic[node.tagName]) break;
+						post_file_info_list.unshift(node);
 						node = node.previousSibling;
 					}
 				}
@@ -22813,7 +22881,18 @@ function PageExpand(page_expand_arguments){
 
 			// 名前情報リスト
 			try{
-				var node = ElementGetElementsByTagName(post_container,"input")[0];
+				var node = post_list[0];
+				if(node.parentNode.tagName != "TD"){
+					var dic = {"FONT":1,"INPUT":1};
+					var i;
+					var num = post_list.length;
+					for(i=0;i<num;i++){
+						if(dic[post_list[i].tagName]){
+							node = post_list[i];
+							break;
+						}
+					}				
+				}
 				var dic = {"DIV":1,"SMALL":1,"BLOCKQUOTE":1,"BR":1};
 				while(node){
 					if(dic[node.tagName]) break;
@@ -22823,59 +22902,8 @@ function PageExpand(page_expand_arguments){
 			}catch(e){
 			}
 
-			if(post_container.tagName == "TABLE"){
-				try{
-					var selector_result = ElementMatchesSelector(post_container,"body > form > table");
-					if(selector_result === undefined){
-						var form = post_container.parentNode;
-						if(form.tagName != "FORM") return false;
-						if(form.parentNode != document.body) return false;
-					}else if(!selector_result){
-						return false;
-					}
-
-				}catch(e){
-					return false;
-				}
-			}else if(post_container.tagName == "FORM"){
-				try{
-					var nodeTest = function (node){
-						while(node){
-							if(node.tagName == "TABLE"){
-								throw "0";
-							}
-							if(node == post_container){
-								return true;
-							}
-							node = node.parentNode;
-						}
-						throw "0";
-					};
-
-					var nodeListTest = function(list){
-						var i;
-						var num = list.length;
-						for(i=0;i<num;i++){
-							nodeTest(list[i]);
-						}
-					};
-
-					nodeListTest(post_info_list);
-					nodeListTest(post_file_info_list);
-
-				}catch(e){
-					return false;
-				}
-
-				try{
-					if(post_container.parentNode != document.body) return false;
-				}catch(e){
-					return false;
-				}
-			}
-
 			// 双葉辞書追加
-			work.analyzeTable(post_container);
+			work.analyzeNodeList(post_list);
 
 			if(post_message){
 				post_message_list.push(post_message);
@@ -22883,7 +22911,7 @@ function PageExpand(page_expand_arguments){
 			if(post_file){
 				post_file_list.push(post_file);
 			}
-
+			
 			// --------------------------------------------------------------------------------
 			// レスアンカー拡張
 			// --------------------------------------------------------------------------------
@@ -23075,19 +23103,21 @@ function PageExpand(page_expand_arguments){
 			}
 			if(!(info_text.match(new RegExp("No\\.([0-9]+)","i"))))	return false;
 
-			// ナンバーからレスポンスオブジェクトを取得
-			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
-
 			// アンカー追加
 			try{
-				var node = post_container.previousSibling;
-				if(node.tagName != "A"){
+				var node = post_list[0].parentNode;
+				if(node.tagName == "TD"){
+					node.id = "" + RegExp.$1;
+				}else{
 					var anchor = DocumentCreateElement("a");
 					anchor.name = "" + RegExp.$1;
-					DomNode_InsertBefore(post_container,anchor);
-				}
+					DomNode_InsertBefore(post_list[0],anchor);
+				}				
 			}catch(e){
 			}
+
+			// ナンバーからレスポンスオブジェクトを取得
+			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
 
 			// レスポンス解析
 			if(!response.getAnalyzed()){
@@ -23126,6 +23156,9 @@ function PageExpand(page_expand_arguments){
 						});
 					}
 					var nodes = post_message.childNodes;
+					if(work.bbs_name == "futalog"){
+						nodes = nodes[0].childNodes;
+					}
 					var i;
 					var num = nodes.length;
 					for(i=0;i<num;i++){
@@ -32575,28 +32608,26 @@ function PageExpand(page_expand_arguments){
 			// ビデオスレッドメーター
 			var video_thread_meter = new UI_ProgressBar(background);
 
-			if(1){
-				// ダウンローダーキュー数
-				element = DocumentCreateElement("div");
-				ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
-				background.appendChild(element);
-				var downloader_queue_msg = new UI_Text(element);
+			// ダウンローダーキュー数
+			element = DocumentCreateElement("div");
+			ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
+			background.appendChild(element);
+			var downloader_queue_msg = new UI_Text(element);
 
-				// ダウンローダーキューエラー数
-				element = DocumentCreateElement("div");
-				ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
-				background.appendChild(element);
-				var downloader_queue_error_msg = new UI_Text(element);
+			// ダウンローダーキューエラー数
+			element = DocumentCreateElement("div");
+			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
+			background.appendChild(element);
+			var downloader_queue_error_msg = new UI_Text(element);
 
-				// ダウンローダースレッド数
-				element = DocumentCreateElement("div");
-				ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
-				background.appendChild(element);
-				var downloader_thread_msg = new UI_Text(element);
+			// ダウンローダースレッド数
+			element = DocumentCreateElement("div");
+			ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
+			background.appendChild(element);
+			var downloader_thread_msg = new UI_Text(element);
 
-				// ダウンローダースレッドメーター
-				var downloader_thread_meter = new UI_ProgressBar(background);
-			}
+			// ダウンローダースレッドメーター
+			var downloader_thread_meter = new UI_ProgressBar(background);
 
 			// リムーブ監視数
 			element = DocumentCreateElement("div");
@@ -32667,13 +32698,11 @@ function PageExpand(page_expand_arguments){
 				video_thread_meter.setValue(element_limitter_video.getCountUse());
 				video_thread_meter.setMaximum(element_limitter_video.getMaxUse());
 
-				if(1){
-					downloader_queue_msg.setText("download queue: " + downloader_queue.getCountQueue());
-					downloader_queue_error_msg.setText("download error: " + downloader_queue.getCountError());
-					downloader_thread_msg.setText("download thread: " + downloader_queue.getCountThread() + " / " + downloader_queue.getMaxThread());
-					downloader_thread_meter.setValue(downloader_queue.getCountThread());
-					downloader_thread_meter.setMaximum(downloader_queue.getMaxThread());
-				}
+				downloader_queue_msg.setText("download queue: " + downloader_queue.getCountQueue());
+				downloader_queue_error_msg.setText("download error: " + downloader_queue.getCountError());
+				downloader_thread_msg.setText("download thread: " + downloader_queue.getCountThread() + " / " + downloader_queue.getMaxThread());
+				downloader_thread_meter.setValue(downloader_queue.getCountThread());
+				downloader_thread_meter.setMaximum(downloader_queue.getMaxThread());
 
 				observer_remove_msg.setText("observer remove: " + document_observer_remove_node.getCount());
 				observer_modify_msg.setText("observer modify: " + document_observer_modify_node.getCount());
@@ -38926,7 +38955,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.4");
+				new UI_Text(parent,"PageExpand ver.1.5.5");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -39463,7 +39492,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function UI_TextHint(parent,label){
 			var div = DocumentCreateElement("div");
-			ElementSetStyle(div,"margin:-2px 0px 5px; font-size:11px; color:#aaa;");
+			ElementSetStyle(div,"margin:-3px 0px 5px 0px; font-size:11px; color:#aaa;");
 			ElementSetTextContent(div,label);
 			parent.appendChild(div);
 			return div;
@@ -39929,11 +39958,11 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			(function(){
 				var container = DocumentCreateElement("div");
-				ElementSetStyle(container,"margin:0px 8px 0px 0px;");
+				ElementSetStyle(container,"margin:0px 0px 5px 0px;");
 				parent.appendChild(container);
 
 				_textarea = DocumentCreateElement("textarea");
-				ElementSetStyle(_textarea,"width:100%; height:100px;");
+				ElementSetStyle(_textarea,"width:100%; height:100px; box-sizing:border-box; display:block;");
 				container.appendChild(_textarea);
 
 				_textarea.oninput = function(){
@@ -40000,7 +40029,7 @@ function PageExpand(page_expand_arguments){
 				_visible = false;
 
 				_body = DocumentCreateElement("div");
-				ElementSetStyle(_body,"margin:0px 8px 0px 0px;");
+				ElementSetStyle(_body,"margin:0px 0px 0px 0px;");
 				parent.appendChild(_body);
 
 				_button = new UI_InlineButton(_body,"");
@@ -40090,11 +40119,11 @@ function PageExpand(page_expand_arguments){
 				_visible = false;
 
 				_body = DocumentCreateElement("div");
-				ElementSetStyle(_body,"margin:0px 8px 0px 0px;");
+				ElementSetStyle(_body,"margin:0px 0px 5px 0px;");
 				parent.appendChild(_body);
 
 				_textarea = DocumentCreateElement("textarea");
-				ElementSetStyle(_textarea,"width:100%; height:300px; background-color:#fff;");
+				ElementSetStyle(_textarea,"width:100%; height:300px; box-sizing:border-box; display:block; background-color:#fff; margin-bottom:5px;");
 				_body.appendChild(_textarea);
 				_textarea.oninput = function(){
 
@@ -40111,11 +40140,11 @@ function PageExpand(page_expand_arguments){
 				};
 
 				_input_container = DocumentCreateElement("div");
-				ElementSetStyle(_input_container,"margin:-4px 8px 5px 0px;");
+				ElementSetStyle(_input_container,"margin:0px 0px 5px 0px;");
 
 				_input = DocumentCreateElement("input");
 				_input.readOnly = "readonly";
-				ElementSetStyle(_input,"width:100%; font-size:12px; padding:2px; background:#f88;");
+				ElementSetStyle(_input,"width:100%; box-sizing:border-box; display:block; font-size:12px; padding:2px; background:#f88;");
 				_input_container.appendChild(_input);
 
 				new UI_TextHint(_body,_i18n.getMessage("menu_scriptarea_hint"));
@@ -40288,7 +40317,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			(function(){
 				_input = DocumentCreateElement("input");
-				ElementSetStyle(_input,"padding:4px 10px; margin:0px 2px 5px -1px;");
+				ElementSetStyle(_input,"padding:4px 10px; margin:0px 2px 5px 0px; box-sizing:border-box;");
 				_input.type = "button";
 				_input.value = label;
 				parent.appendChild(_input);
@@ -40319,7 +40348,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			(function(){
 				var container = DocumentCreateElement("div");
-				ElementSetStyle(container,"margin:0px -1px 5px 0px; text-align:center;");
+				ElementSetStyle(container,"margin:0px 0px 5px 0px; text-align:center;");
 				parent.appendChild(container);
 
 				function ButtonOnClick(result){
@@ -40329,7 +40358,7 @@ function PageExpand(page_expand_arguments){
 				}
 
 				var input_yes = DocumentCreateElement("input");
-				ElementSetStyle(input_yes,"padding:10px; width:200px;");
+				ElementSetStyle(input_yes,"padding:10px; width:200px; box-sizing:border-box;");
 				input_yes.type = "button";
 				input_yes.value = _i18n.getMessage("menu_button_yes");
 				container.appendChild(input_yes);
@@ -40338,7 +40367,7 @@ function PageExpand(page_expand_arguments){
 				};
 
 				var input_no = DocumentCreateElement("input");
-				ElementSetStyle(input_no,"padding:10px; width:200px;");
+				ElementSetStyle(input_no,"padding:10px; width:200px; box-sizing:border-box;");
 				input_no.type = "button";
 				input_no.value = _i18n.getMessage("menu_button_no");
 				container.appendChild(input_no);
@@ -40376,7 +40405,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			(function(){
 				var container = DocumentCreateElement("div");
-				ElementSetStyle(container,"margin:0px -1px 5px 0px; text-align:center;");
+				ElementSetStyle(container,"margin:0px 0px 5px 0px; text-align:center;");
 				parent.appendChild(container);
 
 				function ButtonOnClick(){
@@ -40385,7 +40414,7 @@ function PageExpand(page_expand_arguments){
 				}
 
 				input_ok = DocumentCreateElement("input");
-				ElementSetStyle(input_ok,"padding:10px; width:200px;");
+				ElementSetStyle(input_ok,"padding:10px; width:200px; box-sizing:border-box;");
 				input_ok.type = "button";
 				input_ok.value = _i18n.getMessage("menu_button_ok");
 				container.appendChild(input_ok);
@@ -40445,7 +40474,7 @@ function PageExpand(page_expand_arguments){
 				parent.appendChild(container);
 
 				_combo_box = DocumentCreateElement("select");
-				ElementSetStyle(_combo_box,"width:auto; min-width:200px; height:22px; font-size:14px;");
+				ElementSetStyle(_combo_box,"width:auto; min-width:200px; height:22px; font-size:14px; box-sizing:border-box; display:block;");
 				container.appendChild(_combo_box);
 
 				_combo_box.onchange = function(){
@@ -40543,7 +40572,7 @@ function PageExpand(page_expand_arguments){
 
 				_list = DocumentCreateElement("select");
 				_list.size = 10;
-				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
+				ElementSetStyle(_list,"width:100%; box-sizing:border-box; display:block; font-size:14px; background:#fff;");
 				container.appendChild(_list);
 
 				_list.onchange = function(){
@@ -40827,7 +40856,7 @@ function PageExpand(page_expand_arguments){
 				_list = DocumentCreateElement("select");
 				_list.size = 8;
 				_list.multiple = true;
-				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
+				ElementSetStyle(_list,"width:100%; box-sizing:border-box; display:block; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
 					_select_id = _list.selectedIndex;
@@ -40968,7 +40997,7 @@ function PageExpand(page_expand_arguments){
 				container.appendChild(combo_box_container);
 
 				_combo_box = DocumentCreateElement("select");
-				ElementSetStyle(_combo_box,"width:100%; height:22px; font-size:14px;");
+				ElementSetStyle(_combo_box,"width:100%; height:22px; box-sizing:border-box; display:block; font-size:14px;");
 				combo_box_container.appendChild(_combo_box);
 				_combo_box.onchange = function(){
 					_this.onchange(_combo_box.value);
@@ -41545,7 +41574,7 @@ function PageExpand(page_expand_arguments){
 				_list = DocumentCreateElement("select");
 				_list.size = 10;
 				_list.multiple = true;
-				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
+				ElementSetStyle(_list,"width:100%; box-sizing:border-box; display:block; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
 					_select_id = _list.selectedIndex;
@@ -42003,7 +42032,7 @@ function PageExpand(page_expand_arguments){
 				_list = DocumentCreateElement("select");
 				_list.size = 10;
 				_list.multiple = true;
-				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
+				ElementSetStyle(_list,"width:100%; box-sizing:border-box; display:block; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
 					_select_id = _list.selectedIndex;
@@ -42820,7 +42849,7 @@ function PageExpand(page_expand_arguments){
 				_list = DocumentCreateElement("select");
 				_list.size = 10;
 				_list.multiple = true;
-				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
+				ElementSetStyle(_list,"width:100%; box-sizing:border-box; display:block; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
 					_select_id = _list.selectedIndex;
@@ -43567,7 +43596,7 @@ function PageExpand(page_expand_arguments){
 				_list = DocumentCreateElement("select");
 				_list.size = 10;
 				_list.multiple = true;
-				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
+				ElementSetStyle(_list,"width:100%; box-sizing:border-box; display:block; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
 					_select_id = _list.selectedIndex;
@@ -44159,7 +44188,7 @@ function PageExpand(page_expand_arguments){
 				// リスト
 				_list = DocumentCreateElement("select");
 				_list.multiple = true;
-				ElementSetStyle(_list,"width:100%; font-size:14px; background:#fff;");
+				ElementSetStyle(_list,"width:100%; box-sizing:border-box; display:block; font-size:14px; background:#fff;");
 				list_container.appendChild(_list);
 				_list.onchange = function(e){
 					_select_id = _list.selectedIndex;
@@ -48186,7 +48215,7 @@ function PageExpand(page_expand_arguments){
 				_select_site = DocumentCreateElement("select");
 				_select_site.size = 1;
 				_select_site.onchange = changeSelectSite;
-				ElementSetStyle(_select_site,"height:24px; vertical-align:top;");
+				ElementSetStyle(_select_site,"height:24px; box-sizing:border-box; vertical-align:top;");
 				container_left.appendChild(_select_site);
 
 					var option = DocumentCreateElement("option");
@@ -50166,12 +50195,10 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// インラインフレーム内コンテンツ
 		// --------------------------------------------------------------------------------
-		if(1){
-			// 解析済みチェック
-			if(!AnalyzeWorkGetAnalyzedExpandIframeContent(work)){
-				AnalyzeWorkSetAnalyzedExpandIframeContent(work);
-				execute_queue.attachForExpandElement(ElementAnalyzePhaseExpandIframeContent,param);
-			}
+		// 解析済みチェック
+		if(!AnalyzeWorkGetAnalyzedExpandIframeContent(work)){
+			AnalyzeWorkSetAnalyzedExpandIframeContent(work);
+			execute_queue.attachForExpandElement(ElementAnalyzePhaseExpandIframeContent,param);
 		}
 
 		// --------------------------------------------------------------------------------
@@ -58712,21 +58739,21 @@ function PageExpand(page_expand_arguments){
 
 			_element_transform = DocumentCreateElement("div");
 			ElementSetStyle(_element_transform,CSSTextGetInitialDivElement());
-			ElementAddStyle(_element_transform,"cursor:inherit; opacity:0.25;");
+			ElementAddStyle(_element_transform,"cursor:inherit;");
 
 			_element_transform_circle_before = DocumentCreateElement("div");
 			ElementSetStyle(_element_transform_circle_before,CSSTextGetInitialDivElement());
-			ElementAddStyle(_element_transform_circle_before,"position:absolute; left:0px; top:0px; cursor:inherit; background:#FFF; border-radius:50%; border:5px dotted #444;");
+			ElementAddStyle(_element_transform_circle_before,"position:absolute; left:0px; top:0px; cursor:inherit; opacity:0.25; background:#FFF; border-radius:50%; border:5px dotted #444;");
 			StyleDeclarationSetTransformOrigin(_element_transform_circle_before.style,"0% 0%");
 
 			_element_transform_vector_before = DocumentCreateElement("div");
 			ElementSetStyle(_element_transform_vector_before,CSSTextGetInitialDivElement());
-			ElementAddStyle(_element_transform_vector_before,"position:absolute; left:0px; top:0px; cursor:inherit; height:3px; background:#F88; border:1px solid #800; border-radius:2.5px;");
+			ElementAddStyle(_element_transform_vector_before,"position:absolute; left:0px; top:0px; cursor:inherit; opacity:0.25; height:3px; background:#F88; border:1px solid #800; border-radius:2.5px;");
 			StyleDeclarationSetTransformOrigin(_element_transform_vector_before.style,"0% 0%");
 
 			_element_transform_vector_after = DocumentCreateElement("div");
 			ElementSetStyle(_element_transform_vector_after,CSSTextGetInitialDivElement());
-			ElementAddStyle(_element_transform_vector_after,"position:absolute; left:0px; top:0px; cursor:inherit; height:3px; background:#88F; border:1px solid #008; border-radius:2.5px;");
+			ElementAddStyle(_element_transform_vector_after,"position:absolute; left:0px; top:0px; cursor:inherit; opacity:0.25; height:3px; background:#88F; border:1px solid #008; border-radius:2.5px;");
 			StyleDeclarationSetTransformOrigin(_element_transform_vector_after.style,"0% 0%");
 
 			_element_transform.appendChild(_element_transform_circle_before);
@@ -59357,11 +59384,9 @@ function PageExpand(page_expand_arguments){
 						var document_obj;
 
 						try{
-							if(1){
-								if((window_obj.wrappedJSObject) && typeof(window_obj.wrappedJSObject) === "object"){
-									if(window_obj.wrappedJSObject.open){
-										window_obj = window_obj.wrappedJSObject;
-									}
+							if((window_obj.wrappedJSObject) && typeof(window_obj.wrappedJSObject) === "object"){
+								if(window_obj.wrappedJSObject.open){
+									window_obj = window_obj.wrappedJSObject;
 								}
 							}
 
@@ -66586,51 +66611,10 @@ function PageExpand(page_expand_arguments){
 			// アドレスを登録
 			address_collection.addAddress("download",_this._url);
 
-			if(1){
-				extension_message.sendRequest({command:"download",url:_this._url,file_name:_this._file_name,save_as:_this._save_as}, function(response) {
-					callback(response.result);
-				});
-				return;
-
-			}else{
-				var anchor = DocumentCreateElement("a");
-				if(anchor.download !== undefined){
-
-					var anchor_download = function (data_url){
-						anchor.target = "PageExpandDownload";
-						anchor.href = data_url;
-						anchor.download = _this._file_name;
-						document.body.appendChild(anchor);
-						anchor.click();
-						DomNodeRemove(anchor);
-						anchor.href = "";
-						anchor.download = "";
-						callback(true);
-					};
-
-					if(_this._url.search(new RegExp("^(data|blob):","i")) >= 0){
-						anchor_download(_this._url);
-						return;
-					}else{
-						// ローダーオブジェクトを作成
-						var loader = new Loader();
-
-						// 成功
-						loader.onload = anchor_download;
-
-						// 失敗
-						loader.onerror = function(){
-							callback(false);
-						};
-
-						// DataURIScheme の読み込み
-						loader.setMethod("GET");
-						loader.setURL(_this._url);
-						loader.loadDataUriScheme();
-						return;
-					}
-				}
-			}
+			extension_message.sendRequest({command:"download",url:_this._url,file_name:_this._file_name,save_as:_this._save_as}, function(response) {
+				callback(response.result);
+			});
+			return;
 
 			callback(false);
 		}
@@ -67389,59 +67373,28 @@ function PageExpand(page_expand_arguments){
 								progress.setValueProgress(1.0,0);
 								progress.setValueProgress(1.0,1);
 
-								if(1){
-									progress.setMessage("Create Blob URL ...",0);
-									setTimeout(function(){
-										var blob = new Blob([ary_buffer],{type:"application/zip"});
-										blob_url = BlobURLCreate(blob);
+								progress.setMessage("Create Blob URL ...",0);
+								setTimeout(function(){
+									var blob = new Blob([ary_buffer],{type:"application/zip"});
+									blob_url = BlobURLCreate(blob);
 
-										progress.setMessage("Wait ...",0);
-										setTimeout(function(){
-											var downloader = new Downloader();
-											downloader.setURL(blob_url);
-											downloader.setFileName(download_file_name);
-											downloader.setSaveAs(true);
-											downloader.oncomplete = function(result){
-												progress.setMessage("Complete",0);
-												if(result){
-													success();
-												}else{
-													failure(blob_url);
-												}
+									progress.setMessage("Wait ...",0);
+									setTimeout(function(){
+										var downloader = new Downloader();
+										downloader.setURL(blob_url);
+										downloader.setFileName(download_file_name);
+										downloader.setSaveAs(true);
+										downloader.oncomplete = function(result){
+											progress.setMessage("Complete",0);
+											if(result){
+												success();
+											}else{
+												failure(blob_url);
 											}
-											downloader.start();
-										},1);
+										}
+										downloader.start();
 									},1);
-								}else{
-									progress.setMessage("Create Blob URL ...",0);
-									setTimeout(function(){
-										try{
-											var blob = new Blob([ary_buffer],{type:"application/zip"});
-											blob_url = BlobURLCreate(blob);
-										}catch(e){
-										}
-
-										if(blob_url){
-											failure(blob_url);
-										}else{
-											progress.setMessage("Create Data URI Scheme ...",0);
-											Base64_From_ArrayBuffer_Async(ary_buffer,function(base64){
-												progress.setMessage("Wait ...",0);
-												progress.setMessage("",1);
-												progress.setValueProgress(1.0,1);
-												setTimeout(function(){
-													window.location.assign("data:application/zip;base64," + base64);
-													success();
-												},1);
-											},{
-												onprogress:function(e){
-													progress.setMessage(e.loaded + "/" + e.total + " Byte",1);
-													progress.setValueProgress(e.loaded/e.total,1);
-												}
-											});
-										}
-									},1)
-								}
+								},1);
 
 							});
 						});
@@ -72564,6 +72517,22 @@ function PageExpand(page_expand_arguments){
 				_this.release();
 			});
 		})();
+	}
+
+	// --------------------------------------------------------------------------------
+	// 掲示板ポップアップ内の要素か調べる
+	// --------------------------------------------------------------------------------
+	function BbsResponseDialogContains(node){
+		while(node){
+			var work = analyze_work_dictionary.getAnalyzeWork(node);
+			if(work){
+				if(work.id & ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_OUTSIDER){
+					return true;
+				}
+			}
+			node = node.parentNode;
+		}
+		return false;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -80762,8 +80731,7 @@ function PageExpand(page_expand_arguments){
 			"outline-style: none;" +
 			"outline-width: 0px;" +
 			"overflow-wrap: normal;" +
-			"overflow-x: visible;" +
-			"overflow-y: visible;" +
+			"overflow: visible;" +
 			"padding-bottom: 0px;" +
 			"padding-left: 0px;" +
 			"padding-right: 0px;" +
@@ -80932,8 +80900,7 @@ function PageExpand(page_expand_arguments){
 			"outline-style: none;" +
 			"outline-width: 0px;" +
 			"overflow-wrap: normal;" +
-			"overflow-x: visible;" +
-			"overflow-y: visible;" +
+			"overflow: visible;" +
 			"padding-bottom: 0px;" +
 			"padding-left: 0px;" +
 			"padding-right: 0px;" +
@@ -81071,8 +81038,7 @@ function PageExpand(page_expand_arguments){
 			"outline-style: none;" +
 			"outline-width: 0px;" +
 			"overflow-wrap: normal;" +
-			"overflow-x: visible;" +
-			"overflow-y: visible;" +
+			"overflow: visible;" +
 			"padding-bottom: 1px;" +
 			"padding-left: 6px;" +
 			"padding-right: 6px;" +
