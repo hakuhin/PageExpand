@@ -1242,7 +1242,6 @@ function PageExpand(page_expand_arguments){
 				// --------------------------------------------------------------------------------
 				var item = download_list_image.createItem();
 				item.setURL(element.src);
-				item.setFileName(element.src);
 			}
 		}
 
@@ -2006,7 +2005,6 @@ function PageExpand(page_expand_arguments){
 			// ダウンロードリストに登録
 			var item = download_list_image.createItem();
 			item.setURL(thumbnail_url);
-			item.setFileName(thumbnail_url);
 
 			// サムネイルイメージを破棄（ElementLimiter 用）
 			function releaseThumbnailImageForElementLimiter(e){
@@ -2199,6 +2197,7 @@ function PageExpand(page_expand_arguments){
 						};
 						limitter_element.setElementHitArea(thumbnail_image);
 
+
 						createPopupImage();
 					}
 
@@ -2289,7 +2288,6 @@ function PageExpand(page_expand_arguments){
 			// ダウンロードリストに登録
 			var item = download_list_image.createItem();
 			item.setURL(url);
-			item.setFileName(url);
 
 			// ポップアップイメージを破棄（ElementLimiter 用）
 			function releasePopupImageForElementLimiter(e){

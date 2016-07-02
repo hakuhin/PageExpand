@@ -13,9 +13,9 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.5.5</string>
+	<string>1.5.6</string>
 	<key>CFBundleVersion</key>
-	<string>1.5.5</string>
+	<string>1.5.6</string>
 	<key>Chrome</key>
 	<dict>
 		<key>Database Quota</key>
@@ -46,10 +46,6 @@
 				<true/>
 				<key>Label</key>
 				<string>PageExpand</string>
-				<key>Menu</key>
-				<string>menu</string>
-				<key>Palette Label</key>
-				<string></string>
 				<key>Popover</key>
 				<string>popup</string>
 				<key>Tool Tip</key>

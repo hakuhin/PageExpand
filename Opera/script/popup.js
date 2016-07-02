@@ -323,7 +323,7 @@ function PageExpand(page_expand_arguments){
 				_item = DocumentCreateElement("a");
 				_item.href = "javascript:void(0);";
 				_style = _item.style;
-				ElementSetStyle(_item,"display:block; text-decoration: none; font-size:13px; color:#000; margin:0px 0px 2px; padding:2px 20px; border-radius:5px;");
+				ElementSetStyle(_item,"display:block; text-decoration: none; font-size:13px; color:#000; margin:0px 0px 2px; padding:5px 20px; border-radius:5px; line-height:1.0;");
 				ElementSetTextContent(_item,label);
 				parent.appendChild(_item);
 
@@ -378,7 +378,7 @@ function PageExpand(page_expand_arguments){
 
 			// ボディ
 			var body = document.body;
-			ElementSetStyle(body,'background-color:#ccc; font-family:"Meiryo","sans-serif"; margin:0px; padding:0px; width:300px; border:0px solid #000; overflow-x:hidden;');
+			ElementSetStyle(body,'background-color:#ccc; font-family:"Meiryo","sans-serif"; margin:0px; padding:0px; width:300px; border:0px solid #000; overflow-x:hidden; box-sizing:border-box;');
 
 			// ヘッダ
 			var head_window = DocumentCreateElement("div");

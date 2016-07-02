@@ -585,9 +585,9 @@ function PageExpand(page_expand_arguments){
 			};
 
 			// XMLHttpRequest 通信
-			command_dictionary["loadXMLHttpRequest"] = function(param,sender,sendResponse){
-				var queue_element = loader_queue.createElement();
-				queue_element.onstart = function(){
+			function requestXHR(param,sender,sendResponse){
+				var loader_queue_element = loader_queue.createElement();
+				loader_queue_element.onstart = function(){
 					var completed = false;
 					try{
 						var request = param.request;
@@ -595,36 +595,26 @@ function PageExpand(page_expand_arguments){
 
 						// ステート変更時に実行されるイベント
 						xhr.onreadystatechange = function(r){
-							switch(xhr.readyState){
-							case 4:
-								if(!completed){
-									completed = true;
+							if(xhr.readyState != 4) return;
+							if(completed) return;
+							completed = true;
 
-									queue_element.complete();
-									queue_element.release();
+							loader_queue_element.complete();
+							loader_queue_element.release();
 
-									var response = new Object();
-									response.readyState = xhr.readyState;
-									response.status = xhr.status;
-									response.responseHeaders = xhr.getAllResponseHeaders();
-
-									var i = 0;
-									var size = 1024 * 128;
-									var total = xhr.responseText.length;
-									var f = function (){
-										sendResponse({type:"data",pos:i,total:total,data:xhr.responseText.substr(i,size)},{complete:false});
-
-										i += size;
-										if(i < total){
-											execute_queue.attachLast(f,null);
-											return;
-										}
-										sendResponse({type:"xhr",data:response},{complete:true});
-									};
-									execute_queue.attachLast(f,null);
-								}
-								break;
-							}
+							request.oncomplete(xhr,function(){
+								var response = new Object();
+								response.readyState = xhr.readyState;
+								response.status = xhr.status;
+								response.responseHeaders = xhr.getAllResponseHeaders() || "";
+								sendResponse({type:"xhr",data:response},{complete:true});
+							});
+						};
+						xhr.onprogress = function(e){
+							sendResponse({type:"progress",data:{
+								loaded:(e.loaded || 0),
+								total:(e.total || 0),
+							}},{complete:false});
 						};
 
 						// 読み込み開始
@@ -639,117 +629,142 @@ function PageExpand(page_expand_arguments){
 						if(request.timeout){
 							xhr.timeout = request.timeout;
 						}
+						if(request.responseType){
+							xhr.responseType = request.responseType;
+						}
 						xhr.send(request.data);
 					}catch(e){
-						if(!completed){
-							completed = true;
+						if(completed) return;
+						completed = true;
 
-							queue_element.complete();
-							queue_element.release();
+						loader_queue_element.complete();
+						loader_queue_element.release();
 
-							var response = new Object();
-							response.readyState = 4;
-							response.status = 0;
-							response.responseHeaders = {};
-							sendResponse({type:"xhr",data:response},{complete:true});
-						}
+						var response = new Object();
+						response.readyState = 4;
+						response.status = 0;
+						response.response = null;
+						response.responseHeaders = {};
+						sendResponse({type:"xhr",data:response},{complete:true});
 					}
 				};
 				if(param.single){
-					queue_element.attachSingle();
+					loader_queue_element.attachSingle();
 				}else{
-					queue_element.attachLast();
+					loader_queue_element.attachLast();
 				}
+			};
+
+			// XMLHttpRequest 通信
+			command_dictionary["loadXMLHttpRequest"] = function(param,sender,sendResponse){
+				var request = param.request;
+				request.oncomplete = function(xhr,callback){
+					var text = "";
+					var text_size = 1024 * 1024 * 16;
+					var text_pos = text_size;
+					var pos = 0;
+					var total = xhr.responseText.length;
+					var send_size = text_size / 128;
+					var f = function (){
+						if(text_size <= text_pos){
+							text = xhr.responseText.substr(pos,text_size);
+							text_pos = 0;
+						}
+						sendResponse({type:"data",pos:pos,total:total,data:text.substr(text_pos,send_size)},{complete:false});
+
+						text_pos += send_size;
+						pos += send_size;
+						if(pos < total){
+							execute_queue.attachLast(f,null);
+							return;
+						}
+						callback();
+					};
+					execute_queue.attachLast(f,null);
+				};
+				requestXHR(param,sender,sendResponse);
 			};
 
 			// data URI scheme 読み込み
 			command_dictionary["loadDataUriScheme"] = function(param,sender,sendResponse){
-				var queue_element = loader_queue.createElement();
-				queue_element.onstart = function(){
-					var completed = false;
-					try{
-						var request = param.request;
-						var xhr = XMLHttpRequestCreate();
-
-						// ステート変更時に実行されるイベント
-						xhr.onreadystatechange = function(r){
-							switch(xhr.readyState){
-							case 4:
-								if(!completed){
-									completed = true;
-
-									queue_element.complete();
-									queue_element.release();
-
-									var response = new Object();
-									response.readyState = xhr.readyState;
-									response.status = xhr.status;
-									response.responseHeaders = xhr.getAllResponseHeaders();
-									if(xhr.response){
-										var file_reader = new FileReader();
-										file_reader.onload = function(){
-											var i = 0;
-											var size = 1024 * 128;
-											var total = file_reader.result.length;
-											var f = function (){
-												sendResponse({type:"data",pos:i,total:total,data:file_reader.result.substr(i,size)},{complete:false});
-
-												i += size;
-												if(i < total){
-													execute_queue.attachLast(f,null);
-													return;
-												}
-												sendResponse({type:"xhr",data:response},{complete:true});
-											};
-											execute_queue.attachLast(f,null);
-										};
-										file_reader.onerror = function(){
-											sendResponse({type:"xhr",data:response},{complete:true});
-										};
-										file_reader.readAsDataURL(xhr.response);
-									}else{
-										sendResponse({type:"xhr",data:response},{complete:true});
-									}
-								}
-								break;
-							}
-						};
-
-						// 読み込み開始
-						xhr.open(request.method,request.url,true);
-						var headers = request.headers;
-						for(var name in headers){
-							xhr.setRequestHeader(name,headers[name]);
-						}
-						if(xhr.overrideMimeType && request.override_mime_type){
-							xhr.overrideMimeType(request.override_mime_type);
-						}
-						if(request.timeout){
-							xhr.timeout = request.timeout;
-						}
-						xhr.responseType = "blob";
-						xhr.send(request.data);
-					}catch(e){
-						if(!completed){
-							completed = true;
-
-							queue_element.complete();
-							queue_element.release();
-
-							var response = new Object();
-							response.readyState = 4;
-							response.status = 0;
-							response.response = null;
-							response.responseHeaders = {};
-							sendResponse({type:"xhr",data:response},{complete:true});
-						}
+				var request = param.request;
+				request.responseType = "blob";
+				request.oncomplete = function(xhr,callback){
+					if(!(xhr.response)){
+						callback();
+						return;
 					}
+					var file_reader = new FileReader();
+					file_reader.onloadend = function(){
+						if(file_reader.error){
+							callback();
+							return;
+						}
+						var i = 0;
+						var size = 1024 * 128;
+						var total = file_reader.result.length;
+						var f = function (){
+							sendResponse({type:"data",pos:i,total:total,data:file_reader.result.substr(i,size)},{complete:false});
+
+							i += size;
+							if(i < total){
+								execute_queue.attachLast(f,null);
+								return;
+							}
+							callback();
+						};
+						execute_queue.attachLast(f,null);
+					};
+					var blob = xhr.response;
+					if(!(blob.type)) blob = new Blob([blob],{type:xhr.getResponseHeader("Content-Type")});
+					file_reader.readAsDataURL(blob);
 				};
-				if(param.single){
-					queue_element.attachSingle();
-				}else{
-					queue_element.attachLast();
-				}
+				requestXHR(param,sender,sendResponse);
+			};
+
+			// BinaryString 読み込み
+			command_dictionary["loadBinaryString"] = function(param,sender,sendResponse){
+				var request = param.request;
+				request.responseType = "blob";
+				request.oncomplete = function(xhr,callback){
+					if(!(xhr.response)){
+						callback();
+						return;
+					}
+					var file_reader = new FileReader();
+					file_reader.onloadend = function(){
+						if(file_reader.error){
+							callback();
+							return;
+						}
+						var i = 0;
+						var size = 1024 * 128;
+						var total = file_reader.result.length;
+						var f = function (){
+							sendResponse({type:"data",pos:i,total:total,data:file_reader.result.substr(i,size)},{complete:false});
+
+							i += size;
+							if(i < total){
+								execute_queue.attachLast(f,null);
+								return;
+							}
+							callback();
+						};
+						execute_queue.attachLast(f,null);
+					};
+					file_reader.readAsBinaryString(xhr.response);
+				};
+				requestXHR(param,sender,sendResponse);
+			};
+
+			// キャッシュへ読み込み
+			command_dictionary["loadToCache"] = function(param,sender,sendResponse){
+				var request = param.request;
+				request.responseType = "blob";
+				request.oncomplete = function(xhr,callback){
+					callback();
+				};
+				requestXHR(param,sender,sendResponse);
 			};
 
 			// 掲示板ボードを開く

@@ -269,6 +269,24 @@
 			menu_setting_download_download_thread_max: {
 				message: "同时下载的最大数目"
 			},
+			menu_setting_download_download_save_file: {
+				message: "Save File Name"
+			},
+			menu_setting_download_download_save_file_combo_box_item_simple: {
+				message: "simple"
+			},
+			menu_setting_download_download_save_file_combo_box_item_detail: {
+				message: "detail"
+			},
+			menu_setting_download_download_save_file_simple: {
+				message: "Select File Name"
+			},
+			menu_setting_download_download_save_file_detail: {
+				message: "Edit File Name"
+			},
+			menu_setting_download_download_save_file_variable: {
+				message: "Variable List"
+			},
 			menu_setting_download_download_conflict_type: {
 				message: "文件名冲突"
 			},
@@ -278,6 +296,10 @@
 			menu_setting_download_download_conflict_type_combo_box_item_overwrite: {
 				message: "覆盖"
 			},
+			menu_setting_download_batch_download: {
+				message: "Batch Download Setting"
+			},
+
 			menu_setting_expand_bbs: {
 				message: "BBS 设置"
 			},
@@ -1391,6 +1413,12 @@
 			context_menu_batch_download_user: {
 				message: "批量下载 (用户)"
 			},
+			context_menu_pageexpand_open_bbs_board: {
+				message: "Open BBS Board"
+			},
+			context_menu_pageexpand_open_bbs_board_run_confirm: {
+				message: "Do you want to run the BBS Board in this page?"
+			},
 			context_menu_pageexpand_config_current_page: {
 				message: "PageExpand 设置当前页"
 			},
@@ -1403,8 +1431,11 @@
 			context_menu_pageexpand_config_auto_run_confirm: {
 				message: "你想要在此页面中运行 PageExpand 设置吗？\n(如果此页面被污染，那么恶意脚本将被注入！)"
 			},
-			context_menu_pageexpand_execute: {
-				message: "执行 PageExpand"
+			context_menu_pageexpand_start: {
+				message: "开始 PageExpand"
+			},
+			context_menu_pageexpand_execute_fastest: {
+				message: "执行 PageExpand (最快)"
 			},
 			context_menu_pageexpand_abort: {
 				message: "关于 PageExpand"

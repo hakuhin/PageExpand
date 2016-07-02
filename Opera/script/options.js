@@ -222,7 +222,7 @@ function PageExpand(page_expand_arguments){
 				_style.fontSize = "12px";
 				_style.width = "230px";
 				_style.boxShadow = "";
-				_style.padding = "2px 10px 2px 0px";
+				_style.padding = "5px 10px 5px 0px";
 				_style.marginTop = "0px";
 				_style.marginBottom = "1px";
 
@@ -250,7 +250,7 @@ function PageExpand(page_expand_arguments){
 				_item.onmousedown = null;
 				_style.fontSize = "16px";
 				_style.width = "250px";
-				_style.padding = "10px 5px 10px 0px";
+				_style.padding = "14px 5px 14px 0px";
 				_style.marginTop = "2px";
 				_style.marginBottom = "3px";
 
@@ -333,7 +333,7 @@ function PageExpand(page_expand_arguments){
 			_item = DocumentCreateElement("a");
 			_item.href = "";
 			_item.onclick = function(){ return false; };
-			ElementSetStyle(_item,"display:block; width:250px; text-decoration:none; text-align:right; padding:5px 10px 5px 0px; margin:0px 0px 2px auto; border-radius:5px 0px 0px 5px;");
+			ElementSetStyle(_item,"display:block; width:250px; text-decoration:none; text-align:right; margin:0px 0px 2px auto; line-height:1.0; border-radius:5px 0px 0px 5px;");
 			_style = _item.style;
 			ElementSetTextContent(_item,label);
 			_menu_window.appendChild(_item);
@@ -529,7 +529,7 @@ function PageExpand(page_expand_arguments){
 
 				// 最大CPU占有時間
 				var parent = container.getElement();
-				new UI_Text(parent,_i18n.getMessage("menu_setting_standard_execute_queue_time_occupancy"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_standard_execute_queue_time_occupancy"));
 				_stepper_execute_queue_time_occupancy = new UI_NumericStepper(parent);
 				_stepper_execute_queue_time_occupancy.setMinimum(0);
 				_stepper_execute_queue_time_occupancy.setMaximum(5000);
@@ -537,8 +537,10 @@ function PageExpand(page_expand_arguments){
 					standard.execute_queue.time_occupancy = v;
 					projectModify();
 				};
+				new UI_BreakItem(parent);
+
 				// スリープ時間
-				new UI_Text(parent,_i18n.getMessage("menu_setting_standard_execute_queue_time_sleep"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_standard_execute_queue_time_sleep"));
 				_stepper_execute_queue_sleep_time = new UI_NumericStepper(parent);
 				_stepper_execute_queue_sleep_time.setMinimum(0);
 				_stepper_execute_queue_sleep_time.setMaximum(1000);
@@ -865,7 +867,17 @@ function PageExpand(page_expand_arguments){
 			var _stepper_load_thread_max;
 			var _stepper_load_timeout;
 			var _stepper_download_thread_max;
-			var _combo_box_conflict_type;
+			var _combo_box_conflict_type;			
+			var _form_container_download_save_file_simple;
+			var _form_container_download_save_file_detail;
+			var _combo_box_download_save_file_type;
+			var _combo_box_download_save_file_simple;
+			var _text_input_download_save_file_detail;
+			var _form_container_batch_download_save_file_simple;
+			var _form_container_batch_download_save_file_detail;
+			var _combo_box_batch_download_save_file_type;
+			var _combo_box_batch_download_save_file_simple;
+			var _text_input_batch_download_save_file_detail;
 
 			// --------------------------------------------------------------------------------
 			// 初期化
@@ -925,6 +937,70 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
+				// 保存先の設定
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_download_download_save_file"));
+				var parent = container.getElement();
+
+				_combo_box_download_save_file_type = new UI_ComboBox(parent);
+				_combo_box_download_save_file_type.attachItem(_i18n.getMessage("menu_setting_download_download_save_file_combo_box_item_simple"),"simple");
+				_combo_box_download_save_file_type.attachItem(_i18n.getMessage("menu_setting_download_download_save_file_combo_box_item_detail"),"detail");
+				_combo_box_download_save_file_type.onchange = function(v){
+					download.download.save_file.type = v;
+					autoDownloadUpdateSaveFile(true);
+					projectModify();
+				};
+				new UI_BreakItem(parent);
+
+				// フィルタ更新
+				function autoDownloadUpdateSaveFile(update){
+					var detail = Boolean(download.download.save_file.type === "detail");
+					if(detail && update){
+						var save_file_detail = "PageExpand/" + ProjectDownloadSaveFile_DetailFromSimple(download.download.save_file.simple);
+						_text_input_download_save_file_detail.setValue(save_file_detail);
+						download.download.save_file.detail = save_file_detail;
+					}
+					_form_container_download_save_file_simple.setVisible(!detail);
+					_form_container_download_save_file_detail.setVisible(detail);
+				}
+
+				_form_container_download_save_file_simple = new UI_FormContainer(parent);
+				_form_container_download_save_file_simple.setVisible(true);
+				var form_parent_download_simple = _form_container_download_save_file_simple.getElement();
+
+				// 保存先を選択
+				new UI_TitleItem(form_parent_download_simple,_i18n.getMessage("menu_setting_download_download_save_file_simple"));
+				_combo_box_download_save_file_simple = new UI_ComboBox(form_parent_download_simple);
+				_combo_box_download_save_file_simple.attachItem("PageExpand / <url>","url");
+				_combo_box_download_save_file_simple.attachItem("PageExpand / <kebab-url>","kebab_url");
+				_combo_box_download_save_file_simple.attachItem("PageExpand / <filename>","filename");
+				_combo_box_download_save_file_simple.attachItem("PageExpand / <domain> - <filename>","domain");
+				_combo_box_download_save_file_simple.attachItem("PageExpand / <year> <month> <day> / <filename>","date");
+				_combo_box_download_save_file_simple.onchange = function(v){
+					download.download.save_file.simple = v;
+					projectModify();
+				};
+				new UI_BreakItem(form_parent_download_simple);
+
+				_form_container_download_save_file_detail = new UI_FormContainer(parent);
+				_form_container_download_save_file_detail.setVisible(false);
+				var form_parent_download_detail = _form_container_download_save_file_detail.getElement();
+
+				// 保存先を編集
+				new UI_TitleItem(form_parent_download_detail,_i18n.getMessage("menu_setting_download_download_save_file_detail"));
+				_text_input_download_save_file_detail = new UI_TextInput(form_parent_download_detail);
+				_text_input_download_save_file_detail.oninput = function(v){
+					download.download.save_file.detail = v;
+					projectModify();
+				};
+				new UI_BreakItem(form_parent_download_detail);
+
+				function downloadInsertSaveFileVariable(parent){
+					new UI_TitleItem(parent,_i18n.getMessage("menu_setting_download_download_save_file_variable"));
+					new UI_TextItem(parent,"<url> <kebab-url> <origin> <domain> <filename> <name> <ext> <query> <fragment>");
+					new UI_TextItem(parent,"<year> <month> <day> <hour> <minute> <second> <millisecond> <unixtime>");				
+				}
+				downloadInsertSaveFileVariable(form_parent_download_detail);
+
 				// ファイル名衝突時の処理
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_download_download_conflict_type"));
 				var parent = container.getElement();
@@ -938,18 +1014,99 @@ function PageExpand(page_expand_arguments){
 
 				new UI_Break(_content_window);
 
+
+				// 一括ダウンロード設定
+				var title = new UI_TitleSub(_content_window,_i18n.getMessage("menu_setting_download_batch_download"));
+
+				// グループ
+				var group = new UI_GroupContainer(_content_window);
+				var group_parent = group.getElement();
+
+				// 保存先の設定
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_download_download_save_file"));
+				var parent = container.getElement();
+
+				_combo_box_batch_download_save_file_type = new UI_ComboBox(parent);
+				_combo_box_batch_download_save_file_type.attachItem(_i18n.getMessage("menu_setting_download_download_save_file_combo_box_item_simple"),"simple");
+				_combo_box_batch_download_save_file_type.attachItem(_i18n.getMessage("menu_setting_download_download_save_file_combo_box_item_detail"),"detail");
+				_combo_box_batch_download_save_file_type.onchange = function(v){
+					download.batch_download.save_file.type = v;
+					batchDownloadUpdateSaveFile(true);
+					projectModify();
+				};
+				new UI_BreakItem(parent);
+
+				// フィルタ更新
+				function batchDownloadUpdateSaveFile(update){
+					var detail = Boolean(download.batch_download.save_file.type === "detail");
+					if(detail && update){
+						var save_file_detail = ProjectDownloadSaveFile_DetailFromSimple(download.batch_download.save_file.simple);
+						_text_input_batch_download_save_file_detail.setValue(save_file_detail);
+						download.batch_download.save_file.detail = save_file_detail;
+					}
+					_form_container_batch_download_save_file_simple.setVisible(!detail);
+					_form_container_batch_download_save_file_detail.setVisible(detail);
+				}
+
+				_form_container_batch_download_save_file_simple = new UI_FormContainer(parent);
+				_form_container_batch_download_save_file_simple.setVisible(true);
+				var form_parent_batch_download_simple = _form_container_batch_download_save_file_simple.getElement();
+
+				// 保存先を選択
+				new UI_TitleItem(form_parent_batch_download_simple,_i18n.getMessage("menu_setting_download_download_save_file_simple"));
+				_combo_box_batch_download_save_file_simple = new UI_ComboBox(form_parent_batch_download_simple);
+				_combo_box_batch_download_save_file_simple.attachItem("<url>","url");
+				_combo_box_batch_download_save_file_simple.attachItem("<kebab-url>","kebab_url");
+				_combo_box_batch_download_save_file_simple.attachItem("<filename>","filename");
+				_combo_box_batch_download_save_file_simple.attachItem("<domain> - <filename>","domain");
+				_combo_box_batch_download_save_file_simple.attachItem("<year> <month> <day> / <filename>","date");
+				_combo_box_batch_download_save_file_simple.onchange = function(v){
+					download.batch_download.save_file.simple = v;
+					projectModify();
+				};
+				new UI_BreakItem(form_parent_batch_download_simple);
+
+				_form_container_batch_download_save_file_detail = new UI_FormContainer(parent);
+				_form_container_batch_download_save_file_detail.setVisible(false);
+				var form_parent_batch_download_detail = _form_container_batch_download_save_file_detail.getElement();
+
+				// 保存先を編集
+				new UI_TitleItem(form_parent_batch_download_detail,_i18n.getMessage("menu_setting_download_download_save_file_detail"));
+				_text_input_batch_download_save_file_detail = new UI_TextInput(form_parent_batch_download_detail);
+				_text_input_batch_download_save_file_detail.oninput = function(v){
+					download.batch_download.save_file.detail = v;
+					projectModify();
+				};
+				new UI_BreakItem(form_parent_batch_download_detail);
+
+				downloadInsertSaveFileVariable(form_parent_batch_download_detail);
+
+				new UI_Break(_content_window);
+
+
 				// 最大同時ロード数
 				_stepper_load_thread_max.setValue(download.load.thread_max);
-
 				// タイムアウト
 				_stepper_load_timeout.setValue(download.load.timeout);
-
 				// 最大同時ダウンロード数
 				_stepper_download_thread_max.setValue(download.download.thread_max);
-
 				// ファイル名衝突時の処理
 				_combo_box_conflict_type.setValue(download.download.conflict_type);
-
+				// 設定タイプ
+				_combo_box_download_save_file_type.setValue(download.download.save_file.type);
+				// 保存先を選択
+				_combo_box_download_save_file_simple.setValue(download.download.save_file.simple);
+				// 保存先を編集
+				_text_input_download_save_file_detail.setValue(download.download.save_file.detail);	
+				// 設定タイプ
+				_combo_box_batch_download_save_file_type.setValue(download.batch_download.save_file.type);
+				// 保存先を選択
+				_combo_box_batch_download_save_file_simple.setValue(download.batch_download.save_file.simple);
+				// 保存先を編集
+				_text_input_batch_download_save_file_detail.setValue(download.batch_download.save_file.detail);
+				
+				autoDownloadUpdateSaveFile(false);
+				batchDownloadUpdateSaveFile(false);
 			})();
 		}
 
@@ -1206,7 +1363,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_popup_percent"));
 				var parent = container.getElement();
 				// 横方向パーセント (0～100)
-				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_percent_h"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_percent_h"));
 				_stepper_popup_percent_h = new UI_NumericStepper(parent);
 				_stepper_popup_percent_h.setMinimum(0);
 				_stepper_popup_percent_h.setMaximum(100);
@@ -1217,8 +1374,10 @@ function PageExpand(page_expand_arguments){
 					_expand_bbs_list.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
+
 				// 縦方向パーセント (0～100)
-				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_percent_v"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_percent_v"));
 				_stepper_popup_percent_v = new UI_NumericStepper(parent);
 				_stepper_popup_percent_v.setMinimum(0);
 				_stepper_popup_percent_v.setMaximum(100);
@@ -1234,7 +1393,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_expand_bbs_popup_time"));
 				var parent = container.getElement();
 				// 開くまでに待機する時間（ミリ秒）
-				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_time_wait_open"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_time_wait_open"));
 				_stepper_popup_time_wait_open = new UI_NumericStepper(parent);
 				_stepper_popup_time_wait_open.setMinimum(0);
 				_stepper_popup_time_wait_open.setMaximum(9999999);
@@ -1245,8 +1404,10 @@ function PageExpand(page_expand_arguments){
 					_expand_bbs_list.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
+
 				// 閉じるまでに待機する時間（ミリ秒）
-				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_time_wait_close"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_expand_bbs_popup_time_wait_close"));
 				_stepper_popup_time_wait_close = new UI_NumericStepper(parent);
 				_stepper_popup_time_wait_close.setMinimum(0);
 				_stepper_popup_time_wait_close.setMaximum(9999999);
@@ -1555,6 +1716,7 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 				new UI_TextHint(parent,_i18n.getMessage("menu_setting_urlmap_enable_unsecure_hint"));
+				new UI_BreakItem(parent);
 
 				// 混在コンテンツ
 				_check_box_enable_mixed_content = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_urlmap_enable_mixed_content"));
@@ -2569,7 +2731,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type_combo_box_item"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type_combo_box_item"));
 				_combo_box_send_type = new UI_ComboBox(parent);
 				_combo_box_send_type.attachItem(_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type_combo_box_item_default"),"default");
 				_combo_box_send_type.attachItem(_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_type_combo_box_item_current_url"),"current_url");
@@ -2588,7 +2750,8 @@ function PageExpand(page_expand_arguments){
 				_form_container_send_custom.setVisible(false);
 				var form_parent_send_custom = _form_container_send_custom.getElement();
 
-				new UI_Text(form_parent_send_custom,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_custom"));
+				new UI_BreakItem(form_parent_send_custom);
+				new UI_TitleItem(form_parent_send_custom,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_custom"));
 				_text_input_send_custom = new UI_TextInput(form_parent_send_custom);
 				_text_input_send_custom.oninput = function(v){
 					_filter_list.writeFilters(function(c){
@@ -2602,7 +2765,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp_match"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp_match"));
 				_text_regexp_send_regexp = new UI_TextRegExp(parent);
 				_text_regexp_send_regexp.oninput = function(v){
 					_filter_list.writeFilters(function(c){
@@ -2611,8 +2774,9 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp_replacement"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_replacement_to_referer_filter_send_regexp_replacement"));
 				_text_input_send_replacement = new UI_TextInput(parent);
 				_text_input_send_replacement.oninput = function(v){
 					_filter_list.writeFilters(function(c){
@@ -2794,7 +2958,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_send"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_send_custom"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_replacement_to_useragent_filter_send_custom"));
 				_text_input_send_custom = new UI_TextInput(parent);
 				_text_input_send_custom.oninput = function(v){
 					_filter_list.writeFilters(function(c){
@@ -3232,7 +3396,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
-				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_reduced_image_allow_slcale_less_then_text"));
+				new UI_TextItem(parent,_i18n.getMessage("menu_setting_expand_image_reduced_image_allow_slcale_less_then_text"));
 				new UI_Break(form_parent);
 
 				// サムネイル表示設定
@@ -3292,7 +3456,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(form_parent_thumbnail,_i18n.getMessage("menu_setting_expand_image_thumbnail_size"));
 				var parent = container.getElement();
 				// 最小許容限界（ピクセル値）
-				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_size_min"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_size_min"));
 				var stepper_thumbnail_width_min = new UI_NumericStepper(parent);
 				stepper_thumbnail_width_min.setMinimum(0);
 				stepper_thumbnail_width_min.setMaximum(9999999);
@@ -3304,8 +3468,10 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
+
 				// 基本拡大率（パーセント）
-				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_size_scale"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_size_scale"));
 				var stepper_thumbnail_scale_percent = new UI_NumericStepper(parent);
 				stepper_thumbnail_scale_percent.setMinimum(0);
 				stepper_thumbnail_scale_percent.setMaximum(9999999);
@@ -3317,8 +3483,10 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
+
 				// 最大許容限界（ピクセル値）
-				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_size_max"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_expand_image_thumbnail_size_max"));
 				var stepper_thumbnail_width_max = new UI_NumericStepper(parent);
 				stepper_thumbnail_width_max.setMinimum(0);
 				stepper_thumbnail_width_max.setMaximum(9999999);
@@ -3478,7 +3646,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_size"));
 				var parent = container.getElement();
 				// 拡大率（パーセント）
-				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_popup_size_scale"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_expand_image_popup_size_scale"));
 				var stepper_popup_scale_percent = new UI_NumericStepper(parent);
 				stepper_popup_scale_percent.setMinimum(0);
 				stepper_popup_scale_percent.setMaximum(9999999);
@@ -3495,7 +3663,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(form_parent_popup,_i18n.getMessage("menu_setting_expand_image_popup_time"));
 				var parent = container.getElement();
 				// 開くまでに待機する時間（ミリ秒）
-				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_popup_time_wait_open"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_expand_image_popup_time_wait_open"));
 				var stepper_popup_time_wait_open = new UI_NumericStepper(parent);
 				stepper_popup_time_wait_open.setMinimum(0);
 				stepper_popup_time_wait_open.setMaximum(9999999);
@@ -3507,8 +3675,10 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
+
 				// 閉じるまでに待機する時間（ミリ秒）
-				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_popup_time_wait_close"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_expand_image_popup_time_wait_close"));
 				var stepper_popup_time_wait_close = new UI_NumericStepper(parent);
 				stepper_popup_time_wait_close.setMinimum(0);
 				stepper_popup_time_wait_close.setMaximum(9999999);
@@ -3608,7 +3778,7 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
-				new UI_Text(parent,_i18n.getMessage("menu_setting_expand_image_load_allow_unload_more_then_text"));
+				new UI_TextItem(parent,_i18n.getMessage("menu_setting_expand_image_load_allow_unload_more_then_text"));
 				new UI_Break(form_parent);
 
 				// データの関連付け
@@ -4506,7 +4676,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_text_element"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_text_element_inline"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_text_element_inline"));
 				var text_input_expand_text_inline = new UI_TextInput(parent);
 				text_input_expand_text_inline.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4528,7 +4698,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element_inline"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element_inline"));
 				var text_input_expand_image_thumbnail = new UI_TextInput(parent);
 				text_input_expand_image_thumbnail.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4537,8 +4707,9 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element_popup"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element_popup"));
 				var text_input_expand_image_popup = new UI_TextInput(parent);
 				text_input_expand_image_popup.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4560,7 +4731,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_element"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_element_inline_audio"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_element_inline_audio"));
 				var text_input_expand_sound_inline_audio_element = new UI_TextInput(parent);
 				text_input_expand_sound_inline_audio_element.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4574,7 +4745,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud_inline_player_flash"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud_inline_player_flash"));
 				var text_input_expand_sound_soundcloud_inline_player_flash = new UI_TextInput(parent);
 				text_input_expand_sound_soundcloud_inline_player_flash.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4583,8 +4754,9 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud_inline_player_html5"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud_inline_player_html5"));
 				var text_input_expand_sound_soundcloud_inline_player_html5 = new UI_TextInput(parent);
 				text_input_expand_sound_soundcloud_inline_player_html5.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4598,7 +4770,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_mixcloud"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_mixcloud_inline_player"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_mixcloud_inline_player"));
 				var text_input_expand_sound_mixcloud_inline_player = new UI_TextInput(parent);
 				text_input_expand_sound_mixcloud_inline_player.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4620,7 +4792,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_element"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_element_inline_video"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_element_inline_video"));
 				var text_input_expand_video_inline_video_element = new UI_TextInput(parent);
 				text_input_expand_video_inline_video_element.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4634,7 +4806,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_youtube"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_youtube_inline_video"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_youtube_inline_video"));
 				var text_input_expand_video_youtube_inline_video = new UI_TextInput(parent);
 				text_input_expand_video_youtube_inline_video.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4648,7 +4820,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_video"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_video"));
 				var text_input_expand_video_nicovideo_inline_video = new UI_TextInput(parent);
 				text_input_expand_video_nicovideo_inline_video.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4657,8 +4829,9 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_video"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_video"));
 				var text_input_expand_video_nicovideo_inline_thumbnail_video = new UI_TextInput(parent);
 				text_input_expand_video_nicovideo_inline_thumbnail_video.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4667,8 +4840,9 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_mylist"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_mylist"));
 				var text_input_expand_video_nicovideo_inline_thumbnail_mylist = new UI_TextInput(parent);
 				text_input_expand_video_nicovideo_inline_thumbnail_mylist.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4677,8 +4851,9 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_user"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_user"));
 				var text_input_expand_video_nicovideo_inline_thumbnail_user = new UI_TextInput(parent);
 				text_input_expand_video_nicovideo_inline_thumbnail_user.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4687,8 +4862,9 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_community"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_community"));
 				var text_input_expand_video_nicovideo_inline_thumbnail_community = new UI_TextInput(parent);
 				text_input_expand_video_nicovideo_inline_thumbnail_community.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4697,8 +4873,9 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_live"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_live"));
 				var text_input_expand_video_nicovideo_inline_thumbnail_live = new UI_TextInput(parent);
 				text_input_expand_video_nicovideo_inline_thumbnail_live.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4707,8 +4884,9 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga"));
 				var text_input_expand_video_nicovideo_inline_thumbnail_seiga = new UI_TextInput(parent);
 				text_input_expand_video_nicovideo_inline_thumbnail_seiga.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4722,7 +4900,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream_inline_video_record"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream_inline_video_record"));
 				var text_input_expand_video_ustream_inline_video_record = new UI_TextInput(parent);
 				text_input_expand_video_ustream_inline_video_record.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4731,8 +4909,9 @@ function PageExpand(page_expand_arguments){
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream_inline_video_live"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream_inline_video_live"));
 				var text_input_expand_video_ustream_inline_video_live = new UI_TextInput(parent);
 				text_input_expand_video_ustream_inline_video_live.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4746,7 +4925,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_dailymotion"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_dailymotion_inline_video"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_dailymotion_inline_video"));
 				var text_input_expand_video_dailymotion_inline_video = new UI_TextInput(parent);
 				text_input_expand_video_dailymotion_inline_video.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4760,7 +4939,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_vimeo"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_vimeo_inline_video"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_vimeo_inline_video"));
 				var text_input_expand_video_vimeo_inline_video = new UI_TextInput(parent);
 				text_input_expand_video_vimeo_inline_video.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4774,7 +4953,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_fc2video"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_fc2video_inline_video"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_fc2video_inline_video"));
 				var text_input_expand_video_fc2video_inline_video = new UI_TextInput(parent);
 				text_input_expand_video_fc2video_inline_video.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4788,7 +4967,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_liveleak"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_liveleak_inline_video"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_liveleak_inline_video"));
 				var text_input_expand_video_liveleak_inline_video = new UI_TextInput(parent);
 				text_input_expand_video_liveleak_inline_video.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4810,7 +4989,7 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_iframe_element"));
 				var parent = container.getElement();
 
-				new UI_Text(parent,_i18n.getMessage("menu_setting_style_sheet_expand_iframe_element_inline"));
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_iframe_element_inline"));
 				var text_input_expand_iframe_inline = new UI_TextInput(parent);
 				text_input_expand_iframe_inline.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
@@ -4989,7 +5168,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.5");
+				new UI_Text(parent,"PageExpand ver.1.5.6");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -5495,6 +5674,35 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
+		// アイテム用タイトル
+		// --------------------------------------------------------------------------------
+		function UI_TitleItem(parent,label){
+			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// 値をセット
+			// --------------------------------------------------------------------------------
+			_this.setValue = function(v){
+				ElementSetTextContent(_body,v);
+			};
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _body;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_body = DocumentCreateElement("div");
+				ElementSetStyle(_body,"margin:0px 0px 3px; font-size:14px; line-height:1.0; text-align:left;");
+				ElementSetTextContent(_body,label);
+				parent.appendChild(_body);
+			})();
+		}
+
+		// --------------------------------------------------------------------------------
 		// 改行
 		// --------------------------------------------------------------------------------
 		function UI_Break(parent){
@@ -5523,11 +5731,43 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
+		// アイテム用改行
+		// --------------------------------------------------------------------------------
+		function UI_BreakItem(parent){
+			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _body;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_body = DocumentCreateElement("div");
+				ElementSetStyle(_body,"margin:0px; height:8px;");
+				parent.appendChild(_body);
+			})();
+		}
+
+		// --------------------------------------------------------------------------------
 		// テキスト
 		// --------------------------------------------------------------------------------
 		function UI_Text(parent,label){
 			var div = DocumentCreateElement("div");
-			ElementSetStyle(div,"margin:0px 0px 5px;");
+			ElementSetStyle(div,"margin:0px 0px 3px; line-height:1.0; font-size:14px;");
+			ElementSetTextContent(div,label);
+			parent.appendChild(div);
+			return div;
+		}
+
+		// --------------------------------------------------------------------------------
+		// アイテム用テキスト
+		// --------------------------------------------------------------------------------
+		function UI_TextItem(parent,label){
+			var div = DocumentCreateElement("div");
+			ElementSetStyle(div,"margin:0px 0px 3px; line-height:1.0; font-size:12px; color:#444;");
 			ElementSetTextContent(div,label);
 			parent.appendChild(div);
 			return div;
@@ -5538,7 +5778,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function UI_TextHint(parent,label){
 			var div = DocumentCreateElement("div");
-			ElementSetStyle(div,"margin:-3px 0px 5px 0px; font-size:11px; color:#aaa;");
+			ElementSetStyle(div,"margin:-3px 0px 3px 0px; line-height:1.0; font-size:11px; color:#aaa;");
 			ElementSetTextContent(div,label);
 			parent.appendChild(div);
 			return div;
