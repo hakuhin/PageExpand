@@ -873,9 +873,6 @@
 			menu_setting_expand_sound_inline_soundcloud_check_box_container: {
 				message: "soundcloud.com 设置"
 			},
-			menu_setting_expand_sound_inline_soundcloud_visible_player_flash: {
-				message: "启用播放器 (Flash)"
-			},
 			menu_setting_expand_sound_inline_soundcloud_visible_player_html5: {
 				message: "启用播放器 (HTML5)"
 			},
@@ -1052,9 +1049,6 @@
 			},
 			menu_setting_style_sheet_expand_sound_soundcloud: {
 				message: "soundcloud.com 设置"
-			},
-			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_flash: {
-				message: "播放器 (Flash) 内联显示"
 			},
 			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_html5: {
 				message: "播放器 (HTML5) 内联显示"

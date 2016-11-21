@@ -2479,13 +2479,6 @@
 		};
 
 		// --------------------------------------------------------------------------------
-		// SoundCloud のプレイヤー (Flash 版) を表示するか
-		// --------------------------------------------------------------------------------
-		_this.getVisiblePlayerFlashSoundcloud = function(){
-			return _proj_ins.expand_sound.soundcloud.visible_player_flash;
-		};
-
-		// --------------------------------------------------------------------------------
 		// SoundCloud のプレイヤー (HTML5 版) を表示するか
 		// --------------------------------------------------------------------------------
 		_this.getVisiblePlayerHtml5Soundcloud = function(){
@@ -2723,16 +2716,6 @@
 		_this.getStyleSheetExpandSoundInlineAudioElement = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_sound.inline.audio_element.audio;
-			}
-			return "";
-		};
-
-		// --------------------------------------------------------------------------------
-		// SoundCloud インライン表示 Flash 版プレイヤーのスタイルシート
-		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandSoundSoundcloudInlinePlayerFlash = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_sound.inline.soundcloud.player_flash;
 			}
 			return "";
 		};
@@ -10501,6 +10484,40 @@
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.37
+		// --------------------------------------------------------------------------------
+		if(proj.version < 37){
+			// バージョン値
+			proj.version = 37;
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義
+			// --------------------------------------------------------------------------------
+			updatePreset(proj.expand_sound,"*",function(obj){
+				var soundcloud = obj.soundcloud;
+				delete soundcloud.visible_player_flash;
+				soundcloud.visible_player_html5 = true;
+			});
+
+			// --------------------------------------------------------------------------------
+			// スタイルシート定義
+			// --------------------------------------------------------------------------------
+			updatePreset(proj.style_sheet,"*",function(obj){
+				var soundcloud = obj.expand_sound.inline.soundcloud;
+				delete soundcloud.player_flash;
+			});
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// ふたば☆ちゃんねる
+			var obj = addPreset(proj.expand_bbs,"2chan",null);
+			var filter = obj.preset.filter.regexp.filter;
+			filter[0].pattern = "^(http|https)://[^.]+\\.2chan\\.net/.*/.*";
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
@@ -11653,7 +11670,7 @@
 			// まちBBS
 			{search:"^http://machi\\.to/bbs/link\\.cgi[?]URL=",replace:""},
 			// PINKちゃんねる
-			{search:"^http://pinktower\\.com/([?]|)",replace:""},
+			{search:"^http://(www\\.|)pinktower\\.com/([?]|)",replace:""},
 			// したらば掲示板
 			{search:"^http://jbbs\\.shitaraba\\.net/bbs/link\\.cgi[?]url=",replace:"",decode_uri:true},
 			// ログ速
@@ -20411,7 +20428,7 @@
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"^http://[^.]+\\.2chan\\.net/[^/]+/res/[0-9]+.htm",name:"2chan"},
+			{url:"^(http|https)://[^.]+\\.2chan\\.net/[^/]+/res/[0-9]+.htm",name:"2chan"},
 			{url:"^http://(futalog|imgbako)\\.com/[0-9]+.htm",name:"futalog"},
 			{url:"^http://[^.]+\.ftbucket\\.info/.*/cont/.*$",name:"ftbucket"}
 		];
@@ -21034,7 +21051,7 @@
 								if(window_obj.document){
 									href = window_obj.document.URL;
 								}
-								if(href.indexOf("http://") == 0){
+								if(href.match(new RegExp("^(http|https)://","i"))){
 									if(href.indexOf("/res/") >= 0){
 										closed = true;
 									}else if(href.indexOf("/futaba.php") == -1){
@@ -22274,7 +22291,7 @@
 			var numbers = new ResponseAnchorNumbers();
 
 			var re_search = new RegExp("^(No\\.|>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
-			var re_image = new RegExp("([0-9０-９]+)\\.(bmp|gif|jpeg|jpe|jpg|png)","i");
+			var re_image = new RegExp("([0-9０-９]+)\\.(bmp|gif|jpeg|jpe|jpg|png|webm)","i");
 			var re_number = new RegExp("^([0-9０-９]+)","i");
 
 			var m = str.match(re_search);
@@ -22443,7 +22460,7 @@
 				if(BbsControlQuoteExist(target)) return;
 
 				var re_simple = new RegExp("^(No\\.|>>|<<|>)[-,0-9０-９]+$","i");
-				var re_image = new RegExp("([0-9０-９]+)\\.(bmp|gif|jpeg|jpe|jpg|png)","i");
+				var re_image = new RegExp("([0-9０-９]+)\\.(bmp|gif|jpeg|jpe|jpg|png|webm)","i");
 				var re_detail = new RegExp("(No\\.|>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+,)*[0-9０-９]+","i");
 				var re_number = new RegExp("([0-9０-９]+)","i");
 
@@ -37878,9 +37895,6 @@
 			menu_setting_expand_sound_inline_soundcloud_check_box_container: {
 				message: "soundcloud.com の設定"
 			},
-			menu_setting_expand_sound_inline_soundcloud_visible_player_flash: {
-				message: "Flash 版のプレイヤーを表示"
-			},
 			menu_setting_expand_sound_inline_soundcloud_visible_player_html5: {
 				message: "HTML5 版のプレイヤーを表示"
 			},
@@ -38057,9 +38071,6 @@
 			},
 			menu_setting_style_sheet_expand_sound_soundcloud: {
 				message: "soundcloud.com の設定"
-			},
-			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_flash: {
-				message: "Flash 版プレイヤーのインライン表示"
 			},
 			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_html5: {
 				message: "HTML5 版プレイヤーのインライン表示"
@@ -39325,9 +39336,6 @@
 			menu_setting_expand_sound_inline_soundcloud_check_box_container: {
 				message: "soundcloud.com Setting"
 			},
-			menu_setting_expand_sound_inline_soundcloud_visible_player_flash: {
-				message: "enable player (Flash)"
-			},
 			menu_setting_expand_sound_inline_soundcloud_visible_player_html5: {
 				message: "enable player (HTML5)"
 			},
@@ -39504,9 +39512,6 @@
 			},
 			menu_setting_style_sheet_expand_sound_soundcloud: {
 				message: "soundcloud.com Setting"
-			},
-			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_flash: {
-				message: "Player (Flash) Inline Display"
 			},
 			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_html5: {
 				message: "Player (HTML5) Inline Display"
@@ -40771,9 +40776,6 @@
 			menu_setting_expand_sound_inline_soundcloud_check_box_container: {
 				message: "soundcloud.com 设置"
 			},
-			menu_setting_expand_sound_inline_soundcloud_visible_player_flash: {
-				message: "启用播放器 (Flash)"
-			},
 			menu_setting_expand_sound_inline_soundcloud_visible_player_html5: {
 				message: "启用播放器 (HTML5)"
 			},
@@ -40950,9 +40952,6 @@
 			},
 			menu_setting_style_sheet_expand_sound_soundcloud: {
 				message: "soundcloud.com 设置"
-			},
-			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_flash: {
-				message: "播放器 (Flash) 内联显示"
 			},
 			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_html5: {
 				message: "播放器 (HTML5) 内联显示"
@@ -47807,6 +47806,13 @@
 	function AnalyzeWorkGetAnalyzedPopupReducedImage(work){ return Boolean(work.a_pri); }
 
 	// --------------------------------------------------------------------------------
+	// 「インラインMediaPlayer」の解析状況
+	// --------------------------------------------------------------------------------
+	function AnalyzeWorkClearAnalyzedInlineMediaPlayer(work){ ObjectDeleteProperty(work,"a_imp"); }
+	function AnalyzeWorkSetAnalyzedInlineMediaPlayer(work){ work.a_imp = true; }
+	function AnalyzeWorkGetAnalyzedInlineMediaPlayer(work){ return Boolean(work.a_imp); }
+
+	// --------------------------------------------------------------------------------
 	// 「掲示板拡張」の解析状況
 	// --------------------------------------------------------------------------------
 	function AnalyzeWorkClearAnalyzedExpandBbs(work){ ObjectDeleteProperty(work,"a_ebb"); }
@@ -53848,6 +53854,18 @@
 	}
 
 	// --------------------------------------------------------------------------------
+	// 文字参照からテキストに変換
+	// --------------------------------------------------------------------------------
+	function StringConvert_From_CharacterReferences_To_Text(html){
+		var element = document.createElement("span");
+		var re = new RegExp("(&#[0-9]{1,};)|(&#x[0-9a-f]{1,};)|(&[0-9a-z]{2,};)","gi");
+		return html.replace(re , function(c){
+			element.innerHTML = c;
+			return ElementGetTextContent(element);
+		});
+	}
+
+	// --------------------------------------------------------------------------------
 	// 文字列を評価して配列関数を作成
 	// --------------------------------------------------------------------------------
 	function StringEvalArrayFunction(src){
@@ -55083,12 +55101,7 @@
 				if(b < e){
 					// テキストノード生成
 					var s = html.substring(b,e);
-					s = s.replace(/&gt;/g, ">");
-					s = s.replace(/&lt;/g, "<");
-					s = s.replace(/&quot;/g, "\"");
-					s = s.replace(/&nbsp;/g, function(str) { return String.fromCharCode(0x00a0); });
-					s = s.replace(/&#([0-9]+);/g, function(str) { return String.fromCharCode(RegExp.$1); });
-					s = s.replace(/&amp;/g, "&");
+					s = StringConvert_From_CharacterReferences_To_Text(s);
 					var text_node = document.createTextNode(s);
 					if(text_node){
 						if(edit.depth){

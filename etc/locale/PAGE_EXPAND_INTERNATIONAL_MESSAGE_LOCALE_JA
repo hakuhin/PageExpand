@@ -874,9 +874,6 @@
 			menu_setting_expand_sound_inline_soundcloud_check_box_container: {
 				message: "soundcloud.com の設定"
 			},
-			menu_setting_expand_sound_inline_soundcloud_visible_player_flash: {
-				message: "Flash 版のプレイヤーを表示"
-			},
 			menu_setting_expand_sound_inline_soundcloud_visible_player_html5: {
 				message: "HTML5 版のプレイヤーを表示"
 			},
@@ -1053,9 +1050,6 @@
 			},
 			menu_setting_style_sheet_expand_sound_soundcloud: {
 				message: "soundcloud.com の設定"
-			},
-			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_flash: {
-				message: "Flash 版プレイヤーのインライン表示"
 			},
 			menu_setting_style_sheet_expand_sound_soundcloud_inline_player_html5: {
 				message: "HTML5 版プレイヤーのインライン表示"

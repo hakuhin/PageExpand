@@ -3995,17 +3995,6 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_soundcloud_check_box_container"));
 				var parent = container.getElement();
 
-				// Flash 版プレイヤーを表示
-				var check_box_soundcloud_visible_player_flash = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_sound_inline_soundcloud_visible_player_flash"));
-				check_box_soundcloud_visible_player_flash.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.soundcloud.visible_player_flash = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-
 				// HTML5 版プレイヤーを表示
 				var check_box_soundcloud_visible_player_html5 = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_sound_inline_soundcloud_visible_player_html5"));
 				check_box_soundcloud_visible_player_html5.onchange = function(v){
@@ -4062,7 +4051,6 @@ function PageExpand(page_expand_arguments){
 					// HTMLAudioElement を表示する条件
 					script_obj_editer_audio_element_script_allow.setScriptObject(c.audio_element.script_allow);
 					// soundcloud プレイヤー表示
-					check_box_soundcloud_visible_player_flash.setValue(c.soundcloud.visible_player_flash);
 					check_box_soundcloud_visible_player_html5.setValue(c.soundcloud.visible_player_html5);
 					// mixcloud プレイヤー表示
 					check_box_mixcloud_visible_player.setValue(c.mixcloud.visible_player);
@@ -4745,17 +4733,6 @@ function PageExpand(page_expand_arguments){
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud"));
 				var parent = container.getElement();
 
-				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud_inline_player_flash"));
-				var text_input_expand_sound_soundcloud_inline_player_flash = new UI_TextInput(parent);
-				text_input_expand_sound_soundcloud_inline_player_flash.oninput = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.expand_sound.inline.soundcloud.player_flash = v;
-					});
-					_setting_define.update();
-					projectModify();
-				};
-				new UI_BreakItem(parent);
-
 				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_soundcloud_inline_player_html5"));
 				var text_input_expand_sound_soundcloud_inline_player_html5 = new UI_TextInput(parent);
 				text_input_expand_sound_soundcloud_inline_player_html5.oninput = function(v){
@@ -5014,7 +4991,6 @@ function PageExpand(page_expand_arguments){
 					text_input_expand_image_thumbnail.setValue(c.expand_image.thumbnail);
 					text_input_expand_image_popup.setValue(c.expand_image.popup);
 					text_input_expand_sound_inline_audio_element.setValue(c.expand_sound.inline.audio_element.audio);
-					text_input_expand_sound_soundcloud_inline_player_flash.setValue(c.expand_sound.inline.soundcloud.player_flash);
 					text_input_expand_sound_soundcloud_inline_player_html5.setValue(c.expand_sound.inline.soundcloud.player_html5);
 					text_input_expand_sound_mixcloud_inline_player.setValue(c.expand_sound.inline.mixcloud.player);
 					text_input_expand_video_inline_video_element.setValue(c.expand_video.inline.video_element.video);
@@ -5168,7 +5144,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.7");
+				new UI_Text(parent,"PageExpand ver.1.5.8");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -11094,7 +11070,6 @@ function PageExpand(page_expand_arguments){
 						script_allow:PageExpandProjectScriptObject_Create("ExpandSound_AudioElementScriptAllow_Default")
 					},
 					soundcloud:{
-						visible_player_flash:false,
 						visible_player_html5:false
 					},
 					mixcloud:{
@@ -11200,7 +11175,6 @@ function PageExpand(page_expand_arguments){
 								audio:""
 							},
 							soundcloud:{
-								player_flash:"",
 								player_html5:""
 							},
 							mixcloud:{

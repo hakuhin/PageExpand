@@ -883,7 +883,7 @@ function PageExpand(page_expand_arguments){
 					var get_title = function(){
 						var title = data.title;
 						while(true){
-							var m = title.match(new RegExp("(.*)(&#169;|&copy;)(2ch[.]net|bbspink[.]com)[ 	]*$","i"));
+							var m = title.match(new RegExp("(.*)©(2ch[.]net|bbspink[.]com)[ 	]*$","i"));
 							if(m){
 								title = m[1];
 								continue;
@@ -2125,6 +2125,8 @@ function PageExpand(page_expand_arguments){
 								folder.setLabel(m[1]);
 
 								s.replace(re_item,function(m,p1,p2,index,str){
+									var m = p1.match(new RegExp("^(http|https)://(.*)","i"));
+									if(m) p1 = "https://" + m[2];
 									var item = folder.createItem(p1);
 									item.setLabel(p2);
 									item.setURL(p1);
@@ -2152,7 +2154,7 @@ function PageExpand(page_expand_arguments){
 
 				// テキストの読み込み
 				loader.setMethod("GET");
-				loader.setURL("http://www.2chan.net/bbsmenu.html");
+				loader.setURL("https://www.2chan.net/bbsmenu.html");
 				loader.overrideMimeType("text/plain; charset=Shift_JIS");
 				loader.loadText();
 				break;
@@ -2397,7 +2399,7 @@ function PageExpand(page_expand_arguments){
 								var data = item.getData();
 								data.number = index;
 								data.id = parseInt(m[1]);
-								data.title = m[3];
+								data.title = StringConvert_From_CharacterReferences_To_Text(m[3]);
 								data.res = parseInt(m[4]);
 								data.date_new = parseInt(data.id);
 								data.ppd = (function(){
@@ -2446,14 +2448,14 @@ function PageExpand(page_expand_arguments){
 				var domain;
 				var directory;
 				if(!domain){
-					var m = _catalog_url.match(new RegExp("http://([^/]+[.]2chan[.]net)/([^/]+)","i"));
+					var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.]2chan[.]net)/([^/]+)","i"));
 					if(m){
-						domain = m[1];
-						directory = m[2];
+						domain = m[2];
+						directory = m[3];
 					}
 				}
 				if(domain){
-					_catalog_title.nodeValue = "http://" + domain + "/" + directory + "/futaba.htm";
+					_catalog_title.nodeValue = "https://" + domain + "/" + directory + "/futaba.htm";
 				}else{
 					complete({result:false});
 					return;
@@ -2505,10 +2507,10 @@ function PageExpand(page_expand_arguments){
 								var data = item.getData();
 								data.number = index;
 								data.id = parseInt(m[1]);
-								item.setURL("http://" + domain + "/" + directory + "/res/" + (data.id) + ".htm");
+								item.setURL("https://" + domain + "/" + directory + "/res/" + (data.id) + ".htm");
 
 								m = s.match(re_title);
-								if(m) data.title = m[1];
+								if(m) data.title = StringConvert_From_CharacterReferences_To_Text(m[1]);
 								m = s.match(re_res);
 								if(m) data.res = parseInt(m[1]);
 								m = s.match(re_date);
@@ -2519,9 +2521,11 @@ function PageExpand(page_expand_arguments){
 								}
 								m = s.match(re_image);
 								if(m){
-									data.image_url = m[1] + "/thumb/" + m[3];
+									var image_url = m[1] + "/thumb/" + m[3];
+									if(image_url.match(new RegExp("^/","i"))) image_url = "https://" + domain + image_url;
+									data.image_url = image_url;
 									var image = new Image();
-									image.src = data.image_url;
+									image.src = image_url;
 									data.image = image;
 								}
 								data.ppd = (function(){
@@ -2558,7 +2562,7 @@ function PageExpand(page_expand_arguments){
 
 				// テキストの読み込み
 				loader.setMethod("GET");
-				loader.setURL("http://" + domain + "/" + directory + "/futaba.php?mode=cat&cxyl=1x2000x2000x0x6");
+				loader.setURL("https://" + domain + "/" + directory + "/futaba.php?mode=cat&cxyl=1x2000x2000x0x6");
 				loader.overrideMimeType("text/plain; charset=Shift_JIS");
 				loader.loadText();
 				break;
