@@ -10518,6 +10518,26 @@
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.38
+		// --------------------------------------------------------------------------------
+		if(proj.version < 38){
+			// バージョン値
+			proj.version = 38;
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			// 画像検索サイト
+			var preset = getPreset(proj.urlmap,"image_search");
+			var filter = preset.filter.regexp.filter;
+			filter[4] = {
+				pattern:"^[^:]+://image\\.search\\.yahoo\\.co\\.jp/search.*",
+				flags:{i:true,g:false}
+			};
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
@@ -13474,7 +13494,7 @@
 			// クエリを取得
 			var query = StringGetQuery(url);
 			if(query.imgurl){
-				response({result:true,url:unescape(unescape(query.imgurl)),content_type:["image"]});
+				response({result:true,url:decodeURIComponent(decodeURIComponent(query.imgurl)),content_type:["image"]});
 				return true;
 			}
 		}
@@ -13520,17 +13540,23 @@
 			// ハイパーリンク置換定義「イメージ検索用」「Yahoo! JAPAN 画像検索」
 			// --------------------------------------------------------------------------------
 			attachItem( "ReplacementToLink_DirectLinkImageSearch_YahooJapan" , [
-	
-	function(info,response){
+
+	function (info,response){
 		var anchor_element = info.anchor_element;
 
-		var url = anchor_element.href;
-		var r = new RegExp("^(http|https)://ord\\.yahoo\\.co\\.jp/o/image/.*/[*][-](.*)$","i");
-		if(url.match(r)){
-			response({result:true,url:decodeURIComponent(RegExp.$2),content_type:["image"]});
+		var url = decodeURIComponent(anchor_element.href);
+		var m = url.match(new RegExp("^.*RU=([0-9a-zA-Z._]+)"));
+		if(m){
+			var base64 = m[1];
+			base64 = base64.replace(/[.]/g,"+");
+			base64 = base64.replace(/[_]/g,"/");
+			base64 = base64.replace(/[-]/g,"=");
+			Base64_To_ArrayBuffer_Async(base64,function(ary){
+				if(!ary) return;
+				response({result:true,url:String_From_ArrayBuffer_As_UTF8(ary),content_type:["image"]});
+			});
 			return true;
 		}
-
 		return false;
 	},
 	function(info,response){
@@ -18805,10 +18831,13 @@
 									var m = ElementGetTextContent(node).match(new RegExp("^([a-zA-Z0-9+/.]{6,8})$","i"));
 									if(m){
 										// BbsControlId を生成
-										var control_id = new BbsControlId(node,false);
+										var control_id = new BbsControlId(null,true);
 										control_id.setId(m[1]);
 										var element_id = control_id.getElement();
 										DomNode_InsertAfter(node,element_id);
+										var textnode_id = DocumentCreateText("");
+										element_id.appendChild(textnode_id);
+										control_id.setTextNode(textnode_id);
 									}
 								}
 							}
@@ -18876,8 +18905,10 @@
 							StyleDeclarationSetProperty(style,"font-size","small");
 						}
 						if(count > 1){
+							StyleDeclarationSetProperty(style,"margin-left","2px");
 							StyleDeclarationSetProperty(style,"margin-right","5px");
 						}else{
+							StyleDeclarationRemoveProperty(style,"margin-left");
 							StyleDeclarationRemoveProperty(style,"margin-right");
 						}
 					};
@@ -19498,23 +19529,12 @@
 			if(!response.getAnalyzed()){
 
 				// IDの取得
-				if(info_text.match(new RegExp("ID:(|[ ])([a-zA-Z0-9+/.]+)","i"))){
-					response.setId(RegExp.$2);
-				}
+				var node = ElementGetElementsByClassName(post_intro,"poster_id")[0];
+				if(node) response.setId(ElementGetTextContent(node));					
 
 				// 名前の取得
-				(function(){
-					var nodes = ElementGetElementsByTagName(post_intro,"span");
-					var i;
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						var node = nodes[i];
-						if(node.className == "trip"){
-							response.setName(ElementGetTextContent(node));
-							break;
-						}
-					}
-				})();
+				var node = ElementGetElementsByClassName(post_intro,"trip")[0];
+				if(node) response.setName(ElementGetTextContent(node));					
 
 				// フォロー解析
 				var dictionary = new Object();
@@ -29723,12 +29743,21 @@
 		// HTML 文書の整合性テスト
 		// --------------------------------------------------------------------------------
 		function checkValidityFromHTML(str){
-			var m = str.match(new RegExp("<dt>.*?<dd>[ ].*?[ ]<br><br>","i"));
-			if(m){
-				m = m[0].match(new RegExp("[\r\n]"));
-				if(!m) return true;
+			switch(work.bbs_name){
+			case "shitaraba":
+				var m = str.match(new RegExp("<dt>","i"));
+				if(!m) return false;
+				var m = str.match(new RegExp("<dd>","i"));
+				if(!m) return false;
+				return true;
+			default:
+				var m = str.match(new RegExp("<dt>.*?<dd>[ ].*?[ ]<br><br>","i"));
+				if(m){
+					m = m[0].match(new RegExp("[\r\n]"));
+					if(!m) return true;
+				}
+				return false;
 			}
-			return false;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -29739,6 +29768,7 @@
 			var re_number;
 			var re_id = new RegExp("ID:([-a-zA-Z0-9+/.●!=]{8,})","i");
 			var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
+			var dd_end;
 			switch(work.bbs_name){
 			case "2ch":
 			case "2ch.sc":
@@ -29746,9 +29776,11 @@
 			case "machi":
 			case "machibbs":
 					re_number = new RegExp("([0-9]+)","i");
+					dd_end = "\n";
 				break;
 			case "shitaraba":
-					re_number = new RegExp("<a href=\".*?\">([0-9]+)</a> ：","i");
+					re_number = new RegExp("<a[^>]*>([0-9]+)</a>","i");
+					dd_end = "</dd>";
 				break;
 			}
 
@@ -29758,7 +29790,8 @@
 				if(p >= n) return;
 				p = str.indexOf("<dt>",p);
 				if(p < 0) return;
-				var e = str.indexOf("\n",p);
+				var e = str.indexOf(dd_end,p);
+				if(e < 0) return;
 				var s = str.substring(p,e);
 				var m = s.match(re_number);
 				if(m){
@@ -29768,7 +29801,16 @@
 					}else{
 						var nodes = StringHtmlCreateDomNodesSafe(s);
 						var dt = nodes[0];
-						var dd = nodes[1];
+						var dd = (function(){
+							var i=1;
+							while(true){
+								var node = nodes[i];
+								if(!node) break;
+								if(node.tagName == "DD") return node;
+								i++;
+							}
+							return null;
+						})();
 
 						try{
 							if(dt.tagName != "DT")	return;
@@ -29900,6 +29942,7 @@
 		// --------------------------------------------------------------------------------
 		function loadMoreFromHTML(str,callback){
 			var re_number;
+			var dd_end;
 			switch(work.bbs_name){
 			case "2ch":
 			case "2ch.sc":
@@ -29907,9 +29950,11 @@
 			case "machi":
 			case "machibbs":
 					re_number = new RegExp("([0-9]+)","i");
+					dd_end = "\n";
 				break;
 			case "shitaraba":
-					re_number = new RegExp("<a href=\".*?\">([0-9]+)</a> ：","i");
+					re_number = new RegExp("<a[^>]*>([0-9]+)</a>","i");
+					dd_end = "</dd>";
 				break;
 			}
 
@@ -29921,7 +29966,8 @@
 					if(p >= n) throw 0;
 					p = str.indexOf("<dt>",p);
 					if(p < 0) throw 0;
-					var e = str.indexOf("\n",p);
+					var e = str.indexOf(dd_end,p);
+					if(e < 0) throw 0;
 					var s = str.substring(p,e);
 					var m = s.match(re_number);
 					if(m){
@@ -30330,23 +30376,26 @@
 		var nodes = ElementGetElementsByTagName(element_parent,"dt");
 		var node_num = nodes.length;
 		if(node_num){
-			var re_id = new RegExp("^([0-9]+)","i");
-
-			if(ElementGetTextContent(nodes[0]).match(re_id)){
-				first_id = parseInt(RegExp.$1);
+			var re_id = new RegExp("^[ \t\r\n]*([0-9]+)","i");
+			var m;
+			m = ElementGetTextContent(nodes[0]).match(re_id);
+			if(m){
+				first_id = parseInt(m[1]);
 				dictionary_id[0] = true;
 			}
 
 			if((first_id == 1) && (node_num > 1)){
-				if(ElementGetTextContent(nodes[1]).match(re_id)){
-					first_id = parseInt(RegExp.$1);
+				m = ElementGetTextContent(nodes[1]).match(re_id);
+				if(m){
+					first_id = parseInt(m[1]);
 					dictionary_id[first_id] = true;
 					if(first_id <= 2) first_id = 1;
 				}
 			}
 
-			if(ElementGetTextContent(nodes[node_num-1]).match(re_id)){
-				last_id = parseInt(RegExp.$1);
+			m = ElementGetTextContent(nodes[node_num-1]).match(re_id);
+			if(m){
+				last_id = parseInt(m[1]);
 				dictionary_id[last_id] = true;
 			}
 		}
@@ -31522,7 +31571,15 @@
 				// BbsControlReply を生成
 				// --------------------------------------------------------------------------------
 				(function(){
-					var node = target.firstChild;
+					var node;
+					switch(work.bbs_name){
+					case "shitaraba":
+						node = DomNodeGetFirstElementChild(target);
+						break;
+					default:
+						node = target.firstChild;
+						break;
+					}
 					if(!node) return;
 
 					switch(node.nodeType){
@@ -31616,7 +31673,7 @@
 				return false;
 			}
 
-			dd = dt.nextSibling;
+			dd = DomNodeGetNextElementSibling(dt);
 			try{
 				if(dd.tagName != "DD")	return false;
 			}catch(e){
@@ -31751,7 +31808,7 @@
 
 			// ナンバーを取得
 			var dt_text = ElementGetTextContent(dt);
-			if(!(dt_text.match(new RegExp("^([0-9]+)[ ]","i"))))	return false;
+			if(!(dt_text.match(new RegExp("^[ \t\r\n]*([0-9]+)","i"))))	return false;
 
 			// ナンバーからレスポンスオブジェクトを取得
 			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
@@ -53218,41 +53275,34 @@
 		var n = 0;
 		var b = 0;
 
-		var increment = 1024;
-		var onprogress;
-		if(options){
-			if(options.increment){
-				increment = options.increment;
-			}
-			onprogress = options.onprogress;
-		}
+		if(typeof(options) != "object") options = {};
+		var increment = options.increment || 1024;
+		var onprogress = options.onprogress || null;
 
 		var i = 0;
 		var j = 0;
 		function f(){
-			var s = "";
 			while(i < num){
 				b = ary_u8[i];
-				s += dic[(b >> 2)];
+				base64.push(dic[(b >> 2)]);
 				n = (b & 0x03) << 4;
 				i ++;
 				if(i >= num) break;
 
 				b = ary_u8[i];
-				s += dic[n | (b >> 4)];
+				base64.push(dic[n | (b >> 4)]);
 				n = (b & 0x0f) << 2;
 				i ++;
 				if(i >= num) break;
 
 				b = ary_u8[i];
-				s += dic[n | (b >> 6)];
-				s += dic[(b & 0x3f)];
+				base64.push(dic[n | (b >> 6)]);
+				base64.push(dic[(b & 0x3f)]);
 				i ++;
 
 				j += 3;
 				if(j > increment){
 					j = 0;
-					base64.push(s);
 					if(onprogress){
 						onprogress({loaded:i,total:num});
 					}
@@ -53263,14 +53313,13 @@
 
 			var m = num % 3;
 			if(m){
-				s += dic[n];
+				base64.push(dic[n]);
 			}
 			if(m == 1){
-				s += "==";
+				base64.push("==");
 			}else if(m == 2){
-				s += "=";
+				base64.push("=");
 			}
-			base64.push(s);
 			callback(base64.join(""));
 		}
 
@@ -53280,7 +53329,7 @@
 	// --------------------------------------------------------------------------------
 	// x-user-defined 文字列から Base64 文字列に変換する (非同期実行)
 	// --------------------------------------------------------------------------------
-	function Base64_From_XUserDefined_Async(x_user_defined,callback,increment){
+	function Base64_From_XUserDefined_Async(x_user_defined,callback,options){
 		var dic = [
 			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
 			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
@@ -53292,36 +53341,37 @@
 		var n = 0;
 		var b = 0;
 
-		if(increment === undefined){
-			increment = 1024;
-		}
+		if(typeof(options) != "object") options = {};
+		var increment = options.increment || 1024;
+		var onprogress = options.onprogress || null;
 
 		var i = 0;
 		var j = 0;
 		function f(){
-			var s = "";
 			while(i < num){
 				b = x_user_defined.charCodeAt(i) & 0xff;
-				s += dic[(b >> 2)];
+				base64.push(dic[(b >> 2)]);
 				n = (b & 0x03) << 4;
 				i ++;
 				if(i >= num) break;
 
 				b = x_user_defined.charCodeAt(i) & 0xff;
-				s += dic[n | (b >> 4)];
+				base64.push(dic[n | (b >> 4)]);
 				n = (b & 0x0f) << 2;
 				i ++;
 				if(i >= num) break;
 
 				b = x_user_defined.charCodeAt(i) & 0xff;
-				s += dic[n | (b >> 6)];
-				s += dic[(b & 0x3f)];
+				base64.push(dic[n | (b >> 6)]);
+				base64.push(dic[(b & 0x3f)]);
 				i ++;
 
 				j += 3;
 				if(j > increment){
 					j = 0;
-					base64.push(s);
+					if(onprogress){
+						onprogress({loaded:i,total:num});
+					}
 					execute_queue.attachFirst(f,null);
 					return;
 				}
@@ -53329,15 +53379,96 @@
 
 			var m = num % 3;
 			if(m){
-				s += dic[n];
+				base64.push(dic[n]);
 			}
 			if(m == 1){
-				s += "==";
+				base64.push("==");
 			}else if(m == 2){
-				s += "=";
+				base64.push("=");
 			}
-			base64.push(s);
 			callback(base64.join(""));
+		}
+
+		execute_queue.attachFirst(f,null);
+	}
+
+	// --------------------------------------------------------------------------------
+	// Base64 文字列から ArrayBuffer に変換する関数 (非同期実行)
+	// --------------------------------------------------------------------------------
+	function Base64_To_ArrayBuffer_Async(base64,callback,options){
+		var dic = new Object();
+		dic[0x41]= 0; dic[0x42]= 1; dic[0x43]= 2; dic[0x44]= 3; dic[0x45]= 4; dic[0x46]= 5; dic[0x47]= 6; dic[0x48]= 7; dic[0x49]= 8; dic[0x4a]= 9; dic[0x4b]=10; dic[0x4c]=11; dic[0x4d]=12; dic[0x4e]=13; dic[0x4f]=14; dic[0x50]=15;
+		dic[0x51]=16; dic[0x52]=17; dic[0x53]=18; dic[0x54]=19; dic[0x55]=20; dic[0x56]=21; dic[0x57]=22; dic[0x58]=23; dic[0x59]=24; dic[0x5a]=25; dic[0x61]=26; dic[0x62]=27; dic[0x63]=28; dic[0x64]=29; dic[0x65]=30; dic[0x66]=31;
+		dic[0x67]=32; dic[0x68]=33; dic[0x69]=34; dic[0x6a]=35; dic[0x6b]=36; dic[0x6c]=37; dic[0x6d]=38; dic[0x6e]=39; dic[0x6f]=40; dic[0x70]=41; dic[0x71]=42; dic[0x72]=43; dic[0x73]=44; dic[0x74]=45; dic[0x75]=46; dic[0x76]=47;
+		dic[0x77]=48; dic[0x78]=49; dic[0x79]=50; dic[0x7a]=51; dic[0x30]=52; dic[0x31]=53; dic[0x32]=54; dic[0x33]=55; dic[0x34]=56; dic[0x35]=57; dic[0x36]=58; dic[0x37]=59; dic[0x38]=60; dic[0x39]=61; dic[0x2b]=62; dic[0x2f]=63;
+		var num = base64.length;
+		var n = 0;
+		var b = 0;
+		var e;
+
+		if(typeof(options) != "object") options = {};
+		var increment = options.increment || 1024;
+		var onprogress = options.onprogress || null;
+
+		e = Math.ceil(num / 4) * 3;
+		switch(num % 4){
+		case 0:
+			if(base64.charAt(num - 1) == '=') e -= 1;
+			if(base64.charAt(num - 2) == '=') e -= 1;
+			break;
+		case 2:
+			e -= 2;
+			break;
+		case 3:
+			e -= 1;
+			break;
+		case 1:
+			callback(null);
+			return;
+		}
+
+		var ary_buffer = new ArrayBuffer( e );
+		var ary_u8 = new Uint8Array( ary_buffer );
+		var i = 0;
+		var j = 0;
+		var p = 0;
+		function f(){
+			while(p < e){
+				b = dic[base64.charCodeAt(i)];
+				if(b === undefined){ callback(null); return; }
+				n = (b << 2);
+				i ++;
+
+				b = dic[base64.charCodeAt(i)];
+				if(b === undefined){ callback(null); return; }
+				ary_u8[p] = n | ((b >> 4) & 0x3);
+				n = (b & 0x0f) << 4;
+				i ++;
+				p ++;
+				if(p >= e) break;
+
+				b = dic[base64.charCodeAt(i)];
+				if(b === undefined){ callback(null); return; }
+				ary_u8[p] = n | ((b >> 2) & 0xf);
+				n = (b & 0x03) << 6;
+				i ++;
+				p ++;
+				if(p >= e) break;
+
+				b = dic[base64.charCodeAt(i)];
+				if(b === undefined){ callback(null); return; }
+				ary_u8[p] = n | b;
+				i ++;
+				p ++;
+
+				j += 4;
+				if(j > increment){
+					j = 0;
+					execute_queue.attachFirst(f,null);
+					return;
+				}
+			}
+			callback(ary_buffer);
 		}
 
 		execute_queue.attachFirst(f,null);
@@ -53461,37 +53592,52 @@
 	// --------------------------------------------------------------------------------
 	function String_To_ArrayBuffer_As_UTF8(str){
 		var i;
-		var c;
+		var p;
+		var num;
+		var list = new Array();
 		var size = 0;
-		var num = str.length;
-		for(i=0;i<num;i++){
-			c = str.charCodeAt(i);
-			if(c < 0x80){
+
+		p = 0;
+		num = str.length;
+		while(p < num){
+			var c0 = str.charCodeAt(p);
+			p += 1;
+			if((c0 & 0xFC00) == 0xD800){
+				var c1 = str.charCodeAt(p) || 0;
+				if((c1 & 0xFC00) == 0xDC00){
+					c0 = (((c0 - 0xD800) << 10) | ((c1 - 0xDC00) & 0x3FF)) + 0x10000;
+					p += 1;
+				}
+			}
+			if(c0 < 0x80){
 				size += 1;
-			}else if(c < 0x800){
+			}else if(c0 < 0x800){
 				size += 2;
-			}else if(c < 0x10000){
+			}else if(c0 < 0x10000){
 				size += 3;
-			}else if(c < 0x200000){
+			}else if(c0 < 0x200000){
 				size += 4;
-			}else if(c < 0x4000000){
+			}else if(c0 < 0x4000000){
 				size += 5;
 			}else{
 				size += 6;
 			}
+			list.push(c0);
 		}
 
-		var p = 0;
 		var a = new Uint8Array(size);
+		p = 0;
+		var i;
+		var num = list.length;
 		for(i=0;i<num;i++){
-			c = str.charCodeAt(i);
+			var c = list[i];
 			if(c < 0x80){
 				a[p] = (c & 0x7f) >>> 0;
 				p += 1;
 			}else if(c < 0x800){
-				a[p] = ((c & 0x000007c0) >>> 6) | 0xc0;
+				a[p] = ((c & 0x000007c0) >>>  6) | 0xc0;
 				p += 1;
-				a[p] = ((c & 0x0000003f) >>> 0) | 0x80;
+				a[p] = ((c & 0x0000003f) >>>  0) | 0x80;
 				p += 1;
 			}else if(c < 0x10000){
 				a[p] = ((c & 0x0000f000) >>> 12) | 0xe0;
@@ -53537,6 +53683,59 @@
 		}
 
 		return a.buffer;
+	}
+
+	// --------------------------------------------------------------------------------
+	// ArrayBuffer から文字列に変換（UTF-8）
+	// --------------------------------------------------------------------------------
+	function String_From_ArrayBuffer_As_UTF8(ary){
+		var str = new Array();
+		var a = new Uint8Array(ary);
+		var size = a.byteLength;
+		var p = 0;
+		var c;
+		while(p < size){
+			if((a[p+0] & 0xC0) == 0x80){
+				p += 1;
+			}else if((a[p+0] & 0x80) == 0x00){
+				c = (a[p+0] & 0x7f);
+				str.push(String.fromCharCode(c));
+				p += 1;
+			}else if((a[p+0] & 0xe0) == 0xc0){
+				c = (                          ((a[p+0] & 0x1c) >> 2)  <<  8) |
+                    ((((a[p+0] & 0x03) << 6) | ((a[p+1] & 0x3f) << 0)) <<  0);
+				str.push(String.fromCharCode(c));
+				p += 2;
+			}else if((a[p+0] & 0xF0) == 0xe0){
+				c = ((((a[p+0] & 0x0f) << 4) | ((a[p+1] & 0x3c) >> 2)) <<  8) |
+				    ((((a[p+1] & 0x03) << 6) | ((a[p+2] & 0x3f) << 0)) <<  0);
+				str.push(String.fromCharCode(c));
+				p += 3;
+			}else if((a[p+0] & 0xf8) == 0xf0){
+				c = ((((a[p+0] & 0x07) << 2) | ((a[p+1] & 0x30) >> 4)) << 16) |
+				    ((((a[p+1] & 0x0f) << 4) | ((a[p+2] & 0x3c) >> 2)) <<  8) |
+					((((a[p+2] & 0x03) << 6) | ((a[p+3] & 0x3f) << 0)) <<  0);
+				str.push(String.fromCharCode( ((c - 0x10000) >>> 10) + 0xD800 , ((c - 0x10000) & 0x3FF) + 0xDC00 ));
+				p += 4;
+			}else if((a[p+0] & 0xfc) == 0xf8){
+				c = (                          ((a[p+0] & 0x03) << 0)  << 24) |
+				    ((((a[p+1] & 0x3f) << 2) | ((a[p+2] & 0x30) >> 4)) << 16) |
+				    ((((a[p+2] & 0x0f) << 4) | ((a[p+3] & 0x3c) >> 2)) <<  8) |
+				    ((((a[p+3] & 0x03) << 6) | ((a[p+4] & 0x3f) << 0)) <<  0);
+				str.push(String.fromCodePoint(c));
+				p += 5;
+			}else if((a[p+0] & 0xfe) == 0xfc){
+				c = ((((a[p+0] & 0x01) << 6) | ((a[p+1] & 0x3f) << 0)) << 24) |
+				    ((((a[p+2] & 0x3f) << 2) | ((a[p+3] & 0x30) >> 4)) << 16) |
+				    ((((a[p+3] & 0x0f) << 4) | ((a[p+4] & 0x3c) >> 2)) <<  8) |
+				    ((((a[p+4] & 0x03) << 6) | ((a[p+5] & 0x3f) << 0)) <<  0);
+				str.push(String.fromCodePoint(c));
+				p += 6;
+			}else{
+				break;
+			}
+		}
+		return str.join("");
 	}
 
 	// --------------------------------------------------------------------------------

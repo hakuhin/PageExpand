@@ -588,36 +588,37 @@ function PageExpand(page_expand_arguments){
 			function requestXHR(param,sender,sendResponse){
 				var loader_queue_element = loader_queue.createElement();
 				loader_queue_element.onstart = function(){
-					var completed = false;
+					var request = param.request;
+					var xhr = XMLHttpRequestCreate();
+
+					xhr.onloadend = function(r){
+						xhr_complete();
+					};
+					xhr.onprogress = function(e){
+						sendResponse({type:"progress",data:{
+							loaded:(e.loaded || 0),
+							total:(e.total || 0),
+						}},{complete:false});
+					};
+					var xhr_complete = function(){
+						if(!loader_queue_element) return;
+						loader_queue_element.complete();
+						loader_queue_element.release();
+						loader_queue_element = null;
+
+						xhr.onloadend = null;
+						xhr.onprogress = null;
+
+						request.oncomplete(xhr,function(){
+							var response = new Object();
+							response.readyState = 4;
+							response.status = xhr.status;
+							response.responseHeaders = xhr.getAllResponseHeaders() || "";
+							sendResponse({type:"xhr",data:response},{complete:true});
+						});
+					};
+
 					try{
-						var request = param.request;
-						var xhr = XMLHttpRequestCreate();
-
-						// ステート変更時に実行されるイベント
-						xhr.onreadystatechange = function(r){
-							if(xhr.readyState != 4) return;
-							if(completed) return;
-							completed = true;
-
-							loader_queue_element.complete();
-							loader_queue_element.release();
-
-							request.oncomplete(xhr,function(){
-								var response = new Object();
-								response.readyState = xhr.readyState;
-								response.status = xhr.status;
-								response.responseHeaders = xhr.getAllResponseHeaders() || "";
-								sendResponse({type:"xhr",data:response},{complete:true});
-							});
-						};
-						xhr.onprogress = function(e){
-							sendResponse({type:"progress",data:{
-								loaded:(e.loaded || 0),
-								total:(e.total || 0),
-							}},{complete:false});
-						};
-
-						// 読み込み開始
 						xhr.open(request.method,request.url,true);
 						var headers = request.headers;
 						for(var name in headers){
@@ -634,18 +635,7 @@ function PageExpand(page_expand_arguments){
 						}
 						xhr.send(request.data);
 					}catch(e){
-						if(completed) return;
-						completed = true;
-
-						loader_queue_element.complete();
-						loader_queue_element.release();
-
-						var response = new Object();
-						response.readyState = 4;
-						response.status = 0;
-						response.response = null;
-						response.responseHeaders = {};
-						sendResponse({type:"xhr",data:response},{complete:true});
+						xhr_complete();
 					}
 				};
 				if(param.single){

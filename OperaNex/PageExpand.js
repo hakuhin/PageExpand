@@ -11227,6 +11227,26 @@ function PageExpand(page_expand_arguments){
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.38
+		// --------------------------------------------------------------------------------
+		if(proj.version < 38){
+			// バージョン値
+			proj.version = 38;
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			// 画像検索サイト
+			var preset = getPreset(proj.urlmap,"image_search");
+			var filter = preset.filter.regexp.filter;
+			filter[4] = {
+				pattern:"^[^:]+://image\\.search\\.yahoo\\.co\\.jp/search.*",
+				flags:{i:true,g:false}
+			};
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
@@ -14183,7 +14203,7 @@ function PageExpand(page_expand_arguments){
 			// クエリを取得
 			var query = StringGetQuery(url);
 			if(query.imgurl){
-				response({result:true,url:unescape(unescape(query.imgurl)),content_type:["image"]});
+				response({result:true,url:decodeURIComponent(decodeURIComponent(query.imgurl)),content_type:["image"]});
 				return true;
 			}
 		}
@@ -14229,17 +14249,23 @@ function PageExpand(page_expand_arguments){
 			// ハイパーリンク置換定義「イメージ検索用」「Yahoo! JAPAN 画像検索」
 			// --------------------------------------------------------------------------------
 			attachItem( "ReplacementToLink_DirectLinkImageSearch_YahooJapan" , [
-	
-	function(info,response){
+
+	function (info,response){
 		var anchor_element = info.anchor_element;
 
-		var url = anchor_element.href;
-		var r = new RegExp("^(http|https)://ord\\.yahoo\\.co\\.jp/o/image/.*/[*][-](.*)$","i");
-		if(url.match(r)){
-			response({result:true,url:decodeURIComponent(RegExp.$2),content_type:["image"]});
+		var url = decodeURIComponent(anchor_element.href);
+		var m = url.match(new RegExp("^.*RU=([0-9a-zA-Z._]+)"));
+		if(m){
+			var base64 = m[1];
+			base64 = base64.replace(/[.]/g,"+");
+			base64 = base64.replace(/[_]/g,"/");
+			base64 = base64.replace(/[-]/g,"=");
+			Base64_To_ArrayBuffer_Async(base64,function(ary){
+				if(!ary) return;
+				response({result:true,url:String_From_ArrayBuffer_As_UTF8(ary),content_type:["image"]});
+			});
 			return true;
 		}
-
 		return false;
 	},
 	function(info,response){
@@ -19514,10 +19540,13 @@ function PageExpand(page_expand_arguments){
 									var m = ElementGetTextContent(node).match(new RegExp("^([a-zA-Z0-9+/.]{6,8})$","i"));
 									if(m){
 										// BbsControlId を生成
-										var control_id = new BbsControlId(node,false);
+										var control_id = new BbsControlId(null,true);
 										control_id.setId(m[1]);
 										var element_id = control_id.getElement();
 										DomNode_InsertAfter(node,element_id);
+										var textnode_id = DocumentCreateText("");
+										element_id.appendChild(textnode_id);
+										control_id.setTextNode(textnode_id);
 									}
 								}
 							}
@@ -19585,8 +19614,10 @@ function PageExpand(page_expand_arguments){
 							StyleDeclarationSetProperty(style,"font-size","small");
 						}
 						if(count > 1){
+							StyleDeclarationSetProperty(style,"margin-left","2px");
 							StyleDeclarationSetProperty(style,"margin-right","5px");
 						}else{
+							StyleDeclarationRemoveProperty(style,"margin-left");
 							StyleDeclarationRemoveProperty(style,"margin-right");
 						}
 					};
@@ -20207,23 +20238,12 @@ function PageExpand(page_expand_arguments){
 			if(!response.getAnalyzed()){
 
 				// IDの取得
-				if(info_text.match(new RegExp("ID:(|[ ])([a-zA-Z0-9+/.]+)","i"))){
-					response.setId(RegExp.$2);
-				}
+				var node = ElementGetElementsByClassName(post_intro,"poster_id")[0];
+				if(node) response.setId(ElementGetTextContent(node));					
 
 				// 名前の取得
-				(function(){
-					var nodes = ElementGetElementsByTagName(post_intro,"span");
-					var i;
-					var num = nodes.length;
-					for(i=0;i<num;i++){
-						var node = nodes[i];
-						if(node.className == "trip"){
-							response.setName(ElementGetTextContent(node));
-							break;
-						}
-					}
-				})();
+				var node = ElementGetElementsByClassName(post_intro,"trip")[0];
+				if(node) response.setName(ElementGetTextContent(node));					
 
 				// フォロー解析
 				var dictionary = new Object();
@@ -30432,12 +30452,21 @@ function PageExpand(page_expand_arguments){
 		// HTML 文書の整合性テスト
 		// --------------------------------------------------------------------------------
 		function checkValidityFromHTML(str){
-			var m = str.match(new RegExp("<dt>.*?<dd>[ ].*?[ ]<br><br>","i"));
-			if(m){
-				m = m[0].match(new RegExp("[\r\n]"));
-				if(!m) return true;
+			switch(work.bbs_name){
+			case "shitaraba":
+				var m = str.match(new RegExp("<dt>","i"));
+				if(!m) return false;
+				var m = str.match(new RegExp("<dd>","i"));
+				if(!m) return false;
+				return true;
+			default:
+				var m = str.match(new RegExp("<dt>.*?<dd>[ ].*?[ ]<br><br>","i"));
+				if(m){
+					m = m[0].match(new RegExp("[\r\n]"));
+					if(!m) return true;
+				}
+				return false;
 			}
-			return false;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -30448,6 +30477,7 @@ function PageExpand(page_expand_arguments){
 			var re_number;
 			var re_id = new RegExp("ID:([-a-zA-Z0-9+/.●!=]{8,})","i");
 			var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
+			var dd_end;
 			switch(work.bbs_name){
 			case "2ch":
 			case "2ch.sc":
@@ -30455,9 +30485,11 @@ function PageExpand(page_expand_arguments){
 			case "machi":
 			case "machibbs":
 					re_number = new RegExp("([0-9]+)","i");
+					dd_end = "\n";
 				break;
 			case "shitaraba":
-					re_number = new RegExp("<a href=\".*?\">([0-9]+)</a> ：","i");
+					re_number = new RegExp("<a[^>]*>([0-9]+)</a>","i");
+					dd_end = "</dd>";
 				break;
 			}
 
@@ -30467,7 +30499,8 @@ function PageExpand(page_expand_arguments){
 				if(p >= n) return;
 				p = str.indexOf("<dt>",p);
 				if(p < 0) return;
-				var e = str.indexOf("\n",p);
+				var e = str.indexOf(dd_end,p);
+				if(e < 0) return;
 				var s = str.substring(p,e);
 				var m = s.match(re_number);
 				if(m){
@@ -30477,7 +30510,16 @@ function PageExpand(page_expand_arguments){
 					}else{
 						var nodes = StringHtmlCreateDomNodesSafe(s);
 						var dt = nodes[0];
-						var dd = nodes[1];
+						var dd = (function(){
+							var i=1;
+							while(true){
+								var node = nodes[i];
+								if(!node) break;
+								if(node.tagName == "DD") return node;
+								i++;
+							}
+							return null;
+						})();
 
 						try{
 							if(dt.tagName != "DT")	return;
@@ -30609,6 +30651,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function loadMoreFromHTML(str,callback){
 			var re_number;
+			var dd_end;
 			switch(work.bbs_name){
 			case "2ch":
 			case "2ch.sc":
@@ -30616,9 +30659,11 @@ function PageExpand(page_expand_arguments){
 			case "machi":
 			case "machibbs":
 					re_number = new RegExp("([0-9]+)","i");
+					dd_end = "\n";
 				break;
 			case "shitaraba":
-					re_number = new RegExp("<a href=\".*?\">([0-9]+)</a> ：","i");
+					re_number = new RegExp("<a[^>]*>([0-9]+)</a>","i");
+					dd_end = "</dd>";
 				break;
 			}
 
@@ -30630,7 +30675,8 @@ function PageExpand(page_expand_arguments){
 					if(p >= n) throw 0;
 					p = str.indexOf("<dt>",p);
 					if(p < 0) throw 0;
-					var e = str.indexOf("\n",p);
+					var e = str.indexOf(dd_end,p);
+					if(e < 0) throw 0;
 					var s = str.substring(p,e);
 					var m = s.match(re_number);
 					if(m){
@@ -31039,23 +31085,26 @@ function PageExpand(page_expand_arguments){
 		var nodes = ElementGetElementsByTagName(element_parent,"dt");
 		var node_num = nodes.length;
 		if(node_num){
-			var re_id = new RegExp("^([0-9]+)","i");
-
-			if(ElementGetTextContent(nodes[0]).match(re_id)){
-				first_id = parseInt(RegExp.$1);
+			var re_id = new RegExp("^[ \t\r\n]*([0-9]+)","i");
+			var m;
+			m = ElementGetTextContent(nodes[0]).match(re_id);
+			if(m){
+				first_id = parseInt(m[1]);
 				dictionary_id[0] = true;
 			}
 
 			if((first_id == 1) && (node_num > 1)){
-				if(ElementGetTextContent(nodes[1]).match(re_id)){
-					first_id = parseInt(RegExp.$1);
+				m = ElementGetTextContent(nodes[1]).match(re_id);
+				if(m){
+					first_id = parseInt(m[1]);
 					dictionary_id[first_id] = true;
 					if(first_id <= 2) first_id = 1;
 				}
 			}
 
-			if(ElementGetTextContent(nodes[node_num-1]).match(re_id)){
-				last_id = parseInt(RegExp.$1);
+			m = ElementGetTextContent(nodes[node_num-1]).match(re_id);
+			if(m){
+				last_id = parseInt(m[1]);
 				dictionary_id[last_id] = true;
 			}
 		}
@@ -32231,7 +32280,15 @@ function PageExpand(page_expand_arguments){
 				// BbsControlReply を生成
 				// --------------------------------------------------------------------------------
 				(function(){
-					var node = target.firstChild;
+					var node;
+					switch(work.bbs_name){
+					case "shitaraba":
+						node = DomNodeGetFirstElementChild(target);
+						break;
+					default:
+						node = target.firstChild;
+						break;
+					}
 					if(!node) return;
 
 					switch(node.nodeType){
@@ -32325,7 +32382,7 @@ function PageExpand(page_expand_arguments){
 				return false;
 			}
 
-			dd = dt.nextSibling;
+			dd = DomNodeGetNextElementSibling(dt);
 			try{
 				if(dd.tagName != "DD")	return false;
 			}catch(e){
@@ -32460,7 +32517,7 @@ function PageExpand(page_expand_arguments){
 
 			// ナンバーを取得
 			var dt_text = ElementGetTextContent(dt);
-			if(!(dt_text.match(new RegExp("^([0-9]+)[ ]","i"))))	return false;
+			if(!(dt_text.match(new RegExp("^[ \t\r\n]*([0-9]+)","i"))))	return false;
 
 			// ナンバーからレスポンスオブジェクトを取得
 			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
@@ -33373,27 +33430,13 @@ function PageExpand(page_expand_arguments){
 
 					var xhr = XMLHttpRequestCreate();
 
-					// ステート変更時に実行されるイベント
-					xhr.onreadystatechange = function(r){
-						if(xhr.readyState >= 2){
-							if(xhr_queue_element){
-								xhr_queue_element.release();
-								xhr_queue_element = null;
-							}
-							xhr.onreadystatechange = null;
-						}
+					xhr.onreadystatechange = function(){
+						if(xhr.readyState < 2) return;
+						xhr.onreadystatechange = null;
+						xhr_response_header();
 					};
 					xhr.onloadend = function(r){
-						loader_queue_element.complete();
-						loader_queue_element.release();
-
-						request.oncomplete(xhr,function(){
-							var response = new Object();
-							response.readyState = xhr.readyState;
-							response.status = xhr.status;
-							response.responseHeaders = xhr.getAllResponseHeaders() || "";
-							sendResponse({type:"xhr",data:response},{complete:true});
-						});
+						xhr_complete();
 					};
 					xhr.onprogress = function(e){
 						sendResponse({type:"progress",data:{
@@ -33401,23 +33444,51 @@ function PageExpand(page_expand_arguments){
 							total:(e.total || 0),
 						}},{complete:false});
 					};
+					var xhr_response_header = function(){
+						if(!xhr_queue_element) return;
+						xhr_queue_element.release();
+						xhr_queue_element = null;
+					};					
+					var xhr_complete = function(){
+						xhr_response_header();
 
-					// 読み込み開始
-					xhr.open(request.method,request.url,true);
-					var headers = request.headers;
-					for(var name in headers){
-						xhr.setRequestHeader(name,headers[name]);
+						if(!loader_queue_element) return;
+						loader_queue_element.complete();
+						loader_queue_element.release();
+						loader_queue_element = null;
+
+						xhr.onreadystatechange = null;
+						xhr.onloadend = null;
+						xhr.onprogress = null;
+
+						request.oncomplete(xhr,function(){
+							var response = new Object();
+							response.readyState = 4;
+							response.status = xhr.status;
+							response.responseHeaders = xhr.getAllResponseHeaders() || "";
+							sendResponse({type:"xhr",data:response},{complete:true});
+						});
+					};
+
+					try{
+						xhr.open(request.method,request.url,true);
+						var headers = request.headers;
+						for(var name in headers){
+							xhr.setRequestHeader(name,headers[name]);
+						}
+						if(xhr.overrideMimeType && request.override_mime_type){
+							xhr.overrideMimeType(request.override_mime_type);
+						}
+						if(request.timeout){
+							xhr.timeout = request.timeout;
+						}
+						if(request.responseType){
+							xhr.responseType = request.responseType;
+						}
+						xhr.send(request.data);
+					}catch(e){
+						xhr_complete();
 					}
-					if(xhr.overrideMimeType && request.override_mime_type){
-						xhr.overrideMimeType(request.override_mime_type);
-					}
-					if(request.timeout){
-						xhr.timeout = request.timeout;
-					}
-					if(request.responseType){
-						xhr.responseType = request.responseType;
-					}
-					xhr.send(request.data);
 				};
 				if(param.single){
 					loader_queue_element.attachSingle();
@@ -39158,7 +39229,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.8");
+				new UI_Text(parent,"PageExpand ver.1.5.9");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -46729,6 +46800,179 @@ function PageExpand(page_expand_arguments){
 				_ui_catalog.sort("number",false);
 				break;
 
+			case "2ch.hk":
+				_category_title.nodeValue = _current_site;
+				disableCategoryContainer(false);
+				openSplitterLeft(true);
+
+				var convert_list = new Object();
+				convert_list["ppd"] = function(value){
+					value = Math.floor(value * 100) / 100;
+					return value.toFixed(2);
+				};
+				convert_list["date_new"] = UNIXTIME_ToString_JP;
+
+				_ui_catalog.onUpdateItem = function (info){
+					var parent = info.parent;
+					var data = info.data;
+
+					var get_title = function(size){
+						if(data.title.length > size){
+							return data.title.substr(0,size) + "...";
+						}
+						return data.title;
+					};
+					var get_date = function(){
+						return convert_list["date_new"](data.date_new);
+					};
+					var get_ppd = function(){
+						return convert_list["ppd"](data.ppd);
+					};
+
+					switch(info.layout_mode){
+					case "list":
+						var container = DocumentCreateElement("div");
+						ElementSetStyle(container,"position:relative; margin:2px; margin-left:4px; margin-right:4px; min-height:60px;");
+						parent.appendChild(container);
+
+						var img_block = DocumentCreateElement("div");
+						ElementSetStyle(img_block,"position:absolute; width:60px; height:60px; text-align:right;");
+						container.appendChild(img_block);
+
+						var image = data.image;
+						if(image){
+							ElementSetStyle(image,"max-width:100%; max-height:60px;");
+							img_block.appendChild(image);
+						}
+
+						var text_container = DocumentCreateElement("div");
+						ElementSetStyle(text_container,"margin-left:65px;");
+						container.appendChild(text_container);
+
+						var text_block0 = DocumentCreateElement("div");
+						ElementSetStyle(text_block0,"");
+						text_container.appendChild(text_block0);
+						var inline_text0 = DocumentCreateElement("span");
+						ElementSetStyle(inline_text0,"word-break: break-all;");
+						text_block0.appendChild(inline_text0);
+						var text_node0 = document.createTextNode("");
+						inline_text0.appendChild(text_node0);
+
+						var text_block1 = DocumentCreateElement("div");
+						ElementSetStyle(text_block1,"margin-top:2px;");
+						text_container.appendChild(text_block1);
+						var inline_text1 = DocumentCreateElement("span");
+						ElementSetStyle(inline_text1,"color:#888;");
+						text_block1.appendChild(inline_text1);
+						var text_node1 = document.createTextNode("");
+						inline_text1.appendChild(text_node1);
+
+						info.onupdate = function(){
+							text_node0.nodeValue = data.number + ":" + data.title;
+							text_node1.nodeValue = "R:" + data.replies + " I:" + data.images + " [" + get_ppd() + "/d] [" + get_date() + "]";
+						};
+						break;
+
+					case "small_icon":
+						var inline_text = DocumentCreateElement("span");
+						ElementSetStyle(inline_text,"text-decoration:underline; word-break:break-all;");
+						parent.appendChild(inline_text);
+						var text_node = document.createTextNode("");
+						inline_text.appendChild(text_node);
+
+						info.onupdate = function(){
+							text_node.nodeValue = data.number + ":" + get_title(100) + " (" + data.replies + ")";
+						};
+						break;
+
+					case "large_icon":
+						var img_block = DocumentCreateElement("div");
+						ElementSetStyle(img_block,"margin:4px; margin-bottom:0px; text-align:center;");
+						parent.appendChild(img_block);
+
+						var image = data.image;
+						if(image){
+							ElementSetStyle(image,"max-width:100%; max-height:140px;");
+							img_block.appendChild(image);
+						}
+
+						var text_block = DocumentCreateElement("div");
+						ElementSetStyle(text_block,"margin:4px; margin-top:2px;");
+						parent.appendChild(text_block);
+						var inline_text = DocumentCreateElement("span");
+						ElementSetStyle(inline_text,"word-break:break-all;");
+						text_block.appendChild(inline_text);
+						var text_node = document.createTextNode("");
+						inline_text.appendChild(text_node);
+
+						info.onupdate = function(){
+							text_node.nodeValue = data.number + ":" + get_title(50) + " (" + data.replies + ")";
+						};
+						break;
+					}
+				};
+
+				_ui_catalog.onUpdateCell = function (info){
+					var callback = convert_list[info.key];
+					var parent = info.parent;
+					var data = info.data;
+					var text_node = document.createTextNode("");
+					parent.appendChild(text_node);
+
+					info.onupdate = function(){
+						if(callback){
+							text_node.nodeValue = callback(data[info.key]);
+						}else{
+							text_node.nodeValue = data[info.key];
+						}
+					}
+				};
+
+				var column;
+				column = _ui_catalog.createColumn("number");
+				column.setLabel("No");
+				column.setWidthMin(50);
+				column.setWidthMax(50);
+				column.setTextAlign("center");
+
+				column = _ui_catalog.createColumn("title");
+				column.setLabel("Title");
+				column.setWidthMin(300);
+
+				column = _ui_catalog.createColumn("replies");
+				column.setLabel("Replies");
+				column.setWidthMin(50);
+				column.setWidthMax(70);
+				column.setTextAlign("right");
+
+				column = _ui_catalog.createColumn("images");
+				column.setLabel("Images");
+				column.setWidthMin(50);
+				column.setWidthMax(70);
+				column.setTextAlign("right");
+
+				column = _ui_catalog.createColumn("ppd");
+				column.setLabel("P/d");
+				column.setWidthMin(70);
+				column.setWidthMax(70);
+				column.setTextAlign("right");
+
+				column = _ui_catalog.createColumn("id");
+				column.setLabel("id");
+				column.setWidthMin(100);
+				column.setWidthMax(100);
+				column.setTextAlign("center");
+
+				column = _ui_catalog.createColumn("date_new");
+				column.setLabel("Since");
+				column.setWidthMin(150);
+				column.setWidthMax(150);
+				column.setTextAlign("center");
+
+				_ui_catalog.setBlockSize(140,140 * (4/3));
+				_ui_catalog.sort("number",false);
+				break;
+
 			case "reddit":
 				_category_title.nodeValue = "reddit";
 				disableCategoryContainer(true);
@@ -47185,6 +47429,8 @@ function PageExpand(page_expand_arguments){
 		// カテゴリリロードを更新
 		// --------------------------------------------------------------------------------
 		function updateCategoryReload(callback){
+			_category_modify_count += 1;
+			var modify = _category_modify_count;
 
 			var complete = function(response){
 				_button_category_reload.setDisabled(false);
@@ -47192,6 +47438,12 @@ function PageExpand(page_expand_arguments){
 				if(callback){
 					callback(response);
 				}
+			};
+			
+			var exit = function(){
+				if(modify == _category_modify_count) return false;
+				complete({result:false});
+				return true;
 			};
 
 			_ui_category.clear();
@@ -47206,6 +47458,8 @@ function PageExpand(page_expand_arguments){
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
+					
 					var re_folder = new RegExp("^<br><B>(.*)</B><br>","i");
 					var re_item = new RegExp("<A HREF=(.*)>(.*)</A>","gi");
 					var re_start = new RegExp("<br><b>","gi");
@@ -47214,6 +47468,8 @@ function PageExpand(page_expand_arguments){
 					var p = 0;
 					var n = str.length;
 					function f(){
+						if(exit()) return;
+
 						try{
 							if(p >= n) throw 0;
 
@@ -47238,6 +47494,7 @@ function PageExpand(page_expand_arguments){
 								s.replace(re_item,function(m,p1,p2,index,str){
 									var item = folder.createItem(p1);
 									item.setLabel(p2);
+									item.setTooltip(p1);
 									item.setURL(p1);
 								});
 							}
@@ -47258,6 +47515,7 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
@@ -47269,41 +47527,87 @@ function PageExpand(page_expand_arguments){
 				break;
 
 			case "2chan":
+				var loader_url = "https://www.2chan.net/bbsmenu.html";
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
+
 					var re_folder = new RegExp("^<b>(.*)</b><br>","i");
 					var re_item = new RegExp('<a href="([^"]*)"[^>]*>([^<]*)',"gi");
+					var re_sub = new RegExp('://([^.]+)',"i");
+
+					var board_list = new Array();
+					var board_dictionary = new Object();
 
 					var p = 0;
 					var n = str.length;
-					function f(){
-						try{
-							if(p >= n) throw 0;
+					try{
+						while(p < n){
 							p = str.indexOf("<b>",p);
-							if(p < 0) throw 0;
+							if(p < 0) break;
 							var e = str.indexOf("<b>",p+3);
 							if(e < 0) e = n;
 							var s = str.substring(p,e);
 							var m = s.match(re_folder);
 							if(m){
-								var folder = _ui_category.createFolder(m[1]);
-								folder.setLabel(m[1]);
-
+								var category = {
+									label:m[1]
+								};
 								s.replace(re_item,function(m,p1,p2,index,str){
-									var m = p1.match(new RegExp("^(http|https)://(.*)","i"));
-									if(m) p1 = "https://" + m[2];
-									var item = folder.createItem(p1);
-									item.setLabel(p2);
-									item.setURL(p1);
+									var board = {
+										category:category,
+										url:StringUrl_To_Absolute(p1,loader_url),
+										label:p2
+									};
+									board.prev = board;
+									board.next = board;
+									var m = board.url.match(re_sub);
+									board.sub = (m) ? m[1] : "";
+									var list = board_dictionary[board.label];
+									if(list){
+										var prev = list;
+										var next = list.next;
+										prev.next = board;
+										next.prev = board;
+										board.prev = prev;
+										board.next = next;
+									}else{
+										list = board_dictionary[board.label] = board;
+									}
+									board_list.push(board);
 								});
 							}
+							p = e;
+						}
+					}catch(e){
+					}
 
-							if(p < e){
-								p = e;
-								execute_queue.attachFirst(f,null);
-								return;
+					var p = 0;
+					function f(){
+						if(exit()) return;
+
+						try{
+							var board = board_list[p];
+							if(!board) throw 0;
+							p++;
+
+							var category = board.category;
+							var folder = _ui_category.getFolder(category.label);
+							if(!folder){
+								folder = _ui_category.createFolder(category.label);
+								folder.setLabel(category.label);
 							}
+							var label = board.label;
+							if(board.prev != board){
+								label += "(" + board.sub + ")";
+							}
+							var item = folder.createItem(board.url);
+							item.setLabel(label);
+							item.setTooltip(board.url);
+							item.setURL(board.url);	
+							execute_queue.attachFirst(f,null);
+							return;
 						}catch(e){
 						}
 
@@ -47315,12 +47619,13 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
 				// テキストの読み込み
 				loader.setMethod("GET");
-				loader.setURL("https://www.2chan.net/bbsmenu.html");
+				loader.setURL(loader_url);
 				loader.overrideMimeType("text/plain; charset=Shift_JIS");
 				loader.loadText();
 				break;
@@ -47329,22 +47634,37 @@ function PageExpand(page_expand_arguments){
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
+
 					var boards = JsonParse(str).boards;
 
-					var folder = _ui_category.createFolder("4chan");
-					folder.setLabel("4chan");
+					var folder0 = _ui_category.createFolder("boards");
+					folder0.setLabel("Boards");
+
+					var folder1 = _ui_category.createFolder("folders");
+					folder1.setLabel("Folders");
 
 					var p = 0;
 					var n = boards.length;
 					function f(){
+						if(exit()) return;
+
 						try{
 							if(p >= n) throw 0;
 							var board = boards[p];
 							p += 1;
 
-							var item = folder.createItem(board.board);
+							var url = "https://boards.4chan.org/" + (board.board) + "/";
+
+							var item = folder0.createItem(board.board);
 							item.setLabel(board.title);
-							item.setURL("https://boards.4chan.org/" + (board.board) + "/");
+							item.setTooltip(board.board);
+							item.setURL(url);
+
+							var item = folder1.createItem("#" + board.board);
+							item.setLabel(board.board);
+							item.setTooltip(board.title);
+							item.setURL(url);
 
 							execute_queue.attachFirst(f,null);
 						}catch(e){
@@ -47358,6 +47678,7 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
@@ -47371,6 +47692,8 @@ function PageExpand(page_expand_arguments){
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
+
 					var boards = JsonParse(str);
 
 					var folder = _ui_category.createFolder("8chan");
@@ -47380,6 +47703,8 @@ function PageExpand(page_expand_arguments){
 					var n = boards.length;
 					if(n > 2000) n = 2000;
 					function f(){
+						if(exit()) return;
+
 						try{
 							if(p >= n) throw 0;
 							var board = boards[p];
@@ -47387,6 +47712,7 @@ function PageExpand(page_expand_arguments){
 
 							var item = folder.createItem(board.title);
 							item.setLabel(board.uri);
+							item.setTooltip(board.title);
 							item.setURL("https://8ch.net/" + (board.uri) + "/");
 
 							execute_queue.attachFirst(f,null);
@@ -47401,12 +47727,85 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
 				// テキストの読み込み
 				loader.setMethod("GET");
 				loader.setURL("https://8ch.net/boards.json");
+				loader.loadText();
+				break;
+
+			case "2ch.hk":
+
+				// 成功
+				loader.onload = function(str){
+					if(exit()) return;
+
+					var boards = JsonParse(str).boards;
+
+					var board_list = new Array();
+					var folder_dictionary = new Array();
+					var p = 0;
+					var n = boards.length;
+					for(p=0;p<n;p++){
+						var board = boards[p];
+						var folder = folder_dictionary[board.category];
+						if(!folder){
+							folder = folder_dictionary[board.category] = _ui_category.createFolder(board.category);
+							folder.setLabel(board.category);
+						}
+						var item = {
+							folder:folder,
+							label:board.name,
+							id:board.id,
+							url:"https://2ch.hk/" + (board.id) + "/"
+						};
+						board_list.push(item);
+					}
+					var folder_id = _ui_category.createFolder("folders");
+					folder_id.setLabel("Folders");
+
+
+					var p = 0;
+					function f(){
+						if(exit()) return;
+
+						try{
+							var board = board_list[p];
+							if(!board) throw 0;
+							p += 1;
+
+							var item = board.folder.createItem(board.id);
+							item.setLabel(board.label);
+							item.setTooltip(board.id);
+							item.setURL(board.url);
+
+							var item = folder_id.createItem("#" + board.id);
+							item.setLabel(board.id);
+							item.setTooltip(board.label);
+							item.setURL(board.url);
+
+							execute_queue.attachFirst(f,null);
+						}catch(e){
+						}
+
+						complete({result:true});
+					}
+
+					execute_queue.attachLast(f,null);
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					if(exit()) return;
+					complete({result:false});
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL("https://2ch.hk/boards.json");
 				loader.loadText();
 				break;
 
@@ -47459,6 +47858,8 @@ function PageExpand(page_expand_arguments){
 		// カタログリロードを更新
 		// --------------------------------------------------------------------------------
 		function updateCatalogReload(callback){
+			_catalog_modify_count += 1;
+			var modify = _catalog_modify_count;
 
 			var complete = function(response){
 				_button_catalog_reload.setDisabled(false);
@@ -47466,6 +47867,12 @@ function PageExpand(page_expand_arguments){
 				if(callback){
 					callback(response);
 				}
+			};
+
+			var exit = function(){
+				if(modify == _catalog_modify_count) return false;
+				complete({result:false});
+				return true;
 			};
 
 			_button_catalog_reload.setDisabled(true);
@@ -47525,6 +47932,8 @@ function PageExpand(page_expand_arguments){
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
+					
 					var re = new RegExp("([0-9]+)[.](dat<>[ ]*|cgi,)(.*)[(]([0-9]+)[)]","i");
 
 					var item_list = _ui_catalog.getItemList();
@@ -47549,6 +47958,7 @@ function PageExpand(page_expand_arguments){
 					var n = str.length;
 					var index = 1;
 					function f(){
+						if(exit()) return;
 						try{
 							if(p >= n) throw 0;
 							var e = str.indexOf("\n",p+1);
@@ -47596,6 +48006,7 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
@@ -47629,9 +48040,11 @@ function PageExpand(page_expand_arguments){
 
 				// ローダーオブジェクトを作成
 				var loader = new Loader();
+				var loader_url = "https://" + domain + "/" + directory + "/futaba.php?mode=cat&cxyl=1x2000x2000x0x6";
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
 					var re_href = new RegExp("<a href='res/([0-9]+)[.]htm","i");
 					var re_image = new RegExp("<img src='(.*)/(cat|thumb)/([^']*)","i");
 					var re_title = new RegExp("<small>([^<]*)</small>","i");
@@ -47660,6 +48073,7 @@ function PageExpand(page_expand_arguments){
 					var n = str.length;
 					var index = 1;
 					function f(){
+						if(exit()) return;
 						try{
 							if(p >= n) throw 0;
 							p = str.indexOf("<tr><td>",p);
@@ -47687,11 +48101,9 @@ function PageExpand(page_expand_arguments){
 								}
 								m = s.match(re_image);
 								if(m){
-									var image_url = m[1] + "/thumb/" + m[3];
-									if(image_url.match(new RegExp("^/","i"))) image_url = "https://" + domain + image_url;
-									data.image_url = image_url;
+									data.image_url = StringUrl_To_Absolute(m[1] + "/thumb/" + m[3],loader_url);
 									var image = new Image();
-									image.src = image_url;
+									image.src = data.image_url;
 									data.image = image;
 								}
 								data.ppd = (function(){
@@ -47723,12 +48135,13 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
 				// テキストの読み込み
 				loader.setMethod("GET");
-				loader.setURL("https://" + domain + "/" + directory + "/futaba.php?mode=cat&cxyl=1x2000x2000x0x6");
+				loader.setURL(loader_url);
 				loader.overrideMimeType("text/plain; charset=Shift_JIS");
 				loader.loadText();
 				break;
@@ -47755,6 +48168,7 @@ function PageExpand(page_expand_arguments){
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
 					var item_list = _ui_catalog.getItemList();
 					var i;
 					var num = item_list.length;
@@ -47831,6 +48245,7 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
@@ -47862,6 +48277,7 @@ function PageExpand(page_expand_arguments){
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
 					var item_list = _ui_catalog.getItemList();
 					var i;
 					var num = item_list.length;
@@ -47910,11 +48326,13 @@ function PageExpand(page_expand_arguments){
 								data.date_new = thread.time;
 								data.image_url = (function(){
 									var thumb = (function(){
-										if(!(thread.tim)) return null;
-										return thread.tim + ".jpg";
+										if(!(thread.tim)) return null;										
+										var ext = thread.ext || "";
+										if(!ext.match(/[.](bmp|gif|jpg|jpeg|png)/i)) ext = ".jpg";
+										return thread.tim + ext;
 									})();
 									if(thumb){
-										return "https://8ch.net/" + directory + "/thumb/" + thumb;
+										return "https://media.8ch.net/file_store/thumb/" + thumb;
 									}
 									if(thread.embed){
 										var m = thread.embed.match(new RegExp("//img[.]youtube[.]com/vi/[^/]+/[0-9]+[.]jpg","i"));
@@ -47951,12 +48369,127 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
 				// テキストの読み込み
 				loader.setMethod("GET");
 				loader.setURL("https://8ch.net/" + directory + "/catalog.json");
+				loader.loadText();
+				break;
+
+			case "2ch.hk":
+				var domain;
+				var directory;
+				if(!domain){
+					var m = _catalog_url.match(new RegExp("(http|https)://(2ch[.]hk)/([^/]+)","i"));
+					if(m){
+						domain = m[2];
+						directory = m[3];
+					}
+				}
+				if(domain){
+					_catalog_title.nodeValue = "https://" + domain + "/" + directory + "/";
+				}else{
+					complete({result:false});
+					return;
+				}
+
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
+				var loader_url = "https://2ch.hk/" + directory + "/catalog.json";
+
+				// 成功
+				loader.onload = function(str){
+					if(exit()) return;
+					var item_list = _ui_catalog.getItemList();
+					var i;
+					var num = item_list.length;
+					for(i=0;i<num;i++){
+						var data = item_list[i].getData();
+						data.number = "x";
+						data.ppd = (function(){
+							var now = new Date();
+							var old = new Date(data.date_new * 1000);
+							var sub = now.getTime() - old.getTime();
+							var ppd = 0;
+							if(sub > 0){
+								ppd = data.replies / (sub / 1000 / 60 / 60 / 24);
+							}
+							return ppd;
+						})();
+					}
+
+					var index = 1;
+					try{
+						var response = JsonParse(str);
+						var threads = response.threads;
+
+						var i;
+						for(i=0;i<threads.length;i++){
+							var thread = threads[i];
+
+							var item = _ui_catalog.createItem(thread.num);
+							item.setURL("https://" + domain + "/" + directory + "/res/" + thread.num + ".html");
+							var data = item.getData();
+							data.number = index;
+							data.id = thread.num;
+							data.title = (function(){
+								if(thread.subject) return thread.subject;
+								try{
+									var dom_parser = new DOMParser();
+									var document_obj = dom_parser.parseFromString(thread.comment , "text/html");
+									return ElementGetTextContent(document_obj.body);
+								}catch(e){
+								}
+								return (thread.com || "");
+							})();
+							data.replies = thread.posts_count;
+							data.images = thread.files_count;
+							data.date_new = thread.timestamp;
+							data.image_url = (function(){
+								try{
+									return StringUrl_To_Absolute(thread.files[0].thumbnail , loader_url);
+								}catch(e){
+								}
+								return null;
+							})();
+							if(data.image_url){
+								var image = new Image();
+								image.src = data.image_url;
+								data.image = image;
+							}
+							data.ppd = (function(){
+								var now = new Date();
+								var old = new Date(data.date_new * 1000);
+								var sub = now.getTime() - old.getTime();
+								var ppd = 0;
+								if(sub > 0){
+									ppd = data.replies / (sub / 1000 / 60 / 60 / 24);
+								}
+								return ppd;
+							})();
+
+							index += 1;
+						}
+
+					}catch(e){
+					}
+
+					_ui_catalog.commit();
+					complete({result:true});
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					if(exit()) return;
+					complete({result:false});
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL(loader_url);
 				loader.loadText();
 				break;
 
@@ -47995,6 +48528,7 @@ function PageExpand(page_expand_arguments){
 
 					// 成功
 					loader.onload = function(str){
+						if(exit()) return;
 						try{
 							var response = JsonParse(str);
 							after = response.data.after;
@@ -48050,6 +48584,7 @@ function PageExpand(page_expand_arguments){
 
 					// 失敗
 					loader.onerror = function(){
+						if(exit()) return;
 						complete({result:false});
 					};
 
@@ -48430,6 +48965,8 @@ function PageExpand(page_expand_arguments){
 				site = "4chan";
 			}else if(domain.match(new RegExp("8ch[.]net|8chan.co","i"))){
 				site = "8chan";
+			}else if(domain.match(new RegExp("2ch[.]hk","i"))){
+				site = "2ch.hk";
 			}else if(domain.match(new RegExp("reddit[.]com$","i"))){
 				site = "reddit";
 			}
@@ -48534,8 +49071,13 @@ function PageExpand(page_expand_arguments){
 					_select_site.appendChild(option);
 
 					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"8ch.net (experimental)");
+					ElementSetTextContent(option,"8ch.net");
 					option.value = "8chan";
+					_select_site.appendChild(option);
+
+					var option = DocumentCreateElement("option");
+					ElementSetTextContent(option,"2ch.hk");
+					option.value = "2ch.hk";
 					_select_site.appendChild(option);
 
 				// カテゴリボタン
@@ -48960,6 +49502,9 @@ function PageExpand(page_expand_arguments){
 		var _catalog_layout_mode = 0;
 		var _current_site = "";
 
+		var _category_modify_count = 0;
+		var _catalog_modify_count = 0;
+
 		// --------------------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------------------
@@ -48992,6 +49537,13 @@ function PageExpand(page_expand_arguments){
 				// --------------------------------------------------------------------------------
 				_item.setLabel = function (label){
 					_anchor_text.nodeValue = label;
+				};
+
+				// --------------------------------------------------------------------------------
+				// ツールチップを設定
+				// --------------------------------------------------------------------------------
+				_item.setTooltip = function (label){
+					_anchor.title = label;
 				};
 
 				// --------------------------------------------------------------------------------
@@ -49131,6 +49683,13 @@ function PageExpand(page_expand_arguments){
 			})();
 
 			return _folder;
+		};
+
+		// --------------------------------------------------------------------------------
+		// フォルダを取得
+		// --------------------------------------------------------------------------------
+		_this.getFolder = function (key){
+		   return _folder_dictionary[key] || null;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -49543,16 +50102,13 @@ function PageExpand(page_expand_arguments){
 			_modify_count += 1;
 			var modify = _modify_count;
 			var p = 0;
-			var num = _item_list.length;
 			var f = function (){
 				if(modify != _modify_count) return;
-				try{
-					if(p >= num) return;
-					updateItem(_item_list[p]);
-					p++;
-					execute_queue.attachFirst(f,null);
-				}catch(e){
-				}
+				var item = _item_list[p];
+				p++;
+				if(!item) return;
+				updateItem(item);
+				execute_queue.attachFirst(f,null);
 			};
 			execute_queue.attachLast(f,null);
 		}
@@ -49989,6 +50545,7 @@ function PageExpand(page_expand_arguments){
 		// アイテムクリア
 		// --------------------------------------------------------------------------------
 		_this.clearItem = function (){
+			_modify_count += 1;
 			_item_dictionary = new Object();
 			_item_list = new Array();
 			DomNodeRemoveChildren(_table_body);
@@ -76742,41 +77299,34 @@ function PageExpand(page_expand_arguments){
 		var n = 0;
 		var b = 0;
 
-		var increment = 1024;
-		var onprogress;
-		if(options){
-			if(options.increment){
-				increment = options.increment;
-			}
-			onprogress = options.onprogress;
-		}
+		if(typeof(options) != "object") options = {};
+		var increment = options.increment || 1024;
+		var onprogress = options.onprogress || null;
 
 		var i = 0;
 		var j = 0;
 		function f(){
-			var s = "";
 			while(i < num){
 				b = ary_u8[i];
-				s += dic[(b >> 2)];
+				base64.push(dic[(b >> 2)]);
 				n = (b & 0x03) << 4;
 				i ++;
 				if(i >= num) break;
 
 				b = ary_u8[i];
-				s += dic[n | (b >> 4)];
+				base64.push(dic[n | (b >> 4)]);
 				n = (b & 0x0f) << 2;
 				i ++;
 				if(i >= num) break;
 
 				b = ary_u8[i];
-				s += dic[n | (b >> 6)];
-				s += dic[(b & 0x3f)];
+				base64.push(dic[n | (b >> 6)]);
+				base64.push(dic[(b & 0x3f)]);
 				i ++;
 
 				j += 3;
 				if(j > increment){
 					j = 0;
-					base64.push(s);
 					if(onprogress){
 						onprogress({loaded:i,total:num});
 					}
@@ -76787,14 +77337,13 @@ function PageExpand(page_expand_arguments){
 
 			var m = num % 3;
 			if(m){
-				s += dic[n];
+				base64.push(dic[n]);
 			}
 			if(m == 1){
-				s += "==";
+				base64.push("==");
 			}else if(m == 2){
-				s += "=";
+				base64.push("=");
 			}
-			base64.push(s);
 			callback(base64.join(""));
 		}
 
@@ -76804,7 +77353,7 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// x-user-defined 文字列から Base64 文字列に変換する (非同期実行)
 	// --------------------------------------------------------------------------------
-	function Base64_From_XUserDefined_Async(x_user_defined,callback,increment){
+	function Base64_From_XUserDefined_Async(x_user_defined,callback,options){
 		var dic = [
 			'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
 			'Q','R','S','T','U','V','W','X','Y','Z','a','b','c','d','e','f',
@@ -76816,36 +77365,37 @@ function PageExpand(page_expand_arguments){
 		var n = 0;
 		var b = 0;
 
-		if(increment === undefined){
-			increment = 1024;
-		}
+		if(typeof(options) != "object") options = {};
+		var increment = options.increment || 1024;
+		var onprogress = options.onprogress || null;
 
 		var i = 0;
 		var j = 0;
 		function f(){
-			var s = "";
 			while(i < num){
 				b = x_user_defined.charCodeAt(i) & 0xff;
-				s += dic[(b >> 2)];
+				base64.push(dic[(b >> 2)]);
 				n = (b & 0x03) << 4;
 				i ++;
 				if(i >= num) break;
 
 				b = x_user_defined.charCodeAt(i) & 0xff;
-				s += dic[n | (b >> 4)];
+				base64.push(dic[n | (b >> 4)]);
 				n = (b & 0x0f) << 2;
 				i ++;
 				if(i >= num) break;
 
 				b = x_user_defined.charCodeAt(i) & 0xff;
-				s += dic[n | (b >> 6)];
-				s += dic[(b & 0x3f)];
+				base64.push(dic[n | (b >> 6)]);
+				base64.push(dic[(b & 0x3f)]);
 				i ++;
 
 				j += 3;
 				if(j > increment){
 					j = 0;
-					base64.push(s);
+					if(onprogress){
+						onprogress({loaded:i,total:num});
+					}
 					execute_queue.attachFirst(f,null);
 					return;
 				}
@@ -76853,15 +77403,96 @@ function PageExpand(page_expand_arguments){
 
 			var m = num % 3;
 			if(m){
-				s += dic[n];
+				base64.push(dic[n]);
 			}
 			if(m == 1){
-				s += "==";
+				base64.push("==");
 			}else if(m == 2){
-				s += "=";
+				base64.push("=");
 			}
-			base64.push(s);
 			callback(base64.join(""));
+		}
+
+		execute_queue.attachFirst(f,null);
+	}
+
+	// --------------------------------------------------------------------------------
+	// Base64 文字列から ArrayBuffer に変換する関数 (非同期実行)
+	// --------------------------------------------------------------------------------
+	function Base64_To_ArrayBuffer_Async(base64,callback,options){
+		var dic = new Object();
+		dic[0x41]= 0; dic[0x42]= 1; dic[0x43]= 2; dic[0x44]= 3; dic[0x45]= 4; dic[0x46]= 5; dic[0x47]= 6; dic[0x48]= 7; dic[0x49]= 8; dic[0x4a]= 9; dic[0x4b]=10; dic[0x4c]=11; dic[0x4d]=12; dic[0x4e]=13; dic[0x4f]=14; dic[0x50]=15;
+		dic[0x51]=16; dic[0x52]=17; dic[0x53]=18; dic[0x54]=19; dic[0x55]=20; dic[0x56]=21; dic[0x57]=22; dic[0x58]=23; dic[0x59]=24; dic[0x5a]=25; dic[0x61]=26; dic[0x62]=27; dic[0x63]=28; dic[0x64]=29; dic[0x65]=30; dic[0x66]=31;
+		dic[0x67]=32; dic[0x68]=33; dic[0x69]=34; dic[0x6a]=35; dic[0x6b]=36; dic[0x6c]=37; dic[0x6d]=38; dic[0x6e]=39; dic[0x6f]=40; dic[0x70]=41; dic[0x71]=42; dic[0x72]=43; dic[0x73]=44; dic[0x74]=45; dic[0x75]=46; dic[0x76]=47;
+		dic[0x77]=48; dic[0x78]=49; dic[0x79]=50; dic[0x7a]=51; dic[0x30]=52; dic[0x31]=53; dic[0x32]=54; dic[0x33]=55; dic[0x34]=56; dic[0x35]=57; dic[0x36]=58; dic[0x37]=59; dic[0x38]=60; dic[0x39]=61; dic[0x2b]=62; dic[0x2f]=63;
+		var num = base64.length;
+		var n = 0;
+		var b = 0;
+		var e;
+
+		if(typeof(options) != "object") options = {};
+		var increment = options.increment || 1024;
+		var onprogress = options.onprogress || null;
+
+		e = Math.ceil(num / 4) * 3;
+		switch(num % 4){
+		case 0:
+			if(base64.charAt(num - 1) == '=') e -= 1;
+			if(base64.charAt(num - 2) == '=') e -= 1;
+			break;
+		case 2:
+			e -= 2;
+			break;
+		case 3:
+			e -= 1;
+			break;
+		case 1:
+			callback(null);
+			return;
+		}
+
+		var ary_buffer = new ArrayBuffer( e );
+		var ary_u8 = new Uint8Array( ary_buffer );
+		var i = 0;
+		var j = 0;
+		var p = 0;
+		function f(){
+			while(p < e){
+				b = dic[base64.charCodeAt(i)];
+				if(b === undefined){ callback(null); return; }
+				n = (b << 2);
+				i ++;
+
+				b = dic[base64.charCodeAt(i)];
+				if(b === undefined){ callback(null); return; }
+				ary_u8[p] = n | ((b >> 4) & 0x3);
+				n = (b & 0x0f) << 4;
+				i ++;
+				p ++;
+				if(p >= e) break;
+
+				b = dic[base64.charCodeAt(i)];
+				if(b === undefined){ callback(null); return; }
+				ary_u8[p] = n | ((b >> 2) & 0xf);
+				n = (b & 0x03) << 6;
+				i ++;
+				p ++;
+				if(p >= e) break;
+
+				b = dic[base64.charCodeAt(i)];
+				if(b === undefined){ callback(null); return; }
+				ary_u8[p] = n | b;
+				i ++;
+				p ++;
+
+				j += 4;
+				if(j > increment){
+					j = 0;
+					execute_queue.attachFirst(f,null);
+					return;
+				}
+			}
+			callback(ary_buffer);
 		}
 
 		execute_queue.attachFirst(f,null);
@@ -76985,37 +77616,52 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function String_To_ArrayBuffer_As_UTF8(str){
 		var i;
-		var c;
+		var p;
+		var num;
+		var list = new Array();
 		var size = 0;
-		var num = str.length;
-		for(i=0;i<num;i++){
-			c = str.charCodeAt(i);
-			if(c < 0x80){
+
+		p = 0;
+		num = str.length;
+		while(p < num){
+			var c0 = str.charCodeAt(p);
+			p += 1;
+			if((c0 & 0xFC00) == 0xD800){
+				var c1 = str.charCodeAt(p) || 0;
+				if((c1 & 0xFC00) == 0xDC00){
+					c0 = (((c0 - 0xD800) << 10) | ((c1 - 0xDC00) & 0x3FF)) + 0x10000;
+					p += 1;
+				}
+			}
+			if(c0 < 0x80){
 				size += 1;
-			}else if(c < 0x800){
+			}else if(c0 < 0x800){
 				size += 2;
-			}else if(c < 0x10000){
+			}else if(c0 < 0x10000){
 				size += 3;
-			}else if(c < 0x200000){
+			}else if(c0 < 0x200000){
 				size += 4;
-			}else if(c < 0x4000000){
+			}else if(c0 < 0x4000000){
 				size += 5;
 			}else{
 				size += 6;
 			}
+			list.push(c0);
 		}
 
-		var p = 0;
 		var a = new Uint8Array(size);
+		p = 0;
+		var i;
+		var num = list.length;
 		for(i=0;i<num;i++){
-			c = str.charCodeAt(i);
+			var c = list[i];
 			if(c < 0x80){
 				a[p] = (c & 0x7f) >>> 0;
 				p += 1;
 			}else if(c < 0x800){
-				a[p] = ((c & 0x000007c0) >>> 6) | 0xc0;
+				a[p] = ((c & 0x000007c0) >>>  6) | 0xc0;
 				p += 1;
-				a[p] = ((c & 0x0000003f) >>> 0) | 0x80;
+				a[p] = ((c & 0x0000003f) >>>  0) | 0x80;
 				p += 1;
 			}else if(c < 0x10000){
 				a[p] = ((c & 0x0000f000) >>> 12) | 0xe0;
@@ -77061,6 +77707,59 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return a.buffer;
+	}
+
+	// --------------------------------------------------------------------------------
+	// ArrayBuffer から文字列に変換（UTF-8）
+	// --------------------------------------------------------------------------------
+	function String_From_ArrayBuffer_As_UTF8(ary){
+		var str = new Array();
+		var a = new Uint8Array(ary);
+		var size = a.byteLength;
+		var p = 0;
+		var c;
+		while(p < size){
+			if((a[p+0] & 0xC0) == 0x80){
+				p += 1;
+			}else if((a[p+0] & 0x80) == 0x00){
+				c = (a[p+0] & 0x7f);
+				str.push(String.fromCharCode(c));
+				p += 1;
+			}else if((a[p+0] & 0xe0) == 0xc0){
+				c = (                          ((a[p+0] & 0x1c) >> 2)  <<  8) |
+                    ((((a[p+0] & 0x03) << 6) | ((a[p+1] & 0x3f) << 0)) <<  0);
+				str.push(String.fromCharCode(c));
+				p += 2;
+			}else if((a[p+0] & 0xF0) == 0xe0){
+				c = ((((a[p+0] & 0x0f) << 4) | ((a[p+1] & 0x3c) >> 2)) <<  8) |
+				    ((((a[p+1] & 0x03) << 6) | ((a[p+2] & 0x3f) << 0)) <<  0);
+				str.push(String.fromCharCode(c));
+				p += 3;
+			}else if((a[p+0] & 0xf8) == 0xf0){
+				c = ((((a[p+0] & 0x07) << 2) | ((a[p+1] & 0x30) >> 4)) << 16) |
+				    ((((a[p+1] & 0x0f) << 4) | ((a[p+2] & 0x3c) >> 2)) <<  8) |
+					((((a[p+2] & 0x03) << 6) | ((a[p+3] & 0x3f) << 0)) <<  0);
+				str.push(String.fromCharCode( ((c - 0x10000) >>> 10) + 0xD800 , ((c - 0x10000) & 0x3FF) + 0xDC00 ));
+				p += 4;
+			}else if((a[p+0] & 0xfc) == 0xf8){
+				c = (                          ((a[p+0] & 0x03) << 0)  << 24) |
+				    ((((a[p+1] & 0x3f) << 2) | ((a[p+2] & 0x30) >> 4)) << 16) |
+				    ((((a[p+2] & 0x0f) << 4) | ((a[p+3] & 0x3c) >> 2)) <<  8) |
+				    ((((a[p+3] & 0x03) << 6) | ((a[p+4] & 0x3f) << 0)) <<  0);
+				str.push(String.fromCodePoint(c));
+				p += 5;
+			}else if((a[p+0] & 0xfe) == 0xfc){
+				c = ((((a[p+0] & 0x01) << 6) | ((a[p+1] & 0x3f) << 0)) << 24) |
+				    ((((a[p+2] & 0x3f) << 2) | ((a[p+3] & 0x30) >> 4)) << 16) |
+				    ((((a[p+3] & 0x0f) << 4) | ((a[p+4] & 0x3c) >> 2)) <<  8) |
+				    ((((a[p+4] & 0x03) << 6) | ((a[p+5] & 0x3f) << 0)) <<  0);
+				str.push(String.fromCodePoint(c));
+				p += 6;
+			}else{
+				break;
+			}
+		}
+		return str.join("");
 	}
 
 	// --------------------------------------------------------------------------------

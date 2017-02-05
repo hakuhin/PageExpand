@@ -1563,6 +1563,179 @@ function PageExpand(page_expand_arguments){
 				_ui_catalog.sort("number",false);
 				break;
 
+			case "2ch.hk":
+				_category_title.nodeValue = _current_site;
+				disableCategoryContainer(false);
+				openSplitterLeft(true);
+
+				var convert_list = new Object();
+				convert_list["ppd"] = function(value){
+					value = Math.floor(value * 100) / 100;
+					return value.toFixed(2);
+				};
+				convert_list["date_new"] = UNIXTIME_ToString_JP;
+
+				_ui_catalog.onUpdateItem = function (info){
+					var parent = info.parent;
+					var data = info.data;
+
+					var get_title = function(size){
+						if(data.title.length > size){
+							return data.title.substr(0,size) + "...";
+						}
+						return data.title;
+					};
+					var get_date = function(){
+						return convert_list["date_new"](data.date_new);
+					};
+					var get_ppd = function(){
+						return convert_list["ppd"](data.ppd);
+					};
+
+					switch(info.layout_mode){
+					case "list":
+						var container = DocumentCreateElement("div");
+						ElementSetStyle(container,"position:relative; margin:2px; margin-left:4px; margin-right:4px; min-height:60px;");
+						parent.appendChild(container);
+
+						var img_block = DocumentCreateElement("div");
+						ElementSetStyle(img_block,"position:absolute; width:60px; height:60px; text-align:right;");
+						container.appendChild(img_block);
+
+						var image = data.image;
+						if(image){
+							ElementSetStyle(image,"max-width:100%; max-height:60px;");
+							img_block.appendChild(image);
+						}
+
+						var text_container = DocumentCreateElement("div");
+						ElementSetStyle(text_container,"margin-left:65px;");
+						container.appendChild(text_container);
+
+						var text_block0 = DocumentCreateElement("div");
+						ElementSetStyle(text_block0,"");
+						text_container.appendChild(text_block0);
+						var inline_text0 = DocumentCreateElement("span");
+						ElementSetStyle(inline_text0,"word-break: break-all;");
+						text_block0.appendChild(inline_text0);
+						var text_node0 = document.createTextNode("");
+						inline_text0.appendChild(text_node0);
+
+						var text_block1 = DocumentCreateElement("div");
+						ElementSetStyle(text_block1,"margin-top:2px;");
+						text_container.appendChild(text_block1);
+						var inline_text1 = DocumentCreateElement("span");
+						ElementSetStyle(inline_text1,"color:#888;");
+						text_block1.appendChild(inline_text1);
+						var text_node1 = document.createTextNode("");
+						inline_text1.appendChild(text_node1);
+
+						info.onupdate = function(){
+							text_node0.nodeValue = data.number + ":" + data.title;
+							text_node1.nodeValue = "R:" + data.replies + " I:" + data.images + " [" + get_ppd() + "/d] [" + get_date() + "]";
+						};
+						break;
+
+					case "small_icon":
+						var inline_text = DocumentCreateElement("span");
+						ElementSetStyle(inline_text,"text-decoration:underline; word-break:break-all;");
+						parent.appendChild(inline_text);
+						var text_node = document.createTextNode("");
+						inline_text.appendChild(text_node);
+
+						info.onupdate = function(){
+							text_node.nodeValue = data.number + ":" + get_title(100) + " (" + data.replies + ")";
+						};
+						break;
+
+					case "large_icon":
+						var img_block = DocumentCreateElement("div");
+						ElementSetStyle(img_block,"margin:4px; margin-bottom:0px; text-align:center;");
+						parent.appendChild(img_block);
+
+						var image = data.image;
+						if(image){
+							ElementSetStyle(image,"max-width:100%; max-height:140px;");
+							img_block.appendChild(image);
+						}
+
+						var text_block = DocumentCreateElement("div");
+						ElementSetStyle(text_block,"margin:4px; margin-top:2px;");
+						parent.appendChild(text_block);
+						var inline_text = DocumentCreateElement("span");
+						ElementSetStyle(inline_text,"word-break:break-all;");
+						text_block.appendChild(inline_text);
+						var text_node = document.createTextNode("");
+						inline_text.appendChild(text_node);
+
+						info.onupdate = function(){
+							text_node.nodeValue = data.number + ":" + get_title(50) + " (" + data.replies + ")";
+						};
+						break;
+					}
+				};
+
+				_ui_catalog.onUpdateCell = function (info){
+					var callback = convert_list[info.key];
+					var parent = info.parent;
+					var data = info.data;
+					var text_node = document.createTextNode("");
+					parent.appendChild(text_node);
+
+					info.onupdate = function(){
+						if(callback){
+							text_node.nodeValue = callback(data[info.key]);
+						}else{
+							text_node.nodeValue = data[info.key];
+						}
+					}
+				};
+
+				var column;
+				column = _ui_catalog.createColumn("number");
+				column.setLabel("No");
+				column.setWidthMin(50);
+				column.setWidthMax(50);
+				column.setTextAlign("center");
+
+				column = _ui_catalog.createColumn("title");
+				column.setLabel("Title");
+				column.setWidthMin(300);
+
+				column = _ui_catalog.createColumn("replies");
+				column.setLabel("Replies");
+				column.setWidthMin(50);
+				column.setWidthMax(70);
+				column.setTextAlign("right");
+
+				column = _ui_catalog.createColumn("images");
+				column.setLabel("Images");
+				column.setWidthMin(50);
+				column.setWidthMax(70);
+				column.setTextAlign("right");
+
+				column = _ui_catalog.createColumn("ppd");
+				column.setLabel("P/d");
+				column.setWidthMin(70);
+				column.setWidthMax(70);
+				column.setTextAlign("right");
+
+				column = _ui_catalog.createColumn("id");
+				column.setLabel("id");
+				column.setWidthMin(100);
+				column.setWidthMax(100);
+				column.setTextAlign("center");
+
+				column = _ui_catalog.createColumn("date_new");
+				column.setLabel("Since");
+				column.setWidthMin(150);
+				column.setWidthMax(150);
+				column.setTextAlign("center");
+
+				_ui_catalog.setBlockSize(140,140 * (4/3));
+				_ui_catalog.sort("number",false);
+				break;
+
 			case "reddit":
 				_category_title.nodeValue = "reddit";
 				disableCategoryContainer(true);
@@ -2019,6 +2192,8 @@ function PageExpand(page_expand_arguments){
 		// カテゴリリロードを更新
 		// --------------------------------------------------------------------------------
 		function updateCategoryReload(callback){
+			_category_modify_count += 1;
+			var modify = _category_modify_count;
 
 			var complete = function(response){
 				_button_category_reload.setDisabled(false);
@@ -2026,6 +2201,12 @@ function PageExpand(page_expand_arguments){
 				if(callback){
 					callback(response);
 				}
+			};
+			
+			var exit = function(){
+				if(modify == _category_modify_count) return false;
+				complete({result:false});
+				return true;
 			};
 
 			_ui_category.clear();
@@ -2040,6 +2221,8 @@ function PageExpand(page_expand_arguments){
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
+					
 					var re_folder = new RegExp("^<br><B>(.*)</B><br>","i");
 					var re_item = new RegExp("<A HREF=(.*)>(.*)</A>","gi");
 					var re_start = new RegExp("<br><b>","gi");
@@ -2048,6 +2231,8 @@ function PageExpand(page_expand_arguments){
 					var p = 0;
 					var n = str.length;
 					function f(){
+						if(exit()) return;
+
 						try{
 							if(p >= n) throw 0;
 
@@ -2072,6 +2257,7 @@ function PageExpand(page_expand_arguments){
 								s.replace(re_item,function(m,p1,p2,index,str){
 									var item = folder.createItem(p1);
 									item.setLabel(p2);
+									item.setTooltip(p1);
 									item.setURL(p1);
 								});
 							}
@@ -2092,6 +2278,7 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
@@ -2103,41 +2290,87 @@ function PageExpand(page_expand_arguments){
 				break;
 
 			case "2chan":
+				var loader_url = "https://www.2chan.net/bbsmenu.html";
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
+
 					var re_folder = new RegExp("^<b>(.*)</b><br>","i");
 					var re_item = new RegExp('<a href="([^"]*)"[^>]*>([^<]*)',"gi");
+					var re_sub = new RegExp('://([^.]+)',"i");
+
+					var board_list = new Array();
+					var board_dictionary = new Object();
 
 					var p = 0;
 					var n = str.length;
-					function f(){
-						try{
-							if(p >= n) throw 0;
+					try{
+						while(p < n){
 							p = str.indexOf("<b>",p);
-							if(p < 0) throw 0;
+							if(p < 0) break;
 							var e = str.indexOf("<b>",p+3);
 							if(e < 0) e = n;
 							var s = str.substring(p,e);
 							var m = s.match(re_folder);
 							if(m){
-								var folder = _ui_category.createFolder(m[1]);
-								folder.setLabel(m[1]);
-
+								var category = {
+									label:m[1]
+								};
 								s.replace(re_item,function(m,p1,p2,index,str){
-									var m = p1.match(new RegExp("^(http|https)://(.*)","i"));
-									if(m) p1 = "https://" + m[2];
-									var item = folder.createItem(p1);
-									item.setLabel(p2);
-									item.setURL(p1);
+									var board = {
+										category:category,
+										url:StringUrl_To_Absolute(p1,loader_url),
+										label:p2
+									};
+									board.prev = board;
+									board.next = board;
+									var m = board.url.match(re_sub);
+									board.sub = (m) ? m[1] : "";
+									var list = board_dictionary[board.label];
+									if(list){
+										var prev = list;
+										var next = list.next;
+										prev.next = board;
+										next.prev = board;
+										board.prev = prev;
+										board.next = next;
+									}else{
+										list = board_dictionary[board.label] = board;
+									}
+									board_list.push(board);
 								});
 							}
+							p = e;
+						}
+					}catch(e){
+					}
 
-							if(p < e){
-								p = e;
-								execute_queue.attachFirst(f,null);
-								return;
+					var p = 0;
+					function f(){
+						if(exit()) return;
+
+						try{
+							var board = board_list[p];
+							if(!board) throw 0;
+							p++;
+
+							var category = board.category;
+							var folder = _ui_category.getFolder(category.label);
+							if(!folder){
+								folder = _ui_category.createFolder(category.label);
+								folder.setLabel(category.label);
 							}
+							var label = board.label;
+							if(board.prev != board){
+								label += "(" + board.sub + ")";
+							}
+							var item = folder.createItem(board.url);
+							item.setLabel(label);
+							item.setTooltip(board.url);
+							item.setURL(board.url);	
+							execute_queue.attachFirst(f,null);
+							return;
 						}catch(e){
 						}
 
@@ -2149,12 +2382,13 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
 				// テキストの読み込み
 				loader.setMethod("GET");
-				loader.setURL("https://www.2chan.net/bbsmenu.html");
+				loader.setURL(loader_url);
 				loader.overrideMimeType("text/plain; charset=Shift_JIS");
 				loader.loadText();
 				break;
@@ -2163,22 +2397,37 @@ function PageExpand(page_expand_arguments){
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
+
 					var boards = JsonParse(str).boards;
 
-					var folder = _ui_category.createFolder("4chan");
-					folder.setLabel("4chan");
+					var folder0 = _ui_category.createFolder("boards");
+					folder0.setLabel("Boards");
+
+					var folder1 = _ui_category.createFolder("folders");
+					folder1.setLabel("Folders");
 
 					var p = 0;
 					var n = boards.length;
 					function f(){
+						if(exit()) return;
+
 						try{
 							if(p >= n) throw 0;
 							var board = boards[p];
 							p += 1;
 
-							var item = folder.createItem(board.board);
+							var url = "https://boards.4chan.org/" + (board.board) + "/";
+
+							var item = folder0.createItem(board.board);
 							item.setLabel(board.title);
-							item.setURL("https://boards.4chan.org/" + (board.board) + "/");
+							item.setTooltip(board.board);
+							item.setURL(url);
+
+							var item = folder1.createItem("#" + board.board);
+							item.setLabel(board.board);
+							item.setTooltip(board.title);
+							item.setURL(url);
 
 							execute_queue.attachFirst(f,null);
 						}catch(e){
@@ -2192,6 +2441,7 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
@@ -2205,6 +2455,8 @@ function PageExpand(page_expand_arguments){
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
+
 					var boards = JsonParse(str);
 
 					var folder = _ui_category.createFolder("8chan");
@@ -2214,6 +2466,8 @@ function PageExpand(page_expand_arguments){
 					var n = boards.length;
 					if(n > 2000) n = 2000;
 					function f(){
+						if(exit()) return;
+
 						try{
 							if(p >= n) throw 0;
 							var board = boards[p];
@@ -2221,6 +2475,7 @@ function PageExpand(page_expand_arguments){
 
 							var item = folder.createItem(board.title);
 							item.setLabel(board.uri);
+							item.setTooltip(board.title);
 							item.setURL("https://8ch.net/" + (board.uri) + "/");
 
 							execute_queue.attachFirst(f,null);
@@ -2235,12 +2490,85 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
 				// テキストの読み込み
 				loader.setMethod("GET");
 				loader.setURL("https://8ch.net/boards.json");
+				loader.loadText();
+				break;
+
+			case "2ch.hk":
+
+				// 成功
+				loader.onload = function(str){
+					if(exit()) return;
+
+					var boards = JsonParse(str).boards;
+
+					var board_list = new Array();
+					var folder_dictionary = new Array();
+					var p = 0;
+					var n = boards.length;
+					for(p=0;p<n;p++){
+						var board = boards[p];
+						var folder = folder_dictionary[board.category];
+						if(!folder){
+							folder = folder_dictionary[board.category] = _ui_category.createFolder(board.category);
+							folder.setLabel(board.category);
+						}
+						var item = {
+							folder:folder,
+							label:board.name,
+							id:board.id,
+							url:"https://2ch.hk/" + (board.id) + "/"
+						};
+						board_list.push(item);
+					}
+					var folder_id = _ui_category.createFolder("folders");
+					folder_id.setLabel("Folders");
+
+
+					var p = 0;
+					function f(){
+						if(exit()) return;
+
+						try{
+							var board = board_list[p];
+							if(!board) throw 0;
+							p += 1;
+
+							var item = board.folder.createItem(board.id);
+							item.setLabel(board.label);
+							item.setTooltip(board.id);
+							item.setURL(board.url);
+
+							var item = folder_id.createItem("#" + board.id);
+							item.setLabel(board.id);
+							item.setTooltip(board.label);
+							item.setURL(board.url);
+
+							execute_queue.attachFirst(f,null);
+						}catch(e){
+						}
+
+						complete({result:true});
+					}
+
+					execute_queue.attachLast(f,null);
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					if(exit()) return;
+					complete({result:false});
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL("https://2ch.hk/boards.json");
 				loader.loadText();
 				break;
 
@@ -2293,6 +2621,8 @@ function PageExpand(page_expand_arguments){
 		// カタログリロードを更新
 		// --------------------------------------------------------------------------------
 		function updateCatalogReload(callback){
+			_catalog_modify_count += 1;
+			var modify = _catalog_modify_count;
 
 			var complete = function(response){
 				_button_catalog_reload.setDisabled(false);
@@ -2300,6 +2630,12 @@ function PageExpand(page_expand_arguments){
 				if(callback){
 					callback(response);
 				}
+			};
+
+			var exit = function(){
+				if(modify == _catalog_modify_count) return false;
+				complete({result:false});
+				return true;
 			};
 
 			_button_catalog_reload.setDisabled(true);
@@ -2359,6 +2695,8 @@ function PageExpand(page_expand_arguments){
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
+					
 					var re = new RegExp("([0-9]+)[.](dat<>[ ]*|cgi,)(.*)[(]([0-9]+)[)]","i");
 
 					var item_list = _ui_catalog.getItemList();
@@ -2383,6 +2721,7 @@ function PageExpand(page_expand_arguments){
 					var n = str.length;
 					var index = 1;
 					function f(){
+						if(exit()) return;
 						try{
 							if(p >= n) throw 0;
 							var e = str.indexOf("\n",p+1);
@@ -2430,6 +2769,7 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
@@ -2463,9 +2803,11 @@ function PageExpand(page_expand_arguments){
 
 				// ローダーオブジェクトを作成
 				var loader = new Loader();
+				var loader_url = "https://" + domain + "/" + directory + "/futaba.php?mode=cat&cxyl=1x2000x2000x0x6";
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
 					var re_href = new RegExp("<a href='res/([0-9]+)[.]htm","i");
 					var re_image = new RegExp("<img src='(.*)/(cat|thumb)/([^']*)","i");
 					var re_title = new RegExp("<small>([^<]*)</small>","i");
@@ -2494,6 +2836,7 @@ function PageExpand(page_expand_arguments){
 					var n = str.length;
 					var index = 1;
 					function f(){
+						if(exit()) return;
 						try{
 							if(p >= n) throw 0;
 							p = str.indexOf("<tr><td>",p);
@@ -2521,11 +2864,9 @@ function PageExpand(page_expand_arguments){
 								}
 								m = s.match(re_image);
 								if(m){
-									var image_url = m[1] + "/thumb/" + m[3];
-									if(image_url.match(new RegExp("^/","i"))) image_url = "https://" + domain + image_url;
-									data.image_url = image_url;
+									data.image_url = StringUrl_To_Absolute(m[1] + "/thumb/" + m[3],loader_url);
 									var image = new Image();
-									image.src = image_url;
+									image.src = data.image_url;
 									data.image = image;
 								}
 								data.ppd = (function(){
@@ -2557,12 +2898,13 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
 				// テキストの読み込み
 				loader.setMethod("GET");
-				loader.setURL("https://" + domain + "/" + directory + "/futaba.php?mode=cat&cxyl=1x2000x2000x0x6");
+				loader.setURL(loader_url);
 				loader.overrideMimeType("text/plain; charset=Shift_JIS");
 				loader.loadText();
 				break;
@@ -2589,6 +2931,7 @@ function PageExpand(page_expand_arguments){
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
 					var item_list = _ui_catalog.getItemList();
 					var i;
 					var num = item_list.length;
@@ -2665,6 +3008,7 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
@@ -2696,6 +3040,7 @@ function PageExpand(page_expand_arguments){
 
 				// 成功
 				loader.onload = function(str){
+					if(exit()) return;
 					var item_list = _ui_catalog.getItemList();
 					var i;
 					var num = item_list.length;
@@ -2744,11 +3089,13 @@ function PageExpand(page_expand_arguments){
 								data.date_new = thread.time;
 								data.image_url = (function(){
 									var thumb = (function(){
-										if(!(thread.tim)) return null;
-										return thread.tim + ".jpg";
+										if(!(thread.tim)) return null;										
+										var ext = thread.ext || "";
+										if(!ext.match(/[.](bmp|gif|jpg|jpeg|png)/i)) ext = ".jpg";
+										return thread.tim + ext;
 									})();
 									if(thumb){
-										return "https://8ch.net/" + directory + "/thumb/" + thumb;
+										return "https://media.8ch.net/file_store/thumb/" + thumb;
 									}
 									if(thread.embed){
 										var m = thread.embed.match(new RegExp("//img[.]youtube[.]com/vi/[^/]+/[0-9]+[.]jpg","i"));
@@ -2785,12 +3132,127 @@ function PageExpand(page_expand_arguments){
 
 				// 失敗
 				loader.onerror = function(){
+					if(exit()) return;
 					complete({result:false});
 				};
 
 				// テキストの読み込み
 				loader.setMethod("GET");
 				loader.setURL("https://8ch.net/" + directory + "/catalog.json");
+				loader.loadText();
+				break;
+
+			case "2ch.hk":
+				var domain;
+				var directory;
+				if(!domain){
+					var m = _catalog_url.match(new RegExp("(http|https)://(2ch[.]hk)/([^/]+)","i"));
+					if(m){
+						domain = m[2];
+						directory = m[3];
+					}
+				}
+				if(domain){
+					_catalog_title.nodeValue = "https://" + domain + "/" + directory + "/";
+				}else{
+					complete({result:false});
+					return;
+				}
+
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
+				var loader_url = "https://2ch.hk/" + directory + "/catalog.json";
+
+				// 成功
+				loader.onload = function(str){
+					if(exit()) return;
+					var item_list = _ui_catalog.getItemList();
+					var i;
+					var num = item_list.length;
+					for(i=0;i<num;i++){
+						var data = item_list[i].getData();
+						data.number = "x";
+						data.ppd = (function(){
+							var now = new Date();
+							var old = new Date(data.date_new * 1000);
+							var sub = now.getTime() - old.getTime();
+							var ppd = 0;
+							if(sub > 0){
+								ppd = data.replies / (sub / 1000 / 60 / 60 / 24);
+							}
+							return ppd;
+						})();
+					}
+
+					var index = 1;
+					try{
+						var response = JsonParse(str);
+						var threads = response.threads;
+
+						var i;
+						for(i=0;i<threads.length;i++){
+							var thread = threads[i];
+
+							var item = _ui_catalog.createItem(thread.num);
+							item.setURL("https://" + domain + "/" + directory + "/res/" + thread.num + ".html");
+							var data = item.getData();
+							data.number = index;
+							data.id = thread.num;
+							data.title = (function(){
+								if(thread.subject) return thread.subject;
+								try{
+									var dom_parser = new DOMParser();
+									var document_obj = dom_parser.parseFromString(thread.comment , "text/html");
+									return ElementGetTextContent(document_obj.body);
+								}catch(e){
+								}
+								return (thread.com || "");
+							})();
+							data.replies = thread.posts_count;
+							data.images = thread.files_count;
+							data.date_new = thread.timestamp;
+							data.image_url = (function(){
+								try{
+									return StringUrl_To_Absolute(thread.files[0].thumbnail , loader_url);
+								}catch(e){
+								}
+								return null;
+							})();
+							if(data.image_url){
+								var image = new Image();
+								image.src = data.image_url;
+								data.image = image;
+							}
+							data.ppd = (function(){
+								var now = new Date();
+								var old = new Date(data.date_new * 1000);
+								var sub = now.getTime() - old.getTime();
+								var ppd = 0;
+								if(sub > 0){
+									ppd = data.replies / (sub / 1000 / 60 / 60 / 24);
+								}
+								return ppd;
+							})();
+
+							index += 1;
+						}
+
+					}catch(e){
+					}
+
+					_ui_catalog.commit();
+					complete({result:true});
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					if(exit()) return;
+					complete({result:false});
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL(loader_url);
 				loader.loadText();
 				break;
 
@@ -2829,6 +3291,7 @@ function PageExpand(page_expand_arguments){
 
 					// 成功
 					loader.onload = function(str){
+						if(exit()) return;
 						try{
 							var response = JsonParse(str);
 							after = response.data.after;
@@ -2884,6 +3347,7 @@ function PageExpand(page_expand_arguments){
 
 					// 失敗
 					loader.onerror = function(){
+						if(exit()) return;
 						complete({result:false});
 					};
 
@@ -3268,6 +3732,8 @@ function PageExpand(page_expand_arguments){
 				site = "4chan";
 			}else if(domain.match(new RegExp("8ch[.]net|8chan.co","i"))){
 				site = "8chan";
+			}else if(domain.match(new RegExp("2ch[.]hk","i"))){
+				site = "2ch.hk";
 			}else if(domain.match(new RegExp("reddit[.]com$","i"))){
 				site = "reddit";
 			}
@@ -3372,8 +3838,13 @@ function PageExpand(page_expand_arguments){
 					_select_site.appendChild(option);
 
 					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"8ch.net (experimental)");
+					ElementSetTextContent(option,"8ch.net");
 					option.value = "8chan";
+					_select_site.appendChild(option);
+
+					var option = DocumentCreateElement("option");
+					ElementSetTextContent(option,"2ch.hk");
+					option.value = "2ch.hk";
 					_select_site.appendChild(option);
 
 				// カテゴリボタン
@@ -3798,6 +4269,9 @@ function PageExpand(page_expand_arguments){
 		var _catalog_layout_mode = 0;
 		var _current_site = "";
 
+		var _category_modify_count = 0;
+		var _catalog_modify_count = 0;
+
 		// --------------------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------------------
@@ -3830,6 +4304,13 @@ function PageExpand(page_expand_arguments){
 				// --------------------------------------------------------------------------------
 				_item.setLabel = function (label){
 					_anchor_text.nodeValue = label;
+				};
+
+				// --------------------------------------------------------------------------------
+				// ツールチップを設定
+				// --------------------------------------------------------------------------------
+				_item.setTooltip = function (label){
+					_anchor.title = label;
 				};
 
 				// --------------------------------------------------------------------------------
@@ -3969,6 +4450,13 @@ function PageExpand(page_expand_arguments){
 			})();
 
 			return _folder;
+		};
+
+		// --------------------------------------------------------------------------------
+		// フォルダを取得
+		// --------------------------------------------------------------------------------
+		_this.getFolder = function (key){
+		   return _folder_dictionary[key] || null;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -4381,16 +4869,13 @@ function PageExpand(page_expand_arguments){
 			_modify_count += 1;
 			var modify = _modify_count;
 			var p = 0;
-			var num = _item_list.length;
 			var f = function (){
 				if(modify != _modify_count) return;
-				try{
-					if(p >= num) return;
-					updateItem(_item_list[p]);
-					p++;
-					execute_queue.attachFirst(f,null);
-				}catch(e){
-				}
+				var item = _item_list[p];
+				p++;
+				if(!item) return;
+				updateItem(item);
+				execute_queue.attachFirst(f,null);
 			};
 			execute_queue.attachLast(f,null);
 		}
@@ -4827,6 +5312,7 @@ function PageExpand(page_expand_arguments){
 		// アイテムクリア
 		// --------------------------------------------------------------------------------
 		_this.clearItem = function (){
+			_modify_count += 1;
 			_item_dictionary = new Object();
 			_item_list = new Array();
 			DomNodeRemoveChildren(_table_body);
