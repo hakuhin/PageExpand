@@ -4307,40 +4307,6 @@ function PageExpand(page_expand_arguments){
 				new UI_Break(form_parent);
 
 				// タイトル
-				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream"));
-
-				// グループ
-				var group = new UI_GroupContainer(form_parent);
-				var group_parent = group.getElement();
-
-				// www.ustream.tv の設定
-				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream_check_box_container"));
-				var parent = container.getElement();
-
-				// 配信ビデオを表示
-				var check_box_ustream_visible_video_live = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream_visible_video_live"));
-				check_box_ustream_visible_video_live.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.ustream.visible_video_live = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-
-				// 録画ビデオを表示
-				var check_box_ustream_visible_video_record = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream_visible_video_record"));
-				check_box_ustream_visible_video_record.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.ustream.visible_video_record = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-				new UI_Break(form_parent);
-
-				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_dailymotion"));
 
 				// グループ
@@ -4468,10 +4434,6 @@ function PageExpand(page_expand_arguments){
 					check_box_nicovideo_visible_thumbnail_live.setValue(c.nicovideo.visible_thumbnail_live);
 					// nicovideo 静画サムネイル表示
 					check_box_nicovideo_visible_thumbnail_seiga.setValue(c.nicovideo.visible_thumbnail_seiga);
-					// ustream 配信ビデオ表示
-					check_box_ustream_visible_video_live.setValue(c.ustream.visible_video_live);
-					// ustream 録画ビデオ表示
-					check_box_ustream_visible_video_record.setValue(c.ustream.visible_video_record);
 					// dailymotion ビデオ表示
 					check_box_dailymotion_visible_video.setValue(c.dailymotion.visible_video);
 					// vimeo ビデオ表示
@@ -4873,31 +4835,6 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				// www.ustream.tv の設定
-				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream"));
-				var parent = container.getElement();
-
-				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream_inline_video_record"));
-				var text_input_expand_video_ustream_inline_video_record = new UI_TextInput(parent);
-				text_input_expand_video_ustream_inline_video_record.oninput = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.expand_video.inline.ustream.video_record = v;
-					});
-					_setting_define.update();
-					projectModify();
-				};
-				new UI_BreakItem(parent);
-
-				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream_inline_video_live"));
-				var text_input_expand_video_ustream_inline_video_live = new UI_TextInput(parent);
-				text_input_expand_video_ustream_inline_video_live.oninput = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.expand_video.inline.ustream.video_live = v;
-					});
-					_setting_define.update();
-					projectModify();
-				};
-
 				// www.dailymotion.com の設定
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_dailymotion"));
 				var parent = container.getElement();
@@ -5002,8 +4939,6 @@ function PageExpand(page_expand_arguments){
 					text_input_expand_video_nicovideo_inline_thumbnail_community.setValue(c.expand_video.inline.nicovideo.thumbnail_community);
 					text_input_expand_video_nicovideo_inline_thumbnail_live.setValue(c.expand_video.inline.nicovideo.thumbnail_live);
 					text_input_expand_video_nicovideo_inline_thumbnail_seiga.setValue(c.expand_video.inline.nicovideo.thumbnail_seiga);
-					text_input_expand_video_ustream_inline_video_live.setValue(c.expand_video.inline.ustream.video_live);
-					text_input_expand_video_ustream_inline_video_record.setValue(c.expand_video.inline.ustream.video_record);
 					text_input_expand_video_dailymotion_inline_video.setValue(c.expand_video.inline.dailymotion.video);
 					text_input_expand_video_vimeo_inline_video.setValue(c.expand_video.inline.vimeo.video);
 					text_input_expand_video_fc2video_inline_video.setValue(c.expand_video.inline.fc2video.video);
@@ -5144,7 +5079,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.9");
+				new UI_Text(parent,"PageExpand ver.1.5.10");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -11111,10 +11046,6 @@ function PageExpand(page_expand_arguments){
 						visible_thumbnail_live:false,
 						visible_thumbnail_seiga:false
 					},
-					ustream:{
-						visible_video_live:false,
-						visible_video_record:false
-					},
 					dailymotion:{
 						visible_video:false
 					},
@@ -11198,10 +11129,6 @@ function PageExpand(page_expand_arguments){
 								thumbnail_community:"",
 								thumbnail_live:"",
 								thumbnail_seiga:""
-							},
-							ustream:{
-								video_live:"",
-								video_record:""
 							},
 							dailymotion:{
 								video:""

@@ -948,18 +948,6 @@
 			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_seiga: {
 				message: "启用 世佳 缩略图"
 			},
-			menu_setting_expand_video_inline_ustream: {
-				message: "www.ustream.tv 设置"
-			},
-			menu_setting_expand_video_inline_ustream_check_box_container: {
-				message: "www.ustream.tv 设置"
-			},
-			menu_setting_expand_video_inline_ustream_visible_video_live: {
-				message: "启用传送视频"
-			},
-			menu_setting_expand_video_inline_ustream_visible_video_record: {
-				message: "启用录制的视频"
-			},
 			menu_setting_expand_video_inline_dailymotion: {
 				message: "www.dailymotion.com 设置"
 			},
@@ -1097,15 +1085,6 @@
 			},
 			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga: {
 				message: "世佳 缩略图内联显示"
-			},
-			menu_setting_style_sheet_expand_video_ustream: {
-				message: "www.ustream.tv 设置"
-			},
-			menu_setting_style_sheet_expand_video_ustream_inline_video_record: {
-				message: "传送视频内联显示"
-			},
-			menu_setting_style_sheet_expand_video_ustream_inline_video_live: {
-				message: "录制的视频内联显示"
 			},
 			menu_setting_style_sheet_expand_video_dailymotion: {
 				message: "www.dailymotion.com 设置"

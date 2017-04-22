@@ -1,1 +1,1 @@
-PageExpand({execute_type:"ChromeExtensionBackGround",admin:window,window:window});
+PageExpand({execute_type:"ChromeExtensionBackGround",admin:this,window:window});

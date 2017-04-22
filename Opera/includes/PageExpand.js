@@ -3157,8 +3157,6 @@ function PageExpand(page_expand_arguments){
 			ElementExpandInlineVideoYoutube(param);
 			// nicovideo
 			ElementExpandInlineVideoNicovideo(param);
-			// ustream
-			ElementExpandInlineVideoUstream(param);
 			// dailymotion
 			ElementExpandInlineVideoDailymotion(param);
 			// vimeo
@@ -3654,15 +3652,10 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				var script_url = "http://ext.nicovideo.jp/thumb_watch/" + video_id;
-				if(language){
-					script_url += "?cc=" + language;
-				}
-
 				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-				var loader = null;
-				var video = null;
-				var video_analyze_work = null;
+				var iframe = null;
+				var iframe_analyze_work = null;
+				var iframe_url = "http://embed.nicovideo.jp/watch/" + video_id;
 				var event_handler = null;
 				var limitter_element = null;
 				var observer_remove = null;
@@ -3673,19 +3666,12 @@ function PageExpand(page_expand_arguments){
 					event_dispatcher.dispatchEvent("release",null);
 				}
 
-				// エレメントを破棄
-				function releaseElement(e){
-					// ローダーを中断
-					if(loader){
-						loader.onload = null;
-						loader.onerror = null;
-						loader = null;
-					}
-
+				// インラインフレームを破棄
+				function releaseIframe(e){
 					// アドレスの登録を外す
-					if(script_url){
-						address_collection.removeAddress("video",script_url);
-						script_url = null;
+					if(iframe_url){
+						address_collection.removeAddress("video",iframe_url);
+						iframe_url = null;
 					}
 
 					// イベントハンドラを破棄
@@ -3713,285 +3699,88 @@ function PageExpand(page_expand_arguments){
 					}
 
 					// 解析辞書除外
-					if(video_analyze_work){
-						analyze_work_dictionary.removeAnalyzeWork(video_analyze_work);
-						video_analyze_work = null;
+					if(iframe_analyze_work){
+						analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
+						iframe_analyze_work = null;
 					}
 
-					// エレメントを外す
-					if(video){
-						DomNodeRemove(video);
-						video = null;
+					// インラインフレームを外す
+					if(iframe){
+						DomNodeRemove(iframe);
+						iframe = null;
 					}
+				}
+
+				// 混在コンテンツの展開が可能か
+				if(!(project.checkAllowExpandIframeElement(iframe_url))){
+					releaseIframe();
+					expand_video_complete();
+					return;
 				}
 
 				// 重複チェック
 				if(project.getDisableSameInlineVideo()){
-					if(address_collection.hasAddress("video",script_url)){
-						script_url = null;
-						releaseElement();
+					if(address_collection.hasAddress("video",iframe_url)){
+						iframe_url = null;
+						releaseIframe();
 						complete();
 						return;
 					}
 					// アドレスを登録
-					address_collection.addAddress("video",script_url);
+					address_collection.addAddress("video",iframe_url);
 				}
 
 				// イベントハンドラを作成
 				event_handler = event_dispatcher.createEventHandler("release");
-				event_handler.setFunction(releaseElement);
+				event_handler.setFunction(releaseIframe);
 
-				// テキストの読み込み
-				loader = new Loader();
-				loader.onload = function(str){
-					var num = str.length;
+				iframe = DocumentCreateElement('iframe');
+				iframe.frameBorder = "0";
+				iframe.scrolling = "no";
+				iframe.allowFullscreen = true;
 
-					// url を抽出
-					var player_url;
-					(function(){
-						var w = "Nicovideo.playerUrl = ";
-						var s = str.indexOf(w);
-						if(s < 0){
-							// 未対応
-							return;
-						}
-						s += w.length;
-						// コーテーション開始
-						while(s < num){
-							w = str.charAt(s);
-							if(w == '\'')	break;
-							if(w == '\"')	break;
-							s++;
-						}
-						if(s >= num)	return;
-						s += 1;
-						// コーテーション終了
-						var c;
-						var e = s;
-						while(e < num){
-							c = str.charAt(e);
-							if(c == w)	break;
-							if(c == '\\'){
-								e++;
-							}
-							e++;
-						}
-						if(e >= num)	return;
+				// スタイルをセット
+				ElementSetStyle(iframe,project.getStyleSheetExpandVideoNicovideoInlineVideo());
 
-						player_url = str.substring(s,e);
-					})();
+				// 解析ワーク作成
+				iframe_analyze_work = AnalyzeWorkCreate(iframe);
 
-					// flashvars を抽出
-					var flashvars = "";
-					var variables = new Object();
-					(function(){
-						var w = "new Nicovideo.MiniPlayer";
-						var s = str.lastIndexOf(w);
-						if(s < 0){
-							// 未対応
-							return;
-						}
-						s += w.length;
-						// 中括弧開始
-						while(s < num){
-							if(str.charAt(s) == '{')	break;
-							s++;
-						}
-						if(s >= num)	return;
-						s += 1;
-						// 中括弧終了
-						var c;
-						var check = false;
-						var e = s;
-						while(e < num){
-							c = str.charAt(e);
-							if(check){
-								if(c == w){
-									check = false;
-								}else if(c == '\\'){
-									e++;
-								}
-							}else{
-								if(c == '}')	break;
-								if(c == '\'' || c == '\"'){
-									w = c;
-									check = true;
-								}
-							}
-							e++;
-						}
-						if(e >= num)	return;
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
 
-						var buf = str.substring(s,e);
-						buf = buf.replace(new RegExp("\\\\/","gi"),"/");
-						buf = buf.replace(new RegExp("\\\\u","gi"),"%u");
-						var buf_num = buf.length;
+				// 解析辞書登録
+				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
-						var p = 0;
-						var step = 0;
-						var name;
-						while(p < buf_num){
-							switch(step){
-							case 0:
-								w = buf.charAt(p);
-								if((w == '\'') || (w == '\"')){
-									step = 1;
-									s = p + 1;
-								}
-								break;
-							case 1:
-								c = buf.charAt(p);
-								if(c == '\\'){
-									p += 1;
-								}else if(c == w){
-									step = 2;
-									name = buf.substring(s,p);
-								}
-								break;
-							case 2:
-								c = buf.charAt(p);
-								if(c == ':'){
-									step = 3;
-								}
-								break;
-							case 3:
-								w = buf.charAt(p);
-								if((w == '\'') || (w == '\"')){
-									step = 4;
-									s = p + 1;
-								}
-								break;
-							case 4:
-								c = buf.charAt(p);
-								if(c == '\\'){
-									p += 1;
-								}else if(c == w){
-									step = 5;
-									flashvars += name + "=" + buf.substring(s,p);
-									variables[name] = buf.substring(s,p);
-								}
-								break;
-							case 5:
-								c = buf.charAt(p);
-								if(c == ','){
-									flashvars += "&";
-									step = 0;
-								}
-								break;
-							}
-							p ++;
-						}
+				// インラインフレームのリムーブ監視
+				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
+				observer_remove.setFunction(dispatchEventRelease);
 
-						// アンエスケープ
-						var unescape_list = [
-							"title",
-							"description",
-							"thumbTitle",
-							"thumbDescription",
-							"category",
-							"categoryGroup"
-						];
-						var i;
-						var list_num = unescape_list.length;
-						for(i=0;i<list_num;i++){
-							var name = unescape_list[i];
-							if(variables[name]){
-								variables[name] = unescape(variables[name]);
-							}
-						}
+				// メディアプレイヤー UI
+				media_player_ui = new MediaPlayerExtendUI(iframe);
+				var event_handler_close = media_player_ui.createEventHandler("close");
+				event_handler_close.setFunction(dispatchEventRelease);
 
-						var count = 0;
-						for(var p in variables){
-							if(count)	flashvars += "&" + p + "=" + variables[p];
-							else		flashvars  =       p + "=" + variables[p];
-							count ++;
-						}
-					})();
+				function responseInsert(){
+					if(!iframe)	return;
 
-					// 混在コンテンツの展開が可能か
-					if(!(project.checkAllowExpandEmbedElement(player_url))){
-						// 解析失敗
-						expand_video_complete();
-						return;
-					}
+					limitter_element = element_limitter_video.createElement();
+					limitter_element.onattach = function(){
+						iframe.src = iframe_url;
+					};
+					limitter_element.onremove = function(){
+						iframe.src = "";
+					};
+					limitter_element.setElementHitArea(iframe);
 
-					if(player_url && flashvars){
-					}else{
-						// 解析失敗
-						expand_video_complete();
-						return;
-					}
+					// 更新
+					limitter_element.update();
 
-					var embed;
-					video = DocumentCreateElement('div');
-
-					// スタイルをセット
-					ElementSetStyle(video,project.getStyleSheetExpandVideoNicovideoInlineVideo());
-
-					// 解析ワーク作成
-					video_analyze_work = AnalyzeWorkCreate(video);
-
-					// 解析辞書登録オプション
-					var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-					attach_options.SetOutsider();
-
-					// 解析辞書登録
-					analyze_work_dictionary.attachAnalyzeWork(video_analyze_work,attach_options);
-
-					// エレメントのリムーブ監視
-					observer_remove = new DomNodeObserverRemoveFromDocument(video);
-					observer_remove.setFunction(dispatchEventRelease);
-
-					// メディアプレイヤー UI
-					media_player_ui = new MediaPlayerExtendUI(video);
-					var event_handler_close = media_player_ui.createEventHandler("close");
-					event_handler_close.setFunction(dispatchEventRelease);
-
-					function responseInsert(){
-						if(!video)	return;
-
-						limitter_element = element_limitter_video.createElement();
-						limitter_element.onattach = function(){
-							if(!embed){
-								embed = DocumentCreateElement('embed');
-								embed.type = "application/x-shockwave-flash";
-								embed.width = "100%";
-								embed.height = "100%";
-								embed.setAttribute("allowScriptAccess","always");
-								embed.setAttribute("bgcolor","#000000");
-								embed.setAttribute("quality","high");
-								embed.setAttribute("flashVars",flashvars);
-								embed.src = player_url;
-								video.appendChild(embed);
-							}
-						};
-						limitter_element.onremove = function(){
-							if(embed){
-								DomNodeRemove(embed);
-								embed = null;
-							}
-						};
-						limitter_element.setElementHitArea(video);
-
-						// 更新
-						limitter_element.update();
-
-						expand_video_complete();
-					}
-
-					// コールバック関数を実行
-					project.executeScriptInsertInlineVideo(element,video,work.event_dispatcher,responseInsert);
-				};
-
-				// ロードエラー
-				loader.onerror = function(){
 					expand_video_complete();
-					complete();
-				};
+				}
 
-				loader.setMethod("GET");
-				loader.setURL(script_url);
-				loader.loadText();
+				// コールバック関数を実行
+				project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
 			})();
 		}
 
@@ -4811,279 +4600,6 @@ function PageExpand(page_expand_arguments){
 
 		// 完了
 		complete();
-	}
-
-	// --------------------------------------------------------------------------------
-	// インラインビデオ ustream
-	// --------------------------------------------------------------------------------
-	function ElementExpandInlineVideoUstream(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-		function complete(){
-		}
-
-		// ustream.tv 内では動作禁止
-		var deny_list = [
-			"*://*.ustream.tv/*"
-		];
-		var i;
-		var num = deny_list.length;
-		for(i=0;i<num;i++){
-			if(StringUrlMatchAsteriskWord(document.URL,deny_list[i])){
-				return;
-			}
-		}
-
-		(function(){
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var loader = null;
-			var iframe = null;
-			var iframe_analyze_work = null;
-			var iframe_url = null;
-			var event_handler = null;
-			var limitter_element = null;
-			var observer_remove = null;
-			var media_player_ui = null;
-
-			// 開放イベントを発行
-			function dispatchEventRelease(e){
-				event_dispatcher.dispatchEvent("release",null);
-			}
-
-			// インラインフレームを破棄
-			function releaseIframe(e){
-				// ローダーを中断
-				if(loader){
-					loader.onload = null;
-					loader.onerror = null;
-					loader = null;
-				}
-
-				// アドレスの登録を外す
-				if(iframe_url){
-					address_collection.removeAddress("video",iframe_url);
-					iframe_url = null;
-				}
-
-				// イベントハンドラを破棄
-				if(event_handler){
-					event_handler.release();
-					event_handler = null;
-				}
-
-				if(limitter_element){
-					limitter_element.onremove = null;
-					limitter_element.release();
-					limitter_element = null;
-				}
-
-				// 監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// メディアプレイヤー UI を破棄
-				if(media_player_ui){
-					media_player_ui.release();
-					media_player_ui = null;
-				}
-
-				// 解析辞書除外
-				if(iframe_analyze_work){
-					analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-					iframe_analyze_work = null;
-				}
-
-				// インラインフレームを外す
-				if(iframe){
-					DomNodeRemove(iframe);
-					iframe = null;
-				}
-			}
-
-			function initialize(){
-				// イベントハンドラを作成
-				event_handler = event_dispatcher.createEventHandler("release");
-				event_handler.setFunction(releaseIframe);
-			}
-
-			// 動画情報を読み込み
-			function load_video_info(url){
-				initialize();
-
-				// テキストの読み込み
-				var loader = new Loader();
-				loader.onload = function(str){
-					// og:video:secure_url を取得
-					if(str.match(/<meta[ ]+?property=\"og:video:secure_url\"[ ]+?content=\"(.*?)\"/i)){
-						iframe_url = RegExp.$1;
-					}
-
-					if(!iframe_url){
-						// og:video:secure_url を取得
-						if(str.match(/<meta[ ]+?property=\"og:video\"[ ]+?content=\"(.*?)\"/i)){
-							iframe_url = RegExp.$1;
-						}
-					}
-
-					if(iframe_url){
-						var query = StringGetQuery(iframe_url);
-						if(query.autoplay === undefined){
-							iframe_url = iframe_url + "&autoplay=false";
-						}
-
-						var check = false;
-						if(iframe_url.indexOf("/recorded/") >= 0){
-							if(project.getVisibleVideoRecordUstream()){
-								expand_video(false);
-								check = true;
-							}
-						}else{
-							if(project.getVisibleVideoLiveUstream()){
-								expand_video(true);
-								check = true;
-							}
-						}
-
-						if(!check){
-							releaseIframe();
-						}
-					}
-				};
-
-				loader.onerror = function(){
-					complete();
-				};
-				loader.setMethod("GET");
-				loader.setURL(url);
-				loader.loadText();
-			}
-
-			// 録画動画を展開
-			function expand_video_record(video_id){
-				if(project.getVisibleVideoRecordUstream()){
-					initialize();
-					iframe_url = "https://www.ustream.tv/embed/recorded/" + video_id;
-					expand_video(false);
-				}
-			}
-
-			// 動画を展開
-			function expand_video(live){
-
-				// 混在コンテンツの展開が可能か
-				if(!(project.checkAllowExpandIframeElement(iframe_url))){
-					releaseIframe();
-					complete();
-					return;
-				}
-
-				// 重複チェック
-				if(project.getDisableSameInlineVideo()){
-					if(address_collection.hasAddress("video",iframe_url)){
-						iframe_url = null;
-						releaseIframe();
-						complete();
-						return;
-					}
-					// アドレスを登録
-					address_collection.addAddress("video",iframe_url);
-				}
-
-				iframe = DocumentCreateElement('iframe');
-				iframe.frameBorder = "0";
-				iframe.scrolling = "no";
-				iframe.allowFullscreen = true;
-
-				// スタイルをセット
-				if(live){
-					ElementSetStyle(iframe,project.getStyleSheetExpandVideoUstreamInlineVideoLive());
-				}else{
-					ElementSetStyle(iframe,project.getStyleSheetExpandVideoUstreamInlineVideoRecord());
-				}
-
-				// 解析ワーク作成
-				iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-				// インラインフレームのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-				observer_remove.setFunction(dispatchEventRelease);
-
-				// メディアプレイヤー UI
-				media_player_ui = new MediaPlayerExtendUI(iframe);
-				var event_handler_close = media_player_ui.createEventHandler("close");
-				event_handler_close.setFunction(dispatchEventRelease);
-
-				function responseInsert(){
-					if(!iframe)	return;
-
-					limitter_element = element_limitter_video.createElement();
-					limitter_element.onattach = function(){
-						iframe.src = iframe_url;
-					};
-					limitter_element.onremove = function(){
-						iframe.src = "";
-					};
-					limitter_element.setElementHitArea(iframe);
-
-					// 更新
-					limitter_element.update();
-				}
-
-				// コールバック関数を実行
-				project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
-			}
-
-			// 録画ビデオ用
-			if(project.getVisibleVideoRecordUstream()){
-				var allow_list_video = [
-					"*://*.ustream.tv/recorded/*"
-				];
-				num = allow_list_video.length;
-				for(i=0;i<num;i++){
-					if(StringUrlMatchAsteriskWord(url,allow_list_video[i])){
-						if(url.match("/recorded/([0-9]+?)([?]|[/]|[#]|$)","i")){
-							expand_video_record(RegExp.$1);
-							return;
-						}
-					}
-				}
-			}
-
-			// ustream.tv へのリンク
-			if(
-				project.getVisibleVideoLiveUstream() ||
-				project.getVisibleVideoRecordUstream()
-			){
-				var allow_list_live = [
-					"*://ustre.am/*",
-					"*://*.ustream.tv/*"
-				];
-				num = allow_list_live.length;
-				for(i=0;i<num;i++){
-					if(StringUrlMatchAsteriskWord(url,allow_list_live[i])){
-						load_video_info(url);
-						return;
-					}
-				}
-			}
-
-			// 完了
-			complete();
-		})();
 	}
 
 	// --------------------------------------------------------------------------------

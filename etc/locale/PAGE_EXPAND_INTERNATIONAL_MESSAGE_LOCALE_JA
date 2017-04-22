@@ -949,18 +949,6 @@
 			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_seiga: {
 				message: "静画サムネイルを表示"
 			},
-			menu_setting_expand_video_inline_ustream: {
-				message: "www.ustream.tv の設定"
-			},
-			menu_setting_expand_video_inline_ustream_check_box_container: {
-				message: "www.ustream.tv の設定"
-			},
-			menu_setting_expand_video_inline_ustream_visible_video_live: {
-				message: "配信ビデオを表示"
-			},
-			menu_setting_expand_video_inline_ustream_visible_video_record: {
-				message: "録画ビデオを表示"
-			},
 			menu_setting_expand_video_inline_dailymotion: {
 				message: "www.dailymotion.com の設定"
 			},
@@ -1098,15 +1086,6 @@
 			},
 			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga: {
 				message: "静画サムネイルのインライン表示"
-			},
-			menu_setting_style_sheet_expand_video_ustream: {
-				message: "www.ustream.tv の設定"
-			},
-			menu_setting_style_sheet_expand_video_ustream_inline_video_record: {
-				message: "配信ビデオのインライン表示"
-			},
-			menu_setting_style_sheet_expand_video_ustream_inline_video_live: {
-				message: "録画ビデオのインライン表示"
 			},
 			menu_setting_style_sheet_expand_video_dailymotion: {
 				message: "www.dailymotion.com の設定"

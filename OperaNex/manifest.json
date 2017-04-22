@@ -1,7 +1,7 @@
 {
   "default_locale": "en",
   "name": "__MSG_extension_name__",
-  "version": "1.5.9.0",
+  "version": "1.5.10.0",
   "manifest_version": 2,
   "description": "__MSG_extension_description__",
   "author": "hakuhin",
@@ -52,6 +52,10 @@
     "default_panel": "sidebar.html"
   },
   "options_page": "options.html",
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "permissions": [
     "tabs" , "webRequest" ,"webRequestBlocking" , "contextMenus" , "storage" , "clipboardWrite" , "downloads" , "downloads.shelf" , "http://*/" , "https://*/" , "ftp://*/"
   ]

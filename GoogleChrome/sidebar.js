@@ -1,1 +1,1 @@
-PageExpand({execute_type:"ChromeExtensionSidebar",admin:window,window:window});
+PageExpand({execute_type:"ChromeExtensionSidebar",admin:this,window:window});

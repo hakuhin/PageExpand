@@ -3348,20 +3348,6 @@ function PageExpand(page_expand_arguments){
 		};
 
 		// --------------------------------------------------------------------------------
-		// ustream の配信ビデオを表示するか
-		// --------------------------------------------------------------------------------
-		_this.getVisibleVideoLiveUstream = function(){
-			return _proj_ins.expand_video.ustream.visible_video_live;
-		};
-
-		// --------------------------------------------------------------------------------
-		// ustream の録画ビデオを表示するか
-		// --------------------------------------------------------------------------------
-		_this.getVisibleVideoRecordUstream = function(){
-			return _proj_ins.expand_video.ustream.visible_video_record;
-		};
-
-		// --------------------------------------------------------------------------------
 		// dailymotion の録画ビデオを表示するか
 		// --------------------------------------------------------------------------------
 		_this.getVisibleVideoDailymotion = function(){
@@ -3535,26 +3521,6 @@ function PageExpand(page_expand_arguments){
 		_this.getStyleSheetExpandVideoNicovideoInlineThumbnailSeiga = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.nicovideo.thumbnail_seiga;
-			}
-			return "";
-		};
-
-		// --------------------------------------------------------------------------------
-		// ustream 配信ビデオのインライン表示のスタイルシート
-		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandVideoUstreamInlineVideoLive = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_video.inline.ustream.video_live;
-			}
-			return "";
-		};
-
-		// --------------------------------------------------------------------------------
-		// ustream 録画ビデオのインライン表示のスタイルシート
-		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandVideoUstreamInlineVideoRecord = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_video.inline.ustream.video_record;
 			}
 			return "";
 		};
@@ -4718,6 +4684,30 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 			}
+		}
+
+		// --------------------------------------------------------------------------------
+		// アイテムの位置を取得
+		// --------------------------------------------------------------------------------
+		function getItemIndex(ary,id){
+			var p;
+			var i;
+			var num = ary.length;
+			for(i=0;i<num;i++){
+				p = ary[i];
+				if(p.id == id) return i;
+			}
+			return -1;
+		}
+
+		// --------------------------------------------------------------------------------
+		// アイテムの位置を変更
+		// --------------------------------------------------------------------------------
+		function moveItemAt(ary,id,index){
+			var pos = getItemIndex(ary,id);
+			var item = ary[pos];
+			ary.splice(pos,1);
+			ary.splice(index,0,item);
 		}
 
 		// --------------------------------------------------------------------------------
@@ -10334,12 +10324,7 @@ function PageExpand(page_expand_arguments){
 						filter:[]
 					},
 					regexp:{
-						filter:[
-							{
-								pattern:"^http://potato\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-								flags:{i:true,g:false}
-							}
-						]
+						filter:[]
 					}
 				},
 				enable:true,
@@ -10920,18 +10905,6 @@ function PageExpand(page_expand_arguments){
 				PageExpandProjectScriptObject_SetUserScript(script_obj , obj.script_callback);
 				obj.script_callback = script_obj;
 			});
-
-			// ２ちゃんねる掲示板 v.06
-			var obj = getPreset(proj.expand_bbs,"2ch_v6");
-			var filter = obj.filter.regexp.filter;
-			filter.push({
-				pattern:"^http://hanabi\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			});
-			filter.push({
-				pattern:"^http://tamae\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			});
 		}
 		if(exit())	return proj;
 
@@ -10959,15 +10932,6 @@ function PageExpand(page_expand_arguments){
 		if(proj.version < 31){
 			// バージョン値
 			proj.version = 31;
-			
-			// ２ちゃんねる掲示板 v.06
-			var obj = getPreset(proj.expand_bbs,"2ch_v6");
-			var filter = obj.filter.regexp.filter;
-			filter.push({
-				pattern:"^http://hayabusa8\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			});
-
 		}
 		if(exit())	return proj;
 
@@ -10977,15 +10941,6 @@ function PageExpand(page_expand_arguments){
 		if(proj.version < 32){
 			// バージョン値
 			proj.version = 32;
-			
-			// ２ちゃんねる掲示板 v.06
-			var obj = getPreset(proj.expand_bbs,"2ch_v6");
-			var filter = obj.filter.regexp.filter;
-			filter.push({
-				pattern:"^http://raptor\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			});
-
 		}
 		if(exit())	return proj;
 
@@ -11036,41 +10991,6 @@ function PageExpand(page_expand_arguments){
 					enable_cache:true,
 					script:PageExpandProjectScriptObject_Create("ReplacementToLink_DirectLinkGeneric_Imgur")
 				});
-			});
-
-			// --------------------------------------------------------------------------------
-			// 掲示板設定
-			// --------------------------------------------------------------------------------
-			// ２ちゃんねる掲示板 v.06
-			var obj = getPreset(proj.expand_bbs,"2ch_v6");
-			var filter = obj.filter.regexp.filter;
-			filter.push({
-				pattern:"^http://agree\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			});
-			filter.push({
-				pattern:"^http://echo\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			});
-			filter.push({
-				pattern:"^http://hitomi\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			});
-			filter.push({
-				pattern:"^http://karma\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			});
-			filter.push({
-				pattern:"^http://shiba\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			});
-			filter.push({
-				pattern:"^http://tanuki\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			});
-			filter.push({
-				pattern:"^http://mercury\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
 			});
 		}
 		if(exit())	return proj;
@@ -11166,30 +11086,6 @@ function PageExpand(page_expand_arguments){
 		if(proj.version < 36){
 			// バージョン値
 			proj.version = 36;
-
-			// --------------------------------------------------------------------------------
-			// 掲示板設定
-			// --------------------------------------------------------------------------------
-			// ２ちゃんねる掲示板 v.06
-			var obj = getPreset(proj.expand_bbs,"2ch_v6");
-			var filter = obj.filter.regexp.filter;
-			filter.splice(11,0,{
-				pattern:"^http://krsw\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			},{
-				pattern:"^http://mint\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			},{
-				pattern:"^http://nhk2\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			},{
-				pattern:"^http://rio2016\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			});
-			filter.push({
-				pattern:"^http://phoebe\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			});
 		}
 		if(exit())	return proj;
 
@@ -11244,6 +11140,124 @@ function PageExpand(page_expand_arguments){
 				pattern:"^[^:]+://image\\.search\\.yahoo\\.co\\.jp/search.*",
 				flags:{i:true,g:false}
 			};
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.39
+		// --------------------------------------------------------------------------------
+		if(proj.version < 39){
+			// バージョン値
+			proj.version = 39;
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義
+			// --------------------------------------------------------------------------------
+			// イメージ検索用
+			updatePreset(proj.replacement_to_link,"direct_link_image_search",function(obj,def){
+				var filters = obj.filter;
+				filters.splice(8,3);
+				filters.splice(4,2);
+				filters[4].filter.regexp.filter[0] = {
+					pattern:"^[^:]+://yandex\\.(ru|com)/images/search[?].*img_url=.*$",
+					flags:{i:true,g:false}
+				};
+				filters[5].filter = {
+					type:"regexp",
+					asterisk:{
+						filter:[]
+					},
+					regexp:{
+						filter:[
+							{
+								pattern:"^[^:]+://search\\.goo\\.ne\\.jp/imageDetail[?].*mode=7.*$",
+								flags:{i:true,g:false}
+							}
+						]
+					}
+				};
+			});
+
+			// --------------------------------------------------------------------------------
+			// ビデオ展開定義
+			// --------------------------------------------------------------------------------
+			update(proj.expand_video,"*",function(obj){
+				delete obj.ustream;
+			});
+
+			// --------------------------------------------------------------------------------
+			// スタイルシート定義
+			// --------------------------------------------------------------------------------
+			update(proj.style_sheet,"*",function(obj){
+				delete obj.expand_video.inline.ustream;
+			});
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			// 検索サイト
+			var preset = getPreset(proj.urlmap,"search");
+			var filter = preset.filter.asterisk.filter;
+			filter.splice(7,1);
+
+			// 画像検索サイト
+			var preset = getPreset(proj.urlmap,"image_search");
+			var filter = preset.filter.regexp.filter;
+			filter.splice(12,1);
+			filter.splice(6,1);
+			filter[4] = {
+				pattern:"^[^:]+://search\\.yahoo\\.co\\.jp/image/search.*",
+				flags:{i:true,g:false}
+			};
+			filter.splice(7,0,{
+				pattern:"^[^:]+://[^.]+\\.aolsearch\\.com/image[?].*",
+				flags:{i:true,g:false}
+			});
+			filter[9] = {
+				pattern:"^[^:]+://search\\.goo\\.ne\\.jp/web\\.jsp[?].*mode=7.*",
+				flags:{i:true,g:false}
+			};
+			filter[11] = {
+				pattern:"^[^:]+://search\\.naver\\.com/search\\.naver[?].*where=image.*",
+				flags:{i:true,g:false}
+			};
+
+			// リアルタイム検索サイト
+			var preset = getPreset(proj.urlmap,"realtime_search");
+			var filter = preset.filter.asterisk.filter;
+			filter.splice(4,1);
+			filter.splice(1,5);
+			filter[0] = "*://search.yahoo.co.jp/realtime/*";
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// ２ちゃんねる掲示板 v.06
+			moveItemAt(proj.expand_bbs,"2ch_v6",getItemIndex(proj.expand_bbs,"2ch"));
+			var obj = getPreset(proj.expand_bbs,"2ch_v6");
+			var filter = obj.filter.regexp.filter = [{
+				pattern:"^(http|https)://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			},{
+				pattern:"^(http|https)://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			}];
+
+			// ２ちゃんねる掲示板
+			var obj = getPreset(proj.expand_bbs,"2ch");
+			var filter = obj.filter.regexp.filter;
+			var i;
+			var num = filter.length;
+			for(i=0;i<num;i++){
+				var f = filter[i]
+				f.pattern = f.pattern.replace("^http:","^(http|https):");
+			}
+			filter.splice(3,1);
+			filter[0] = {
+				pattern:"^(http|https)://(carpenter|hayabusa6|hayabusa7|vipper)\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			};
+
 		}
 		if(exit())	return proj;
 
@@ -11427,16 +11441,49 @@ function PageExpand(page_expand_arguments){
 	function(info,response){
 		var element = info.element;
 
+		if(element.tagName == "LI"){
+
+			// AOL Image Search
+			try{
+				var org_src = element.dataset["imgdetailContent"];
+				if(org_src){
+					response({url:org_src});
+					return true;			
+				}
+			}catch(e){}
+
+			// 百度画像検索
+			try{
+				var a = ElementGetElementsByTagName(element,"a")[0];
+				if(a){
+					if(a.href.match(new RegExp("^[^:]+://image\\.baidu\\.com/search/detail[?]"))){
+						var image_url = element.dataset.objurl;
+						if(image_url){
+							response({url:image_url});
+							return true;
+						}
+					}
+				}
+			}catch(e){}
+		}
+
 		if(element.tagName == "A"){
 
 			// NAVER 画像検索
-			var org_src = element.getAttribute("src");
-			if(org_src){
-				if(org_src.indexOf(".search.naver.jp/") >= 0){
-					response({url:org_src});
-					return true;
+			try{
+				var m = ElementGetClassName(element).match(new RegExp("thumb","i"));
+				if(m){
+					var node = ElementGetElementsByClassName(element,"_meta")[0];
+					if(node){
+						obj = JsonParse(ElementGetTextContent(node));
+						var image_url = obj["originalUrl"];
+						if(image_url){
+							response({url:decodeURIComponent(image_url)});
+							return true;
+						}
+					}
 				}
-			}
+			}catch(e){}
 
 			// BIGLOBE 画像検索
 			var org_imgsrc = element.getAttribute("org_imgsrc");
@@ -12078,139 +12125,7 @@ function PageExpand(page_expand_arguments){
 			// アンカー置換定義「ポップアップを無効化（イメージ検索用）」
 			// --------------------------------------------------------------------------------
 			attachItem( "ReplacementToAnchor_DisablePopupImageSearch" , [
-	
-	function(info,response){
-		var anchor_element = info.anchor_element;
 
-		// Google 画像検索
-		var url = anchor_element.href;
-		var r = new RegExp("^(http|https)://.*?\\.google\\.(at|be|ca|ch|de|es|fr|it|nl|no|pl|ru|se|co\\.(id|in|jp|th|uk|za)|com|com\\.(ar|au|br|mx|sa|tr|tw))/imgres[?].*","i");
-		if(url.match(r)){
-			// ポップアップ要素を外す
-			var node = anchor_element;
-			while(true){
-				if(!node)	break;
-				if(node.id == "rg_h"){
-					DomNodeRemove(node);
-					response({});
-					return true;
-				}
-				node = node.parentNode;
-			}
-		}
-
-		return false;
-	},
-	function(info,response){
-		var anchor_element = info.anchor_element;
-
-		// Yahoo Image Search
-		var url = anchor_element.href;
-		var r = new RegExp("(image|images)\\.search\\.yahoo\\.com/images/view;.*","i");
-		if(url.match(r)){
-			// ポップアップ要素を非表示
-			var node = anchor_element;
-			while(true){
-				if(!node)	break;
-				if(node.id == "ihover-node-cont"){
-					node.style.display = "none";
-					response({});
-					return true;
-				}
-				node = node.parentNode;
-			}
-		}
-
-		return false;
-	},
-	function(info,response){
-		var anchor_element = info.anchor_element;
-
-		// Bing 画像検索
-		var url = anchor_element.href;
-		var r = new RegExp("^(http|https)://www\\.bing\\.com/images/search[?].*","i");
-		if(url.match(r)){
-			// ポップアップ要素を非表示
-			var node = anchor_element;
-			while(true){
-				if(!node)	break;
-				if(node.id == "sg_hid"){
-					node.style.display = "none";
-					response({});
-					return true;
-				}
-				node = node.parentNode;
-			}
-		}
-
-		return false;
-	},
-	function(info,response){
-		var anchor_element = info.anchor_element;
-
-		// AOL Image Search
-		var url = anchor_element.href;
-		var r = new RegExp("^http://search\\.aol\\..+?/aol/imageDetails[?].*","i");
-		if(url.match(r)){
-			// ポップアップ要素を非表示
-			var node = anchor_element;
-			while(true){
-				if(!node)	break;
-				if(node.className == "hover"){
-					node.style.display = "none";
-					response({});
-					return true;
-				}
-				node = node.parentNode;
-			}
-		}
-
-		return false;
-	},
-	function(info,response){
-		var anchor_element = info.anchor_element;
-
-		// Baidu Image Search
-		var url = anchor_element.href;
-		var r = new RegExp("^http://image\\.baidu\\.com/i[?].*","i");
-		if(url.match(r)){
-			// ポップアップ要素を外す
-			var node = anchor_element;
-			while(true){
-				if(!node)	break;
-				if(node.id == "imgDetail"){
-					DomNodeRemove(node);
-					response({});
-					return true;
-				}
-				node = node.parentNode;
-			}
-		}
-
-		return false;
-	},
-	function(info,response){
-		var anchor_element = info.anchor_element;
-
-		// NAVER Image Search
-		var url = anchor_element.href;
-		var r = new RegExp("http://imagesearch\\.naver\\.com/search.naver[?]","i");
-		if(url.match(r)){
-			// ポップアップ要素を外す
-			var node = anchor_element;
-			while(true){
-				if(!node)	break;
-				if(node.className == "zoom_imsch _infolayer"){
-					DomNodeRemove(node);
-					response({});
-					return true;
-				}
-				node = node.parentNode;
-			}
-		}
-
-		return false;
-	},
 	function(info,response){
 		response({});
 		return true;
@@ -12303,11 +12218,18 @@ function PageExpand(page_expand_arguments){
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
-		// Yahoo! JAPAN リアルタイム検索
-		var url = anchor_element.href;
-		var r = new RegExp("^(http|https)://ord\\.yahoo\\.co\\.jp/o/realtime/.*/([*][-]|[*][*])(.*)$","i");
-		if(url.match(r)){
-			anchor_element.href = unescape(RegExp.$3);
+		// Yahoo! JAPAN リアルタイム検索		
+		var url = decodeURIComponent(anchor_element.href);
+		var m = url.match(new RegExp("^(http|https)://ord\\.yahoo\\.co\\.jp/o/realtime/.*RU=([0-9a-zA-Z._]+)"));
+		if(m){
+			var base64 = m[2];
+			base64 = base64.replace(/[.]/g,"+");
+			base64 = base64.replace(/[_]/g,"/");
+			base64 = base64.replace(/[-]/g,"=");
+			var ary = Base64_To_ArrayBuffer(base64);
+			if(ary){
+				anchor_element.href = String_From_ArrayBuffer_As_UTF8(ary);
+			}
 		}
 
 		return false;
@@ -12326,19 +12248,27 @@ function PageExpand(page_expand_arguments){
 	
 	function(info,response){
 		var anchor_element = info.anchor_element;
-		var r;
 
-		// Google 検索
-		if(anchor_element.onmousedown){
-			if(anchor_element.onmousedown.toString().match(/return rwt\(this,/)){
-				anchor_element.onmousedown = null;
-			}
-		}
+		if((function(){
+			var code = anchor_element.getAttribute("onmousedown") || (function(){
+				if(!anchor_element.onmousedown) return "";
+				return anchor_element.onmousedown.toString();
+			})() || "";
 
-		// Yahoo! JAPAN
-		if(anchor_element.onmousedown){
-			if(anchor_element.onmousedown.toString().match(/return lswap\(this/)){
-				anchor_element.onmousedown = null;
+			// Google 検索
+			if(code.match(/return rwt\(this,/)) return true;
+
+			// Yahoo! JAPAN
+			if(code.match(/return lswap\(this/)) return true;
+
+			return false;
+		})()){
+			anchor_element.onmousedown = null;
+			var parent = anchor_element.parentNode;
+			if(parent.addEventListener){
+				parent.addEventListener("mousedown",function(e){
+					e.stopPropagation();
+				},true);
 			}
 		}
 
@@ -12354,7 +12284,7 @@ function PageExpand(page_expand_arguments){
 			// クエリを取得
 			var query = StringGetQuery(url);
 			if(query.url){
-				anchor_element.href = unescape(query.url);
+				anchor_element.href = decodeURIComponent(query.url);
 			}
 		}
 
@@ -12365,9 +12295,9 @@ function PageExpand(page_expand_arguments){
 
 		// Yahoo! JAPAN 検索
 		var url = anchor_element.href;
-		var r = new RegExp("^(http|https)://wrs\\.search\\.yahoo\\.co\\.jp/_ylt=.*[/][*][*](.*)$","i");
+		var r = new RegExp("^(http|https)://search[.]yahoo[.]co[.]jp/r/.*_ylt=.*[/][*][*](.*)$","i");
 		if(url.match(r)){
-			anchor_element.href = unescape(RegExp.$2);
+			anchor_element.href = decodeURIComponent(RegExp.$2);
 		}
 
 		return false;
@@ -12393,17 +12323,17 @@ function PageExpand(page_expand_arguments){
 
 		var list = [
 			// 2ちゃんねる
-			{search:"^http://ime\\.nu/",replace:""},
-			{search:"^http://jump\\.2ch\\.net/[?]",replace:""},
-			{search:"^http://2ch\\.io/",replace:""},
+			{search:"^(http|https)://ime\\.nu/",replace:""},
+			{search:"^(http|https)://jump\\.2ch\\.net/[?]",replace:""},
+			{search:"^(http|https)://2ch\\.io/",replace:""},
 			// まちBBS
-			{search:"^http://machi\\.to/bbs/link\\.cgi[?]URL=",replace:""},
+			{search:"^(http|https)://machi\\.to/bbs/link\\.cgi[?]URL=",replace:""},
 			// PINKちゃんねる
-			{search:"^http://(www\\.|)pinktower\\.com/([?]|)",replace:""},
+			{search:"^(http|https)://(www\\.|)pinktower\\.com/([?]|)",replace:""},
 			// したらば掲示板
-			{search:"^http://jbbs\\.shitaraba\\.net/bbs/link\\.cgi[?]url=",replace:"",decode_uri:true},
+			{search:"^(http|https)://jbbs\\.shitaraba\\.net/bbs/link\\.cgi[?]url=",replace:"",decode_uri:true},
 			// ログ速
-			{search:"^http://l\\.moapi\\.net/",replace:""}
+			{search:"^(http|https)://l\\.moapi\\.net/",replace:""}
 		];
 
 		var i;
@@ -14260,11 +14190,11 @@ function PageExpand(page_expand_arguments){
 			base64 = base64.replace(/[.]/g,"+");
 			base64 = base64.replace(/[_]/g,"/");
 			base64 = base64.replace(/[-]/g,"=");
-			Base64_To_ArrayBuffer_Async(base64,function(ary){
-				if(!ary) return;
+			var ary = Base64_To_ArrayBuffer(base64);
+			if(ary){
 				response({result:true,url:String_From_ArrayBuffer_As_UTF8(ary),content_type:["image"]});
-			});
-			return true;
+				return true;
+			}
 		}
 		return false;
 	},
@@ -14286,42 +14216,21 @@ function PageExpand(page_expand_arguments){
 		var url = anchor_element.href;
 		var r = new RegExp("^(http|https)://www\\.bing\\.com/images/search[?].*","i");
 		if(url.match(r)){
-			// 画像を取得
-			var images = ElementGetElementsByTagName(anchor_element,"img");
-			if(images.length){
-				var image_url;
-
-				try{
-					// クエリを取得
-					var query = StringGetQuery(images[0].src);
-					if(query.url){
-						image_url = unescape(query.url);
-					}
-				}catch(e){}
-
+			
+			var image_url = (function(){
 				try{
 					// m 属性を取得
-					var span = anchor_element.parentNode.parentNode;
-					var m = span.getAttribute("m");
-					if(!m)	m = span.getAttribute("_pageexpand_m");
-					if(m.match(new RegExp("imgurl:\"(.*?)\"","i"))){
-						image_url = RegExp.$1;
-					}
+					var m = anchor_element.getAttribute("m") || "";
+					var obj = JsonParse(m);
+					if(obj["murl"]) return obj["murl"];
 				}catch(e){}
+				
+				return null;
+			})();
 
-				try{
-					// m 属性を取得
-					var m = anchor_element.getAttribute("m");
-					if(!m)	m = span.getAttribute("_pageexpand_m");
-					if(m.match(new RegExp("oi:\"(.*?)\"","i"))){
-						image_url = RegExp.$1;
-					}
-				}catch(e){}
-
-				if(image_url){
-					response({result:true,url:image_url,content_type:["image"]});
-					return true;
-				}
+			if(image_url){
+				response({result:true,url:image_url,content_type:["image"]});
+				return true;
 			}
 		}
 
@@ -14367,57 +14276,6 @@ function PageExpand(page_expand_arguments){
 			]);
 
 			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「イメージ検索用」「Ask 画像検索」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkImageSearch_Ask" , [
-	
-	function(info,response){
-		var anchor_element = info.anchor_element;
-
-		// クエリを取得
-		var query = StringGetQuery(anchor_element.href);
-		if(query.ftURI){
-			query = StringGetQuery(decodeURIComponent(query.ftURI));
-			if(query.imagesrc){
-				response({result:true,url:unescape(decodeURIComponent(query.imagesrc)),content_type:["image"]});
-				return true;
-			}
-		}
-
-		return false;
-	},
-	function(info,response){
-		response({result:false});
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「イメージ検索用」「AOL 画像検索」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkImageSearch_Aol" , [
-	
-	function(info,response){
-		var anchor_element = info.anchor_element;
-
-		// クエリを取得
-		var query = StringGetQuery(anchor_element.href);
-		if(query.img){
-			response({result:true,url:unescape(query.img),content_type:["image"]});
-			return true;
-		}
-
-		return false;
-	},
-	function(info,response){
-		response({result:false});
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
 			// ハイパーリンク置換定義「イメージ検索用」「Yandex 画像検索」
 			// --------------------------------------------------------------------------------
 			attachItem( "ReplacementToLink_DirectLinkImageSearch_Yandex" , [
@@ -14425,19 +14283,15 @@ function PageExpand(page_expand_arguments){
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
-		var url = anchor_element.href;
-		var r = new RegExp("yandex\\.(com|ru)/images/search[?]","i");
-		if(url.match(r)){
-			// クエリを取得
-			var query = StringGetQuery(url);
-			if(query.img_url){
-				var image_url = decodeURIComponent(query.img_url);
-				if(image_url.indexOf("http") != 0){
-					image_url = "http://" + image_url;
-				}
-				response({result:true,url:image_url,content_type:["image"]});
-				return true;
+		// クエリを取得
+		var query = StringGetQuery(anchor_element.href);
+		if(query.img_url){
+			var image_url = decodeURIComponent(query.img_url);
+			if(image_url.indexOf("http") != 0){
+				image_url = "http://" + image_url;
 			}
+			response({result:true,url:image_url,content_type:["image"]});
+			return true;
 		}
 
 		return false;
@@ -14457,103 +14311,37 @@ function PageExpand(page_expand_arguments){
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
-		// クエリを取得
-		var query = StringGetQuery(anchor_element.href);
-		if(query.DOC_ID){
-			response({result:true,url:"http://" + decodeURIComponent(query.DOC_ID).replace(/%2f/ig,"/"),content_type:["image"]});
-			return true;
-		}
+		// ローダーオブジェクトを作成
+		var loader = new Loader();
 
-		return false;
-	},
-	function(info,response){
-		response({result:false});
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「イメージ検索用」「百度」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkImageSearch_Baidu" , [
-	
-	function(info,response){
-		var anchor_element = info.anchor_element;
-
-		// 画像を取得
-		var images = ElementGetElementsByTagName(anchor_element,"img");
-		if(images.length == 1){
-			var image = images[0];
-
-			try{
-				var li = image.parentNode.parentNode.parentNode;
-				var str = li.getAttribute("data-objurl");
-				if(str){
-					response({result:true,url:str,content_type:["image"]});
-					return true;
-				}
-			}catch(e){
-			}
-		}
-
-		response({result:false});
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「イメージ検索用」「NAVER 画像検索」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkImageSearch_Naver" , [
-	
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-		// 画像を取得
-		var images = ElementGetElementsByTagName(anchor_element,"img");
-		if(images.length == 1){
-			var image = images[0];
-			if(image.src.match(new RegExp("search\\.naver\\.net/ugc[?]","i"))){
-				// クエリを取得
-				var query = StringGetQuery(image.src);
-				if(query.q){
-					response({result:true,url:query.q,content_type:["image"]});
-					return true;
+		// 成功
+		loader.onload = function(str){
+			var image_url;
+			var m = str.match('<p[^>]+class[ \n\r\t]*=[ \n\r\t]*"imgDetailTxtLimitLength"[^>]*>(.*)?</p>');
+			if(m){
+				m = m[1].match('<a[^>]+href[ \n\r\t]*=[ \n\r\t]*"([^"]+)');
+				if(m){
+					image_url = m[1];
 				}
 			}
-		}
 
-		return false;
-	},
-	function(info,response){
-		response({result:false});
-		return true;
-	}
+			if(image_url){
+				response({result:true,url:image_url});
+				return;
+			}
+			response({result:false});
+		};
 
-			]);
+		// 失敗
+		loader.onerror = function(){
+			response({result:false});
+		};
 
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「イメージ検索用」「naver.jp」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkImageSearch_NaverJp" , [
-	
-	function(info,response){
+		// テキストの読み込み
+		loader.setMethod("GET");
+		loader.setURL(anchor_element.href);
+		loader.loadText();
 
-		var anchor_element = info.anchor_element;
-
-		// クエリを取得
-		var query = StringGetQuery(anchor_element.href);
-		if(query.q){
-			response({result:true,url:query.q,content_type:["image"]});
-			return true;
-		}
-
-		return false;
-	},
-	function(info,response){
-		response({result:false});
 		return true;
 	}
 
@@ -28320,8 +28108,8 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"(http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch_v6"},
-			{url:"(http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch_v6"}
+			{url:"((http|https)://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch_v6"},
+			{url:"((http|https)://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"pink"}
 		];
 
 		var i;
@@ -28332,6 +28120,10 @@ function PageExpand(page_expand_arguments){
 			var m = url.match(re);
 			if(m){
 				work.base_url = m[1].replace(re,bbs.replace);
+				if(bbs.secure){
+					m = work.base_url.match(new RegExp("[^:]+(.*)"));
+					if(m) work.base_url = "https" + m[1];
+				}
 				work.bbs_name = bbs.name;
 				break;
 			}
@@ -28353,6 +28145,7 @@ function PageExpand(page_expand_arguments){
 		var load_more_list;
 		var load_more_pos = 0;
 		var element_parent = null;
+		var element_parents = [];
 		var read_more_button = null;
 		var element_form = null;
 		var base_url = work.base_url;
@@ -28517,23 +28310,38 @@ function PageExpand(page_expand_arguments){
 		// HTML 文書の整合性テスト
 		// --------------------------------------------------------------------------------
 		function checkValidityFromHTML(str){
-			var m = str.match(new RegExp('<div[^>]+class="(| )thread( |)"[^>]*>.*?<div[^>]+class="(| )post( |)"[^>]*>.*?<div[^>]+class="(| )message( |)"[^>]*>',"i"));
-			if(m){
-				return true;
+			var re;
+			switch(work.bbs_name){
+			case "2ch_v6":
+				re = new RegExp('<div[^>]+class="(| )thread( |)"[^>]*>.*?<div[^>]+class="(| )post( |)"[^>]*>.*?<div[^>]+class="(| )message( |)"[^>]*>',"i");
+				break;
+			case "pink":
+				re = new RegExp('<dl[^>]+class="(| )post( |)"[^>]*>.*?<dd[^>]+class="(| )thread_in( |)"[^>]*>',"i");
+				break;
 			}
-			return false;
+			return Boolean(str.match(re));
 		}
 
 		// --------------------------------------------------------------------------------
 		// HTML 文書をシャドウ読み込み
 		// --------------------------------------------------------------------------------
 		function loadShadowFromHTML(str){
-			var re_number;
+			var re_number = new RegExp('id="([0-9]+)',"i");
 			var re_id = new RegExp("ID:([-a-zA-Z0-9+/.●!=]{8,})","i");
 			var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
+			var search_post_start;
+			var search_post_end;
+			var class_name_message;
 			switch(work.bbs_name){
 			case "2ch_v6":
-					re_number = new RegExp('id="([0-9]+)',"i");
+				search_post_start = '<div class="post"';
+				search_post_end = "</div></div>";
+				class_name_message = "message";
+				break;
+			case "pink":
+				search_post_start = '<dl class="post"';
+				search_post_end = "</dd></dl>";
+				class_name_message = "thread_in";
 				break;
 			}
 
@@ -28541,10 +28349,10 @@ function PageExpand(page_expand_arguments){
 			var n = str.length;
 			function f(){
 				if(p >= n) return;
-				p = str.indexOf('<div class="post"',p);
+				p = str.indexOf(search_post_start,p);
 				if(p < 0) return;
-				var e = str.indexOf("</div></div>",p);
-				if(e >= 0) e += 12;
+				var e = str.indexOf(search_post_end,p);
+				if(e >= 0) e += search_post_end.length;
 				var s = str.substring(p,e);
 				var m = s.match(re_number);
 				if(m){
@@ -28564,7 +28372,7 @@ function PageExpand(page_expand_arguments){
 							info_number = ElementGetElementsByClassName(info_post,"number")[0];
 							info_name = ElementGetElementsByClassName(info_post,"name")[0];
 							info_date = ElementGetElementsByClassName(info_post,"date")[0];
-							info_message = ElementGetElementsByClassName(info_post,"message")[0];	
+							info_message = ElementGetElementsByClassName(info_post,class_name_message)[0];	
 						}catch(e){
 							return;
 						}
@@ -28687,22 +28495,24 @@ function PageExpand(page_expand_arguments){
 		// HTML 文書を継ぎ足し読み込み
 		// --------------------------------------------------------------------------------
 		function loadMoreFromHTML(str,callback){
-
 			// 最後尾取得
-			var nodes = ElementGetElementsByClassName(element_parent,"post");
-			var node_num = nodes.length;
-			if(node_num){
-				var re_id = new RegExp("^([0-9]+)","i");
-				if(ElementGetTextContent(nodes[node_num-1]).match(re_id)){
-					last_id = parseInt(RegExp.$1);
-					dictionary_id[last_id] = true;
-				}
-			}
+			getLastId(function(id){
+				last_id = id;
+				dictionary_id[last_id] = true;
+			});
 
-			var re_number;
+			var re_number = new RegExp("([0-9]+)","i");
+			var search_post_start;
+			var search_post_end;
 			switch(work.bbs_name){
 			case "2ch_v6":
-					re_number = new RegExp("([0-9]+)","i");
+				search_post_start = '<div class="post"';
+				search_post_end = "</div></div>";
+				break;
+			case "pink":
+				search_post_start = '<dl class="post"';
+				search_post_end = "</dd></dl>";
+				break;
 				break;
 			}
 
@@ -28712,10 +28522,10 @@ function PageExpand(page_expand_arguments){
 			function f(){
 				try{
 					if(p >= n) throw 0;
-					p = str.indexOf('<div class="post"',p);
+					p = str.indexOf(search_post_start,p);
 					if(p < 0) throw 0;
-					var e = str.indexOf("</div></div>",p);
-					if(e >= 0) e += 12;
+					var e = str.indexOf(search_post_end,p);
+					if(e >= 0) e += search_post_end.length;
 					var s = str.substring(p,e);
 					var m = s.match(re_number);
 					if(m){
@@ -28805,6 +28615,7 @@ function PageExpand(page_expand_arguments){
 				loader.setURL(param.url);
 				switch(work.bbs_name){
 				case "2ch_v6":
+				case "pink":
 					loader.overrideMimeType("text/plain; charset=Shift_JIS");
 					break;
 				}
@@ -28820,8 +28631,8 @@ function PageExpand(page_expand_arguments){
 		var nodes = ElementGetElementsByClassName(document.body,"thread");
 		var num = nodes.length;
 		for(i=0;i<num;i++){
+			element_parents.push(nodes[i]);
 			element_parent = nodes[i];
-			break;
 		}
 
 		if(!element_parent) return false;
@@ -28829,29 +28640,50 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 範囲取得
 		// --------------------------------------------------------------------------------
-		var nodes = ElementGetElementsByClassName(element_parent,"post");
-		var node_num = nodes.length;
-		if(node_num){
-			var re_id = new RegExp("^([0-9]+)","i");
-
-			if(ElementGetTextContent(nodes[0]).match(re_id)){
-				first_id = parseInt(RegExp.$1);
-				dictionary_id[0] = true;
-			}
-
-			if((first_id == 1) && (node_num > 1)){
-				if(ElementGetTextContent(nodes[1]).match(re_id)){
-					first_id = parseInt(RegExp.$1);
-					dictionary_id[first_id] = true;
-					if(first_id <= 2) first_id = 1;
+		function getLastId(callback){
+			var num = element_parents.length;
+			var i;
+			for(i=num-1;i>=0;i--){
+				var nodes = ElementGetElementsByClassName(element_parents[i],"post");
+				var node_num = nodes.length;
+				if(node_num){
+					var re_id = new RegExp("^([0-9]+)","i");
+					if(ElementGetTextContent(nodes[node_num-1]).match(re_id)){
+						callback(parseInt(RegExp.$1));
+						return;
+					}
 				}
 			}
-
-			if(ElementGetTextContent(nodes[node_num-1]).match(re_id)){
-				last_id = parseInt(RegExp.$1);
-				dictionary_id[last_id] = true;
-			}
 		}
+		(function(){
+			var count = 0;
+			var re_id = new RegExp("^([0-9]+)","i");
+			var num = element_parents.length;
+			var i,j;
+			for(i=0;i<num;i++){
+				var nodes = ElementGetElementsByClassName(element_parents[i],"post");
+				var node_num = nodes.length;
+				for(j=0;j<node_num;j++){
+					var m = ElementGetTextContent(nodes[j]).match(re_id);
+					if(!m) break;
+					if(count == 0){
+						first_id = parseInt(m[1]);
+						dictionary_id[0] = true;
+						if(first_id > 1) return;
+					}else if(count == 1){
+						first_id = parseInt(m[1]);
+						dictionary_id[first_id] = true;
+						if(first_id <= 2) first_id = 1;
+						return;
+					}
+					count += 1;
+				}
+			}
+		})();
+		getLastId(function(id){
+			last_id = id;
+			dictionary_id[last_id] = true;
+		});
 
 		// --------------------------------------------------------------------------------
 		// 読み込みリスト
@@ -28901,6 +28733,7 @@ function PageExpand(page_expand_arguments){
 				var i;
 				switch(work.bbs_name){
 				case "2ch_v6":
+				case "pink":
 					for(i=0;i<nodes.length;i++){
 						if(nodes[i].action.indexOf("/test/bbs.cgi") >= 0){
 							element_form = nodes[i];
@@ -28989,6 +28822,7 @@ function PageExpand(page_expand_arguments){
 				var h;
 				switch(work.bbs_name){
 				case "2ch_v6":
+				case "pink":
 					w = 800;
 					h = 600;
 					var cookie = document.cookie;
@@ -29027,9 +28861,10 @@ function PageExpand(page_expand_arguments){
 							if(window_obj.document){
 								href = window_obj.document.URL;
 							}
-							if(href.indexOf("http://") == 0){
+							if(href.match(/^(http|https):/)){
 								switch(work.bbs_name){
 								case "2ch_v6":
+								case "pink":
 									if(href.indexOf("/test/bbs.cgi") == -1){
 										closed = true;
 									}else if(!timer){
@@ -29073,6 +28908,22 @@ function PageExpand(page_expand_arguments){
 				if(!element_textarea) return;
 				if(window.localStorage.getItem("autoPost") == "true") return;
 
+				if(work.docking_form){
+					work.docking_form.onreset = clear;
+				}
+
+				if((function(){
+					try{
+						var re = new RegExp("^[^:]+");
+						var m0 = element_form.action.match(re);
+						var m1 = document.URL.match(re);
+						if(!m0) return true;
+						if(!m1) return true;
+						if(m0[0] === m1[0]) return false;
+					}catch(e){}
+					return true;
+				})()) return;
+
 				if(load_more_pos == 0){
 					addEvent();
 	
@@ -29080,10 +28931,6 @@ function PageExpand(page_expand_arguments){
 					event_handler_release.setFunction(function(){
 						release();
 					});
-				}
-
-				if(work.docking_form){
-					work.docking_form.onreset = clear;
 				}
 			})();
 		})();
@@ -29130,6 +28977,7 @@ function PageExpand(page_expand_arguments){
 				loader.setURL(param.url);
 				switch(work.bbs_name){
 				case "2ch_v6":
+				case "pink":
 					loader.overrideMimeType("text/plain; charset=Shift_JIS");
 					break;
 				}
@@ -29222,6 +29070,10 @@ function PageExpand(page_expand_arguments){
 								for(j=0;j<clone_num;j++){
 									var obj = clone[j];
 									param[obj.name] = obj.element;
+									DomNodeFindAllDescendants(obj.element,function(node){
+										param[node.className] = node;
+										return false;
+									});
 									dl.appendChild(obj.element);
 								}
 
@@ -29390,6 +29242,10 @@ function PageExpand(page_expand_arguments){
 								for(j=0;j<clone_num;j++){
 									var obj = clone[j];
 									param[obj.name] = obj.element;
+									DomNodeFindAllDescendants(obj.element,function(node){
+										param[node.className] = node;
+										return false;
+									});
 									dl.appendChild(obj.element);
 								}
 
@@ -29556,6 +29412,10 @@ function PageExpand(page_expand_arguments){
 								for(j=0;j<clone_num;j++){
 									var obj = clone[j];
 									param[obj.name] = obj.element;
+									DomNodeFindAllDescendants(obj.element,function(node){
+										param[node.className] = node;
+										return false;
+									});
 									dl.appendChild(obj.element);
 								}
 
@@ -29762,6 +29622,10 @@ function PageExpand(page_expand_arguments){
 								for(j=0;j<clone_num;j++){
 									var obj = clone[j];
 									param[obj.name] = obj.element;
+									DomNodeFindAllDescendants(obj.element,function(node){
+										param[node.className] = node;
+										return false;
+									});
 									dl.appendChild(obj.element);
 								}
 
@@ -29860,6 +29724,10 @@ function PageExpand(page_expand_arguments){
 							for(j=0;j<clone_num;j++){
 								var obj = clone[j];
 								param[obj.name] = obj.element;
+								DomNodeFindAllDescendants(obj.element,function(node){
+									param[node.className] = node;
+									return false;
+								});
 								dl.appendChild(obj.element);
 							}
 
@@ -29965,10 +29833,11 @@ function PageExpand(page_expand_arguments){
 				forHost(node.date);
 				forFollower(node.date);
 			}
-			if(node.message){
-				forResponseAnchor(node.message);
-				forId(node.message);
-				forName(node.message);
+			var message = node.message || node.thread_in;
+			if(message){
+				forResponseAnchor(message);
+				forId(message);
+				forName(message);
 			}
 		}
 
@@ -29987,7 +29856,9 @@ function PageExpand(page_expand_arguments){
 				info_number = ElementGetElementsByClassName(info_post,"number")[0];
 				info_name = ElementGetElementsByClassName(info_post,"name")[0];
 				info_date = ElementGetElementsByClassName(info_post,"date")[0];
-				info_message = ElementGetElementsByClassName(info_post,"message")[0];	
+				info_message = 
+					ElementGetElementsByClassName(info_post,"message")[0] ||
+					ElementGetElementsByClassName(info_post,"thread_in")[0];
 			}catch(e){
 				return false;
 			}
@@ -30075,6 +29946,7 @@ function PageExpand(page_expand_arguments){
 			(function(){
 				switch(work.bbs_name){
 				case "2ch_v6":
+				case "pink":
 					var node_list = ElementGetElementsByClassName(info_post,"back-links");
 					var i;
 					var num = node_list.length;
@@ -30208,10 +30080,13 @@ function PageExpand(page_expand_arguments){
 			var num = nodes.length;
 			for(i=0;i<num;i++){
 				var node = nodes[i];
-				var class_name = node.className || ("_" + i);
-				node_obj[class_name] = node;
+				node_obj[node.className] = node;
+				DomNodeFindAllDescendants(node,function(node){
+					node_obj[node.className] = node;
+					return false;
+				});
 			}
-			node_obj.parent = info_post;
+			node_obj.parent = document.body;
 
 			// レスポンスダイアログを登録（ルート）
 			attachBbsResponseDialog(
@@ -30243,13 +30118,13 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"(http://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch"},
-			{url:"(http://[^.]+\\.2ch\\.sc/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"2ch.sc"},
-			{url:"(http://(|[^.]+\\.)machi\\.to/bbs/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"machi"},
-			{url:"(http://(|[^.]+\\.)machibbs\\.net/[^/]+/[^/]*[0-9]+)",replace:"$1",name:"machibbs"},
-			{url:"(http://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",name:"pink"},
-			{url:"(http://jbbs\\.shitaraba\\.net/bbs/read\\.cgi/[^/]+/[0-9]+/[0-9]+)",replace:"$1/",name:"shitaraba"},
-			{url:"(http://jbbs\\.shitaraba\\.net/bbs/read_archive\\.cgi/[^/]+/[0-9]+/[0-9]+)",replace:"$1/",name:"shitaraba_storage"}
+			{url:"((http|https)://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
+			{url:"((http|https)://[^.]+\\.2ch\\.sc/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch.sc"},
+			{url:"((http|https)://(|[^.]+\\.)machi\\.to/bbs/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"machi"},
+			{url:"((http|https)://(|[^.]+\\.)machibbs\\.net/[^/]+/[^/]*[0-9]+)",replace:"$1",secure:true,name:"machibbs"},
+			{url:"((http|https)://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"pink"},
+			{url:"((http|https)://jbbs\\.shitaraba\\.net/bbs/read\\.cgi/[^/]+/[0-9]+/[0-9]+)",replace:"$1/",secure:false,name:"shitaraba"},
+			{url:"((http|https)://jbbs\\.shitaraba\\.net/bbs/read_archive\\.cgi/[^/]+/[0-9]+/[0-9]+)",replace:"$1/",secure:false,name:"shitaraba_storage"}
 		];
 
 		var i;
@@ -30260,6 +30135,10 @@ function PageExpand(page_expand_arguments){
 			var m = url.match(re);
 			if(m){
 				work.base_url = m[1].replace(re,bbs.replace);
+				if(bbs.secure){
+					m = work.base_url.match(new RegExp("[^:]+(.*)"));
+					if(m) work.base_url = "https" + m[1];
+				}
 				work.bbs_name = bbs.name;
 				break;
 			}
@@ -31367,7 +31246,7 @@ function PageExpand(page_expand_arguments){
 							if(window_obj.document){
 								href = window_obj.document.URL;
 							}
-							if(href.indexOf("http://") == 0){
+							if(href.match(/^(http|https):/)){
 								switch(work.bbs_name){
 								case "2ch":
 								case "pink":
@@ -31447,6 +31326,22 @@ function PageExpand(page_expand_arguments){
 				if(!input_submit) return;
 				if(!element_textarea) return;
 
+				if(work.docking_form){
+					work.docking_form.onreset = clear;
+				}
+
+				if((function(){
+					try{
+						var re = new RegExp("^[^:]+");
+						var m0 = element_form.action.match(re);
+						var m1 = document.URL.match(re);
+						if(!m0) return true;
+						if(!m1) return true;
+						if(m0[0] === m1[0]) return false;
+					}catch(e){}
+					return true;
+				})()) return;
+
 				if(load_more_pos == 0){
 					addEvent();
 	
@@ -31454,10 +31349,6 @@ function PageExpand(page_expand_arguments){
 					event_handler_release.setFunction(function(){
 						release();
 					});
-				}
-
-				if(work.docking_form){
-					work.docking_form.onreset = clear;
 				}
 			})();
 		})();
@@ -33361,24 +33252,11 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
-		// ダウンロードシェルフの設定（内部用）
-		// --------------------------------------------------------------------------------
-		function setDownloadShelf(enable){
-			if(_download_shelf_enable == enable) return;
-
-			_download_shelf_enable = enable;
-			chrome.downloads.setShelfEnabled(_download_shelf_enable);
-		}
-
-		// --------------------------------------------------------------------------------
 		// プライベート変数
 		// --------------------------------------------------------------------------------
 		var _i18n;
 		var _redirect_url_dictionary;
 		var _xhr_queue_dictionary;
-		var _download_dictionary;
-		var _download_ref_count_silent;
-		var _download_shelf_enable;
 		var _tabs;
 		var _context_menu_items;
 
@@ -33390,9 +33268,6 @@ function PageExpand(page_expand_arguments){
 			_context_menu_items = new Array();
 			_redirect_url_dictionary = new RedirectUrlDictionary();
 			_xhr_queue_dictionary = new QueueDictionary();
-			_download_dictionary = new Object();
-			_download_ref_count_silent = 0;
-			_download_shelf_enable = true;
 
 			// GoogleChrome拡張機能通信
 			extension_message = new GoogleChromeExtensionMessageForBackground();
@@ -33609,163 +33484,17 @@ function PageExpand(page_expand_arguments){
 
 			// ダウンロード
 			command_dictionary["download"] = function(param,sender,sendResponse){
-				var request = param;
-				request.silent = Boolean(request.silent);
-				if(request.save_as) request.silent = false;
-
-				var xhr_queue_element = null;
-				var event_dispatcher = null;
-				var item = {
-					contentType:"",
-					bytesLoaded:0,
-					bytesTotal:0
-				};
-
-				var downloader_queue_element = downloader_queue.createElement();
-				downloader_queue_element.onstart = function(){
-
-					if(!chrome.downloads){
-						failure("Download API is not supported.");
-						return;
-					}
-
-					function complete(){
-						downloader_queue_element.complete();
-						downloader_queue_element.release();
-						if(xhr_queue_element){
-							xhr_queue_element.release();
-							xhr_queue_element = null;
+				sendResponse(
+					{
+						state:"complete",
+						response:{
+							result:false,
+							error:"Download API is not supported."
 						}
-					}
-					function success(){
-						complete();
-						sendResponse(
-							{
-								state:"complete",
-								response:{
-									result:true,
-									error:""
-								}
-							},
-							{complete:true}
-						);
-					}
-					function failure(reason){
-						complete();
-						sendResponse(
-							{
-								state:"complete",
-								response:{
-									result:false,
-									error:reason
-								}
-							},
-							{complete:true}
-						);
-					}
-					function progress(downloadDelta){
-						item.contentType = downloadDelta.mime || "";
-						item.bytesLoaded = downloadDelta.bytesReceived || 0;
-						item.bytesTotal  = downloadDelta.totalBytes || 0;
-						sendResponse(
-							{
-								state:"progress",
-								response:item
-							},
-							{complete:false}
-						);
-					}
-
-					var file_name = ProjectDownloadSaveFile_Sanitize(request.file_name || project.getSaveFileDownload(request.url));
-
-					var download_options = {
-						url:request.url,
-						filename:file_name,
-						saveAs:request.save_as
-					};
-
-					switch(project.getDownloadConflict()){
-					case "rename":
-					default:
-						download_options.conflictAction = "uniquify";
-						break;
-					case "overwrite":
-						download_options.conflictAction = "overwrite";
-						break;
-					}
-
-					event_dispatcher = new EventDispatcher();
-					xhr_queue_element = _xhr_queue_dictionary.createElement(request.url);
-					xhr_queue_element.setData({url:request.current_url});
-
-					chrome.downloads.download(download_options , function(downloadId) {
-						if(downloadId === undefined){
-							if(chrome.runtime.lastError){
-								failure(chrome.runtime.lastError.message);
-							}else{
-								failure("chrome.downloads.download() is failed.");
-							}
-							return;
-						}
-
-						if(request.silent){
-							_download_ref_count_silent ++;
-						}
-						setDownloadShelf(!(request.silent));
-
-						var download_closed = false;
-						var download_item = _download_dictionary[downloadId] || new Object();
-						download_item.request = request;
-						download_item.event_dispatcher = event_dispatcher;
-
-						// ダウンロード完了
-						var event_handler = event_dispatcher.createEventHandler("complete");
-						event_handler.setFunction(function(downloadDelta){
-
-							download_closed = true;
-							event_dispatcher.release();
-
-							chrome.downloads.search({id:downloadId},function(items){
-								var downloadDelta = items[0];
-								if(downloadDelta){
-									progress(downloadDelta);
-									switch(downloadDelta.state){
-									case "complete":
-										success();
-										break;
-									default:
-										failure(downloadDelta.error || "");
-										break;
-									}
-								}
-							})
-						});
-
-						// ダウンロード進捗
-						progress(download_item.downloadDelta);
-						var interval = 1000/5;
-						var handle = setTimeout(function callee(){
-							handle = null;
-							if(download_closed) return;
-
-							chrome.downloads.search({id:downloadId},function(items){
-								if(download_closed) return;
-								handle = setTimeout(callee,interval);
-
-								var downloadDelta = items[0];
-								if(!downloadDelta) return;
-								progress(downloadDelta);
-							})
-						},interval);
-					});
-				};
-
-				if(request.single){
-					downloader_queue_element.attachSingle();
-				}else{
-					downloader_queue_element.attachLast();
-				}
-			};
+					},
+					{complete:true}
+				);
+			}
 
 			// リダイレクト先のURLを取得
 			command_dictionary["getFinalURL"] = function(param,sender,sendResponse){
@@ -33973,29 +33702,52 @@ function PageExpand(page_expand_arguments){
 				(function(){
 					if(!(chrome.downloads)) return;
 
-					var time_handle = null;
+					var download_dictionary = new Object();
+					var download_ref_count_silent = 0;
+					var download_shelf_enable = true;
+					var download_shelf_time_handle = null;
 
+					// --------------------------------------------------------------------------------
+					// ダウンロードシェルフの設定
+					// --------------------------------------------------------------------------------
+					function setDownloadShelf(enable){
+						if(download_shelf_enable == enable) return;
+
+						download_shelf_enable = enable;
+						chrome.downloads.setShelfEnabled(download_shelf_enable);
+					}
+
+					// --------------------------------------------------------------------------------
+					// ダウンロード開始
+					// --------------------------------------------------------------------------------
 					chrome.downloads.onCreated.addListener(function(downloadDelta){
 						if(downloadDelta.state != "in_progress") return;
 						var id = downloadDelta.id;
 						if(id === undefined) return;
 
-						var download_item = _download_dictionary[id];
+						var download_item = download_dictionary[id];
 						if(!download_item){
-							download_item = new Object();
-							_download_dictionary[id] = download_item;
+							download_item = download_dictionary[id] = new Object();
 						}
 
 						download_item.downloadDelta = downloadDelta;
+
+						var event_dispatcher = download_item.event_dispatcher;
+						if(event_dispatcher){
+							event_dispatcher.dispatchEvent("progress" , downloadDelta);
+						}
 					});
 
+					// --------------------------------------------------------------------------------
+					// ダウンロードの状態変化
+					// --------------------------------------------------------------------------------
 					chrome.downloads.onChanged.addListener(function(downloadDelta){
 						var state = downloadDelta.state;
 						if(!state) return;
 						var id = downloadDelta.id;
 						if(id === undefined) return;
 
-						var download_item = _download_dictionary[id];
+						var download_item = download_dictionary[id];
 						if(!download_item) return;
 
 						switch(state.current){
@@ -34008,16 +33760,16 @@ function PageExpand(page_expand_arguments){
 
 						var request = download_item.request;
 						if(request.silent){
-							_download_ref_count_silent --;
+							download_ref_count_silent --;
 						}
-						if(time_handle !== null){
-							clearTimeout(time_handle);
-							time_handle = null;
+						if(download_shelf_time_handle !== null){
+							clearTimeout(download_shelf_time_handle);
+							download_shelf_time_handle = null;
 						}
-						if(_download_ref_count_silent <= 0){
-							time_handle = setTimeout(function(){
-								time_handle = null;
-								if(_download_ref_count_silent <= 0){
+						if(download_ref_count_silent <= 0){
+							download_shelf_time_handle = setTimeout(function(){
+								download_shelf_time_handle = null;
+								if(download_ref_count_silent <= 0){
 									setDownloadShelf(true);
 								}
 							},1);
@@ -34025,8 +33777,182 @@ function PageExpand(page_expand_arguments){
 
 						var event_dispatcher = download_item.event_dispatcher;
 						event_dispatcher.dispatchEvent("complete" , null);
-						delete _download_dictionary[id];
+						delete download_dictionary[id];
 					});
+
+					// --------------------------------------------------------------------------------
+					// ダウンロード
+					// --------------------------------------------------------------------------------
+					command_dictionary["download"] = function(param,sender,sendResponse){
+						var request = param;
+						request.silent = Boolean(request.silent);
+						if(request.save_as) request.silent = false;
+
+						var xhr_queue_element = null;
+						var event_dispatcher = null;
+						var item = {
+							contentType:"",
+							bytesLoaded:0,
+							bytesTotal:0
+						};
+
+						var downloader_queue_element = downloader_queue.createElement();
+						downloader_queue_element.onstart = function(){
+
+							function complete(){
+								downloader_queue_element.complete();
+								downloader_queue_element.release();
+								if(xhr_queue_element){
+									xhr_queue_element.release();
+									xhr_queue_element = null;
+								}
+							}
+							function success(){
+								complete();
+								sendResponse(
+									{
+										state:"complete",
+										response:{
+											result:true,
+											error:""
+										}
+									},
+									{complete:true}
+								);
+							}
+							function failure(reason){
+								complete();
+								sendResponse(
+									{
+										state:"complete",
+										response:{
+											result:false,
+											error:reason
+										}
+									},
+									{complete:true}
+								);
+							}
+							function progress(downloadDelta){
+								downloadDelta = downloadDelta || {};
+								item.contentType = downloadDelta.mime || "";
+								item.bytesLoaded = downloadDelta.bytesReceived || 0;
+								item.bytesTotal  = downloadDelta.totalBytes || 0;
+								sendResponse(
+									{
+										state:"progress",
+										response:item
+									},
+									{complete:false}
+								);
+							}
+
+							var file_name = ProjectDownloadSaveFile_Sanitize(request.file_name || project.getSaveFileDownload(request.url));
+
+							var download_options = {
+								url:request.url,
+								filename:file_name,
+								saveAs:request.save_as
+							};
+
+							switch(project.getDownloadConflict()){
+							case "rename":
+							default:
+								download_options.conflictAction = "uniquify";
+								break;
+							case "overwrite":
+								download_options.conflictAction = "overwrite";
+								break;
+							}
+
+							event_dispatcher = new EventDispatcher();
+							xhr_queue_element = _xhr_queue_dictionary.createElement(request.url);
+							xhr_queue_element.setData({url:request.current_url});
+
+							try{
+								chrome.downloads.download(download_options , function(downloadId) {
+									if(downloadId === undefined){
+										if(chrome.runtime.lastError){
+											failure(chrome.runtime.lastError.message);
+										}else{
+											failure("chrome.downloads.download() is failed.");
+										}
+										return;
+									}
+
+									if(request.silent){
+										download_ref_count_silent ++;
+									}
+									setDownloadShelf(!(request.silent));
+
+									var download_closed = false;
+									var download_item = download_dictionary[downloadId];
+									if(!download_item){
+											download_item = download_dictionary[downloadId] = new Object();
+									}
+									download_item.request = request;
+									download_item.event_dispatcher = event_dispatcher;
+
+									// ダウンロード進捗イベント
+									var event_handler_progress = event_dispatcher.createEventHandler("progress");
+									event_handler_progress.setFunction(function(downloadDelta){
+										progress(downloadDelta);
+									});
+
+									// ダウンロード完了イベント
+									var event_handler_complete = event_dispatcher.createEventHandler("complete");
+									event_handler_complete.setFunction(function(downloadDelta){
+
+										download_closed = true;
+										event_dispatcher.release();
+
+										chrome.downloads.search({id:downloadId},function(items){
+											var downloadDelta = items[0];
+											if(downloadDelta){
+												progress(downloadDelta);
+												switch(downloadDelta.state){
+												case "complete":
+													success();
+													break;
+												default:
+													failure(downloadDelta.error || "");
+													break;
+												}
+											}
+										})
+									});
+
+									if(download_item.downloadDelta){
+										progress(download_item.downloadDelta);
+									}
+
+									// ダウンロード進捗監視
+									var interval = 1000/5;
+									var handle = setTimeout(function callee(){
+										handle = null;
+										if(download_closed) return;
+
+										chrome.downloads.search({id:downloadId},function(items){
+											if(download_closed) return;
+											handle = setTimeout(callee,interval);
+
+											var downloadDelta = items[0];
+											if(!downloadDelta) return;
+											progress(downloadDelta);
+										})
+									},interval);
+								});
+							}catch(e){
+								failure(e.message || "");
+							}
+						};
+
+						if(request.single){
+							downloader_queue_element.attachSingle();
+						}else{
+							downloader_queue_element.attachLast();
+						}
+					};
 				})();
 
 			});
@@ -38392,40 +38318,6 @@ function PageExpand(page_expand_arguments){
 				new UI_Break(form_parent);
 
 				// タイトル
-				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream"));
-
-				// グループ
-				var group = new UI_GroupContainer(form_parent);
-				var group_parent = group.getElement();
-
-				// www.ustream.tv の設定
-				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream_check_box_container"));
-				var parent = container.getElement();
-
-				// 配信ビデオを表示
-				var check_box_ustream_visible_video_live = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream_visible_video_live"));
-				check_box_ustream_visible_video_live.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.ustream.visible_video_live = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-
-				// 録画ビデオを表示
-				var check_box_ustream_visible_video_record = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_ustream_visible_video_record"));
-				check_box_ustream_visible_video_record.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.ustream.visible_video_record = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-				new UI_Break(form_parent);
-
-				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_dailymotion"));
 
 				// グループ
@@ -38553,10 +38445,6 @@ function PageExpand(page_expand_arguments){
 					check_box_nicovideo_visible_thumbnail_live.setValue(c.nicovideo.visible_thumbnail_live);
 					// nicovideo 静画サムネイル表示
 					check_box_nicovideo_visible_thumbnail_seiga.setValue(c.nicovideo.visible_thumbnail_seiga);
-					// ustream 配信ビデオ表示
-					check_box_ustream_visible_video_live.setValue(c.ustream.visible_video_live);
-					// ustream 録画ビデオ表示
-					check_box_ustream_visible_video_record.setValue(c.ustream.visible_video_record);
 					// dailymotion ビデオ表示
 					check_box_dailymotion_visible_video.setValue(c.dailymotion.visible_video);
 					// vimeo ビデオ表示
@@ -38958,31 +38846,6 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				// www.ustream.tv の設定
-				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream"));
-				var parent = container.getElement();
-
-				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream_inline_video_record"));
-				var text_input_expand_video_ustream_inline_video_record = new UI_TextInput(parent);
-				text_input_expand_video_ustream_inline_video_record.oninput = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.expand_video.inline.ustream.video_record = v;
-					});
-					_setting_define.update();
-					projectModify();
-				};
-				new UI_BreakItem(parent);
-
-				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_ustream_inline_video_live"));
-				var text_input_expand_video_ustream_inline_video_live = new UI_TextInput(parent);
-				text_input_expand_video_ustream_inline_video_live.oninput = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.expand_video.inline.ustream.video_live = v;
-					});
-					_setting_define.update();
-					projectModify();
-				};
-
 				// www.dailymotion.com の設定
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_dailymotion"));
 				var parent = container.getElement();
@@ -39087,8 +38950,6 @@ function PageExpand(page_expand_arguments){
 					text_input_expand_video_nicovideo_inline_thumbnail_community.setValue(c.expand_video.inline.nicovideo.thumbnail_community);
 					text_input_expand_video_nicovideo_inline_thumbnail_live.setValue(c.expand_video.inline.nicovideo.thumbnail_live);
 					text_input_expand_video_nicovideo_inline_thumbnail_seiga.setValue(c.expand_video.inline.nicovideo.thumbnail_seiga);
-					text_input_expand_video_ustream_inline_video_live.setValue(c.expand_video.inline.ustream.video_live);
-					text_input_expand_video_ustream_inline_video_record.setValue(c.expand_video.inline.ustream.video_record);
 					text_input_expand_video_dailymotion_inline_video.setValue(c.expand_video.inline.dailymotion.video);
 					text_input_expand_video_vimeo_inline_video.setValue(c.expand_video.inline.vimeo.video);
 					text_input_expand_video_fc2video_inline_video.setValue(c.expand_video.inline.fc2video.video);
@@ -39229,7 +39090,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.9");
+				new UI_Text(parent,"PageExpand ver.1.5.10");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -45176,10 +45037,6 @@ function PageExpand(page_expand_arguments){
 						visible_thumbnail_live:false,
 						visible_thumbnail_seiga:false
 					},
-					ustream:{
-						visible_video_live:false,
-						visible_video_record:false
-					},
 					dailymotion:{
 						visible_video:false
 					},
@@ -45263,10 +45120,6 @@ function PageExpand(page_expand_arguments){
 								thumbnail_community:"",
 								thumbnail_live:"",
 								thumbnail_seiga:""
-							},
-							ustream:{
-								video_live:"",
-								video_record:""
 							},
 							dailymotion:{
 								video:""
@@ -47455,6 +47308,7 @@ function PageExpand(page_expand_arguments){
 			switch(_current_site){
 			case "2ch":
 			case "open2ch":
+				var loader_url = "https://menu." + _current_site + ".net/bbsmenu.html";
 
 				// 成功
 				loader.onload = function(str){
@@ -47492,10 +47346,26 @@ function PageExpand(page_expand_arguments){
 								folder.setLabel(m[1]);
 
 								s.replace(re_item,function(m,p1,p2,index,str){
+									var url = StringUrl_To_Absolute(p1,loader_url);
+									if(_current_site == "2ch"){
+										var m = url.match(new RegExp("^([^:]+)://([^.]+)(.*)"));
+										if(m){
+											switch(m[2]){
+											case "carpenter":
+											case "hayabusa6":
+											case "hayabusa7":
+											case "vipper":
+												break;
+											default:
+												url = "https://" + m[2] + m[3];
+												break;
+											}
+										}
+									}
 									var item = folder.createItem(p1);
 									item.setLabel(p2);
-									item.setTooltip(p1);
-									item.setURL(p1);
+									item.setTooltip(url);
+									item.setURL(url);
 								});
 							}
 
@@ -47521,7 +47391,7 @@ function PageExpand(page_expand_arguments){
 
 				// テキストの読み込み
 				loader.setMethod("GET");
-				loader.setURL("http://menu." + _current_site + ".net/bbsmenu.html");
+				loader.setURL(loader_url);
 				loader.overrideMimeType("text/plain; charset=Shift_JIS");
 				loader.loadText();
 				break;
@@ -47881,46 +47751,51 @@ function PageExpand(page_expand_arguments){
 			case "2ch":
 			case "open2ch":
 			case "shitaraba":
+				var protocol;
 				var domain;
 				var directory;
 				if(_current_site == "shitaraba"){
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("http://([^/]+[.](shitaraba)[.]net)/(test|bbs)/[^/]+[.]cgi/([^/]+/[0-9]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](shitaraba)[.]net)/(test|bbs)/[^/]+[.]cgi/([^/]+/[0-9]+)","i"));
 						if(m){
-							domain = m[1];
-							directory = m[4];
+							protocol = m[1];
+							domain = m[2];
+							directory = m[5];
 						}
 					}
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("http://([^/]+[.](shitaraba)[.]net)/([^/]+/[0-9]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](shitaraba)[.]net)/([^/]+/[0-9]+)","i"));
 						if(m){
-							domain = m[1];
-							directory = m[3];
+							protocol = m[1];
+							domain = m[2];
+							directory = m[4];
 						}
 					}
 					if(domain){
-						_catalog_title.nodeValue = "http://" + domain + "/" + directory + "/";
+						_catalog_title.nodeValue = protocol + "://" + domain + "/" + directory + "/";
 					}else{
 						complete({result:false});
 						return;
 					}
 				}else{
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("http://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net))/test/read[.]cgi/([^/]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net))/test/read[.]cgi/([^/]+)","i"));
 						if(m){
-							domain = m[1];
-							directory = m[3];
+							protocol = m[1];
+							domain = m[2];
+							directory = m[4];
 						}
 					}
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("http://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net))/([^/]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net))/([^/]+)","i"));
 						if(m){
-							domain = m[1];
-							directory = m[3];
+							protocol = m[1];
+							domain = m[2];
+							directory = m[4];
 						}
 					}
 					if(domain){
-						_catalog_title.nodeValue = "http://" + domain + "/" + directory + "/";
+						_catalog_title.nodeValue = protocol + "://" + domain + "/" + directory + "/";
 					}else{
 						complete({result:false});
 						return;
@@ -47968,9 +47843,9 @@ function PageExpand(page_expand_arguments){
 							if(m){
 								var item = _ui_catalog.createItem(m[1]);
 								if(_current_site == "shitaraba"){
-									item.setURL("http://" + domain + "/bbs/read.cgi/" + directory + "/" + (m[1]));
+									item.setURL(protocol + "://" + domain + "/bbs/read.cgi/" + directory + "/" + (m[1]));
 								}else{
-									item.setURL("http://" + domain + "/test/read.cgi/" + directory + "/" + (m[1]));
+									item.setURL(protocol + "://" + domain + "/test/read.cgi/" + directory + "/" + (m[1]));
 								}
 								var data = item.getData();
 								data.number = index;
@@ -48012,7 +47887,7 @@ function PageExpand(page_expand_arguments){
 
 				// テキストの読み込み
 				loader.setMethod("GET");
-				loader.setURL("http://" + domain + "/" + directory + "/subject.txt");
+				loader.setURL(protocol + "://" + domain + "/" + directory + "/subject.txt");
 				if(_current_site == "shitaraba"){
 					loader.overrideMimeType("text/plain; charset=euc-jp");
 				}else{
@@ -53298,8 +53173,6 @@ function PageExpand(page_expand_arguments){
 			ElementExpandInlineVideoYoutube(param);
 			// nicovideo
 			ElementExpandInlineVideoNicovideo(param);
-			// ustream
-			ElementExpandInlineVideoUstream(param);
 			// dailymotion
 			ElementExpandInlineVideoDailymotion(param);
 			// vimeo
@@ -53795,15 +53668,10 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				var script_url = "http://ext.nicovideo.jp/thumb_watch/" + video_id;
-				if(language){
-					script_url += "?cc=" + language;
-				}
-
 				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-				var loader = null;
-				var video = null;
-				var video_analyze_work = null;
+				var iframe = null;
+				var iframe_analyze_work = null;
+				var iframe_url = "http://embed.nicovideo.jp/watch/" + video_id;
 				var event_handler = null;
 				var limitter_element = null;
 				var observer_remove = null;
@@ -53814,19 +53682,12 @@ function PageExpand(page_expand_arguments){
 					event_dispatcher.dispatchEvent("release",null);
 				}
 
-				// エレメントを破棄
-				function releaseElement(e){
-					// ローダーを中断
-					if(loader){
-						loader.onload = null;
-						loader.onerror = null;
-						loader = null;
-					}
-
+				// インラインフレームを破棄
+				function releaseIframe(e){
 					// アドレスの登録を外す
-					if(script_url){
-						address_collection.removeAddress("video",script_url);
-						script_url = null;
+					if(iframe_url){
+						address_collection.removeAddress("video",iframe_url);
+						iframe_url = null;
 					}
 
 					// イベントハンドラを破棄
@@ -53854,285 +53715,88 @@ function PageExpand(page_expand_arguments){
 					}
 
 					// 解析辞書除外
-					if(video_analyze_work){
-						analyze_work_dictionary.removeAnalyzeWork(video_analyze_work);
-						video_analyze_work = null;
+					if(iframe_analyze_work){
+						analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
+						iframe_analyze_work = null;
 					}
 
-					// エレメントを外す
-					if(video){
-						DomNodeRemove(video);
-						video = null;
+					// インラインフレームを外す
+					if(iframe){
+						DomNodeRemove(iframe);
+						iframe = null;
 					}
+				}
+
+				// 混在コンテンツの展開が可能か
+				if(!(project.checkAllowExpandIframeElement(iframe_url))){
+					releaseIframe();
+					expand_video_complete();
+					return;
 				}
 
 				// 重複チェック
 				if(project.getDisableSameInlineVideo()){
-					if(address_collection.hasAddress("video",script_url)){
-						script_url = null;
-						releaseElement();
+					if(address_collection.hasAddress("video",iframe_url)){
+						iframe_url = null;
+						releaseIframe();
 						complete();
 						return;
 					}
 					// アドレスを登録
-					address_collection.addAddress("video",script_url);
+					address_collection.addAddress("video",iframe_url);
 				}
 
 				// イベントハンドラを作成
 				event_handler = event_dispatcher.createEventHandler("release");
-				event_handler.setFunction(releaseElement);
+				event_handler.setFunction(releaseIframe);
 
-				// テキストの読み込み
-				loader = new Loader();
-				loader.onload = function(str){
-					var num = str.length;
+				iframe = DocumentCreateElement('iframe');
+				iframe.frameBorder = "0";
+				iframe.scrolling = "no";
+				iframe.allowFullscreen = true;
 
-					// url を抽出
-					var player_url;
-					(function(){
-						var w = "Nicovideo.playerUrl = ";
-						var s = str.indexOf(w);
-						if(s < 0){
-							// 未対応
-							return;
-						}
-						s += w.length;
-						// コーテーション開始
-						while(s < num){
-							w = str.charAt(s);
-							if(w == '\'')	break;
-							if(w == '\"')	break;
-							s++;
-						}
-						if(s >= num)	return;
-						s += 1;
-						// コーテーション終了
-						var c;
-						var e = s;
-						while(e < num){
-							c = str.charAt(e);
-							if(c == w)	break;
-							if(c == '\\'){
-								e++;
-							}
-							e++;
-						}
-						if(e >= num)	return;
+				// スタイルをセット
+				ElementSetStyle(iframe,project.getStyleSheetExpandVideoNicovideoInlineVideo());
 
-						player_url = str.substring(s,e);
-					})();
+				// 解析ワーク作成
+				iframe_analyze_work = AnalyzeWorkCreate(iframe);
 
-					// flashvars を抽出
-					var flashvars = "";
-					var variables = new Object();
-					(function(){
-						var w = "new Nicovideo.MiniPlayer";
-						var s = str.lastIndexOf(w);
-						if(s < 0){
-							// 未対応
-							return;
-						}
-						s += w.length;
-						// 中括弧開始
-						while(s < num){
-							if(str.charAt(s) == '{')	break;
-							s++;
-						}
-						if(s >= num)	return;
-						s += 1;
-						// 中括弧終了
-						var c;
-						var check = false;
-						var e = s;
-						while(e < num){
-							c = str.charAt(e);
-							if(check){
-								if(c == w){
-									check = false;
-								}else if(c == '\\'){
-									e++;
-								}
-							}else{
-								if(c == '}')	break;
-								if(c == '\'' || c == '\"'){
-									w = c;
-									check = true;
-								}
-							}
-							e++;
-						}
-						if(e >= num)	return;
+				// 解析辞書登録オプション
+				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+				attach_options.SetOutsider();
 
-						var buf = str.substring(s,e);
-						buf = buf.replace(new RegExp("\\\\/","gi"),"/");
-						buf = buf.replace(new RegExp("\\\\u","gi"),"%u");
-						var buf_num = buf.length;
+				// 解析辞書登録
+				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
-						var p = 0;
-						var step = 0;
-						var name;
-						while(p < buf_num){
-							switch(step){
-							case 0:
-								w = buf.charAt(p);
-								if((w == '\'') || (w == '\"')){
-									step = 1;
-									s = p + 1;
-								}
-								break;
-							case 1:
-								c = buf.charAt(p);
-								if(c == '\\'){
-									p += 1;
-								}else if(c == w){
-									step = 2;
-									name = buf.substring(s,p);
-								}
-								break;
-							case 2:
-								c = buf.charAt(p);
-								if(c == ':'){
-									step = 3;
-								}
-								break;
-							case 3:
-								w = buf.charAt(p);
-								if((w == '\'') || (w == '\"')){
-									step = 4;
-									s = p + 1;
-								}
-								break;
-							case 4:
-								c = buf.charAt(p);
-								if(c == '\\'){
-									p += 1;
-								}else if(c == w){
-									step = 5;
-									flashvars += name + "=" + buf.substring(s,p);
-									variables[name] = buf.substring(s,p);
-								}
-								break;
-							case 5:
-								c = buf.charAt(p);
-								if(c == ','){
-									flashvars += "&";
-									step = 0;
-								}
-								break;
-							}
-							p ++;
-						}
+				// インラインフレームのリムーブ監視
+				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
+				observer_remove.setFunction(dispatchEventRelease);
 
-						// アンエスケープ
-						var unescape_list = [
-							"title",
-							"description",
-							"thumbTitle",
-							"thumbDescription",
-							"category",
-							"categoryGroup"
-						];
-						var i;
-						var list_num = unescape_list.length;
-						for(i=0;i<list_num;i++){
-							var name = unescape_list[i];
-							if(variables[name]){
-								variables[name] = unescape(variables[name]);
-							}
-						}
+				// メディアプレイヤー UI
+				media_player_ui = new MediaPlayerExtendUI(iframe);
+				var event_handler_close = media_player_ui.createEventHandler("close");
+				event_handler_close.setFunction(dispatchEventRelease);
 
-						var count = 0;
-						for(var p in variables){
-							if(count)	flashvars += "&" + p + "=" + variables[p];
-							else		flashvars  =       p + "=" + variables[p];
-							count ++;
-						}
-					})();
+				function responseInsert(){
+					if(!iframe)	return;
 
-					// 混在コンテンツの展開が可能か
-					if(!(project.checkAllowExpandEmbedElement(player_url))){
-						// 解析失敗
-						expand_video_complete();
-						return;
-					}
+					limitter_element = element_limitter_video.createElement();
+					limitter_element.onattach = function(){
+						iframe.src = iframe_url;
+					};
+					limitter_element.onremove = function(){
+						iframe.src = "";
+					};
+					limitter_element.setElementHitArea(iframe);
 
-					if(player_url && flashvars){
-					}else{
-						// 解析失敗
-						expand_video_complete();
-						return;
-					}
+					// 更新
+					limitter_element.update();
 
-					var embed;
-					video = DocumentCreateElement('div');
-
-					// スタイルをセット
-					ElementSetStyle(video,project.getStyleSheetExpandVideoNicovideoInlineVideo());
-
-					// 解析ワーク作成
-					video_analyze_work = AnalyzeWorkCreate(video);
-
-					// 解析辞書登録オプション
-					var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-					attach_options.SetOutsider();
-
-					// 解析辞書登録
-					analyze_work_dictionary.attachAnalyzeWork(video_analyze_work,attach_options);
-
-					// エレメントのリムーブ監視
-					observer_remove = new DomNodeObserverRemoveFromDocument(video);
-					observer_remove.setFunction(dispatchEventRelease);
-
-					// メディアプレイヤー UI
-					media_player_ui = new MediaPlayerExtendUI(video);
-					var event_handler_close = media_player_ui.createEventHandler("close");
-					event_handler_close.setFunction(dispatchEventRelease);
-
-					function responseInsert(){
-						if(!video)	return;
-
-						limitter_element = element_limitter_video.createElement();
-						limitter_element.onattach = function(){
-							if(!embed){
-								embed = DocumentCreateElement('embed');
-								embed.type = "application/x-shockwave-flash";
-								embed.width = "100%";
-								embed.height = "100%";
-								embed.setAttribute("allowScriptAccess","always");
-								embed.setAttribute("bgcolor","#000000");
-								embed.setAttribute("quality","high");
-								embed.setAttribute("flashVars",flashvars);
-								embed.src = player_url;
-								video.appendChild(embed);
-							}
-						};
-						limitter_element.onremove = function(){
-							if(embed){
-								DomNodeRemove(embed);
-								embed = null;
-							}
-						};
-						limitter_element.setElementHitArea(video);
-
-						// 更新
-						limitter_element.update();
-
-						expand_video_complete();
-					}
-
-					// コールバック関数を実行
-					project.executeScriptInsertInlineVideo(element,video,work.event_dispatcher,responseInsert);
-				};
-
-				// ロードエラー
-				loader.onerror = function(){
 					expand_video_complete();
-					complete();
-				};
+				}
 
-				loader.setMethod("GET");
-				loader.setURL(script_url);
-				loader.loadText();
+				// コールバック関数を実行
+				project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
 			})();
 		}
 
@@ -54952,279 +54616,6 @@ function PageExpand(page_expand_arguments){
 
 		// 完了
 		complete();
-	}
-
-	// --------------------------------------------------------------------------------
-	// インラインビデオ ustream
-	// --------------------------------------------------------------------------------
-	function ElementExpandInlineVideoUstream(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-		function complete(){
-		}
-
-		// ustream.tv 内では動作禁止
-		var deny_list = [
-			"*://*.ustream.tv/*"
-		];
-		var i;
-		var num = deny_list.length;
-		for(i=0;i<num;i++){
-			if(StringUrlMatchAsteriskWord(document.URL,deny_list[i])){
-				return;
-			}
-		}
-
-		(function(){
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var loader = null;
-			var iframe = null;
-			var iframe_analyze_work = null;
-			var iframe_url = null;
-			var event_handler = null;
-			var limitter_element = null;
-			var observer_remove = null;
-			var media_player_ui = null;
-
-			// 開放イベントを発行
-			function dispatchEventRelease(e){
-				event_dispatcher.dispatchEvent("release",null);
-			}
-
-			// インラインフレームを破棄
-			function releaseIframe(e){
-				// ローダーを中断
-				if(loader){
-					loader.onload = null;
-					loader.onerror = null;
-					loader = null;
-				}
-
-				// アドレスの登録を外す
-				if(iframe_url){
-					address_collection.removeAddress("video",iframe_url);
-					iframe_url = null;
-				}
-
-				// イベントハンドラを破棄
-				if(event_handler){
-					event_handler.release();
-					event_handler = null;
-				}
-
-				if(limitter_element){
-					limitter_element.onremove = null;
-					limitter_element.release();
-					limitter_element = null;
-				}
-
-				// 監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// メディアプレイヤー UI を破棄
-				if(media_player_ui){
-					media_player_ui.release();
-					media_player_ui = null;
-				}
-
-				// 解析辞書除外
-				if(iframe_analyze_work){
-					analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-					iframe_analyze_work = null;
-				}
-
-				// インラインフレームを外す
-				if(iframe){
-					DomNodeRemove(iframe);
-					iframe = null;
-				}
-			}
-
-			function initialize(){
-				// イベントハンドラを作成
-				event_handler = event_dispatcher.createEventHandler("release");
-				event_handler.setFunction(releaseIframe);
-			}
-
-			// 動画情報を読み込み
-			function load_video_info(url){
-				initialize();
-
-				// テキストの読み込み
-				var loader = new Loader();
-				loader.onload = function(str){
-					// og:video:secure_url を取得
-					if(str.match(/<meta[ ]+?property=\"og:video:secure_url\"[ ]+?content=\"(.*?)\"/i)){
-						iframe_url = RegExp.$1;
-					}
-
-					if(!iframe_url){
-						// og:video:secure_url を取得
-						if(str.match(/<meta[ ]+?property=\"og:video\"[ ]+?content=\"(.*?)\"/i)){
-							iframe_url = RegExp.$1;
-						}
-					}
-
-					if(iframe_url){
-						var query = StringGetQuery(iframe_url);
-						if(query.autoplay === undefined){
-							iframe_url = iframe_url + "&autoplay=false";
-						}
-
-						var check = false;
-						if(iframe_url.indexOf("/recorded/") >= 0){
-							if(project.getVisibleVideoRecordUstream()){
-								expand_video(false);
-								check = true;
-							}
-						}else{
-							if(project.getVisibleVideoLiveUstream()){
-								expand_video(true);
-								check = true;
-							}
-						}
-
-						if(!check){
-							releaseIframe();
-						}
-					}
-				};
-
-				loader.onerror = function(){
-					complete();
-				};
-				loader.setMethod("GET");
-				loader.setURL(url);
-				loader.loadText();
-			}
-
-			// 録画動画を展開
-			function expand_video_record(video_id){
-				if(project.getVisibleVideoRecordUstream()){
-					initialize();
-					iframe_url = "https://www.ustream.tv/embed/recorded/" + video_id;
-					expand_video(false);
-				}
-			}
-
-			// 動画を展開
-			function expand_video(live){
-
-				// 混在コンテンツの展開が可能か
-				if(!(project.checkAllowExpandIframeElement(iframe_url))){
-					releaseIframe();
-					complete();
-					return;
-				}
-
-				// 重複チェック
-				if(project.getDisableSameInlineVideo()){
-					if(address_collection.hasAddress("video",iframe_url)){
-						iframe_url = null;
-						releaseIframe();
-						complete();
-						return;
-					}
-					// アドレスを登録
-					address_collection.addAddress("video",iframe_url);
-				}
-
-				iframe = DocumentCreateElement('iframe');
-				iframe.frameBorder = "0";
-				iframe.scrolling = "no";
-				iframe.allowFullscreen = true;
-
-				// スタイルをセット
-				if(live){
-					ElementSetStyle(iframe,project.getStyleSheetExpandVideoUstreamInlineVideoLive());
-				}else{
-					ElementSetStyle(iframe,project.getStyleSheetExpandVideoUstreamInlineVideoRecord());
-				}
-
-				// 解析ワーク作成
-				iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-				// インラインフレームのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-				observer_remove.setFunction(dispatchEventRelease);
-
-				// メディアプレイヤー UI
-				media_player_ui = new MediaPlayerExtendUI(iframe);
-				var event_handler_close = media_player_ui.createEventHandler("close");
-				event_handler_close.setFunction(dispatchEventRelease);
-
-				function responseInsert(){
-					if(!iframe)	return;
-
-					limitter_element = element_limitter_video.createElement();
-					limitter_element.onattach = function(){
-						iframe.src = iframe_url;
-					};
-					limitter_element.onremove = function(){
-						iframe.src = "";
-					};
-					limitter_element.setElementHitArea(iframe);
-
-					// 更新
-					limitter_element.update();
-				}
-
-				// コールバック関数を実行
-				project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
-			}
-
-			// 録画ビデオ用
-			if(project.getVisibleVideoRecordUstream()){
-				var allow_list_video = [
-					"*://*.ustream.tv/recorded/*"
-				];
-				num = allow_list_video.length;
-				for(i=0;i<num;i++){
-					if(StringUrlMatchAsteriskWord(url,allow_list_video[i])){
-						if(url.match("/recorded/([0-9]+?)([?]|[/]|[#]|$)","i")){
-							expand_video_record(RegExp.$1);
-							return;
-						}
-					}
-				}
-			}
-
-			// ustream.tv へのリンク
-			if(
-				project.getVisibleVideoLiveUstream() ||
-				project.getVisibleVideoRecordUstream()
-			){
-				var allow_list_live = [
-					"*://ustre.am/*",
-					"*://*.ustream.tv/*"
-				];
-				num = allow_list_live.length;
-				for(i=0;i<num;i++){
-					if(StringUrlMatchAsteriskWord(url,allow_list_live[i])){
-						load_video_info(url);
-						return;
-					}
-				}
-			}
-
-			// 完了
-			complete();
-		})();
 	}
 
 	// --------------------------------------------------------------------------------
@@ -62146,18 +61537,6 @@ function PageExpand(page_expand_arguments){
 			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_seiga: {
 				message: "静画サムネイルを表示"
 			},
-			menu_setting_expand_video_inline_ustream: {
-				message: "www.ustream.tv の設定"
-			},
-			menu_setting_expand_video_inline_ustream_check_box_container: {
-				message: "www.ustream.tv の設定"
-			},
-			menu_setting_expand_video_inline_ustream_visible_video_live: {
-				message: "配信ビデオを表示"
-			},
-			menu_setting_expand_video_inline_ustream_visible_video_record: {
-				message: "録画ビデオを表示"
-			},
 			menu_setting_expand_video_inline_dailymotion: {
 				message: "www.dailymotion.com の設定"
 			},
@@ -62295,15 +61674,6 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga: {
 				message: "静画サムネイルのインライン表示"
-			},
-			menu_setting_style_sheet_expand_video_ustream: {
-				message: "www.ustream.tv の設定"
-			},
-			menu_setting_style_sheet_expand_video_ustream_inline_video_record: {
-				message: "配信ビデオのインライン表示"
-			},
-			menu_setting_style_sheet_expand_video_ustream_inline_video_live: {
-				message: "録画ビデオのインライン表示"
 			},
 			menu_setting_style_sheet_expand_video_dailymotion: {
 				message: "www.dailymotion.com の設定"
@@ -63587,18 +62957,6 @@ function PageExpand(page_expand_arguments){
 			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_seiga: {
 				message: "enable seiga thumbnail"
 			},
-			menu_setting_expand_video_inline_ustream: {
-				message: "www.ustream.tv Setting"
-			},
-			menu_setting_expand_video_inline_ustream_check_box_container: {
-				message: "www.ustream.tv Setting"
-			},
-			menu_setting_expand_video_inline_ustream_visible_video_live: {
-				message: "enable delivery video"
-			},
-			menu_setting_expand_video_inline_ustream_visible_video_record: {
-				message: "enable recorded video "
-			},
 			menu_setting_expand_video_inline_dailymotion: {
 				message: "www.dailymotion.com Setting"
 			},
@@ -63736,15 +63094,6 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga: {
 				message: "Seiga Thumbnail Inline Display"
-			},
-			menu_setting_style_sheet_expand_video_ustream: {
-				message: "www.ustream.tv Setting"
-			},
-			menu_setting_style_sheet_expand_video_ustream_inline_video_record: {
-				message: "Delivery Video Inline Display"
-			},
-			menu_setting_style_sheet_expand_video_ustream_inline_video_live: {
-				message: "Recorded Video Inline Display"
 			},
 			menu_setting_style_sheet_expand_video_dailymotion: {
 				message: "www.dailymotion.com Setting"
@@ -65027,18 +64376,6 @@ function PageExpand(page_expand_arguments){
 			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_seiga: {
 				message: "启用 世佳 缩略图"
 			},
-			menu_setting_expand_video_inline_ustream: {
-				message: "www.ustream.tv 设置"
-			},
-			menu_setting_expand_video_inline_ustream_check_box_container: {
-				message: "www.ustream.tv 设置"
-			},
-			menu_setting_expand_video_inline_ustream_visible_video_live: {
-				message: "启用传送视频"
-			},
-			menu_setting_expand_video_inline_ustream_visible_video_record: {
-				message: "启用录制的视频"
-			},
 			menu_setting_expand_video_inline_dailymotion: {
 				message: "www.dailymotion.com 设置"
 			},
@@ -65176,15 +64513,6 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga: {
 				message: "世佳 缩略图内联显示"
-			},
-			menu_setting_style_sheet_expand_video_ustream: {
-				message: "www.ustream.tv 设置"
-			},
-			menu_setting_style_sheet_expand_video_ustream_inline_video_record: {
-				message: "传送视频内联显示"
-			},
-			menu_setting_style_sheet_expand_video_ustream_inline_video_live: {
-				message: "录制的视频内联显示"
 			},
 			menu_setting_style_sheet_expand_video_dailymotion: {
 				message: "www.dailymotion.com 设置"
@@ -68706,7 +68034,8 @@ function PageExpand(page_expand_arguments){
 
 								progress.setMessage("Create Blob URL ...",0);
 								setTimeout(function(){
-									var blob = new Blob([ary_buffer],{type:"application/zip"});
+									//var blob = new Blob([ary_buffer],{type:"application/zip"});
+									var blob = new Blob([new Uint8Array(ary_buffer)],{type:"application/zip"});
 									blob_url = BlobURLCreate(blob);
 
 									progress.setMessage("Wait ...",0);
@@ -77417,6 +76746,71 @@ function PageExpand(page_expand_arguments){
 	}
 
 	// --------------------------------------------------------------------------------
+	// Base64 文字列から ArrayBuffer に変換する関数 (同期実行)
+	// --------------------------------------------------------------------------------
+	function Base64_To_ArrayBuffer(base64){
+		var dic = new Object();
+		dic[0x41]= 0; dic[0x42]= 1; dic[0x43]= 2; dic[0x44]= 3; dic[0x45]= 4; dic[0x46]= 5; dic[0x47]= 6; dic[0x48]= 7; dic[0x49]= 8; dic[0x4a]= 9; dic[0x4b]=10; dic[0x4c]=11; dic[0x4d]=12; dic[0x4e]=13; dic[0x4f]=14; dic[0x50]=15;
+		dic[0x51]=16; dic[0x52]=17; dic[0x53]=18; dic[0x54]=19; dic[0x55]=20; dic[0x56]=21; dic[0x57]=22; dic[0x58]=23; dic[0x59]=24; dic[0x5a]=25; dic[0x61]=26; dic[0x62]=27; dic[0x63]=28; dic[0x64]=29; dic[0x65]=30; dic[0x66]=31;
+		dic[0x67]=32; dic[0x68]=33; dic[0x69]=34; dic[0x6a]=35; dic[0x6b]=36; dic[0x6c]=37; dic[0x6d]=38; dic[0x6e]=39; dic[0x6f]=40; dic[0x70]=41; dic[0x71]=42; dic[0x72]=43; dic[0x73]=44; dic[0x74]=45; dic[0x75]=46; dic[0x76]=47;
+		dic[0x77]=48; dic[0x78]=49; dic[0x79]=50; dic[0x7a]=51; dic[0x30]=52; dic[0x31]=53; dic[0x32]=54; dic[0x33]=55; dic[0x34]=56; dic[0x35]=57; dic[0x36]=58; dic[0x37]=59; dic[0x38]=60; dic[0x39]=61; dic[0x2b]=62; dic[0x2f]=63;
+		var num = base64.length;
+		var n = 0;
+		var b = 0;
+		var e;
+
+		e = Math.ceil(num / 4) * 3;
+		switch(num % 4){
+		case 0:
+			if(base64.charAt(num - 1) == '=') e -= 1;
+			if(base64.charAt(num - 2) == '=') e -= 1;
+			break;
+		case 2:
+			e -= 2;
+			break;
+		case 3:
+			e -= 1;
+			break;
+		case 1:
+			return null;
+		}
+
+		var ary_buffer = new ArrayBuffer( e );
+		var ary_u8 = new Uint8Array( ary_buffer );
+		var i = 0;
+		var p = 0;
+		while(p < e){
+			b = dic[base64.charCodeAt(i)];
+			if(b === undefined) return null;
+			n = (b << 2);
+			i ++;
+
+			b = dic[base64.charCodeAt(i)];
+			if(b === undefined) return null;
+			ary_u8[p] = n | ((b >> 4) & 0x3);
+			n = (b & 0x0f) << 4;
+			i ++;
+			p ++;
+			if(p >= e) break;
+
+			b = dic[base64.charCodeAt(i)];
+			if(b === undefined) return null;
+			ary_u8[p] = n | ((b >> 2) & 0xf);
+			n = (b & 0x03) << 6;
+			i ++;
+			p ++;
+			if(p >= e) break;
+
+			b = dic[base64.charCodeAt(i)];
+			if(b === undefined) return null;
+			ary_u8[p] = n | b;
+			i ++;
+			p ++;
+		}
+		return ary_buffer;
+	}
+
+	// --------------------------------------------------------------------------------
 	// Base64 文字列から ArrayBuffer に変換する関数 (非同期実行)
 	// --------------------------------------------------------------------------------
 	function Base64_To_ArrayBuffer_Async(base64,callback,options){
@@ -81928,6 +81322,27 @@ function PageExpand(page_expand_arguments){
 		}
 
 		return false;
+	}
+
+	// --------------------------------------------------------------------------------
+	// DOM オブジェクトのすべての子孫を検索する関数
+	// --------------------------------------------------------------------------------
+	function DomNodeFindAllDescendants(node,func){
+		function f(n){
+			var nodes = n.childNodes;
+			var i;
+			var num = nodes.length;
+			var a = new Array();
+			for(i=0;i < num;i++){ a[i] = nodes[i]; }
+			for(i=0;i < num;i++){
+				node = func(a[i]);
+				if(node){ return node; }
+				node = f(a[i]);
+				if(node){ return node; }
+			}
+			return null;
+		}
+		return f(node);
 	}
 
 	// --------------------------------------------------------------------------------

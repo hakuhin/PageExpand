@@ -2218,6 +2218,7 @@ function PageExpand(page_expand_arguments){
 			switch(_current_site){
 			case "2ch":
 			case "open2ch":
+				var loader_url = "https://menu." + _current_site + ".net/bbsmenu.html";
 
 				// 成功
 				loader.onload = function(str){
@@ -2255,10 +2256,26 @@ function PageExpand(page_expand_arguments){
 								folder.setLabel(m[1]);
 
 								s.replace(re_item,function(m,p1,p2,index,str){
+									var url = StringUrl_To_Absolute(p1,loader_url);
+									if(_current_site == "2ch"){
+										var m = url.match(new RegExp("^([^:]+)://([^.]+)(.*)"));
+										if(m){
+											switch(m[2]){
+											case "carpenter":
+											case "hayabusa6":
+											case "hayabusa7":
+											case "vipper":
+												break;
+											default:
+												url = "https://" + m[2] + m[3];
+												break;
+											}
+										}
+									}
 									var item = folder.createItem(p1);
 									item.setLabel(p2);
-									item.setTooltip(p1);
-									item.setURL(p1);
+									item.setTooltip(url);
+									item.setURL(url);
 								});
 							}
 
@@ -2284,7 +2301,7 @@ function PageExpand(page_expand_arguments){
 
 				// テキストの読み込み
 				loader.setMethod("GET");
-				loader.setURL("http://menu." + _current_site + ".net/bbsmenu.html");
+				loader.setURL(loader_url);
 				loader.overrideMimeType("text/plain; charset=Shift_JIS");
 				loader.loadText();
 				break;
@@ -2644,46 +2661,51 @@ function PageExpand(page_expand_arguments){
 			case "2ch":
 			case "open2ch":
 			case "shitaraba":
+				var protocol;
 				var domain;
 				var directory;
 				if(_current_site == "shitaraba"){
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("http://([^/]+[.](shitaraba)[.]net)/(test|bbs)/[^/]+[.]cgi/([^/]+/[0-9]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](shitaraba)[.]net)/(test|bbs)/[^/]+[.]cgi/([^/]+/[0-9]+)","i"));
 						if(m){
-							domain = m[1];
-							directory = m[4];
+							protocol = m[1];
+							domain = m[2];
+							directory = m[5];
 						}
 					}
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("http://([^/]+[.](shitaraba)[.]net)/([^/]+/[0-9]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](shitaraba)[.]net)/([^/]+/[0-9]+)","i"));
 						if(m){
-							domain = m[1];
-							directory = m[3];
+							protocol = m[1];
+							domain = m[2];
+							directory = m[4];
 						}
 					}
 					if(domain){
-						_catalog_title.nodeValue = "http://" + domain + "/" + directory + "/";
+						_catalog_title.nodeValue = protocol + "://" + domain + "/" + directory + "/";
 					}else{
 						complete({result:false});
 						return;
 					}
 				}else{
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("http://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net))/test/read[.]cgi/([^/]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net))/test/read[.]cgi/([^/]+)","i"));
 						if(m){
-							domain = m[1];
-							directory = m[3];
+							protocol = m[1];
+							domain = m[2];
+							directory = m[4];
 						}
 					}
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("http://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net))/([^/]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net))/([^/]+)","i"));
 						if(m){
-							domain = m[1];
-							directory = m[3];
+							protocol = m[1];
+							domain = m[2];
+							directory = m[4];
 						}
 					}
 					if(domain){
-						_catalog_title.nodeValue = "http://" + domain + "/" + directory + "/";
+						_catalog_title.nodeValue = protocol + "://" + domain + "/" + directory + "/";
 					}else{
 						complete({result:false});
 						return;
@@ -2731,9 +2753,9 @@ function PageExpand(page_expand_arguments){
 							if(m){
 								var item = _ui_catalog.createItem(m[1]);
 								if(_current_site == "shitaraba"){
-									item.setURL("http://" + domain + "/bbs/read.cgi/" + directory + "/" + (m[1]));
+									item.setURL(protocol + "://" + domain + "/bbs/read.cgi/" + directory + "/" + (m[1]));
 								}else{
-									item.setURL("http://" + domain + "/test/read.cgi/" + directory + "/" + (m[1]));
+									item.setURL(protocol + "://" + domain + "/test/read.cgi/" + directory + "/" + (m[1]));
 								}
 								var data = item.getData();
 								data.number = index;
@@ -2775,7 +2797,7 @@ function PageExpand(page_expand_arguments){
 
 				// テキストの読み込み
 				loader.setMethod("GET");
-				loader.setURL("http://" + domain + "/" + directory + "/subject.txt");
+				loader.setURL(protocol + "://" + domain + "/" + directory + "/subject.txt");
 				if(_current_site == "shitaraba"){
 					loader.overrideMimeType("text/plain; charset=euc-jp");
 				}else{

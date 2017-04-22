@@ -1,1 +1,1 @@
-PageExpand({execute_type:"ChromeExtensionOption",admin:window,window:window});
+PageExpand({execute_type:"ChromeExtensionOption",admin:this,window:window});
