@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2016  http://hakuhin.jp
+// Hakuhin 2010-2017  http://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -11253,11 +11253,41 @@ function PageExpand(page_expand_arguments){
 				f.pattern = f.pattern.replace("^http:","^(http|https):");
 			}
 			filter.splice(3,1);
-			filter[0] = {
-				pattern:"^(http|https)://(carpenter|hayabusa6|hayabusa7|vipper)\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
-				flags:{i:true,g:false}
-			};
 
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.40
+		// --------------------------------------------------------------------------------
+		if(proj.version < 40){
+			// バージョン値
+			proj.version = 40;
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			// ピクシブ
+			var preset = getPreset(proj.urlmap,"pixiv");
+			preset.filter.asterisk.filter = [
+				"*://*.pixiv.net/",
+				"*://*.pixiv.net/*"
+			];
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// ２ちゃんねる掲示板
+			var obj = getPreset(proj.expand_bbs,"2ch");
+			var filter = obj.filter.regexp.filter;
+			filter.splice(0,1);
+
+			// ２ちゃんねる掲示板 v.06
+			var obj = getPreset(proj.expand_bbs,"2ch_v6");
+			var filter = obj.filter.regexp.filter.push({
+				pattern:"^(http|https)://[^.]+\\.2ch\\.net/[^/]+/kako/[0-9]+.*$",
+				flags:{i:true,g:false}
+			});
 		}
 		if(exit())	return proj;
 
@@ -28108,7 +28138,8 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"((http|https)://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch_v6"},
+			{url:"((http|https)://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
+			{url:"((http|https)://[^.]+\\.2ch\\.net/[^/]+/kako/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
 			{url:"((http|https)://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"pink"}
 		];
 
@@ -28150,6 +28181,34 @@ function PageExpand(page_expand_arguments){
 		var element_form = null;
 		var base_url = work.base_url;
 		var resource_url_more;
+
+		// --------------------------------------------------------------------------------
+		// read.cgi バージョンチェック
+		// --------------------------------------------------------------------------------
+		if(work.bbs_name == "2ch"){
+			work.bbs_name = (function(){
+				var version = (function(){
+					var re = new RegExp("read[.]cgi[ \t]+ver[ \t]*([0-9]+)[.][0-9]+[.][0-9]+","i");
+
+					// ver 06-07
+					var nodes = ElementGetElementsByClassName(document.body,"footer");
+					var node = nodes[nodes.length - 1];
+					if(node){
+						var m = ElementGetTextContent(node).match(re);
+						if(m) return parseInt(m[1]);
+					}
+
+					// ver 05
+					return 5;
+				})();
+				if(version == 6){
+					return "2ch_v6";
+				}else if(version >= 7){
+					return "2ch_v6";
+				}
+				return "2ch_v5";
+			})();
+		}
 
 		// --------------------------------------------------------------------------------
 		// 文字列からレスポンス番号を取得
@@ -28312,14 +28371,21 @@ function PageExpand(page_expand_arguments){
 		function checkValidityFromHTML(str){
 			var re;
 			switch(work.bbs_name){
+			case "2ch_v5":
+				var m = str.match(new RegExp("<dt>.*?<dd>[ ].*?[ ]<br><br>","i"));
+				if(m){
+					m = m[0].match(new RegExp("[\r\n]"));
+					if(!m) return true;
+				}
+				break;
 			case "2ch_v6":
 				re = new RegExp('<div[^>]+class="(| )thread( |)"[^>]*>.*?<div[^>]+class="(| )post( |)"[^>]*>.*?<div[^>]+class="(| )message( |)"[^>]*>',"i");
-				break;
+				return Boolean(str.match(re));
 			case "pink":
 				re = new RegExp('<dl[^>]+class="(| )post( |)"[^>]*>.*?<dd[^>]+class="(| )thread_in( |)"[^>]*>',"i");
-				break;
+				return Boolean(str.match(re));
 			}
-			return Boolean(str.match(re));
+			return false;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -28333,6 +28399,11 @@ function PageExpand(page_expand_arguments){
 			var search_post_end;
 			var class_name_message;
 			switch(work.bbs_name){
+			case "2ch_v5":
+				re_number = new RegExp('([0-9]+)',"i");
+				search_post_start = '<dt>';
+				search_post_end = "<br><br>";
+				break;
 			case "2ch_v6":
 				search_post_start = '<div class="post"';
 				search_post_end = "</div></div>";
@@ -28360,19 +28431,31 @@ function PageExpand(page_expand_arguments){
 					if((first_id <= id) && (id <= last_id)){
 					}else if(dictionary_id[id]){
 					}else{
-						var nodes = StringHtmlCreateDomNodesSafe(s);
-						var info_post = nodes[0];
+						var clone_nodes = StringHtmlCreateDomNodesSafe(s);
+						var info_post;
 						var info_number;
 						var info_name;
 						var info_date;
 						var info_message;
 
 						try{
-							if(info_post.className != "post") return;
-							info_number = ElementGetElementsByClassName(info_post,"number")[0];
-							info_name = ElementGetElementsByClassName(info_post,"name")[0];
-							info_date = ElementGetElementsByClassName(info_post,"date")[0];
-							info_message = ElementGetElementsByClassName(info_post,class_name_message)[0];	
+							switch(work.bbs_name){
+							case "2ch_v5":
+								info_number = info_name = info_date = clone_nodes[0];
+								if(info_number.tagName != "DT") return;
+								info_message = clone_nodes[1];
+								if(info_message.tagName != "DD") return;
+								break;
+							case "2ch_v6":
+							case "pink":
+								info_post = clone_nodes[0];
+								if(info_post.className != "post") return;
+								info_number = ElementGetElementsByClassName(info_post,"number")[0];
+								info_name = ElementGetElementsByClassName(info_post,"name")[0];
+								info_date = ElementGetElementsByClassName(info_post,"date")[0];
+								info_message = ElementGetElementsByClassName(info_post,class_name_message)[0];	
+								break;
+							}
 						}catch(e){
 							return;
 						}
@@ -28466,13 +28549,9 @@ function PageExpand(page_expand_arguments){
 							})();
 
 							// オリジナルエレメントをセット
-							var nodes = info_post.childNodes;
-							var i;
-							var num = nodes.length;
+							var num = clone_nodes.length;
 							for(i=0;i<num;i++){
-								var node = nodes[i];
-								var class_name = node.className || ("_" + i);
-								response.addOriginalElements(class_name,node);
+								response.addOriginalElements(String(i),clone_nodes[i]);
 							}
 
 							// 消去時に実行されるイベント
@@ -28505,6 +28584,10 @@ function PageExpand(page_expand_arguments){
 			var search_post_start;
 			var search_post_end;
 			switch(work.bbs_name){
+			case "2ch_v5":
+				search_post_start = '<dt>';
+				search_post_end = "<br><br>";
+				break;
 			case "2ch_v6":
 				search_post_start = '<div class="post"';
 				search_post_end = "</div></div>";
@@ -28535,6 +28618,11 @@ function PageExpand(page_expand_arguments){
 							response.clearAnalyzed();
 							response.clearOriginalElements();
 							response.clearFollowing();
+
+							// 暫定 (2ch_v7)
+							if(str.substr(e,4) == "<br>"){
+								s += "<br>";
+							}
 
 							var nodes = StringHtmlCreateDomNodesSafe(s);
 							var j;
@@ -28614,6 +28702,7 @@ function PageExpand(page_expand_arguments){
 				loader.setMethod("GET");
 				loader.setURL(param.url);
 				switch(work.bbs_name){
+				case "2ch_v5":
 				case "2ch_v6":
 				case "pink":
 					loader.overrideMimeType("text/plain; charset=Shift_JIS");
@@ -28627,27 +28716,52 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// レスポンス親要素
 		// --------------------------------------------------------------------------------
-		var i;
-		var nodes = ElementGetElementsByClassName(document.body,"thread");
-		var num = nodes.length;
-		for(i=0;i<num;i++){
-			element_parents.push(nodes[i]);
-			element_parent = nodes[i];
+		if(!element_parent){
+			var i;
+			var nodes = ElementGetElementsByClassName(document.body,"thread");
+			var num = nodes.length;
+			for(i=0;i<num;i++){
+				element_parents.push(nodes[i]);
+				element_parent = nodes[i];
+			}
 		}
-
+		if(!element_parent){
+			var i;
+			var nodes = ElementGetElementsByTagName(document.body,"DL");
+			var num = nodes.length;
+			for(i=0;i<num;i++){
+				element_parents.push(nodes[i]);
+				element_parent = nodes[i];
+			}
+		}
 		if(!element_parent) return false;
 
 		// --------------------------------------------------------------------------------
 		// 範囲取得
 		// --------------------------------------------------------------------------------
 		function getLastId(callback){
+			var get_elements;
+			switch(work.bbs_name){
+			case "2ch_v5":
+				get_elements = function(target){
+					return ElementGetElementsByTagName(target,"dt");
+				};
+				break;
+			case "2ch_v6":
+			case "pink":
+				get_elements = function(target){
+					return ElementGetElementsByClassName(target,"post");
+				};
+				break;
+			}
+
 			var num = element_parents.length;
 			var i;
 			for(i=num-1;i>=0;i--){
-				var nodes = ElementGetElementsByClassName(element_parents[i],"post");
+				var nodes = get_elements(element_parents[i]);
 				var node_num = nodes.length;
 				if(node_num){
-					var re_id = new RegExp("^([0-9]+)","i");
+					var re_id = new RegExp("^[ \t\r\n]*([0-9]+)","i");
 					if(ElementGetTextContent(nodes[node_num-1]).match(re_id)){
 						callback(parseInt(RegExp.$1));
 						return;
@@ -28656,12 +28770,27 @@ function PageExpand(page_expand_arguments){
 			}
 		}
 		(function(){
+			var get_elements;
+			switch(work.bbs_name){
+			case "2ch_v5":
+				get_elements = function(target){
+					return ElementGetElementsByTagName(target,"dt");
+				};
+				break;
+			case "2ch_v6":
+			case "pink":
+				get_elements = function(target){
+					return ElementGetElementsByClassName(target,"post");
+				};
+				break;
+			}
+
 			var count = 0;
-			var re_id = new RegExp("^([0-9]+)","i");
+			var re_id = new RegExp("^[ \t\r\n]*([0-9]+)","i");
 			var num = element_parents.length;
 			var i,j;
 			for(i=0;i<num;i++){
-				var nodes = ElementGetElementsByClassName(element_parents[i],"post");
+				var nodes = get_elements(element_parents[i]);
 				var node_num = nodes.length;
 				for(j=0;j<node_num;j++){
 					var m = ElementGetTextContent(nodes[j]).match(re_id);
@@ -28732,6 +28861,7 @@ function PageExpand(page_expand_arguments){
 				var nodes = ElementGetElementsByTagName(document.body,"form");
 				var i;
 				switch(work.bbs_name){
+				case "2ch_v5":
 				case "2ch_v6":
 				case "pink":
 					for(i=0;i<nodes.length;i++){
@@ -28821,6 +28951,7 @@ function PageExpand(page_expand_arguments){
 				var w;
 				var h;
 				switch(work.bbs_name){
+				case "2ch_v5":
 				case "2ch_v6":
 				case "pink":
 					w = 800;
@@ -28863,6 +28994,7 @@ function PageExpand(page_expand_arguments){
 							}
 							if(href.match(/^(http|https):/)){
 								switch(work.bbs_name){
+								case "2ch_v5":
 								case "2ch_v6":
 								case "pink":
 									if(href.indexOf("/test/bbs.cgi") == -1){
@@ -28976,6 +29108,7 @@ function PageExpand(page_expand_arguments){
 				loader.setMethod("GET");
 				loader.setURL(param.url);
 				switch(work.bbs_name){
+				case "2ch_v5":
 				case "2ch_v6":
 				case "pink":
 					loader.overrideMimeType("text/plain; charset=Shift_JIS");
@@ -29065,17 +29198,15 @@ function PageExpand(page_expand_arguments){
 							var j;
 							var clone_num = clone.length;
 							if(clone_num){
-								var param = new Object();
-								param.parent = node.parent;
+								var clone_nodes = [];
 								for(j=0;j<clone_num;j++){
 									var obj = clone[j];
-									param[obj.name] = obj.element;
-									DomNodeFindAllDescendants(obj.element,function(node){
-										param[node.className] = node;
-										return false;
-									});
+									clone_nodes.push(obj.element);
 									dl.appendChild(obj.element);
 								}
+								var param = new Object();
+								param.clone_nodes = clone_nodes;
+								param.parent = node.parent;
 
 								// レスポンスダイアログを登録
 								attachBbsResponseDialog(following,param,response_dialog,"response");
@@ -29236,18 +29367,15 @@ function PageExpand(page_expand_arguments){
 							var j;
 							var clone_num = clone.length;
 							if(clone_num){
-
-								var param = new Object();
-								param.parent = node.parent;
+								var clone_nodes = [];
 								for(j=0;j<clone_num;j++){
 									var obj = clone[j];
-									param[obj.name] = obj.element;
-									DomNodeFindAllDescendants(obj.element,function(node){
-										param[node.className] = node;
-										return false;
-									});
+									clone_nodes.push(obj.element);
 									dl.appendChild(obj.element);
 								}
+								var param = new Object();
+								param.clone_nodes = clone_nodes;
+								param.parent = node.parent;
 
 								// レスポンスダイアログを登録
 								attachBbsResponseDialog(response_id,param,response_dialog,"id");
@@ -29406,18 +29534,15 @@ function PageExpand(page_expand_arguments){
 							var j;
 							var clone_num = clone.length;
 							if(clone_num){
-
-								var param = new Object();
-								param.parent = node.parent;
+								var clone_nodes = [];
 								for(j=0;j<clone_num;j++){
 									var obj = clone[j];
-									param[obj.name] = obj.element;
-									DomNodeFindAllDescendants(obj.element,function(node){
-										param[node.className] = node;
-										return false;
-									});
+									clone_nodes.push(obj.element);
 									dl.appendChild(obj.element);
 								}
+								var param = new Object();
+								param.clone_nodes = clone_nodes;
+								param.parent = node.parent;
 
 								// レスポンスダイアログを登録
 								attachBbsResponseDialog(response_name,param,response_dialog,"name");
@@ -29616,18 +29741,15 @@ function PageExpand(page_expand_arguments){
 							var j;
 							var clone_num = clone.length;
 							if(clone_num){
-
-								var param = new Object();
-								param.parent = node.parent;
+								var clone_nodes = [];
 								for(j=0;j<clone_num;j++){
 									var obj = clone[j];
-									param[obj.name] = obj.element;
-									DomNodeFindAllDescendants(obj.element,function(node){
-										param[node.className] = node;
-										return false;
-									});
+									clone_nodes.push(obj.element);
 									dl.appendChild(obj.element);
 								}
+								var param = new Object();
+								param.clone_nodes = clone_nodes;
+								param.parent = node.parent;
 
 								// レスポンスダイアログを登録
 								attachBbsResponseDialog(response_host,param,response_dialog,"host");
@@ -29690,7 +29812,16 @@ function PageExpand(page_expand_arguments){
 					}
 				};
 				control_follower.update();
-				target.appendChild(element_follower);
+				var prev = target.lastChild;
+				while(prev){
+					if(prev.tagName != "BR") break;
+					prev = prev.previousSibling;
+				}
+				if(prev){
+					DomNode_InsertAfter(prev,element_follower);
+				}else{
+					target.appendChild(element_follower);
+				}
 
 				// --------------------------------------------------------------------------------
 				// ポップアップ化
@@ -29718,18 +29849,15 @@ function PageExpand(page_expand_arguments){
 						var j;
 						var clone_num = clone.length;
 						if(clone_num){
-
-							var param = new Object();
-							param.parent = node.parent;
-							for(j=0;j<clone_num;j++){
-								var obj = clone[j];
-								param[obj.name] = obj.element;
-								DomNodeFindAllDescendants(obj.element,function(node){
-									param[node.className] = node;
-									return false;
-								});
-								dl.appendChild(obj.element);
-							}
+								var clone_nodes = [];
+								for(j=0;j<clone_num;j++){
+									var obj = clone[j];
+									clone_nodes.push(obj.element);
+									dl.appendChild(obj.element);
+								}
+								var param = new Object();
+								param.clone_nodes = clone_nodes;
+								param.parent = node.parent;
 
 							// レスポンスダイアログを登録
 							attachBbsResponseDialog(follower,param,response_dialog,"response");
@@ -29822,22 +29950,43 @@ function PageExpand(page_expand_arguments){
 				});
 			}
 
-			if(node.number){
-				forReply(node.number);
+			var info_number;
+			var info_name;
+			var info_date;
+			var info_message;
+			
+			switch(work.bbs_name){
+			case "2ch_v5":
+				info_number = info_name = info_date = node.clone_nodes[0];
+				info_message = node.clone_nodes[1];
+				break;
+			case "2ch_v6":
+			case "pink":
+				var info_post = node.clone_nodes[0];
+				info_number = ElementGetElementsByClassName(info_post,"number")[0];
+				info_name = ElementGetElementsByClassName(info_post,"name")[0];
+				info_date = ElementGetElementsByClassName(info_post,"date")[0];
+				info_message = 
+					ElementGetElementsByClassName(info_post,"message")[0] ||
+					ElementGetElementsByClassName(info_post,"thread_in")[0];
+				break;
 			}
-			if(node.name){
-				forName(node.name);
+
+			if(info_number){
+				forReply(info_number);
 			}
-			if(node.date){
-				forId(node.date);
-				forHost(node.date);
-				forFollower(node.date);
+			if(info_name){
+				forName(info_name);
 			}
-			var message = node.message || node.thread_in;
-			if(message){
-				forResponseAnchor(message);
-				forId(message);
-				forName(message);
+			if(info_date){
+				forId(info_date);
+				forHost(info_date);
+				forFollower(info_date);
+			}
+			if(info_message){
+				forResponseAnchor(info_message);
+				forId(info_message);
+				forName(info_message);
 			}
 		}
 
@@ -29845,22 +29994,47 @@ function PageExpand(page_expand_arguments){
 		// エレメントを解析
 		// --------------------------------------------------------------------------------
 		var useful = (function(){
-			var info_post = element;
+			var info_post;
 			var info_number;
 			var info_name;
 			var info_date;
 			var info_message;
+			var clone_nodes = [];
 
-			try{
-				if(info_post.className != "post") return false;
-				info_number = ElementGetElementsByClassName(info_post,"number")[0];
-				info_name = ElementGetElementsByClassName(info_post,"name")[0];
-				info_date = ElementGetElementsByClassName(info_post,"date")[0];
-				info_message = 
-					ElementGetElementsByClassName(info_post,"message")[0] ||
-					ElementGetElementsByClassName(info_post,"thread_in")[0];
-			}catch(e){
-				return false;
+			switch(work.bbs_name){
+			case "2ch_v5":
+				try{
+					var dt = element;
+					if(dt.tagName != "DT")	return false;
+					var dd = DomNodeGetNextElementSibling(dt);
+					var dl = dt.parentNode;
+					if(dd.tagName != "DD")	return false;
+					if(dl.tagName != "DL")	return false;
+					info_post = dl;
+					info_number = info_name = info_date = dt;
+					info_message = dd;
+					clone_nodes.push(dt);
+					clone_nodes.push(dd);
+				}catch(e){
+					return false;
+				}
+				break;
+			case "2ch_v6":
+			case "pink":
+				try{
+					info_post = element;
+					if(info_post.className != "post") return false;
+					info_number = ElementGetElementsByClassName(info_post,"number")[0];
+					info_name = ElementGetElementsByClassName(info_post,"name")[0];
+					info_date = ElementGetElementsByClassName(info_post,"date")[0];
+					info_message = 
+						ElementGetElementsByClassName(info_post,"message")[0] ||
+						ElementGetElementsByClassName(info_post,"thread_in")[0];
+					clone_nodes.push(info_post);
+				}catch(e){
+					return false;
+				}
+				break;
 			}
 
 			// document に未登録
@@ -29945,6 +30119,7 @@ function PageExpand(page_expand_arguments){
 
 			(function(){
 				switch(work.bbs_name){
+				case "2ch_v5":
 				case "2ch_v6":
 				case "pink":
 					var node_list = ElementGetElementsByClassName(info_post,"back-links");
@@ -29958,7 +30133,7 @@ function PageExpand(page_expand_arguments){
 			})();
 
 			// ナンバーを取得
-			if(!(ElementGetTextContent(info_number).match(new RegExp("^([0-9]+)[ ]","i"))))	return false;
+			if(!(ElementGetTextContent(info_number).match(new RegExp("^([0-9]+)","i"))))	return false;
 
 			// ナンバーからレスポンスオブジェクトを取得
 			var response = bbs_dictionary.getResponse(parseInt(RegExp.$1));
@@ -30049,22 +30224,22 @@ function PageExpand(page_expand_arguments){
 				})();
 
 				// オリジナルエレメントをセット
-				var nodes = info_post.childNodes;
 				var i;
-				var num = nodes.length;
+				var num = clone_nodes.length;
 				for(i=0;i<num;i++){
-					var node = nodes[i];
-					var class_name = node.className || ("_" + i);
-					response.addOriginalElements(class_name,node);
+					response.addOriginalElements(String(i),clone_nodes[i]);
 				}
 
 				// 消去時に実行されるイベント
 				response.onerase = function(){
 					var original = response.getOriginalElements();
-					
-					if(original[0]){
+
+					// オリジナルエレメントを外す
+					var i;
+					var num = original.length;
+					for(i=0;i<num;i++){
 						var revise_scroll = new DocumentReviseScroll();
-						var node = original[0].element.parentNode;
+						var node = original[i].element;
 						revise_scroll.executeRemoveElementBefore(node);
 						DomNodeRemove(node);
 						revise_scroll.executeRemoveElementAfter(node);
@@ -30075,18 +30250,8 @@ function PageExpand(page_expand_arguments){
 			}
 
 			var node_obj = new Object();
-			var nodes = info_post.childNodes;
-			var i;
-			var num = nodes.length;
-			for(i=0;i<num;i++){
-				var node = nodes[i];
-				node_obj[node.className] = node;
-				DomNodeFindAllDescendants(node,function(node){
-					node_obj[node.className] = node;
-					return false;
-				});
-			}
 			node_obj.parent = document.body;
+			node_obj.clone_nodes = clone_nodes;
 
 			// レスポンスダイアログを登録（ルート）
 			attachBbsResponseDialog(
@@ -39090,7 +39255,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.10");
+				new UI_Text(parent,"PageExpand ver.1.5.11");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -39100,7 +39265,7 @@ function PageExpand(page_expand_arguments){
 				var tr = table.insertRow(-1);
 				new UI_Text(tr.insertCell(-1),'by');
 				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","http://hakuhin.jp/");
-				new UI_Text(tr.insertCell(-1),'2010-2016');
+				new UI_Text(tr.insertCell(-1),'2010-2017');
 				new UI_AnchorText(parent,"https://github.com/hakuhin/PageExpand","https://github.com/hakuhin/PageExpand");
 
 				// 翻訳者

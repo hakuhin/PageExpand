@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2016  http://hakuhin.jp
+// Hakuhin 2010-2017  http://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -5079,7 +5079,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.10");
+				new UI_Text(parent,"PageExpand ver.1.5.11");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -5089,7 +5089,7 @@ function PageExpand(page_expand_arguments){
 				var tr = table.insertRow(-1);
 				new UI_Text(tr.insertCell(-1),'by');
 				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","http://hakuhin.jp/");
-				new UI_Text(tr.insertCell(-1),'2010-2016');
+				new UI_Text(tr.insertCell(-1),'2010-2017');
 				new UI_AnchorText(parent,"https://github.com/hakuhin/PageExpand","https://github.com/hakuhin/PageExpand");
 
 				// 翻訳者
