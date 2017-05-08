@@ -11288,6 +11288,27 @@ function PageExpand(page_expand_arguments){
 				pattern:"^(http|https)://[^.]+\\.2ch\\.net/[^/]+/kako/[0-9]+.*$",
 				flags:{i:true,g:false}
 			});
+
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.41
+		// --------------------------------------------------------------------------------
+		if(proj.version < 41){
+			// バージョン値
+			proj.version = 41;
+
+			// --------------------------------------------------------------------------------
+			// リファラ置換定義
+			// --------------------------------------------------------------------------------
+			// 直リンク用（汎用）
+			var obj = getPreset(proj.replacement_to_referer,"direct_link_generic");
+			obj.filter[0].filter.regexp.filter.push({
+					pattern:"^(http|https)://i[0-9]*[.]pximg[.]net/.*[.](bmp|gif|jpg|jpeg|png)$",
+					flags:{i:true,g:false}
+			});
+
 		}
 		if(exit())	return proj;
 
@@ -28436,12 +28457,13 @@ function PageExpand(page_expand_arguments){
 						var info_number;
 						var info_name;
 						var info_date;
+						var info_uid;
 						var info_message;
 
 						try{
 							switch(work.bbs_name){
 							case "2ch_v5":
-								info_number = info_name = info_date = clone_nodes[0];
+								info_number = info_name = info_date = info_uid = clone_nodes[0];
 								if(info_number.tagName != "DT") return;
 								info_message = clone_nodes[1];
 								if(info_message.tagName != "DD") return;
@@ -28453,6 +28475,7 @@ function PageExpand(page_expand_arguments){
 								info_number = ElementGetElementsByClassName(info_post,"number")[0];
 								info_name = ElementGetElementsByClassName(info_post,"name")[0];
 								info_date = ElementGetElementsByClassName(info_post,"date")[0];
+								info_uid = ElementGetElementsByClassName(info_post,"uid")[0] || info_date;
 								info_message = ElementGetElementsByClassName(info_post,class_name_message)[0];	
 								break;
 							}
@@ -28467,7 +28490,7 @@ function PageExpand(page_expand_arguments){
 							work.extendResponseAnchor(info_message);
 
 							// IDの取得
-							if(ElementGetTextContent(info_date).match(re_id)){
+							if(ElementGetTextContent(info_uid).match(re_id)){
 								response.setId(RegExp.$1);
 							}
 
@@ -28595,7 +28618,6 @@ function PageExpand(page_expand_arguments){
 			case "pink":
 				search_post_start = '<dl class="post"';
 				search_post_end = "</dd></dl>";
-				break;
 				break;
 			}
 
@@ -29189,7 +29211,7 @@ function PageExpand(page_expand_arguments){
 
 						function f(){
 							var dl = DocumentCreateElement("div");
-							dl.style.margin = "0px 0px 20px";
+							dl.style.margin = "0px";
 							_window.appendChild(dl);
 
 							var following = bbs_dictionary.getResponse(number_list[i]);
@@ -29358,7 +29380,7 @@ function PageExpand(page_expand_arguments){
 
 						function f(){
 							var dl = DocumentCreateElement("div");
-							dl.style.margin = "0px 0px 20px";
+							dl.style.margin = "0px";
 							_window.appendChild(dl);
 
 							var response_id = responses[i];
@@ -29525,7 +29547,7 @@ function PageExpand(page_expand_arguments){
 
 						function f(){
 							var dl = DocumentCreateElement("div");
-							dl.style.margin = "0px 0px 20px";
+							dl.style.margin = "0px";
 							_window.appendChild(dl);
 
 							var response_name = responses[i];
@@ -29732,7 +29754,7 @@ function PageExpand(page_expand_arguments){
 
 						function f(){
 							var dl = DocumentCreateElement("div");
-							dl.style.margin = "0px 0px 20px";
+							dl.style.margin = "0px";
 							_window.appendChild(dl);
 
 							var response_host = responses[i];
@@ -29840,7 +29862,7 @@ function PageExpand(page_expand_arguments){
 
 					function f(){
 						var dl = DocumentCreateElement("div");
-						dl.style.margin = "0px 0px 20px";
+						dl.style.margin = "0px";
 						_window.appendChild(dl);
 
 						var follower = bbs_dictionary.getResponse(ary[i].getNumber());
@@ -29953,11 +29975,12 @@ function PageExpand(page_expand_arguments){
 			var info_number;
 			var info_name;
 			var info_date;
+			var info_uid;
 			var info_message;
 			
 			switch(work.bbs_name){
 			case "2ch_v5":
-				info_number = info_name = info_date = node.clone_nodes[0];
+				info_number = info_name = info_date = info_uid = node.clone_nodes[0];
 				info_message = node.clone_nodes[1];
 				break;
 			case "2ch_v6":
@@ -29966,6 +29989,7 @@ function PageExpand(page_expand_arguments){
 				info_number = ElementGetElementsByClassName(info_post,"number")[0];
 				info_name = ElementGetElementsByClassName(info_post,"name")[0];
 				info_date = ElementGetElementsByClassName(info_post,"date")[0];
+				info_uid = ElementGetElementsByClassName(info_post,"uid")[0] || info_date;
 				info_message = 
 					ElementGetElementsByClassName(info_post,"message")[0] ||
 					ElementGetElementsByClassName(info_post,"thread_in")[0];
@@ -29979,9 +30003,11 @@ function PageExpand(page_expand_arguments){
 				forName(info_name);
 			}
 			if(info_date){
-				forId(info_date);
 				forHost(info_date);
-				forFollower(info_date);
+			}
+			if(info_uid){
+				forId(info_uid);
+				forFollower(info_uid);
 			}
 			if(info_message){
 				forResponseAnchor(info_message);
@@ -29998,6 +30024,7 @@ function PageExpand(page_expand_arguments){
 			var info_number;
 			var info_name;
 			var info_date;
+			var info_uid;
 			var info_message;
 			var clone_nodes = [];
 
@@ -30011,7 +30038,7 @@ function PageExpand(page_expand_arguments){
 					if(dd.tagName != "DD")	return false;
 					if(dl.tagName != "DL")	return false;
 					info_post = dl;
-					info_number = info_name = info_date = dt;
+					info_number = info_name = info_date = info_uid = dt;
 					info_message = dd;
 					clone_nodes.push(dt);
 					clone_nodes.push(dd);
@@ -30027,6 +30054,7 @@ function PageExpand(page_expand_arguments){
 					info_number = ElementGetElementsByClassName(info_post,"number")[0];
 					info_name = ElementGetElementsByClassName(info_post,"name")[0];
 					info_date = ElementGetElementsByClassName(info_post,"date")[0];
+					info_uid = ElementGetElementsByClassName(info_post,"uid")[0] || info_date;
 					info_message = 
 						ElementGetElementsByClassName(info_post,"message")[0] ||
 						ElementGetElementsByClassName(info_post,"thread_in")[0];
@@ -30112,6 +30140,9 @@ function PageExpand(page_expand_arguments){
 				if(info_date){
 					cleanup(info_date);
 				}
+				if(info_uid){
+					cleanup(info_uid);
+				}
 				if(info_message){
 					cleanup(info_message);
 				}
@@ -30142,7 +30173,7 @@ function PageExpand(page_expand_arguments){
 			if(!response.getAnalyzed()){
 
 				// IDの取得
-				if(ElementGetTextContent(info_date).match(new RegExp("ID:([-a-zA-Z0-9+/.●!=]{8,})","i"))){
+				if(ElementGetTextContent(info_uid).match(new RegExp("ID:([-a-zA-Z0-9+/.●!=]{8,})","i"))){
 					response.setId(RegExp.$1);
 				}
 
@@ -39255,7 +39286,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.11");
+				new UI_Text(parent,"PageExpand ver.1.5.12");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
