@@ -28203,7 +28203,7 @@
 
 					// BbsControlDockingForm 作成
 					var docking_form = new BbsControlDockingForm(element_form,false);
-					docking_form.setStyle("background:#e8e8e8; background-image:linear-gradient(to bottom, #f8f8f8, #e8e8e8); padding:0px 20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px;");
+					docking_form.setStyle("background:#e8e8e8; background-image:linear-gradient(to bottom, #f8f8f8, #e8e8e8); padding:10px 20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px;");
 					work.docking_form = docking_form;
 				}
 			})();
@@ -29257,6 +29257,10 @@
 						textarea.value = text.slice(0,selection_end) + insert_str + text.slice(selection_end);
 						textarea.selectionEnd = selection_end + insert_str.length;
 						textarea.focus();
+
+						if(e.stopImmediatePropagation){
+							e.stopImmediatePropagation();
+						}
 					};
 
 					return null;
