@@ -1,4 +1,5 @@
 ## Get PageExpand
+
 | platform | get |
 |---:|:---|
 | for Chromium | [download page](https://chrome.google.com/webstore/detail/bjnobgdfhefpilajplncgjjeopakpepc) |
@@ -8,6 +9,7 @@
 | for Greasemonkey | [install](https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/PageExpand.user.js) |
 
 ## Screenshot
+
 [<img src="https://hakuhin.github.io/PageExpand/etc/screenshot/en/twitter.png" width=256 height=160>](https://hakuhin.github.io/PageExpand/etc/screenshot/en/twitter.png)
 [<img src="https://hakuhin.github.io/PageExpand/etc/screenshot/en/image_search.png" width=256 height=160>](https://hakuhin.github.io/PageExpand/etc/screenshot/en/image_search.png)
 [<img src="https://hakuhin.github.io/PageExpand/etc/screenshot/en/bbs.png" width=256 height=160>](https://hakuhin.github.io/PageExpand/etc/screenshot/en/bbs.png)
@@ -85,9 +87,10 @@
  - [http://hakuhin.jp/browser_extension/page_expand.html](http://hakuhin.jp/browser_extension/page_expand.html)
 
 ## Test
+
 | platform | get |
 |------:|:------|
-| for Chromium | download |
+| for Chromium | [download page](https://chrome.google.com/webstore/detail/bjnobgdfhefpilajplncgjjeopakpepc) |
 | for Firefox | download |
 | for Opera | download |
 | for Safari | download |
@@ -103,4 +106,4 @@
 
 ![aaa](https://hakuhin.github.io/PageExpand/etc/screenshot/en/image_viewer.png "bbb")
 
-<img src="https://hakuhin.github.io/PageExpand/etc/screenshot/en/image_viewer.png" alt="aaa" title="bbb">
+<img src="https://hakuhin.github.io/PageExpand/etc/screenshot/en/image_viewer.png" alt="aaa" title="bbb" width=256 height=160>
