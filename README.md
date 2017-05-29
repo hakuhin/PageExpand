@@ -1,11 +1,11 @@
 ## Get PageExpand
-|platform|get|
+| platform | get |
 |---:|:---|
-|for Chromium|[download page](https://chrome.google.com/webstore/detail/bjnobgdfhefpilajplncgjjeopakpepc)|
-|for Firefox|[download page](https://addons.mozilla.org/addon/pageexpand/)|
-|for Opera|[download page](https://addons.opera.com/extensions/details/pageexpand/)|
-|for Safari|[install](http://hakuhin.jp/download/page_expand/release/safari/page_expand.safariextz)|
-|for Greasemonkey|[install](https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/PageExpand.user.js)|
+| for Chromium | [download page](https://chrome.google.com/webstore/detail/bjnobgdfhefpilajplncgjjeopakpepc) |
+| for Firefox | [download page](https://addons.mozilla.org/addon/pageexpand/) |
+| for Opera | [download page](https://addons.opera.com/extensions/details/pageexpand/) |
+| for Safari | [install](http://hakuhin.jp/download/page_expand/release/safari/page_expand.safariextz) |
+| for Greasemonkey | [install](https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/PageExpand.user.js) |
 
 ## Screenshot
 [<img src="https://hakuhin.github.io/PageExpand/etc/screenshot/en/twitter.png" width=256 height=160>](https://hakuhin.github.io/PageExpand/etc/screenshot/en/twitter.png)
