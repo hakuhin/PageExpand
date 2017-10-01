@@ -857,6 +857,7 @@ function PageExpand(page_expand_arguments){
 
 			switch(_current_site){
 			case "2ch":
+			case "5ch":
 			case "open2ch":
 			case "shitaraba":
 				if(_current_site == "shitaraba"){
@@ -883,7 +884,7 @@ function PageExpand(page_expand_arguments){
 					var get_title = function(){
 						var title = data.title;
 						while(true){
-							var m = title.match(new RegExp("(.*)©(2ch[.]net|bbspink[.]com)[ 	]*$","i"));
+							var m = title.match(new RegExp("(.*)©(2ch[.]net|5ch[.]net|bbspink[.]com)[ 	]*$","i"));
 							if(m){
 								title = m[1];
 								continue;
@@ -2217,6 +2218,7 @@ function PageExpand(page_expand_arguments){
 
 			switch(_current_site){
 			case "2ch":
+			case "5ch":
 			case "open2ch":
 				var loader_url = "https://menu." + _current_site + ".net/bbsmenu.html";
 
@@ -2257,7 +2259,9 @@ function PageExpand(page_expand_arguments){
 
 								s.replace(re_item,function(m,p1,p2,index,str){
 									var url = StringUrl_To_Absolute(p1,loader_url);
-									if(_current_site == "2ch"){
+									switch(_current_site){
+									case "2ch":
+									case "5ch":
 										var m = url.match(new RegExp("^([^:]+)://([^.]+)(.*)"));
 										if(m){
 											switch(m[2]){
@@ -2271,6 +2275,7 @@ function PageExpand(page_expand_arguments){
 												break;
 											}
 										}
+										break;
 									}
 									var item = folder.createItem(p1);
 									item.setLabel(p2);
@@ -2659,6 +2664,7 @@ function PageExpand(page_expand_arguments){
 
 			switch(_current_site){
 			case "2ch":
+			case "5ch":
 			case "open2ch":
 			case "shitaraba":
 				var protocol;
@@ -2689,7 +2695,7 @@ function PageExpand(page_expand_arguments){
 					}
 				}else{
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net))/test/read[.]cgi/([^/]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net|5ch[.]net))/test/read[.]cgi/([^/]+)","i"));
 						if(m){
 							protocol = m[1];
 							domain = m[2];
@@ -2697,7 +2703,7 @@ function PageExpand(page_expand_arguments){
 						}
 					}
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net))/([^/]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net|5ch[.]net))/([^/]+)","i"));
 						if(m){
 							protocol = m[1];
 							domain = m[2];
@@ -3746,6 +3752,8 @@ function PageExpand(page_expand_arguments){
 				site = "open2ch";
 			}else if(domain.match(new RegExp("shitaraba[.]net$","i"))){
 				site = "shitaraba";
+			}else if(domain.match(new RegExp("(5ch[.]net)$","i"))){
+				site = "5ch";
 			}else if(domain.match(new RegExp("(bbspink[.]com|2ch[.]net)$","i"))){
 				site = "2ch";
 			}else if(domain.match(new RegExp("2chan[.]net$","i"))){
@@ -3839,9 +3847,14 @@ function PageExpand(page_expand_arguments){
 					option.value = "";
 					_select_site.appendChild(option);
 
-				   var option = DocumentCreateElement("option");
+					var option = DocumentCreateElement("option");
 					ElementSetTextContent(option,"2ch.net");
 					option.value = "2ch";
+					_select_site.appendChild(option);
+
+					var option = DocumentCreateElement("option");
+					ElementSetTextContent(option,"5ch.net (new 2ch?)");
+					option.value = "5ch";
 					_select_site.appendChild(option);
 
 					var option = DocumentCreateElement("option");

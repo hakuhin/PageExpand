@@ -10603,6 +10603,41 @@
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.42
+		// --------------------------------------------------------------------------------
+		if(proj.version < 42){
+			// バージョン値
+			proj.version = 42;
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			// スレッド掲示板
+			var obj = getPreset(proj.urlmap,"bbs");
+			obj.filter.asterisk.filter.splice(2,0,
+				"*://5ch.net/*",
+				"*://*.5ch.net/*"
+			);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// ２ちゃんねる掲示板 v.06
+			var obj = getPreset(proj.expand_bbs,"2ch_v6");
+			var filter = obj.filter.regexp.filter;
+			filter[0] = {
+				pattern:"^(http|https)://[^.]+\\.(2ch|5ch)\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			}
+			filter[2] = {
+				pattern:"^(http|https)://[^.]+\\.(2ch|5ch)\\.net/[^/]+/kako/[0-9]+.*$",
+				flags:{i:true,g:false}
+			};
+
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
@@ -11666,7 +11701,7 @@
 		var list = [
 			// 2ちゃんねる
 			{search:"^(http|https)://ime\\.nu/",replace:""},
-			{search:"^(http|https)://jump\\.2ch\\.net/[?]",replace:""},
+			{search:"^(http|https)://jump\\.(2ch|5ch)\\.net/[?]",replace:""},
 			{search:"^(http|https)://2ch\\.io/",replace:""},
 			// まちBBS
 			{search:"^(http|https)://machi\\.to/bbs/link\\.cgi[?]URL=",replace:""},
@@ -27450,8 +27485,8 @@
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"((http|https)://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
-			{url:"((http|https)://[^.]+\\.2ch\\.net/[^/]+/kako/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
+			{url:"((http|https)://[^.]+\\.(2ch|5ch)\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
+			{url:"((http|https)://[^.]+\\.(2ch|5ch)\\.net/[^/]+/kako/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
 			{url:"((http|https)://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"pink"}
 		];
 
@@ -29609,7 +29644,7 @@
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"((http|https)://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
+			{url:"((http|https)://[^.]+\\.(2ch|5ch)\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
 			{url:"((http|https)://[^.]+\\.2ch\\.sc/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch.sc"},
 			{url:"((http|https)://(|[^.]+\\.)machi\\.to/bbs/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"machi"},
 			{url:"((http|https)://(|[^.]+\\.)machibbs\\.net/[^/]+/[^/]*[0-9]+)",replace:"$1",secure:true,name:"machibbs"},
@@ -37172,7 +37207,7 @@
 				message: "PageExpand"
 			},
 			extension_description: {
-				message: "画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、リファラ置換、掲示板の拡張表示など..."
+				message: "画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、リファラ置換、主要掲示板の拡張表示など..."
 			},
 			page_expand_config: {
 				message: "PageExpand 設定"

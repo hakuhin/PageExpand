@@ -12,10 +12,10 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.5.13
+// @version        1.5.14
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
-// @description:ja 画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、掲示板の拡張表示など...
+// @description:ja 画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、2chなどの主要掲示板の拡張表示など...
 // @description:zh 下载所有图片、图片缩放、扩展缩略图以及音频和视频、展开短网址、从文本生成链接、扩展BBS，等等...
 // @include        http://*
 // @include        https://*
@@ -11339,6 +11339,41 @@
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.42
+		// --------------------------------------------------------------------------------
+		if(proj.version < 42){
+			// バージョン値
+			proj.version = 42;
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			// スレッド掲示板
+			var obj = getPreset(proj.urlmap,"bbs");
+			obj.filter.asterisk.filter.splice(2,0,
+				"*://5ch.net/*",
+				"*://*.5ch.net/*"
+			);
+
+			// --------------------------------------------------------------------------------
+			// 掲示板設定
+			// --------------------------------------------------------------------------------
+			// ２ちゃんねる掲示板 v.06
+			var obj = getPreset(proj.expand_bbs,"2ch_v6");
+			var filter = obj.filter.regexp.filter;
+			filter[0] = {
+				pattern:"^(http|https)://[^.]+\\.(2ch|5ch)\\.net/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			}
+			filter[2] = {
+				pattern:"^(http|https)://[^.]+\\.(2ch|5ch)\\.net/[^/]+/kako/[0-9]+.*$",
+				flags:{i:true,g:false}
+			};
+
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
@@ -12402,7 +12437,7 @@
 		var list = [
 			// 2ちゃんねる
 			{search:"^(http|https)://ime\\.nu/",replace:""},
-			{search:"^(http|https)://jump\\.2ch\\.net/[?]",replace:""},
+			{search:"^(http|https)://jump\\.(2ch|5ch)\\.net/[?]",replace:""},
 			{search:"^(http|https)://2ch\\.io/",replace:""},
 			// まちBBS
 			{search:"^(http|https)://machi\\.to/bbs/link\\.cgi[?]URL=",replace:""},
@@ -28186,8 +28221,8 @@
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"((http|https)://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
-			{url:"((http|https)://[^.]+\\.2ch\\.net/[^/]+/kako/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
+			{url:"((http|https)://[^.]+\\.(2ch|5ch)\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
+			{url:"((http|https)://[^.]+\\.(2ch|5ch)\\.net/[^/]+/kako/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
 			{url:"((http|https)://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"pink"}
 		];
 
@@ -30345,7 +30380,7 @@
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"((http|https)://[^.]+\\.2ch\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
+			{url:"((http|https)://[^.]+\\.(2ch|5ch)\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
 			{url:"((http|https)://[^.]+\\.2ch\\.sc/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch.sc"},
 			{url:"((http|https)://(|[^.]+\\.)machi\\.to/bbs/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"machi"},
 			{url:"((http|https)://(|[^.]+\\.)machibbs\\.net/[^/]+/[^/]*[0-9]+)",replace:"$1",secure:true,name:"machibbs"},
@@ -38151,7 +38186,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.13");
+				new UI_Text(parent,"PageExpand ver.1.5.14");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -44975,6 +45010,7 @@
 
 			switch(_current_site){
 			case "2ch":
+			case "5ch":
 			case "open2ch":
 			case "shitaraba":
 				if(_current_site == "shitaraba"){
@@ -45001,7 +45037,7 @@
 					var get_title = function(){
 						var title = data.title;
 						while(true){
-							var m = title.match(new RegExp("(.*)©(2ch[.]net|bbspink[.]com)[ 	]*$","i"));
+							var m = title.match(new RegExp("(.*)©(2ch[.]net|5ch[.]net|bbspink[.]com)[ 	]*$","i"));
 							if(m){
 								title = m[1];
 								continue;
@@ -46335,6 +46371,7 @@
 
 			switch(_current_site){
 			case "2ch":
+			case "5ch":
 			case "open2ch":
 				var loader_url = "https://menu." + _current_site + ".net/bbsmenu.html";
 
@@ -46375,7 +46412,9 @@
 
 								s.replace(re_item,function(m,p1,p2,index,str){
 									var url = StringUrl_To_Absolute(p1,loader_url);
-									if(_current_site == "2ch"){
+									switch(_current_site){
+									case "2ch":
+									case "5ch":
 										var m = url.match(new RegExp("^([^:]+)://([^.]+)(.*)"));
 										if(m){
 											switch(m[2]){
@@ -46389,6 +46428,7 @@
 												break;
 											}
 										}
+										break;
 									}
 									var item = folder.createItem(p1);
 									item.setLabel(p2);
@@ -46777,6 +46817,7 @@
 
 			switch(_current_site){
 			case "2ch":
+			case "5ch":
 			case "open2ch":
 			case "shitaraba":
 				var protocol;
@@ -46807,7 +46848,7 @@
 					}
 				}else{
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net))/test/read[.]cgi/([^/]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net|5ch[.]net))/test/read[.]cgi/([^/]+)","i"));
 						if(m){
 							protocol = m[1];
 							domain = m[2];
@@ -46815,7 +46856,7 @@
 						}
 					}
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net))/([^/]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net|5ch[.]net))/([^/]+)","i"));
 						if(m){
 							protocol = m[1];
 							domain = m[2];
@@ -47864,6 +47905,8 @@
 				site = "open2ch";
 			}else if(domain.match(new RegExp("shitaraba[.]net$","i"))){
 				site = "shitaraba";
+			}else if(domain.match(new RegExp("(5ch[.]net)$","i"))){
+				site = "5ch";
 			}else if(domain.match(new RegExp("(bbspink[.]com|2ch[.]net)$","i"))){
 				site = "2ch";
 			}else if(domain.match(new RegExp("2chan[.]net$","i"))){
@@ -47957,9 +48000,14 @@
 					option.value = "";
 					_select_site.appendChild(option);
 
-				   var option = DocumentCreateElement("option");
+					var option = DocumentCreateElement("option");
 					ElementSetTextContent(option,"2ch.net");
 					option.value = "2ch";
+					_select_site.appendChild(option);
+
+					var option = DocumentCreateElement("option");
+					ElementSetTextContent(option,"5ch.net (new 2ch?)");
+					option.value = "5ch";
 					_select_site.appendChild(option);
 
 					var option = DocumentCreateElement("option");
@@ -59707,7 +59755,7 @@
 				message: "PageExpand"
 			},
 			extension_description: {
-				message: "画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、リファラ置換、掲示板の拡張表示など..."
+				message: "画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、リファラ置換、主要掲示板の拡張表示など..."
 			},
 			page_expand_config: {
 				message: "PageExpand 設定"
