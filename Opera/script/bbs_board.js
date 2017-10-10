@@ -3853,7 +3853,7 @@ function PageExpand(page_expand_arguments){
 					_select_site.appendChild(option);
 
 					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"5ch.net (new 2ch?)");
+					ElementSetTextContent(option,"5ch.net");
 					option.value = "5ch";
 					_select_site.appendChild(option);
 

@@ -13118,10 +13118,10 @@
 			// 成功
 			loader.onload = function(str){
 				var image_url = str;
-				var m = image_url.match(new RegExp("(http://lohas\\.nicoseiga\\.jp/)o(/[a-z0-9]+/[0-9]+/[0-9]+)","i"));
+				var m = image_url.match(new RegExp("((http|https)://lohas\\.nicoseiga\\.jp/)o(/[a-z0-9]+/[0-9]+/[0-9]+)","i"));
 				if(m){
 					// 高解像度画像
-					var image_url = m[1] + "priv" + m[2];
+					var image_url = m[1] + "priv" + m[3];
 				}
 
 				if(image_url){
@@ -13172,10 +13172,10 @@
 		loader.onload = function(str){
 			var image_url = str;
 
-			var m = image_url.match(new RegExp("(http://lohas\\.nicoseiga\\.jp/)o(/[a-z0-9]+/[0-9]+/[0-9]+)","i"));
+			var m = image_url.match(new RegExp("((http|https)://lohas\\.nicoseiga\\.jp/)o(/[a-z0-9]+/[0-9]+/[0-9]+)","i"));
 			if(m){
 				// 高解像度画像
-				image_url = m[1] + "priv" + m[2];
+				image_url = m[1] + "priv" + m[3];
 			}
 
 			if(image_url){
@@ -13217,7 +13217,7 @@
 
 			// ログイン済み
 			if(!image_url){
-				var m = str.match(new RegExp('data-original[ \n\r\t]*=[ \n\r\t]*"(http://lohas.nicoseiga.jp/thumb/[^"]*)"',"i"));
+				var m = str.match(new RegExp('data-original[ \n\r\t]*=[ \n\r\t]*"((http|https)://lohas.nicoseiga.jp/thumb/[^"]*)"',"i"));
 				if(m) image_url = m[1];
 			}
  
@@ -57267,6 +57267,8 @@
 		(function(){
 			var overflow_hidden = {"scroll":1,"hidden":1,"auto":1};
 			var display_inline = {"inline":1,"none":1,"table-column":1,"table-column-group":1};
+			var position_offset_parent = {"relative":1,"absolute":1,"fixed":1,"sticky":1};
+			var absoluted = false;
 
 			var node_obj = _this;
 			var node = element;
@@ -57278,12 +57280,22 @@
 
 				var style = ElementGetComputedStyle(node,null);
 				if(style){
-					if(!display_inline[style.display]){
-						if(overflow_hidden[style.overflow]){
-							node_obj.parentNode = {
-								boundingClientRect:r
-							};
-							node_obj = node_obj.parentNode;
+					if(style.position == "fixed") break;
+
+					if(absoluted){
+						absoluted = !Boolean(position_offset_parent[style.position]);
+					}else{
+						absoluted = Boolean(style.position == "absolute");
+					}
+
+					if(!absoluted){
+						if(!display_inline[style.display]){
+							if(overflow_hidden[style.overflow]){
+								node_obj.parentNode = {
+									boundingClientRect:r
+								};
+								node_obj = node_obj.parentNode;
+							}
 						}
 					}
 				}
@@ -57351,6 +57363,8 @@
 
 		var overflow_hidden = {"scroll":1,"hidden":1,"auto":1};
 		var display_inline = {"inline":1,"none":1,"table-column":1,"table-column-group":1};
+		var position_offset_parent = {"relative":1,"absolute":1,"fixed":1,"sticky":1};
+		var absoluted = false;
 
 		var node = element;
 		while(node){
@@ -57361,12 +57375,22 @@
 
 			var style = ElementGetComputedStyle(node,null);
 			if(style){
-				if(!display_inline[style.display]){
-					if(overflow_hidden[style.overflow]){
-						if(r.bottom + 1 < pos.y) return false;
-						if(r.top    - 1 > pos.y) return false;
-						if(r.right  + 1 < pos.x) return false;
-						if(r.left   - 1 > pos.x) return false;
+				if(style.position == "fixed") break;
+
+				if(absoluted){
+					absoluted = !Boolean(position_offset_parent[style.position]);
+				}else{
+					absoluted = Boolean(style.position == "absolute");
+				}
+
+				if(!absoluted){
+					if(!display_inline[style.display]){
+						if(overflow_hidden[style.overflow]){
+							if(r.bottom + 1 < pos.y) return false;
+							if(r.top    - 1 > pos.y) return false;
+							if(r.right  + 1 < pos.x) return false;
+							if(r.left   - 1 > pos.x) return false;
+						}
 					}
 				}
 			}
