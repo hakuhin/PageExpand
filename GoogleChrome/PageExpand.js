@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2017  http://hakuhin.jp
+// Hakuhin 2010-2019  https://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -39325,7 +39325,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.15");
+				new UI_Text(parent,"PageExpand ver.1.5.16");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -39334,8 +39334,8 @@ function PageExpand(page_expand_arguments){
 				parent.appendChild(table);
 				var tr = table.insertRow(-1);
 				new UI_Text(tr.insertCell(-1),'by');
-				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","http://hakuhin.jp/");
-				new UI_Text(tr.insertCell(-1),'2010-2017');
+				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","https://hakuhin.jp/");
+				new UI_Text(tr.insertCell(-1),'2010-2019');
 				new UI_AnchorText(parent,"https://github.com/hakuhin/PageExpand","https://github.com/hakuhin/PageExpand");
 
 				// 翻訳者
@@ -71091,7 +71091,8 @@ function PageExpand(page_expand_arguments){
 			var event_handler = _event_dispatcher.createEventHandler("message");
 			event_handler.setFunction(function(event){
 				var request = event.request;
-				var port = event.port;
+				var receive_queue = event.receive_queue;
+				var port = receive_queue.port;
 				f(request.data,port.sender,function(data,option){
 					var receive = new Object();
 					receive.phase = 1;
@@ -71100,7 +71101,7 @@ function PageExpand(page_expand_arguments){
 					receive.option = option;
 
 					// 返信
-					pushPortQueue(port,receive);
+					receive_queue.push(receive);
 				});
 			});
 		};
@@ -71146,75 +71147,63 @@ function PageExpand(page_expand_arguments){
 		};
 
 		// --------------------------------------------------------------------------------
-		// ポート初期化
+		// 返信キュー作成
 		// --------------------------------------------------------------------------------
-		function initializePortQueue (port){
-			var name = "" + _unique;
-			_unique ++;
+		function createReceiveQueue (port){
+			var _receive_queue = new Object();
 
-			port.name = name;
+			// --------------------------------------------------------------------------------
+			// キューに登録
+			// --------------------------------------------------------------------------------
+			_receive_queue.push = function (request){
+				var empty = (_receive_queue == _receive_queue.next);
+				var list = {request:request};
+				var next = _receive_queue;
+				var prev = next.prev;
+				list.prev = prev;
+				list.next = next;
+				prev.next = list;
+				next.prev = list;
 
-			var queue = new Object();
-			queue.prev = queue;
-			queue.next = queue;
+				if(empty){
+					_receive_queue.pop();
+				}
+			};
 
-			_port_queue_dictionary[name] = queue;
-		}
+			// --------------------------------------------------------------------------------
+			// キューを消化
+			// --------------------------------------------------------------------------------
+			_receive_queue.pop = function (){
+				execute_queue.attachLastForInterrupt(function(){
+					if(_receive_queue == _receive_queue.next) return;
 
-		// --------------------------------------------------------------------------------
-		// ポートキューに登録
-		// --------------------------------------------------------------------------------
-		function pushPortQueue (port,request){
-			var queue = _port_queue_dictionary[port.name];
-			if(!queue) return;
+					var list = _receive_queue.next;
+					var prev = list.prev;
+					var next = list.next;
+					prev.next = next;
+					next.prev = prev;
 
-			var empty = (queue == queue.next);
-			var list = {request:request};
-			var next = queue;
-			var prev = next.prev;
-			list.prev = prev;
-			list.next = next;
-			prev.next = list;
-			next.prev = list;
+					port.postMessage(list.request);
+				},null);
+			};
 
-			if(empty){
-				popPortQueue(port);
-			}
-		}
+			// --------------------------------------------------------------------------------
+			// ポートを解放
+			// --------------------------------------------------------------------------------
+			_receive_queue.release = function (){
+				_receive_queue.prev = _receive_queue;
+				_receive_queue.next = _receive_queue;
+				_receive_queue.port = port = null;
+			};
 
-		// --------------------------------------------------------------------------------
-		// ポートキューを消化
-		// --------------------------------------------------------------------------------
-		function popPortQueue (port){
-			execute_queue.attachLastForInterrupt(function(){
-				var queue = _port_queue_dictionary[port.name];
-				if(!queue) return;
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			_receive_queue.prev = _receive_queue;
+			_receive_queue.next = _receive_queue;
+			_receive_queue.port = port;
 
-				if(queue == queue.next) return;
-
-				var list = queue.next;
-				var prev = list.prev;
-				var next = list.next;
-				prev.next = next;
-				next.prev = prev;
-
-				port.postMessage(list.request);
-			},null);
-		}
-
-		// --------------------------------------------------------------------------------
-		// ポートを解放
-		// --------------------------------------------------------------------------------
-		function releasePortQueue (port){
-			var queue = _port_queue_dictionary[port.name];
-			if(!queue) return;
-
-			var prev = queue.prev;
-			var next = queue.next;
-			prev.next = next;
-			next.prev = prev;
-
-			delete _port_queue_dictionary[port.name];
+			return _receive_queue;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -71222,7 +71211,6 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		var _unique;
 		var _callback_dictionary;
-		var _port_queue_dictionary;
 		var _event_dispatcher;
 
 		// --------------------------------------------------------------------------------
@@ -71231,19 +71219,18 @@ function PageExpand(page_expand_arguments){
 		(function(){
 			_unique = 0;
 			_callback_dictionary = new Array();
-			_port_queue_dictionary = new Object();
 			_event_dispatcher = new EventDispatcher();
 
 			// コンテンツから接続
 			chrome.runtime.onConnect.addListener(function (port){
-				initializePortQueue(port);
+				var receive_queue = createReceiveQueue(port);
 
 				port.onMessage.addListener(function(request){
 					switch(request.phase){
 					// リクエストを受信
 					case 0:
 						// イベントを発火
-						_event_dispatcher.dispatchEvent("message",{request:request,port:port});
+						_event_dispatcher.dispatchEvent("message",{request:request,receive_queue:receive_queue});
 						break;
 
 					// 返信を受信
@@ -71261,14 +71248,14 @@ function PageExpand(page_expand_arguments){
 						}
 						break;
 
-					// リクエストの完了
+					// 返信受取成功を受信
 					case 2:
-						popPortQueue(port);
+						receive_queue.pop();
 						break;
 					}
 				});
 				port.onDisconnect.addListener(function (){
-					releasePortQueue(port);
+					receive_queue.release();
 				});
 			});
 
