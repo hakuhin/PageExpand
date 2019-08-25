@@ -13,9 +13,9 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.5.15</string>
+	<string>1.5.17</string>
 	<key>CFBundleVersion</key>
-	<string>1.5.15</string>
+	<string>1.5.17</string>
 	<key>Chrome</key>
 	<dict>
 		<key>Database Quota</key>
@@ -79,8 +79,8 @@
 		</dict>
 	</dict>
 	<key>Update Manifest URL</key>
-	<string>http://hakuhin.jp/download/page_expand/release/safari/update.plist</string>
+	<string>https://hakuhin.jp/download/page_expand/release/safari/update.plist</string>
 	<key>Website</key>
-	<string>http://hakuhin.jp</string>
+	<string>https://hakuhin.jp</string>
 </dict>
 </plist>

@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2017  http://hakuhin.jp
+// Hakuhin 2010-2019  https://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -11592,7 +11592,7 @@ function PageExpand(page_expand_arguments){
 			// エレメント置換定義「展開アシスト（ツイッター用）」
 			// --------------------------------------------------------------------------------
 			attachItem( "ReplacementToElement_AssistTwitter" , [
-	
+
 	function(info,response){
 		var element = info.element;
 
@@ -11608,7 +11608,7 @@ function PageExpand(page_expand_arguments){
 	function(info,response){
 		var element = info.element;
 
-		// タイムライン上の画像サムネイル（twimg.com）
+		// ２カラムタイムライン上の画像サムネイル（twimg.com）
 		try{
 			var m = ElementGetClassName(element).match(new RegExp("(^| |\t|\n|-)(photoContainer)( |\t|\n|$)","i"));
 			if(m){
@@ -11622,6 +11622,33 @@ function PageExpand(page_expand_arguments){
 			}
 		}catch(e){
 		}		
+
+		return false;
+	},
+	function(info,response){
+		var element = info.element;
+
+		// ３カラムタイムライン上の画像サムネイル（twimg.com）
+		var result = (function(){
+			if(element.tagName != "A") return false;
+			if(!element.href.match(/(http|https):[/][/]twitter[.]com[/][^/]+[/]status[/][0-9]+[/]photo[/][0-9]+/)) return false;
+			return true;
+		})();
+
+		if(result){
+			var nodes = ElementGetElementsByTagName(element,"img");
+			var i;
+			var num = nodes.length;
+			for(i=0;i<num;i++){
+				var node = nodes[i];
+				var m = node.src.match(/(http|https)(:[/][/]pbs[.]twimg[.]com[/]media[/][^?]+)[?].*format=/);
+				if(m){
+					var q = StringGetQuery(node.src);
+					response({url:m[1]+m[2]+"." + q["format"] + ":orig"});
+					return true;
+				}
+			}
+		}
 
 		return false;
 	},
@@ -21032,7 +21059,6 @@ function PageExpand(page_expand_arguments){
 		var url = document.URL;
 		var bbs_list = [
 			{url:"^(http|https)://[^.]+\\.2chan\\.net/[^/]+/res/[0-9]+.htm",name:"2chan"},
-			{url:"^http://(futalog|imgbako)\\.com/[0-9]+.htm",name:"futalog"},
 			{url:"^http://[^.]+\.ftbucket\\.info/.*/cont/.*$",name:"ftbucket"}
 		];
 
@@ -21289,9 +21315,6 @@ function PageExpand(page_expand_arguments){
 				// 本文
 				var nodes;
 				switch(work.bbs_name){
-				case "futalog":
-					nodes = DomNodeGetFirstElementChild(blockquote).childNodes;
-					break;
 				default:
 					nodes = blockquote.childNodes;
 					break;
@@ -21328,9 +21351,6 @@ function PageExpand(page_expand_arguments){
 		// レスポンス親要素
 		// --------------------------------------------------------------------------------
 		switch(work.bbs_name){
-		case "futalog":
-			element_parent = document.body;
-			break;
 		default:
 			var i;
 			var nodes = ElementGetElementsByTagName(document.body,"form");
@@ -21897,10 +21917,6 @@ function PageExpand(page_expand_arguments){
 					var numbers_new = null;
 					var i;
 					var nodes = target.childNodes;
-
-					if(work.bbs_name == "futalog"){
-						nodes = nodes[0].childNodes;
-					}
 
 					var num = nodes.length;
 					for(i=num-1;i>=0;i--){
@@ -23299,9 +23315,6 @@ function PageExpand(page_expand_arguments){
 						});
 					}
 					var nodes = post_message.childNodes;
-					if(work.bbs_name == "futalog"){
-						nodes = nodes[0].childNodes;
-					}
 					var i;
 					var num = nodes.length;
 					for(i=0;i<num;i++){
@@ -39325,7 +39338,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.15");
+				new UI_Text(parent,"PageExpand ver.1.5.17");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -39334,8 +39347,8 @@ function PageExpand(page_expand_arguments){
 				parent.appendChild(table);
 				var tr = table.insertRow(-1);
 				new UI_Text(tr.insertCell(-1),'by');
-				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","http://hakuhin.jp/");
-				new UI_Text(tr.insertCell(-1),'2010-2017');
+				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","https://hakuhin.jp/");
+				new UI_Text(tr.insertCell(-1),'2010-2019');
 				new UI_AnchorText(parent,"https://github.com/hakuhin/PageExpand","https://github.com/hakuhin/PageExpand");
 
 				// 翻訳者
@@ -59097,8 +59110,8 @@ function PageExpand(page_expand_arguments){
 			_shadow_host = DocumentCreateElement("div");
 			_element_root.appendChild(_shadow_host);
 			var shadow_root;
-			if(_shadow_host.createShadowRoot){
-				shadow_root = _shadow_host.createShadowRoot();
+			if(_shadow_host.attachShadow){
+				shadow_root = _shadow_host.attachShadow({mode:"closed"});
 			}else{
 				shadow_root = _shadow_host;
 			}
@@ -59794,8 +59807,8 @@ function PageExpand(page_expand_arguments){
 
 			document.body.appendChild(_shadow_host);
 			var shadow_root;
-			if(_shadow_host.createShadowRoot){
-				shadow_root = _shadow_host.createShadowRoot();
+			if(_shadow_host.attachShadow){
+				shadow_root = _shadow_host.attachShadow({mode:"closed"});
 			}else{
 				shadow_root = _shadow_host;
 			}
@@ -60736,8 +60749,8 @@ function PageExpand(page_expand_arguments){
 		(function(){
 			_shadow_host = DocumentCreateElement("div");
 			parent.appendChild(_shadow_host);
-			if(_shadow_host.createShadowRoot){
-				parent = _shadow_host.createShadowRoot();
+			if(_shadow_host.attachShadow){
+				parent = _shadow_host.attachShadow({mode:"closed"});
 			}else{
 				parent = _shadow_host;
 			}
@@ -71091,7 +71104,8 @@ function PageExpand(page_expand_arguments){
 			var event_handler = _event_dispatcher.createEventHandler("message");
 			event_handler.setFunction(function(event){
 				var request = event.request;
-				var port = event.port;
+				var receive_queue = event.receive_queue;
+				var port = receive_queue.port;
 				f(request.data,port.sender,function(data,option){
 					var receive = new Object();
 					receive.phase = 1;
@@ -71100,7 +71114,7 @@ function PageExpand(page_expand_arguments){
 					receive.option = option;
 
 					// 返信
-					pushPortQueue(port,receive);
+					receive_queue.push(receive);
 				});
 			});
 		};
@@ -71146,75 +71160,63 @@ function PageExpand(page_expand_arguments){
 		};
 
 		// --------------------------------------------------------------------------------
-		// ポート初期化
+		// 返信キュー作成
 		// --------------------------------------------------------------------------------
-		function initializePortQueue (port){
-			var name = "" + _unique;
-			_unique ++;
+		function createReceiveQueue (port){
+			var _receive_queue = new Object();
 
-			port.name = name;
+			// --------------------------------------------------------------------------------
+			// キューに登録
+			// --------------------------------------------------------------------------------
+			_receive_queue.push = function (request){
+				var empty = (_receive_queue == _receive_queue.next);
+				var list = {request:request};
+				var next = _receive_queue;
+				var prev = next.prev;
+				list.prev = prev;
+				list.next = next;
+				prev.next = list;
+				next.prev = list;
 
-			var queue = new Object();
-			queue.prev = queue;
-			queue.next = queue;
+				if(empty){
+					_receive_queue.pop();
+				}
+			};
 
-			_port_queue_dictionary[name] = queue;
-		}
+			// --------------------------------------------------------------------------------
+			// キューを消化
+			// --------------------------------------------------------------------------------
+			_receive_queue.pop = function (){
+				execute_queue.attachLastForInterrupt(function(){
+					if(_receive_queue == _receive_queue.next) return;
 
-		// --------------------------------------------------------------------------------
-		// ポートキューに登録
-		// --------------------------------------------------------------------------------
-		function pushPortQueue (port,request){
-			var queue = _port_queue_dictionary[port.name];
-			if(!queue) return;
+					var list = _receive_queue.next;
+					var prev = list.prev;
+					var next = list.next;
+					prev.next = next;
+					next.prev = prev;
 
-			var empty = (queue == queue.next);
-			var list = {request:request};
-			var next = queue;
-			var prev = next.prev;
-			list.prev = prev;
-			list.next = next;
-			prev.next = list;
-			next.prev = list;
+					port.postMessage(list.request);
+				},null);
+			};
 
-			if(empty){
-				popPortQueue(port);
-			}
-		}
+			// --------------------------------------------------------------------------------
+			// ポートを解放
+			// --------------------------------------------------------------------------------
+			_receive_queue.release = function (){
+				_receive_queue.prev = _receive_queue;
+				_receive_queue.next = _receive_queue;
+				_receive_queue.port = port = null;
+			};
 
-		// --------------------------------------------------------------------------------
-		// ポートキューを消化
-		// --------------------------------------------------------------------------------
-		function popPortQueue (port){
-			execute_queue.attachLastForInterrupt(function(){
-				var queue = _port_queue_dictionary[port.name];
-				if(!queue) return;
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			_receive_queue.prev = _receive_queue;
+			_receive_queue.next = _receive_queue;
+			_receive_queue.port = port;
 
-				if(queue == queue.next) return;
-
-				var list = queue.next;
-				var prev = list.prev;
-				var next = list.next;
-				prev.next = next;
-				next.prev = prev;
-
-				port.postMessage(list.request);
-			},null);
-		}
-
-		// --------------------------------------------------------------------------------
-		// ポートを解放
-		// --------------------------------------------------------------------------------
-		function releasePortQueue (port){
-			var queue = _port_queue_dictionary[port.name];
-			if(!queue) return;
-
-			var prev = queue.prev;
-			var next = queue.next;
-			prev.next = next;
-			next.prev = prev;
-
-			delete _port_queue_dictionary[port.name];
+			return _receive_queue;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -71222,7 +71224,6 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		var _unique;
 		var _callback_dictionary;
-		var _port_queue_dictionary;
 		var _event_dispatcher;
 
 		// --------------------------------------------------------------------------------
@@ -71231,19 +71232,18 @@ function PageExpand(page_expand_arguments){
 		(function(){
 			_unique = 0;
 			_callback_dictionary = new Array();
-			_port_queue_dictionary = new Object();
 			_event_dispatcher = new EventDispatcher();
 
 			// コンテンツから接続
 			chrome.runtime.onConnect.addListener(function (port){
-				initializePortQueue(port);
+				var receive_queue = createReceiveQueue(port);
 
 				port.onMessage.addListener(function(request){
 					switch(request.phase){
 					// リクエストを受信
 					case 0:
 						// イベントを発火
-						_event_dispatcher.dispatchEvent("message",{request:request,port:port});
+						_event_dispatcher.dispatchEvent("message",{request:request,receive_queue:receive_queue});
 						break;
 
 					// 返信を受信
@@ -71261,14 +71261,14 @@ function PageExpand(page_expand_arguments){
 						}
 						break;
 
-					// リクエストの完了
+					// 返信受取成功を受信
 					case 2:
-						popPortQueue(port);
+						receive_queue.pop();
 						break;
 					}
 				});
 				port.onDisconnect.addListener(function (){
-					releasePortQueue(port);
+					receive_queue.release();
 				});
 			});
 
@@ -71950,14 +71950,8 @@ function PageExpand(page_expand_arguments){
 				// フォローイングをクリア
 				_response.clearFollowing();
 
-				// ID を開放
-				removeId();
-
-				// 名前を開放
-				removeName();
-
-				// ホストを開放
-				removeHost();
+				// データを開放
+				removeDataAll();
 
 				// イベント発火
 				_event_dispatcher.dispatchEvent("release",null);
@@ -72004,205 +71998,174 @@ function PageExpand(page_expand_arguments){
 			};
 
 			// --------------------------------------------------------------------------------
-			// ID を登録（内部用）
-			// --------------------------------------------------------------------------------
-			function attachId(id){
-				removeId();
-
-				var id_list = _id_dictionary[id];
-				if(!id_list){
-					id_list = new Object();
-					id_list._id_prev = id_list;
-					id_list._id_next = id_list;
-					_id_dictionary[id] = id_list;
-				}
-
-				var list = id_list._id_prev;
-				while(list != id_list){
-					if(_response.getNumber() >= list.getNumber()){
-						break;
-					}
-					list = list._id_prev;
-				}
-
-				var _id_prev = list;
-				var _id_next = _id_prev._id_next;
-				_id_prev._id_next = _response;
-				_id_next._id_prev = _response;
-				_response._id_prev = _id_prev;
-				_response._id_next = _id_next;
-
-				// カウンタ
-				addCountId(id,1);
-				_id = id;
-			}
-
-			// --------------------------------------------------------------------------------
-			// ID の登録を外す（内部用）
-			// --------------------------------------------------------------------------------
-			function removeId(){
-				if(_response != _response._id_next){
-					// カウンタ
-					addCountId(_id,-1);
-				}
-
-				var _id_prev = _response._id_prev;
-				var _id_next = _response._id_next;
-				_id_prev._id_next = _id_next;
-				_id_next._id_prev = _id_prev;
-				_response._id_prev = _response;
-				_response._id_next = _response;
-			}
-
-			// --------------------------------------------------------------------------------
 			// ID を取得
 			// --------------------------------------------------------------------------------
 			_response.getId = function(){
-				return _id;
+				return _response.getDataList("id")[0];
 			};
 
 			// --------------------------------------------------------------------------------
 			// ID をセット
 			// --------------------------------------------------------------------------------
 			_response.setId = function(id){
-				attachId(id);
+				removeData("id");
+				_response.attachData("id",id);
 			};
-
-			// --------------------------------------------------------------------------------
-			// 名前を登録（内部用）
-			// --------------------------------------------------------------------------------
-			function attachName(name){
-				removeName();
-
-				var name_list = _name_dictionary[name];
-				if(!name_list){
-					name_list = new Object();
-					name_list._name_prev = name_list;
-					name_list._name_next = name_list;
-					_name_dictionary[name] = name_list;
-				}
-
-				var list = name_list._name_prev;
-				while(list != name_list){
-					if(_response.getNumber() >= list.getNumber()){
-						break;
-					}
-					list = list._name_prev;
-				}
-
-				var _name_prev = list;
-				var _name_next = _name_prev._name_next;
-				_name_prev._name_next = _response;
-				_name_next._name_prev = _response;
-				_response._name_prev = _name_prev;
-				_response._name_next = _name_next;
-
-				// カウンタ
-				addCountName(name,1);
-				_name = name;
-			}
-
-			// --------------------------------------------------------------------------------
-			// 名前の登録を外す（内部用）
-			// --------------------------------------------------------------------------------
-			function removeName(){
-				if(_response != _response._name_next){
-					// カウンタ
-					addCountName(_name,-1);
-				}
-
-				var _name_prev = _response._name_prev;
-				var _name_next = _response._name_next;
-				_name_prev._name_next = _name_next;
-				_name_next._name_prev = _name_prev;
-				_response._name_prev = _response;
-				_response._name_next = _response;
-			}
 
 			// --------------------------------------------------------------------------------
 			// 名前を取得
 			// --------------------------------------------------------------------------------
 			_response.getName = function(){
-				return _name;
+				return _response.getDataList("name")[0];
 			};
 
 			// --------------------------------------------------------------------------------
 			// 名前をセット
 			// --------------------------------------------------------------------------------
 			_response.setName = function(name){
-				attachName(name);
+				removeData("name");
+				_response.attachData("name",name);
 			};
-
-			// --------------------------------------------------------------------------------
-			// ホストを登録（内部用）
-			// --------------------------------------------------------------------------------
-			function attachHost(host){
-				removeHost();
-
-				var host_list = _host_dictionary[host];
-				if(!host_list){
-					host_list = new Object();
-					host_list._host_prev = host_list;
-					host_list._host_next = host_list;
-					_host_dictionary[host] = host_list;
-				}
-
-				var list = host_list._host_prev;
-				while(list != host_list){
-					if(_response.getNumber() >= list.getNumber()){
-						break;
-					}
-					list = list._host_prev;
-				}
-
-				var _host_prev = list;
-				var _host_next = _host_prev._host_next;
-				_host_prev._host_next = _response;
-				_host_next._host_prev = _response;
-				_response._host_prev = _host_prev;
-				_response._host_next = _host_next;
-
-				// カウンタ
-				addCountHost(host,1);
-				_host = host;
-			}
-
-			// --------------------------------------------------------------------------------
-			// ホストの登録を外す（内部用）
-			// --------------------------------------------------------------------------------
-			function removeHost(){
-				if(_response != _response._host_next){
-					// カウンタ
-					addCountHost(_host,-1);
-				}
-
-				var _host_prev = _response._host_prev;
-				var _host_next = _response._host_next;
-				_host_prev._host_next = _host_next;
-				_host_next._host_prev = _host_prev;
-				_response._host_prev = _response;
-				_response._host_next = _response;
-			}
 
 			// --------------------------------------------------------------------------------
 			// ホストを取得
 			// --------------------------------------------------------------------------------
 			_response.getHost = function(){
-				return _host;
+				return _response.getDataList("host")[0];
 			};
 
 			// --------------------------------------------------------------------------------
 			// ホストをセット
 			// --------------------------------------------------------------------------------
 			_response.setHost = function(host){
-				attachHost(host);
+				removeData("host");
+				_response.attachData("host",host);
+			};
+
+			// --------------------------------------------------------------------------------
+			// データを登録（内部用）
+			// --------------------------------------------------------------------------------
+			function attachData(name,data){
+				var same_container = getSameContainer(name,data);
+				var data_list = same_container.list;
+				var target_item = data_list.dic_prev;
+				while(target_item != data_list){
+					if(_response.getNumber() >= target_item.owner.getNumber()){
+						break;
+					}
+					target_item = target_item.dic_prev;
+				}
+
+				if(!_datalist[name]){
+					var ary_list = new Object();
+					ary_list.ary_prev = ary_list;
+					ary_list.ary_next = ary_list;
+					_datalist[name] = ary_list;
+				}
+
+				var data_item = Object();
+				data_item.data = data;
+				data_item.owner = _response;
+				data_item.container = same_container;
+
+				var dic_prev = target_item;
+				var dic_next = dic_prev.dic_next;
+				dic_prev.dic_next = data_item;
+				dic_next.dic_prev = data_item;
+				data_item.dic_prev = dic_prev;
+				data_item.dic_next = dic_next;
+
+				var ary_prev = _datalist[name].ary_prev;
+				var ary_next = ary_prev.ary_next;
+				ary_prev.ary_next = data_item;
+				ary_next.ary_prev = data_item;
+				data_item.ary_prev = ary_prev;
+				data_item.ary_next = ary_next;
+
+				// カウンタ
+				addCountData(same_container,1);
+			}
+
+			// --------------------------------------------------------------------------------
+			// データの登録を外す（内部用）
+			// --------------------------------------------------------------------------------
+			function removeData(name){
+				var data_item = _datalist[name];
+				if(!data_item) return;
+				while(data_item.ary_next != data_item){
+					removeDataItem(data_item.ary_next);
+				}
+			}
+
+			// --------------------------------------------------------------------------------
+			// データの登録を外す（内部用）
+			// --------------------------------------------------------------------------------
+			function removeDataItem(data_item){
+				addCountData(data_item.container,-1);
+
+				var dic_prev = data_item.dic_prev;
+				var dic_next = data_item.dic_next;
+				dic_prev.dic_next = dic_next;
+				dic_next.dic_prev = dic_prev;
+
+				var ary_prev = data_item.ary_prev;
+				var ary_next = data_item.ary_next;
+				ary_prev.ary_next = ary_next;
+				ary_next.ary_prev = ary_prev;
+			}
+
+			// --------------------------------------------------------------------------------
+			// すべてのデータを解放（内部用）
+			// --------------------------------------------------------------------------------
+			function removeDataAll(){
+				for(var name in _datalist){
+					removeData(name);
+				}
+			}
+
+			// --------------------------------------------------------------------------------
+			// データを取得
+			// --------------------------------------------------------------------------------
+			_response.getDataList = function(name){
+				var ary = [];
+				var data_list = _datalist[name];
+				if(!data_list) return ary;
+
+				var data_item = data_list.ary_next;
+				while(data_item != data_list){
+					ary.push(data_item.data);
+					data_item = data_item.ary_next;
+				}
+				return ary;
+			};
+
+			// --------------------------------------------------------------------------------
+			// データを持っているか
+			// --------------------------------------------------------------------------------
+			_response.hasData = function(name,data){
+				var data_list = _datalist[name];
+				if(!data_list) return false;
+
+				var data_item = data_list.ary_next;
+				while(data_item != data_list){
+					if(data_item.data === data) return true;
+					data_item = data_item.ary_next;
+				}
+				return false;
+			};
+
+			// --------------------------------------------------------------------------------
+			// データを追加
+			// --------------------------------------------------------------------------------
+			_response.attachData = function(name,data){
+				attachData(name,data);
 			};
 
 			// --------------------------------------------------------------------------------
 			// 解析済みクリア
 			// --------------------------------------------------------------------------------
 			_response.clearAnalyzed = function(){
-				_analyzed = false;;
+				_analyzed = false;
 			};
 
 			// --------------------------------------------------------------------------------
@@ -72385,9 +72348,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			// プライベート変数
 			// --------------------------------------------------------------------------------
-			var _id;
-			var _name;
-			var _host;
+			var _datalist;
 			var _analyzed;
 			var _released;
 			var _elements_original;
@@ -72401,9 +72362,7 @@ function PageExpand(page_expand_arguments){
 			// 初期化
 			// --------------------------------------------------------------------------------
 			(function(){
-				_id = null;
-				_name = null;
-				_host = null;
+				_datalist = new Object();
 				_analyzed = false;
 				_released = false;
 				_elements_original = new Array();
@@ -72411,12 +72370,6 @@ function PageExpand(page_expand_arguments){
 				_elements_clone = new Array();
 				_follower_count = 0;
 				_response._follow = createFollow(null,null);
-				_response._id_prev = _response;
-				_response._id_next = _response;
-				_response._name_prev = _response;
-				_response._name_next = _response;
-				_response._host_prev = _response;
-				_response._host_next = _response;
 				_observer_remove = new Array();
 				_event_dispatcher = new EventDispatcher();
 			})();
@@ -72451,84 +72404,65 @@ function PageExpand(page_expand_arguments){
 		// ID からレスポンスを取得
 		// --------------------------------------------------------------------------------
 		_this.getResponsesFromId = function(id){
-			var ary = new Array();
-			var id_list = _id_dictionary[id];
-			if(id_list){
-				var list = id_list._id_next;
-				while(list != id_list){
-					ary.push(list);
-					list = list._id_next;
-				}
-			}
-			return ary;
+			return _this.getResponsesFromData("id",id);
 		};
 
 		// --------------------------------------------------------------------------------
 		// 名前からレスポンスを取得
 		// --------------------------------------------------------------------------------
 		_this.getResponsesFromName = function(name){
-			var ary = new Array();
-			var name_list = _name_dictionary[name];
-			if(name_list){
-				var list = name_list._name_next;
-				while(list != name_list){
-					ary.push(list);
-					list = list._name_next;
-				}
-			}
-			return ary;
+			return _this.getResponsesFromData("name",name);
 		};
 
 		// --------------------------------------------------------------------------------
 		// ホストからレスポンスを取得
 		// --------------------------------------------------------------------------------
 		_this.getResponsesFromHost = function(host){
+			return _this.getResponsesFromData("host",host);
+		};
+
+		// --------------------------------------------------------------------------------
+		// データからレスポンスを取得
+		// --------------------------------------------------------------------------------
+		_this.getResponsesFromData = function(name,data){
 			var ary = new Array();
-			var host_list = _host_dictionary[host];
-			if(host_list){
-				var list = host_list._host_next;
-				while(list != host_list){
-					ary.push(list);
-					list = list._host_next;
-				}
+			var same_container = getSameContainer(name,data);
+			var data_list = same_container.list;
+			var data_item = data_list.dic_next;
+			while(data_item != data_list){
+				ary.push(data_item.owner);
+				data_item = data_item.dic_next;
 			}
-			return ary;
+			return ary;	
 		};
 
 		// --------------------------------------------------------------------------------
 		// ID カウント用のイベントハンドラを生成
 		// --------------------------------------------------------------------------------
 		_this.createEventHandlerForIdCounter = function(id){
-			var event_dispatcher = _id_counter_event_dictionary[id];
-			if(!event_dispatcher){
-				event_dispatcher = new EventDispatcher();
-				_id_counter_event_dictionary[id] = event_dispatcher;
-			}
-			return event_dispatcher.createEventHandler("update");
+			return _this.createEventHandlerForDataCounter("id",id);
 		};
 
 		// --------------------------------------------------------------------------------
 		// 名前カウント用のイベントハンドラを生成
 		// --------------------------------------------------------------------------------
 		_this.createEventHandlerForNameCounter = function(name){
-			var event_dispatcher = _name_counter_event_dictionary[name];
-			if(!event_dispatcher){
-				event_dispatcher = new EventDispatcher();
-				_name_counter_event_dictionary[name] = event_dispatcher;
-			}
-			return event_dispatcher.createEventHandler("update");
+			return _this.createEventHandlerForDataCounter("name",name);
 		};
 
 		// --------------------------------------------------------------------------------
 		// ホストカウント用のイベントハンドラを生成
 		// --------------------------------------------------------------------------------
 		_this.createEventHandlerForHostCounter = function(host){
-			var event_dispatcher = _host_counter_event_dictionary[host];
-			if(!event_dispatcher){
-				event_dispatcher = new EventDispatcher();
-				_host_counter_event_dictionary[host] = event_dispatcher;
-			}
-			return event_dispatcher.createEventHandler("update");
+			return _this.createEventHandlerForDataCounter("host",host);
+		};
+
+		// --------------------------------------------------------------------------------
+		// データカウント用のイベントハンドラを生成
+		// --------------------------------------------------------------------------------
+		_this.createEventHandlerForDataCounter = function(name,data){
+			var same_container = getSameContainer(name,data);
+			return same_container.counter_event.createEventHandler("update");		
 		};
 
 		// --------------------------------------------------------------------------------
@@ -72547,87 +72481,71 @@ function PageExpand(page_expand_arguments){
 		// IDカウント数取得
 		// --------------------------------------------------------------------------------
 		_this.getCountId = function(id){
-			if(_id_counter_dictionary[id])	return _id_counter_dictionary[id];
-			return 0;
+			return _this.getCountData("id",id);
 		};
-
-		// --------------------------------------------------------------------------------
-		// IDカウント数加算（内部用）
-		// --------------------------------------------------------------------------------
-		function addCountId(id,v){
-			if(!_id_counter_dictionary[id]){
-				_id_counter_dictionary[id] = 0;
-			}
-			_id_counter_dictionary[id] += v;
-
-			// イベント発火
-			var event_dispatcher = _id_counter_event_dictionary[id];
-			if(event_dispatcher){
-				event_dispatcher.dispatchEvent("update",_id_counter_dictionary[id]);
-			}
-		}
 
 		// --------------------------------------------------------------------------------
 		// 名前カウント数取得
 		// --------------------------------------------------------------------------------
 		_this.getCountName = function(name){
-			if(_name_counter_dictionary[name])	return _name_counter_dictionary[name];
-			return 0;
+			return _this.getCountData("name",name);
 		};
-
-		// --------------------------------------------------------------------------------
-		// 名前カウント数加算（内部用）
-		// --------------------------------------------------------------------------------
-		function addCountName(name,v){
-			if(!_name_counter_dictionary[name]){
-				_name_counter_dictionary[name] = 0;
-			}
-			_name_counter_dictionary[name] += v;
-
-			// イベント発火
-			var event_dispatcher = _name_counter_event_dictionary[name];
-			if(event_dispatcher){
-				event_dispatcher.dispatchEvent("update",_name_counter_dictionary[name]);
-			}
-		}
 
 		// --------------------------------------------------------------------------------
 		// ホストカウント数取得
 		// --------------------------------------------------------------------------------
 		_this.getCountHost = function(host){
-			if(_host_counter_dictionary[host])	return _host_counter_dictionary[host];
-			return 0;
+			return _this.getCountData("host",host);
 		};
 
 		// --------------------------------------------------------------------------------
-		// ホストカウント数加算（内部用）
+		// データカウント数取得
 		// --------------------------------------------------------------------------------
-		function addCountHost(host,v){
-			if(!_host_counter_dictionary[host]){
-				_host_counter_dictionary[host] = 0;
-			}
-			_host_counter_dictionary[host] += v;
+		_this.getCountData = function(name,data){
+			var same_container = getSameContainer(name,data);
+			return same_container.count;
+		};
+
+		// --------------------------------------------------------------------------------
+		// データカウント数加算（内部用）
+		// --------------------------------------------------------------------------------
+		function addCountData(same_container,v){
+			same_container.count += v;
 
 			// イベント発火
-			var event_dispatcher = _host_counter_event_dictionary[host];
-			if(event_dispatcher){
-				event_dispatcher.dispatchEvent("update",_host_counter_dictionary[host]);
+			same_container.counter_event.dispatchEvent("update",same_container.count);
+		}
+
+		// --------------------------------------------------------------------------------
+		// データを取得（内部用）
+		// --------------------------------------------------------------------------------
+		function getSameContainer(name,data){
+			var same_dic = _data_dictionary[name];
+			if(!same_dic){
+				same_dic = _data_dictionary[name] = new Object();
 			}
+			var same_container = same_dic[data];
+			if(!same_container){
+				var dic_list = new Object();
+				dic_list.dic_prev = dic_list;
+				dic_list.dic_next = dic_list;
+
+				var event_dispatcher = new EventDispatcher();
+				same_container = same_dic[data] = {
+					count:0,
+					counter_event:event_dispatcher,
+					list:dic_list
+				};
+			}
+
+			return same_container;
 		}
 
 		// --------------------------------------------------------------------------------
 		// プライベート変数
 		// --------------------------------------------------------------------------------
 		var _number_dictionary;
-		var _id_dictionary;
-		var _id_counter_dictionary;
-		var _id_counter_event_dictionary;
-		var _name_dictionary;
-		var _name_counter_dictionary;
-		var _name_counter_event_dictionary;
-		var _host_dictionary;
-		var _host_counter_dictionary;
-		var _host_counter_event_dictionary;
+		var _data_dictionary;
 		var _follower_counter_event_dictionary;
 
 		// --------------------------------------------------------------------------------
@@ -72635,15 +72553,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		(function(){
 			_number_dictionary = new Object();
-			_id_dictionary = new Object();
-			_id_counter_dictionary = new Object();
-			_id_counter_event_dictionary = new Object();
-			_name_dictionary = new Object();
-			_name_counter_dictionary = new Object();
-			_name_counter_event_dictionary = new Object();
-			_host_dictionary = new Object();
-			_host_counter_dictionary = new Object();
-			_host_counter_event_dictionary = new Object();
+			_data_dictionary = new Object();
 			_follower_counter_event_dictionary = new Object();
 		})();
 	}
