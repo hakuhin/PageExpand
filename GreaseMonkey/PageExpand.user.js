@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.5.17
+// @version        1.5.18
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @description:ja 画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、2chなどの主要掲示板の拡張表示など...
@@ -20,19 +20,25 @@
 // @include        http://*
 // @include        https://*
 // @include        ftp://*
-// @icon           https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/icon32.png
-// @icon64         https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/icon64.png
-// @updateURL      https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/PageExpand.meta.js
-// @downloadURL    https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/PageExpand.user.js
-// @copyright      hakuhin
+// @connect        *
+// @icon           https://hakuhin.github.io/PageExpand/GreaseMonkey/icon32.png
+// @icon64         https://hakuhin.github.io/PageExpand/GreaseMonkey/icon64.png
+// @updateURL      https://hakuhin.github.io/PageExpand/GreaseMonkey/PageExpand.meta.js
+// @downloadURL    https://hakuhin.github.io/PageExpand/GreaseMonkey/PageExpand.user.js
+// @author         hakuhin
+// @grant          GM.xmlHttpRequest 
 // @grant          GM_xmlhttpRequest
+// @grant          GM.getValue
 // @grant          GM_getValue
+// @grant          GM.setValue
 // @grant          GM_setValue
+// @grant          GM.deleteValue
 // @grant          GM_deleteValue
-// @grant          GM_log
-// @grant          GM_registerMenuCommand
+// @grant          GM.openInTab
 // @grant          GM_openInTab
-// @grant          GM_info
+// @grant          GM_registerMenuCommand
+// @grant          GM_unregisterMenuCommand
+// @grant          GM_download
 // ==/UserScript==
 
 
@@ -38199,7 +38205,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.17");
+				new UI_Text(parent,"PageExpand ver.1.5.18");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -58706,7 +58712,7 @@
 
 			_window = DocumentCreateElement("div");
 			ElementSetStyle(_window,CSSTextGetInitialDivElement());
-			ElementAddStyle(_window,"background:#fcfcfc; color:#000; font-size:14px; line-height:1; position:absolute; padding:15px; z-index:2147483646; border-radius:10px; box-shadow:0px 0px 5px #c0c0c0; pointer-events:inherit;");
+			ElementAddStyle(_window,"background:#fcfcfc; color:#000; font-size:14px; line-height:1; position:fixed; padding:15px; z-index:2147483646; border-radius:10px; box-shadow:0px 0px 5px #c0c0c0; pointer-events:inherit;");
 			shadow_root.appendChild(_window);
 			
 			var style_droperea = "margin:0px; padding:0px; background:#ffc; font-size:12px; font-weight:bold; text-align:center; width:100px; height:100px; display:inline-block; pointer-events:inherit; border-radius:10px; overflow:hidden;";
@@ -58728,9 +58734,6 @@
 			var h = client_rect.bottom - client_rect.top;
 			var x = mouse_pos.x - w * 0.5;
 			var y = mouse_pos.y - h * 0.5;
-			var scroll_pos = WindowGetScrollPosition(window);
-			x += scroll_pos.x;
-			y += scroll_pos.y;
 			var offset = window_manager.getPositionFromRoot();
 			x -= offset.x;
 			y -= offset.y;
@@ -64976,12 +64979,6 @@
 				tryAttachElement(true);
 			}
 
-			// TrixieUserScript の場合処理しない
-			if(ExecuteAsTrixieUserScript()){
-				tryLoadImage();
-				return;
-			}
-
 			// 通常リトライ回数
 			_count = 1;
 			// シングルリトライ回数
@@ -65430,12 +65427,6 @@
 			// カレント URL
 			var current_url = _request.url;
 
-			// TrixieUserScript の場合処理しない
-			if(ExecuteAsTrixieUserScript()){
-				loadSuccess(current_url);
-				return;
-			}
-
 			// キャッシュがあれば返す
 			var url = redirect_url_dictionary.getRedirectURL(current_url);
 			if(url){
@@ -65765,11 +65756,25 @@
 		function requestXHR(response,options){
 			// XMLHttpRequest 作成
 			var xhr = null;
-			if(GM_xmlhttpRequestSupported()){
-				xhr = new GM_xmlhttpRequestCreate();
-			}else{
-				xhr = XMLHttpRequestCreate();
-			}
+			xhr = (function(){
+				if(GMW_XMLHttpRequest.isSupported()){
+					return (new GMW_XMLHttpRequest());
+				}
+				try{
+					return (new XMLHttpRequest());
+				}catch(e){}
+				try{
+					return (new ActiveXObject('MSXML2.XMLHTTP.6.0'));
+				}catch(e){}
+				try{
+					return (new ActiveXObject('MSXML2.XMLHTTP.3.0'));
+				}catch(e){}
+				try{
+					return (new ActiveXObject('MSXML2.XMLHTTP'));
+				}catch(e){}
+
+				return null;
+			})();
 			if(!xhr) return false;
 
 			var received = false;
@@ -65995,9 +66000,9 @@
 				onopen:function(xhr){
 					if(xhr.responseType !== undefined){
 						if(window.FileReader){
-							xhr.response_type = "blob";
+							_request.response_type = "blob";
 						}else{
-							xhr.response_type = "arraybuffer";
+							_request.response_type = "arraybuffer";
 						}
 					}
 				}			
@@ -66343,8 +66348,14 @@
 		_this.start = function(){
 			var queue_element = downloader_queue.createElement();
 			queue_element.onstart = function(){
-				download(function(response){
-					var param = response.response;					
+
+				var exec = function(){
+					var f = download_methods.shift();
+					f(response);
+				};
+
+				var response = function(response){
+					var param = response.response;
 					switch(response.state){
 					case "progress":
 						if(_this.onprogress) _this.onprogress(param);
@@ -66359,9 +66370,13 @@
 
 						if(_this.oncomplete) _this.oncomplete(param);
 						break;					
+					case "unsupported":
+						exec();
+						break;
 					}
-				});
+				};
 
+				exec();
 			};
 			queue_element.attachLast();
 		};
@@ -66377,33 +66392,120 @@
 		_this.oncomplete = function(response){};
 
 		// --------------------------------------------------------------------------------
-		// ダウンロード（内部用）
+		// プライベート変数
 		// --------------------------------------------------------------------------------
-		function download(callback){
+		var download_methods;
 
-			if(!(_this._allow_same_request)){
-				if(address_collection.hasAddress("download",_this._url)){
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		(function(){
+			_this._url = "";
+			_this._file_name = "";
+			_this._save_as = false;
+			_this._silent = true;
+			_this._allow_same_request = false;
+
+			download_methods = new Array();
+
+			// 重複チェック
+			download_methods.push(function(callback){
+				if(!(_this._allow_same_request)){
+					if(address_collection.hasAddress("download",_this._url)){
+						callback({
+							state:"complete",
+							response:{
+								result:false,
+								error:"Request is duplicated."
+							}
+						});
+						return;
+					}
+
+					// アドレスを登録
+					address_collection.addAddress("download",_this._url);
+				}
+
+				callback({
+					state:"unsupported",
+					response:{}
+				});
+			});
+
+
+			// GM_download API
+			download_methods.push(function(callback){
+				if(!GM_downloadSupported()){
 					callback({
-						state:"complete",
-						response:{
-							result:false,
-							error:"Request is duplicated."
-						}
+						state:"unsupported",
+						response:{}
 					});
 					return;
 				}
-				// アドレスを登録
-				address_collection.addAddress("download",_this._url);
-			}
 
-			var anchor = DocumentCreateElement("a");
-			if(anchor.download !== undefined){
-				var file_name = ProjectDownloadSaveFile_Sanitize(_this._file_name || project.getSaveFileDownload(_this._url));
+				// Firefox版 Tampermonkey にてエラーが返らないので除外
+				if(_this._url.search(new RegExp("^(data|blob):","i")) >= 0){
+					callback({
+						state:"unsupported",
+						response:{}
+					});
+					return;
+				}
+
+				var dl_options = {
+					url:_this._url,
+					saveAs:_this._save_as,
+					name:ProjectDownloadSaveFile_Sanitize(_this._file_name || project.getSaveFileDownload(_this._url)),
+					onload:function(e){
+						callback({
+							state:"complete",
+							response:{
+								result:true,
+								completed:true,
+								error:""
+							}
+						});
+					},
+					onerror:function(e){
+						callback({
+							state:"complete",
+							response:{
+								result:false,
+								completed:true,
+								error:e.error
+							}
+						});
+					},
+					onprogress:function(e){
+						callback({
+							state:"progress",
+							response:{
+								bytesLoaded:e.loaded || 0,
+								bytesTotal:e.total || 0
+							}
+						});
+					}
+				};
+
+				// ダウンロード開始
+				GM_download(dl_options);
+			});
+
+			// HTML5
+			download_methods.push(function(callback){
+				var anchor = DocumentCreateElement("a");
+				if(anchor.download === undefined){
+					callback({
+						state:"unsupported",
+						response:{}
+					});
+					return;
+				}
 
 				var anchor_download = function (data_url){
 					anchor.target = "PageExpandDownload";
 					anchor.href = data_url;
-					anchor.download = file_name;
+					anchor.download = ProjectDownloadSaveFile_Sanitize(_this._file_name || project.getSaveFileDownload(_this._url));
 					document.body.appendChild(anchor);
 					anchor.click();
 					DomNodeRemove(anchor);
@@ -66413,6 +66515,7 @@
 						state:"complete",
 						response:{
 							result:true,
+							completed:false,
 							error:""
 						}
 					});
@@ -66421,54 +66524,48 @@
 				if(_this._url.search(new RegExp("^(data|blob):","i")) >= 0){
 					anchor_download(_this._url);
 					return;
-				}else{
-					// ローダーオブジェクトを作成
-					var loader = new Loader();
-
-					// 進捗
-					loader.onprogress = function(e){
-						if(_this.onprogress) _this.onprogress(e);
-					};
-
-					// 成功
-					loader.onload = anchor_download;
-
-					// 失敗
-					loader.onerror = function(){
-						callback({
-							state:"complete",
-							response:{
-								result:false,
-								error:"Loader is failed."
-							}
-						});
-					};
-
-					// DataURIScheme の読み込み
-					loader.setMethod("GET");
-					loader.setURL(_this._url);
-					loader.loadDataUriScheme();
-					return;
 				}
-			}
 
-			callback({
-				state:"complete",
-				response:{
-					result:false,
-					error:"Downloader is not supported."
-				}
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
+
+				// 進捗
+				loader.onprogress = function(e){
+					if(_this.onprogress) _this.onprogress(e);
+				};
+
+				// 成功
+				loader.onload = anchor_download;
+
+				// 失敗
+				loader.onerror = function(){
+					callback({
+						state:"complete",
+						response:{
+							result:false,
+							error:"Loader is failed."
+						}
+					});
+				};
+
+				// DataURIScheme の読み込み
+				loader.setMethod("GET");
+				loader.setURL(_this._url);
+				loader.loadDataUriScheme();
 			});
-		}
 
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		_this._url = "";
-		_this._file_name = "";
-		_this._save_as = false;
-		_this._silent = true;
-		_this._allow_same_request = false;
+			// 未対応
+			download_methods.push(function(callback){
+				callback({
+					state:"complete",
+					response:{
+						result:false,
+						error:"Downloader is not supported."
+					}
+				});
+			});
+
+		})();
 	}
 
 	// --------------------------------------------------------------------------------
@@ -67227,13 +67324,35 @@
 								progress.setMessage("Create Blob URL ...",0);
 								setTimeout(function(){
 									try{
-										var blob = new Blob([ary_buffer],{type:"application/zip"});
+										var blob = new Blob([new Uint8Array(ary_buffer)],{type:"application/zip"});
 										blob_url = BlobURLCreate(blob);
 									}catch(e){
 									}
 
 									if(blob_url){
-										failure(blob_url);
+										progress.setMessage("Wait ...",0);
+										setTimeout(function(){
+											var downloader = new Downloader();
+											downloader.setURL(blob_url);
+											downloader.setFileName(download_file_name);
+											downloader.setSaveAs(true);
+											downloader.onprogress = function(response){
+												var loaded = response.bytesLoaded;
+												var total = response.bytesTotal;
+												if(total < loaded) total = loaded;
+												progress.setValueProgress(loaded/total,1);
+												progress.setMessage(loaded + " / " + total + " Byte",1);
+											}
+											downloader.oncomplete = function(response){
+												progress.setMessage("Complete",0);
+												if(response.result && response.completed){
+													success();
+												}else{
+													failure(blob_url);
+												}
+											}
+											downloader.start();
+										},1);
 									}else{
 										progress.setMessage("Create Data URI Scheme ...",0);
 										Base64_From_ArrayBuffer_Async(ary_buffer,function(base64){
@@ -67241,8 +67360,7 @@
 											progress.setMessage("",1);
 											progress.setValueProgress(1.0,1);
 											setTimeout(function(){
-												window.location.assign("data:application/zip;base64," + base64);
-												success();
+												failure("data:application/zip;base64," + base64);
 											},1);
 										},{
 											onprogress:function(e){
@@ -75309,198 +75427,12 @@
 	}
 
 	// --------------------------------------------------------------------------------
-	// XMLHttpRequest オブジェクトを作成する関数
-	// --------------------------------------------------------------------------------
-	function XMLHttpRequestCreate(){
-		try{
-			return new XMLHttpRequest();
-		}catch(e){}
-		try{
-			return new ActiveXObject('MSXML2.XMLHTTP.6.0');
-		}catch(e){}
-		try{
-			return new ActiveXObject('MSXML2.XMLHTTP.3.0');
-		}catch(e){}
-		try{
-			return new ActiveXObject('MSXML2.XMLHTTP');
-		}catch(e){}
-
-		return null;
-	}
-
-	// --------------------------------------------------------------------------------
-	// GM_xmlhttpRequest のラッパー関数
-	// --------------------------------------------------------------------------------
-	function GM_xmlhttpRequestCreate(){
-			var _this = this;
-
-			// --------------------------------------------------------------------------------
-			// リクエストヘッダを設定
-			// --------------------------------------------------------------------------------
-			_this.setRequestHeader = function(name,value){
-				_param.headers[name] = value;
-			};
-
-			// --------------------------------------------------------------------------------
-			// オーバーライドコンテンツタイプを設定
-			// --------------------------------------------------------------------------------
-			_this.overrideMimeType = function(type){
-				_param.overrideMimeType = type;
-			};
-
-			// --------------------------------------------------------------------------------
-			// レスポンスヘッダを取得
-			// --------------------------------------------------------------------------------
-			_this.getResponseHeader = function(label){
-				if(!(_response_header)) return "";
-				return _response_header.getResponseHeader(label);
-			};
-
-			// --------------------------------------------------------------------------------
-			// すべてのレスポンスヘッダを取得
-			// --------------------------------------------------------------------------------
-			_this.getAllResponseHeaders = function(){
-				return _this.responseHeaders;
-			};
-
-			// --------------------------------------------------------------------------------
-			// 開く
-			// --------------------------------------------------------------------------------
-			_this.open = function(method,url){
-				_param.method = method;
-				_param.url = url;
-			};
-
-			// --------------------------------------------------------------------------------
-			// 送信開始
-			// --------------------------------------------------------------------------------
-			_this.send = function(data){
-				_param.data = data;
-				_param.onprogress = function(r){
-					if(_this.onprogress) _this.onprogress(r);
-				};
-				_param.onreadystatechange = function(r){
-					_this.readyState = r.readyState;
-					if(r.status) _this.status = r.status;
-					if(r.responseHeaders){
-						if(!_response_header){
-							_this.responseHeaders = r.responseHeaders;
-							_response_header = new ResponseHeadersParser(r.responseHeaders);
-						}
-					}
-					if(r.readyState == 4){
-						try{
-							_this.responseText = r.responseText;
-						}catch(e){}
-						try{
-							_this.response = r.response;
-						}catch(e){}
-						_this.responseURL = r.finalUrl;
-					}
-					if(_this.onreadystatechange){
-						_this.onreadystatechange(r);
-					}
-				};
-
-				if(ExecuteAsTrixieUserScript()){
-					_param.onload = function(r){
-						_this.readyState = 4;
-						_this.status = r.status;
-						_this.responseText = r.responseText;
-						if(_this.onreadystatechange){
-							_this.onreadystatechange(r);
-						}
-					};
-					_param.onerror = function(r){
-						_this.readyState = 4;
-						_this.status = 0;
-						_this.responseText = "";
-						if(_this.onreadystatechange){
-							_this.onreadystatechange(r);
-						}
-					};
-				}
-
-				if(_this.timeout){
-					_param.timeout = _this.timeout;
-				}
-				if(_this.responseType){
-					_param.responseType = _this.responseType;
-				}
-
-				try{
-					GM_xmlhttpRequest(_param);
-				}catch(e){
-					_param.onreadystatechange({readyState:4,status:0});
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// 状態変更イベント
-			// --------------------------------------------------------------------------------
-			_this.onreadystatechange = function(){};
-
-			// --------------------------------------------------------------------------------
-			// 進捗イベント
-			// --------------------------------------------------------------------------------
-			_this.onprogress = function(response){};
-
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _param;
-			var _response_header;
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			_param = new Object();
-			_param.headers = new Object();
-			_this.readyState = 0;
-			_this.status = 0;
-			_this.responseHeaders = null;
-			_this.responseText = "";
-			if(GM_infoVersionCompare("2.3") >= 0){
-				_this.responseType = "";
-			}
-	}
-
-	// --------------------------------------------------------------------------------
-	// GM_infoVersion 比較
-	// --------------------------------------------------------------------------------
-	function GM_infoVersionCompare(ver){
-		try{
-			var list0 = GM_info.version.split(".");
-			var list1 = ver.split(".");
-
-			var i;
-			var num = list0.length;
-			if(num < list1.length) num = list1.length;
-			for(i=0;i<num;i++){
-				if(list0[i])	list0[i] = Number(list0[i]);
-				else		list0[i] = 0;
-				if(list1[i])	list1[i] = Number(list1[i]);
-				else		list1[i] = 0;
-			}
-			for(i=0;i<num;i++){
-				if(list0[i] > list1[i]) return  1;
-				if(list0[i] < list1[i]) return -1;
-			}
-
-			return 0;
-		}catch(e){
-		}
-		return -1;
-	}
-
-	// --------------------------------------------------------------------------------
 	// コンソールにログ出力
 	// --------------------------------------------------------------------------------
 	function ConsoleLog(obj){
-		if(GM_logSupported()){
-			GM_log(obj);
-			return;
-		}
+		try{
+			console.log(obj);
+		}catch(e){}
 	}
 
 	// --------------------------------------------------------------------------------
@@ -75510,6 +75442,54 @@
 		try{
 			console.error(obj);
 		}catch(e){}
+	}
+
+	// --------------------------------------------------------------------------------
+	// Promise 生成
+	// --------------------------------------------------------------------------------
+	function PromiseCreate(executor){
+		try{
+			return (new Promise(executor));
+		}catch(e){
+		}
+
+		var completed = false;
+		var result;
+		var callback_resolve;
+		var callback_reject;
+		var argument_value;
+		var argument_reason;
+		var promise = new Object();
+		promise.then = function(resolve , reject){
+			callback_resolve = resolve;
+			callback_reject = reject;
+			receive();
+		};
+		var receive = function(){
+			if(!completed) return;
+			if(result){
+				if(!callback_resolve) return;
+				callback_resolve(argument_value);
+			}else{
+				if(!callback_reject) return;
+				callback_reject(argument_reason);
+			}
+		};
+		executor(
+			function onFulfilled(value){
+				completed = true;
+				result = true;
+				argument_value = value;
+				receive();
+			},
+			function onRejected(reason){
+				completed = true;
+				result = false;
+				argument_reason = reason;
+				receive();
+			}
+		);
+		return promise;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -76171,103 +76151,395 @@
 	}
 
 	// --------------------------------------------------------------------------------
-	// Trixie のユーザースクリプトとして動作しているか
+	// GM_download が利用可能か
 	// --------------------------------------------------------------------------------
-	function ExecuteAsTrixieUserScript(){
+	function GM_downloadSupported(){
 		try{
-			if(GM_xmlhttpRequest.toString().match(/TrixieXmlHttp/))	return true;
+			if(GM_download)	return true;
 		}catch(e){
 		}
 		return false;
 	}
 
 	// --------------------------------------------------------------------------------
-	// JScript として動作しているか
+	// GM_openInTab ラッパー
 	// --------------------------------------------------------------------------------
-	function ExecuteAsJScript(){
+	function GMW_openInTab( url, open_in_background ){
 		try{
-			if(ScriptEngineMajorVersion() > 0)	return true;
+			if(GM.openInTab){
+				GM.openInTab(url, open_in_background);
+				return;
+			}
+		}catch(e){
+		}
+		try{
+			if(GM_openInTab){
+				GM_openInTab(url, open_in_background);
+				return;
+			}
+		}catch(e){
+		}
+	}
+	GMW_openInTab.isSupported = function(){
+		try{
+			if(GM.openInTab) return true;
+		}catch(e){
+		}
+		try{
+			if(GM_openInTab) return true;
 		}catch(e){
 		}
 		return false;
-	}
+	};
 
 	// --------------------------------------------------------------------------------
-	// GM_xmlhttpRequest が利用可能か
+	// GM_xmlhttpRequest ラッパー
 	// --------------------------------------------------------------------------------
-	function GM_xmlhttpRequestSupported(){
+	function GMW_XMLHttpRequest(){
+			var _this = this;
+
+			// --------------------------------------------------------------------------------
+			// リクエストヘッダを設定
+			// --------------------------------------------------------------------------------
+			_this.setRequestHeader = function(name,value){
+				_param.headers[name] = value;
+			};
+
+			// --------------------------------------------------------------------------------
+			// オーバーライドコンテンツタイプを設定
+			// --------------------------------------------------------------------------------
+			_this.overrideMimeType = function(type){
+				_param.overrideMimeType = type;
+			};
+
+			// --------------------------------------------------------------------------------
+			// レスポンスヘッダを取得
+			// --------------------------------------------------------------------------------
+			_this.getResponseHeader = function(label){
+				if(!(_response_header)) return "";
+				return _response_header.getResponseHeader(label);
+			};
+
+			// --------------------------------------------------------------------------------
+			// すべてのレスポンスヘッダを取得
+			// --------------------------------------------------------------------------------
+			_this.getAllResponseHeaders = function(){
+				return _this.responseHeaders;
+			};
+
+			// --------------------------------------------------------------------------------
+			// 開く
+			// --------------------------------------------------------------------------------
+			_this.open = function(method,url){
+				_param.method = method;
+				_param.url = url;
+			};
+
+			// --------------------------------------------------------------------------------
+			// 送信開始
+			// --------------------------------------------------------------------------------
+			_this.send = function(data){
+				_param.data = data;
+				_param.onprogress = function(r){
+					if(_this.onprogress) _this.onprogress(r);
+				};
+				_param.onreadystatechange = function(r){
+					readystatechange(r);
+				};
+				_param.onerror = function(r){
+					// Tampermonkey 用
+					readystatechange(r);
+				};
+
+				if(_this.timeout){
+					_param.timeout = _this.timeout;
+				}
+				if(_this.responseType){
+					_param.responseType = _this.responseType;
+				}
+
+				try{
+					GM.xmlHttpRequest(_param);
+					return;
+				}catch(e){
+				}
+				try{
+					GM_xmlhttpRequest(_param);
+					return;
+				}catch(e){
+				}
+				readystatechange({readyState:4,status:0});
+			};
+
+			// --------------------------------------------------------------------------------
+			// 状態変更イベント
+			// --------------------------------------------------------------------------------
+			_this.onreadystatechange = function(){};
+
+			// --------------------------------------------------------------------------------
+			// 状態変更イベント呼び出し
+			// --------------------------------------------------------------------------------
+			function readystatechange(r){
+				_this.readyState = r.readyState;
+				_this.status = r.status || 0;
+				if(r.responseHeaders){
+					if(!_response_header){
+						_this.responseHeaders = r.responseHeaders;
+						_response_header = new ResponseHeadersParser(r.responseHeaders);
+					}
+				}
+				if(r.readyState == 4){
+					try{
+						_this.responseText = r.responseText;
+					}catch(e){}
+					try{
+						_this.response = r.response;
+					}catch(e){}
+					_this.responseURL = r.finalUrl;
+				}
+				if(_this.onreadystatechange){
+					_this.onreadystatechange(_this);
+				}
+				if(_this.readyState == 4){
+					_this.onreadystatechange = null;
+				}
+			}
+
+			// --------------------------------------------------------------------------------
+			// 進捗イベント
+			// --------------------------------------------------------------------------------
+			_this.onprogress = function(response){};
+
+			// --------------------------------------------------------------------------------
+			// プライベート変数
+			// --------------------------------------------------------------------------------
+			var _param;
+			var _response_header;
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			_param = new Object();
+			_param.headers = new Object();
+			_this.readyState = 0;
+			_this.status = 0;
+			_this.responseHeaders = null;
+			_this.responseText = "";
+			_this.responseType = "";
+	}
+	GMW_XMLHttpRequest.isSupported = function(){
 		try{
-			if(GM_xmlhttpRequest)	return true;
+			if(GM.xmlHttpRequest) return true;
+		}catch(e){
+		}
+		try{
+			if(GM_xmlhttpRequest) return true;
 		}catch(e){
 		}
 		return false;
-	}
+	};
 
 	// --------------------------------------------------------------------------------
-	// GM_getValue が利用可能か
+	// ローカルストレージのラッパー
 	// --------------------------------------------------------------------------------
-	function GM_getValueSupported(){
+	function GMW_LocalStorage(){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// 追加
+		// --------------------------------------------------------------------------------
+		_this.setItem = function(key, value){
+			var promise;
+			try{
+				if(GM.setValue){
+					promise = GM.setValue(key, value);
+					return promise;
+				}
+			}catch(e){
+			}
+			try{
+				if(GM_setValue){
+					promise = PromiseCreate(function(resolve , reject){
+						GM_setValue(key, value);
+						resolve();
+					});
+					return promise;
+				}
+			}catch(e){
+			}
+			promise = PromiseCreate(function(resolve , reject){
+				reject();
+			})
+			return promise;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 取得
+		// --------------------------------------------------------------------------------
+		_this.getItem = function(key){
+			var promise;
+			try{
+				if(GM.getValue){
+					promise = GM.getValue(key);
+					return promise;
+				}
+			}catch(e){
+			}
+			try{
+				if(GM_getValue){
+					promise = PromiseCreate(function(resolve , reject){
+						var value = GM_getValue(key);
+						resolve(value);
+					});
+					return promise;
+				}
+			}catch(e){
+			}
+			promise = PromiseCreate(function(resolve , reject){
+				reject();
+			})
+			return promise;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 削除
+		// --------------------------------------------------------------------------------
+		_this.removeItem = function(key){
+			var promise;
+			try{
+				if(GM.deleteValue){
+					promise = GM.deleteValue(key);
+					return promise;
+				}
+			}catch(e){
+			}
+			try{
+				if(GM_deleteValue){
+					promise = PromiseCreate(function(resolve , reject){
+						var value = GM_deleteValue(key);
+						resolve(value);
+					});
+					return promise;
+				}
+			}catch(e){
+			}
+			promise = PromiseCreate(function(resolve , reject){
+				reject();
+			})
+			return promise;
+		};
+	}
+	GMW_LocalStorage.isSupported = function(){
 		try{
-			if(GM_getValue)	return true;
+			if(GM.getValue) return true;
+		}catch(e){
+		}
+		try{
+			if(GM_getValue) return true;
 		}catch(e){
 		}
 		return false;
-	}
+	};
 
 	// --------------------------------------------------------------------------------
-	// GM_setValue が利用可能か
+	// MenuCommand ラッパー
 	// --------------------------------------------------------------------------------
-	function GM_setValueSupported(){
-		try{
-			if(GM_setValue)	return true;
-		}catch(e){
+	function GMW_MenuCommand(){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// 開放
+		// --------------------------------------------------------------------------------
+		_this.release = function(){
+			var i;
+			var num = _item_list.length;
+			for(i=num-1;i>=0;i--){
+				try{
+					var item = _item_list[i];
+					delete _item_list[i];
+					// Violentmonkey 用
+					GM_unregisterMenuCommand(item.caption);
+					// Tampermonkey 用
+					GM_unregisterMenuCommand(item.id);
+				}catch(e){
+				}
+			}
+
+			if(document.removeEventListener){
+				document.removeEventListener("keydown" , keyDown);
+			}else if(document.detachEvent){
+				document.detachEvent("onkeydown" , keyDown);
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// 追加
+		// --------------------------------------------------------------------------------
+		_this.addItem = function(caption, commandFunc, accessKey){
+			var key_code = 0;
+			if(accessKey){
+				key_code =  accessKey.toLocaleUpperCase().charCodeAt(0) || 0;
+			}
+			var item = {
+				caption:caption,
+				callback:commandFunc,
+				key_code:key_code
+			};
+			_item_list.push(item);
+			try{
+				item.id = GM_registerMenuCommand(caption, commandFunc, accessKey);
+			}catch(e){
+			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// ショートカット
+		// --------------------------------------------------------------------------------
+		function keyDown(e){
+			if(!(e.shiftKey)) return;
+			if(!(e.ctrlKey)) return;
+			if(!(e.altKey)) return;
+			
+			var i;
+			var num = _item_list.length;
+			for(i=0;i<num;i++){
+				var item = _item_list[i];
+				if(item.key_code == e.keyCode){
+					setTimeout(function(){
+						if(confirm("execute the command?\n[" + item.caption + "]")){
+								item.callback();
+						}
+					},1);
+					break;
+				}
+			}
 		}
-		return false;
-	}
 
-	// --------------------------------------------------------------------------------
-	// GM_deleteValue が利用可能か
-	// --------------------------------------------------------------------------------
-	function GM_deleteValueSupported(){
-		try{
-			if(GM_deleteValue)	return true;
-		}catch(e){
-		}
-		return false;
-	}
+		// --------------------------------------------------------------------------------
+		// プライベート変数
+		// --------------------------------------------------------------------------------
+		var _item_list;
 
-	// --------------------------------------------------------------------------------
-	// GM_log が利用可能か
-	// --------------------------------------------------------------------------------
-	function GM_logSupported(){
-		try{
-			if(GM_log)	return true;
-		}catch(e){
-		}
-		return false;
-	}
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		(function(){
+			_item_list = new Array();
 
-	// --------------------------------------------------------------------------------
-	// GM_openInTab が利用可能か
-	// --------------------------------------------------------------------------------
-	function GM_openInTabSupported(){
-		try{
-			if(GM_openInTab)	return true;
-		}catch(e){
-		}
-		return false;
+			if(document.addEventListener){
+				document.addEventListener("keydown" , keyDown);
+			}else if(document.attachEvent){
+				document.attachEvent("onkeydown" , keyDown);
+			}
+		})();
 	}
-
-	// --------------------------------------------------------------------------------
-	// GM_registerMenuCommand が利用可能か
-	// --------------------------------------------------------------------------------
-	function GM_registerMenuCommandSupported(){
+	GMW_MenuCommand.isSupported = function(){
 		try{
 			if(GM_registerMenuCommand)	return true;
 		}catch(e){
 		}
 		return false;
-	}
+	};
 
 	// --------------------------------------------------------------------------------
 	// ローカルストレージからロード
@@ -76291,8 +76563,17 @@
 			func(result);
 		}
 
-		if(GM_getValueSupported()){
-			func({result:true,value:GM_getValue(key,undefined)});
+		if(GMW_LocalStorage.isSupported()){
+			var storage = new GMW_LocalStorage();
+			var promise = storage.getItem(key);
+			promise.then(
+				function(value){
+					func({result:true,value:value});
+				},
+				function(reason){
+					func({result:false,message:reason});
+				}
+			);
 		}else{
 			func({result:false,message:"Do not support storage."});
 		}
@@ -76321,14 +76602,17 @@
 		}
 
 		var result = new Object();
-		if(GM_setValueSupported()){
-			try{
-				GM_setValue(key,str);
-				result.result = true;
-			}catch(e){
-				result.result = false;
-				result.message = e;
-			}
+		if(GMW_LocalStorage.isSupported()){
+			var storage = new GMW_LocalStorage();
+			var promise = storage.setItem(key,str);
+			promise.then(
+				function(value){
+					func({result:true,value:value});
+				},
+				function(reason){
+					func({result:false,message:reason});
+				}
+			);
 		}else{
 			result.result = false;
 			result.message = "Do not support storage.";
@@ -76359,14 +76643,17 @@
 		}
 
 		var result = new Object();
-		if(GM_deleteValueSupported()){
-			try{
-				GM_deleteValue(key);
-				result.result = true;
-			}catch(e){
-				result.result = false;
-				result.message = e;
-			}
+		if(GMW_LocalStorage.isSupported()){
+			var storage = new GMW_LocalStorage();
+			var promise = storage.removeItem(key);
+			promise.then(
+				function(value){
+					func({result:true,value:value});
+				},
+				function(reason){
+					func({result:false,message:reason});
+				}
+			);
 		}else{
 			result.result = false;
 			result.message = "Do not support storage.";
@@ -81454,28 +81741,50 @@
 			}
 
 			// --------------------------------------------------------------------------------
-			// メニューコマンドの追加（設定）
+			// メニューコマンド（設定）
 			// --------------------------------------------------------------------------------
-			if(page_expand_arguments.admin != page_expand_arguments.window){
-			}else if(GM_registerMenuCommandSupported()){
+			var menu_command = new GMW_MenuCommand();
+			(function(){
+				var event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
+				event_handler_release.setFunction(function(){
+					menu_command.release();
+					event_handler_release.release();
+					menu_command = null;
+				});
+		 	})();
 
-				GM_registerMenuCommand(_i18n.getMessage("context_menu_batch_download_image"), function(){
-					if (WindowIsChild(window)){
-					}else{
-						download_list_image.createArchive();
-					}
+			// --------------------------------------------------------------------------------
+			// メニューコマンドの追加（トップのみ）
+			// --------------------------------------------------------------------------------
+			(function(){
+				if(!menu_command) return;
+				if(WindowIsChild(window)) return;
+				if(page_expand_arguments.admin != page_expand_arguments.window) return;
+
+				menu_command.addItem(_i18n.getMessage("context_menu_batch_download_image"), function(){
+					download_list_image.createArchive();
 				},"i");
 
-				GM_registerMenuCommand(_i18n.getMessage("context_menu_batch_download_user"), function(){
-					if (WindowIsChild(window)){
-					}else{
-						download_list_user.createArchive();
-					}
+				menu_command.addItem(_i18n.getMessage("context_menu_batch_download_user"), function(){
+					download_list_user.createArchive();
 				},"u");
 
 				(function(){
 
-					function start(){
+					// BbsBoard の自動実行を許すアドレス
+					var bbs_board_allow_filter = "https://hakuhin.github.io/PageExpand/GreaseMonkey/bbs_board.html";
+
+					var allowed = StringUrlMatchAsteriskWord( (document.URL) , (bbs_board_allow_filter + "*") );
+
+					var bbs_board_exec = function(){
+						if(!confirm(_i18n.getMessage("context_menu_pageexpand_open_bbs_board_run_confirm"))) return;
+
+						// PageExpand コンストラクタ
+						PageExpandConstructor();
+
+						// 実行開始
+						PageExpandStart();
+
 						var bbs_board = new PageExpandBbsBoard();
 						bbs_board.initialize(function(info){
 							if(!(info.result)) return;
@@ -81483,22 +81792,26 @@
 							bbs_board.enableCompactMode(false);			
 							bbs_board.setURL(document.URL);	
 						});
-					}
+					};
 
-					GM_registerMenuCommand(_i18n.getMessage("context_menu_pageexpand_open_bbs_board"), function(){
-						if(confirm(_i18n.getMessage("context_menu_pageexpand_open_bbs_board_run_confirm"))){
-							start();
-						}
+					menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_open_bbs_board"), function(){
+						bbs_board_exec();
 					},"b");
 
+					// 自動実行
+					if(allowed) bbs_board_exec();
 			 	})();
 
 				(function(){
 
 					// PageExpand 設定の動作を許すアドレス
-					var config_allow_filter = "https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/options";
+					var config_allow_filter = "https://hakuhin.github.io/PageExpand/GreaseMonkey/options.html";
 
-					function start(){
+					var allowed = StringUrlMatchAsteriskWord( (document.URL) , (config_allow_filter + "*") );
+
+					var config_exec = function(){
+						if(!confirm(_i18n.getMessage("context_menu_pageexpand_config_auto_run_confirm"))) return;
+
 						// PageExpand コンストラクタ
 						PageExpandConstructor();
 
@@ -81509,21 +81822,15 @@
 						config.initialize(function(result){
 							config.MenuItemSelect(PageExpandConfig.MENU_TYPE_SETTING_STANDARD);
 						});
-					}
+					};
 
-					if(StringUrlMatchAsteriskWord(document.URL,config_allow_filter + "*")){
-						if(confirm(_i18n.getMessage("context_menu_pageexpand_config_auto_run_confirm"))){
-							start();
-						}
-					}
-
-					GM_registerMenuCommand(_i18n.getMessage("context_menu_pageexpand_config"), function(){
-						if(StringUrlMatchAsteriskWord(document.URL,config_allow_filter + "*")){
-							start();
+					menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_config"), function(){
+						if(allowed){
+							config_exec();
 						}else{
 							if(confirm(_i18n.getMessage("context_menu_pageexpand_config_current_page_confirm") + config_allow_filter)){
-								if(GM_openInTabSupported()){
-									GM_openInTab(config_allow_filter);
+								if(GMW_openInTab.isSupported()){
+									GMW_openInTab(config_allow_filter,{active:true});
 								}else{
 									window.open(config_allow_filter,"_blank");
 								}
@@ -81531,9 +81838,10 @@
 						}
 					},"c");
 
+					// 自動実行
+					if(allowed) config_exec();
 			 	})();
-
-			}
+			})();
 
 			// 実行可能
 			if(project.getEnable()){
@@ -81542,36 +81850,29 @@
 				PageExpandConstructor();
 
 				// --------------------------------------------------------------------------------
-				// メニューコマンドの追加
+				// メニューコマンドの追加（全フレーム）
 				// --------------------------------------------------------------------------------
-				if(GM_registerMenuCommandSupported()){
+				(function(){
+					if(!menu_command) return;
 
-					// フレーム内では動作させない
-					if (WindowIsChild(window)){
-					}else if(page_expand_arguments.admin != page_expand_arguments.window){
-					}else{
-
-						if(!(project.getEnableStartup())){
-							GM_registerMenuCommand(_i18n.getMessage("context_menu_pageexpand_start"), function(){
-								PageExpandStart();
-							},"s");
-						}
-
-						GM_registerMenuCommand(_i18n.getMessage("context_menu_pageexpand_abort"), function(){
-							PageExpandRelease();
-						},"a");
-
-						GM_registerMenuCommand(_i18n.getMessage("context_menu_pageexpand_execute_fastest"), function(){
-							PageExpandExecuteFastest();
-						},"f");
-
-						GM_registerMenuCommand(_i18n.getMessage("context_menu_pageexpand_debug"), function(){
-							// デバッグモード
-							page_expand_debug.setVisible(true);
-						},"d");
-
+					if(!(project.getEnableStartup())){
+						menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_start"), function(){
+							PageExpandStart();
+						},"s");
 					}
-				}
+
+					menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_abort"), function(){
+						PageExpandRelease();
+					},"a");
+
+					menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_execute_fastest"), function(){
+						PageExpandExecuteFastest();
+					},"q");
+
+					menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_debug"), function(){
+						page_expand_debug.setVisible(true);
+					},"d");
+			 	})();
 
 				if((page_expand_arguments.page_expand_parent) || project.getEnableStartup()){
 					// 実行開始

@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.5.17
+// @version        1.5.18
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @description:ja 画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、2chなどの主要掲示板の拡張表示など...
@@ -20,19 +20,25 @@
 // @include        http://*
 // @include        https://*
 // @include        ftp://*
-// @icon           https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/icon32.png
-// @icon64         https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/icon64.png
-// @updateURL      https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/PageExpand.meta.js
-// @downloadURL    https://raw.githubusercontent.com/hakuhin/PageExpand/master/GreaseMonkey/PageExpand.user.js
-// @copyright      hakuhin
+// @connect        *
+// @icon           https://hakuhin.github.io/PageExpand/GreaseMonkey/icon32.png
+// @icon64         https://hakuhin.github.io/PageExpand/GreaseMonkey/icon64.png
+// @updateURL      https://hakuhin.github.io/PageExpand/GreaseMonkey/PageExpand.meta.js
+// @downloadURL    https://hakuhin.github.io/PageExpand/GreaseMonkey/PageExpand.user.js
+// @author         hakuhin
+// @grant          GM.xmlHttpRequest 
 // @grant          GM_xmlhttpRequest
+// @grant          GM.getValue
 // @grant          GM_getValue
+// @grant          GM.setValue
 // @grant          GM_setValue
+// @grant          GM.deleteValue
 // @grant          GM_deleteValue
-// @grant          GM_log
-// @grant          GM_registerMenuCommand
+// @grant          GM.openInTab
 // @grant          GM_openInTab
-// @grant          GM_info
+// @grant          GM_registerMenuCommand
+// @grant          GM_unregisterMenuCommand
+// @grant          GM_download
 // ==/UserScript==
 
 
