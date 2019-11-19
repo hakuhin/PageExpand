@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.5.18
+// @version        1.5.19
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @description:ja 画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、2chなどの主要掲示板の拡張表示など...
@@ -219,7 +219,7 @@
 
 		// ダウンローダーキュー
 		if(!downloader_queue){
-			downloader_queue = new DownloaderQueue();
+			downloader_queue = new LoaderQueue();
 		}
 
 		// アドレスコレクション
@@ -21304,7 +21304,7 @@
 		// --------------------------------------------------------------------------------
 		work.analyzeNodeList = function(node_list){
 			var re_number = new RegExp("No\\.([0-9]+)","i");
-			var re_image = new RegExp(".*/([0-9]+)(|s)\\.(bmp|gif|jpeg|jpe|jpg|png)","i");
+			var re_image = new RegExp(".*/([0-9]+)(|s)\\.(bmp|gif|jpeg|jpe|jpg|png|webp|webm|mp4)","i");
 
 			var node_num = node_list.length;
 			var info_text = "";
@@ -21385,18 +21385,32 @@
 		// --------------------------------------------------------------------------------
 		switch(work.bbs_name){
 		default:
-			var i;
-			var nodes = ElementGetElementsByTagName(document.body,"form");
-			var num = nodes.length;
-			for(i=0;i<num;i++){
-				var node = nodes[i];
-				if(node.action.indexOf("futaba.php") != -1){
-					if(ElementGetElementsByTagName(node,"blockquote").length){
-						element_parent = node;
-						break;
+			// 2019/11/18 以前
+			(function(){
+				if(element_parent) return;
+				var i;
+				var nodes = ElementGetElementsByTagName(document.body,"form");
+				var num = nodes.length;
+				for(i=0;i<num;i++){
+					var node = nodes[i];
+					if(node.action.indexOf("futaba.php") != -1){
+						if(ElementGetElementsByTagName(node,"blockquote").length){
+							element_parent = node;
+							break;
+						}
 					}
 				}
-			}
+			})();
+
+			// 2019/11/18 以降
+			(function(){
+				if(element_parent) return;
+				var node = ElementGetElementsByClassName(document.body,"thre")[0];
+				if(!node) return;
+				if(!node.getAttribute("data-res")) return;
+				element_parent = node;
+			})();
+
 			if(!element_parent) return false;
 			break;
 		}
@@ -21419,6 +21433,26 @@
 			}
 
 			// --------------------------------------------------------------------------------
+			// 最新の番号を取得
+			// --------------------------------------------------------------------------------
+			function getLastestNumber(){
+				try{
+					var re_number = new RegExp("No\\.([0-9]+)","i");
+					var nodes = ElementGetElementsByTagName(document.body,"table");
+					var i = nodes.length-1;
+					for(;i>=0;i--){
+						var node = ElementGetElementsByClassName(nodes[i],"rtd")[0];
+						if(node){
+							if(ElementGetTextContent(node).match(re_number)){
+								return parseInt(RegExp.$1);
+							}
+						}
+					}
+				}catch(e){}
+				return -1;
+			}
+
+			// --------------------------------------------------------------------------------
 			// 継ぎ足し読み込み
 			// --------------------------------------------------------------------------------
 			function readMore(callback){
@@ -21429,7 +21463,7 @@
 
 				// 成功
 				loader.onload = function(str){
-					var re_number = new RegExp("Name[ ].*?No\\.([0-9]+)","i");
+					var re_number = new RegExp("No\\.([0-9]+)","i");
 					var re_result = new RegExp("<span id=\"contdisp\">(.*?)<\\\\/span>","i");
 					var element_last = null;
 
@@ -21452,6 +21486,10 @@
 							var s = str.substring(p,e);
 							var m = s.match(re_number);
 							if(m){
+								var lastest_id = getLastestNumber();
+								if(last_id < lastest_id){
+									last_id = lastest_id;
+								}
 								var id = parseInt(m[1]);
 								if(last_id < id){
 									var response = bbs_dictionary.getResponse(id);
@@ -21569,9 +21607,9 @@
 			read_more_button = new BbsControlReadMoreButton();
 			read_more_button.setWaitTime(2 * 1000);
 			read_more_button.onclick = readMore;
-			var nodes = ElementGetElementsByTagName(element_parent,"hr");
-			if(nodes.length){
-				DomNode_InsertBefore(nodes[nodes.length-1],read_more_button.getElement());
+			var node = document.getElementById("contres");
+			if(node){
+				DomNode_InsertAfter(node,read_more_button.getElement());
 			}
 
 			// --------------------------------------------------------------------------------
@@ -21582,7 +21620,6 @@
 				var input_submit;
 				var element_textarea;
 				var event_handler_release;
-				var task;
 
 				(function(){
 					// フォーム
@@ -21618,12 +21655,6 @@
 						event_handler_release.release();
 						event_handler_release = null;
 					}
-
-					removeEvent();
-
-					if(task){
-						task.release();
-					}
 				}
 
 				// クリア
@@ -21644,115 +21675,10 @@
 					element_textarea.value = "";
 				}
 
-				// 有効セット
-				function setEnable(type){
-					input_submit.disabled = !(type);
-				}
-
-				// イベント追加
-				function addEvent(){
-					if(window.addEventListener){
-						input_submit.addEventListener("click",EventClickButton);
-						element_form.addEventListener("submit",EventSubmitForm);
-					}else if(window.attachEvent){
-						input_submit.attachEvent("onclick",EventClickButton);
-						element_form.attachEvent("onsubmit",EventSubmitForm);
-					}
-				}
-
-				// イベント除外
-				function removeEvent(){
-					if(window.removeEventListener){
-						input_submit.removeEventListener("click",EventClickButton);
-						element_form.removeEventListener("submit",EventSubmitForm);
-					}else if(window.detachEvent){
-						input_submit.detachEvent("onclick",EventClickButton);
-						element_form.detachEvent("onsubmit",EventSubmitForm);
-					}
-				}
-
-				// サブミット直前に実行されるイベント
-				function EventSubmitForm(e){
-					setEnable(false);
-				}
-
-				// クリック時に実行されるイベント
-				function EventClickButton(e){
-					var w = 600;
-					var h = 400;
-
-					var window_name = "_pageexpand_" + Math.floor(Math.random() * 0x7FFFFFFF);
-					var popup_iframe = new BbsControlPopupIframe(window_name);
-					popup_iframe.setWindowSize(w,h);
-					popup_iframe.onclose = function(){
-						setEnable(true);
-					};
-
-					var element_iframe = popup_iframe.getIFrameElement();
-					element_form.target = window_name;
-
-					(function(){
-						var closed = false;
-						var timer = null;
-
-						// タスク生成
-						task = task_container.createTask();
-						task.setDestructorFunc(function(){
-							task = null;
-						});
-						task.setExecuteFunc(function(){
-							try{
-								var href = "";
-								var window_obj = element_iframe.contentWindow;
-								if(window_obj.document){
-									href = window_obj.document.URL;
-								}
-								if(href.match(new RegExp("^(http|https)://","i"))){
-									if(href.indexOf("/res/") >= 0){
-										closed = true;
-									}else if(href.indexOf("/futaba.php") == -1){
-										closed = true;
-									}else{
-										var body = window_obj.document.body;
-										if(body){
-											if(ElementGetTextContent(body).indexOf("切り替えます") != -1){
-												if(!timer){
-													timer = (new Date()).getTime();
-												}
-											}
-										}
-									}
-								}
-								if(timer){
-									if((new Date()).getTime() - timer > 1000 * 1.0){
-										closed = true;
-									}
-								}
-							}catch(e){
-								closed = true;
-							}
-
-							if(closed){
-								if(task){
-									task.release();
-								}
-								popup_iframe.close();
-								setEnable(true);
-								if(timer){
-									readMore(function(){});
-									clear();
-								}
-							}
-						});
-					})();
-				}
-
 				(function(){
 					if(!element_form) return;
 					if(!input_submit) return;
 					if(!element_textarea) return;
-
-					addEvent();
 
 					event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
 					event_handler_release.setFunction(function(){
@@ -22825,24 +22751,35 @@
 				(function(){
 					var n = target;
 					if(!n) return;
-					if(n.nodeType != 3) return;
 
 					// 本文
-					var m = DomNodeGetNodeValue(n).match(new RegExp("No[.][0-9]+","i"));
+					var m = ElementGetTextContent(n).match(new RegExp("No[.][0-9]+","i"));
 					if(!m)	return;
 
-					// 元のテキストノード
-					DomNodeSetNodeValue(n,RegExp.leftContext);
+					var element_reply;
+					switch(n.nodeType){
+					// 2019/11/18 以降
+					case 1:
+						// BbsControlReply を生成
+						control_reply = new BbsControlReply(n,true);
+						break;
 
-					// BbsControlReply を生成
-					var control_reply = new BbsControlReply(null,false);
-					var element_reply = control_reply.getElement();
-					ElementSetTextContent(element_reply,m[0]);
-					DomNode_InsertAfter(n,element_reply);
+					// 2019/11/18 以前
+					case 3:
+						// 元のテキストノード
+						DomNodeSetNodeValue(n,RegExp.leftContext);
 
-					// 直後テキスト
-					n = DocumentCreateText(RegExp.rightContext);
-					DomNode_InsertAfter(element_reply,n);
+						// BbsControlReply を生成
+						control_reply = new BbsControlReply(null,false);
+						var element_reply = control_reply.getElement();
+						ElementSetTextContent(element_reply,m[0]);
+						DomNode_InsertAfter(n,element_reply);
+
+						// 直後テキスト
+						n = DocumentCreateText(RegExp.rightContext);
+						DomNode_InsertAfter(element_reply,n);
+						break;
+					}
 
 					control_reply.setResponse(response);
 					var docking_form = work.docking_form;
@@ -22943,7 +22880,7 @@
 			var numbers = new ResponseAnchorNumbers();
 
 			var re_search = new RegExp("^(No\\.|>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+)","i");
-			var re_image = new RegExp("([0-9０-９]+)\\.(bmp|gif|jpeg|jpe|jpg|png|webm)","i");
+			var re_image = new RegExp("([0-9０-９]+)\\.(bmp|gif|jpeg|jpe|jpg|png|webp|webm|mp4)","i");
 			var re_number = new RegExp("^([0-9０-９]+)","i");
 
 			var m = str.match(re_search);
@@ -23075,7 +23012,7 @@
 			try{
 				var node = post_list[0];
 				if(node.parentNode.tagName != "TD"){
-					var dic = {"FONT":1,"INPUT":1};
+					var dic = {"FONT":1,"INPUT":1,"SPAN":1};
 					var i;
 					var num = post_list.length;
 					for(i=0;i<num;i++){
@@ -23112,7 +23049,7 @@
 				if(BbsControlQuoteExist(target)) return;
 
 				var re_simple = new RegExp("^(No\\.|>>|<<|>)[-,0-9０-９]+$","i");
-				var re_image = new RegExp("([0-9０-９]+)\\.(bmp|gif|jpeg|jpe|jpg|png|webm)","i");
+				var re_image = new RegExp("([0-9０-９]+)\\.(bmp|gif|jpeg|jpe|jpg|png|webp|webm|mp4)","i");
 				var re_detail = new RegExp("(No\\.|>>|<<|＞＞|＜＜|>|＞|》|≫|&gt;&gt;)([0-9０-９]+,)*[0-9０-９]+","i");
 				var re_number = new RegExp("([0-9０-９]+)","i");
 
@@ -38205,7 +38142,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.18");
+				new UI_Text(parent,"PageExpand ver.1.5.19");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -66063,241 +66000,6 @@
 			_count = 0;
 			_single_count = 0;
 			_queue_element = loader_queue.createElement();
-		})();
-	}
-
-	// --------------------------------------------------------------------------------
-	// ダウンローダーキュー
-	// --------------------------------------------------------------------------------
-	function DownloaderQueue(){
-		var _this = this;
-
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			var queue = _this.queue;
-			while(queue != queue._next){
-				var next = queue._next;
-				if(next.onabort) next.onabort();
-				ElementRemove(next);
-			}
-			var queue = _this.queue_single;
-			while(queue != queue._next){
-				var next = queue._next;
-				if(next.onabort) next.onabort();
-				ElementRemove(next);
-			}
-		};
-
-		// --------------------------------------------------------------------------------
-		// 要素を作成
-		// --------------------------------------------------------------------------------
-		_this.createElement = function(){
-			var _element = new Object();
-
-			// --------------------------------------------------------------------------------
-			// 開始イベント
-			// --------------------------------------------------------------------------------
-			_element.onstart = function(){};
-
-			// --------------------------------------------------------------------------------
-			// 中止イベント
-			// --------------------------------------------------------------------------------
-			_element.onabort = function(){};
-
-			// --------------------------------------------------------------------------------
-			// 完了を通知
-			// --------------------------------------------------------------------------------
-			_element.complete = function(){
-				_thread_count -= 1;
-				dequeue();
-			};
-
-			// --------------------------------------------------------------------------------
-			// 要素を破棄
-			// --------------------------------------------------------------------------------
-			_element.release = function(){
-				ElementRemove(_element);
-				_queue_count -= 1;
-				dequeue();
-			};
-
-			// --------------------------------------------------------------------------------
-			// 通常最前列に処理を追加
-			// --------------------------------------------------------------------------------
-			_element.attachFirst = function(){
-				ElementRemove(_element);
-
-				var _prev = _this.queue;
-				var _next = _prev._next;
-				_prev._next = _element;
-				_next._prev = _element;
-				_element._prev = _prev;
-				_element._next = _next;
-
-				dequeue();
-			};
-
-			// --------------------------------------------------------------------------------
-			// 通常最後尾に追加
-			// --------------------------------------------------------------------------------
-			_element.attachLast = function(){
-				ElementRemove(_element);
-
-				var _next = _this.queue;
-				var _prev = _next._prev;
-				_prev._next = _element;
-				_next._prev = _element;
-				_element._prev = _prev;
-				_element._next = _next;
-
-				dequeue();
-			};
-
-			// --------------------------------------------------------------------------------
-			// シングル最後尾に追加
-			// --------------------------------------------------------------------------------
-			_element.attachSingle = function(){
-				ElementRemove(_element);
-
-				var _next = _this.queue_single;
-				var _prev = _next._prev;
-				_prev._next = _element;
-				_next._prev = _element;
-				_element._prev = _prev;
-				_element._next = _next;
-
-				dequeue();
-			};
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_element._prev = _element;
-				_element._next = _element;
-
-				_queue_count += 1;
-			})();
-
-			return _element;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 要素のロード開始（内部用）
-		// --------------------------------------------------------------------------------
-		function ElementLoadStart(element){
-			ElementRemove(element);
-			_thread_count += 1;
-			element.onstart();
-		}
-
-		// --------------------------------------------------------------------------------
-		// 要素を外す（内部用）
-		// --------------------------------------------------------------------------------
-		function ElementRemove(element){
-			var _prev = element._prev;
-			var _next = element._next;
-			_prev._next = _next;
-			_next._prev = _prev;
-			element._prev = element;
-			element._next = element;
-		}
-
-		// --------------------------------------------------------------------------------
-		// デキュー（内部用）
-		// --------------------------------------------------------------------------------
-		function dequeue(){
-			// 通常キュー
-			while(_thread_count < _thread_max){
-				var element = _this.queue._next;
-
-				// キューが空
-				if(element == _this.queue){
-					break;
-				}
-				ElementLoadStart(element);
-			}
-
-			// シングルキュー
-			if(_thread_count <= 0){
-				var element = _this.queue_single._next;
-
-				if(element != _this.queue_single){
-					ElementLoadStart(element);
-				}
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// キューの数を取得
-		// --------------------------------------------------------------------------------
-		_this.getCountQueue = function(){
-			return _queue_count;
-		};
-
-		// --------------------------------------------------------------------------------
-		// スレッドの数を取得
-		// --------------------------------------------------------------------------------
-		_this.getCountThread = function(){
-			return _thread_count;
-		};
-
-		// --------------------------------------------------------------------------------
-		// エラー数を取得
-		// --------------------------------------------------------------------------------
-		_this.getCountError = function(){
-			return _error_count;
-		};
-
-		// --------------------------------------------------------------------------------
-		// エラー数を加算
-		// --------------------------------------------------------------------------------
-		_this.addCountError = function(){
-			_error_count += 1;
-		};
-
-		// --------------------------------------------------------------------------------
-		// スレッドの最大数を取得
-		// --------------------------------------------------------------------------------
-		_this.getMaxThread = function(){
-			return _thread_max;
-		};
-
-		// --------------------------------------------------------------------------------
-		// ロードスレッドの最大数をセット
-		// --------------------------------------------------------------------------------
-		_this.setMaxThread = function(v){
-			_thread_max = v;
-		};
-
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _queue_count;
-		var _thread_count;
-		var _thread_max;
-		var _error_count;
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_queue_count = 0;
-			_thread_count = 0;
-			_this.setMaxThread(10);
-			_error_count = 0;
-
-			var queue = new Object();
-			queue._prev = queue;
-			queue._next = queue;
-			_this.queue = queue;
-
-			var queue_single = new Object();
-			queue_single._prev = queue_single;
-			queue_single._next = queue_single;
-			_this.queue_single = queue_single;
 		})();
 	}
 
