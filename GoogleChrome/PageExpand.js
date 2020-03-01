@@ -11527,6 +11527,23 @@ function PageExpand(page_expand_arguments){
 	function(info,response){
 		var element = info.element;
 
+		if(element.tagName == "DIV"){
+
+			// Google Image Search
+			try{
+				var data_ri = element.getAttribute("data-ri");
+				if(data_ri){
+					var image = element.getElementsByTagName("IMG")[0];
+					if(image){
+						var mouse_event = document.createEvent("MouseEvent");
+						mouse_event.initMouseEvent("mousedown",true,false,document.defaultView,0,0,0,0,0,false,false,false,false,0,null);
+						image.dispatchEvent(mouse_event);
+						return true;
+					}
+				}
+			}catch(e){}
+		}
+
 		if(element.tagName == "LI"){
 
 			// AOL Image Search
@@ -23195,7 +23212,7 @@ function PageExpand(page_expand_arguments){
 			var i;
 			var num = post_info_list.length;
 			for(i=0;i<num;i++){
-				info_text += ElementGetTextContent(post_info_list[i]);
+				info_text += ElementGetTextContent(post_info_list[i]) + "|";
 			}
 			if(!(info_text.match(new RegExp("No\\.([0-9]+)","i"))))	return false;
 
@@ -39274,7 +39291,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.19");
+				new UI_Text(parent,"PageExpand ver.1.5.20");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
