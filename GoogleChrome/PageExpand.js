@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2019  https://hakuhin.jp
+// Hakuhin 2010-2022  https://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -12146,7 +12146,9 @@ function PageExpand(page_expand_arguments){
 			"jpg",
 			"jpe",
 			"jpeg",
-			"png"
+			"png",
+			"webp",
+			"avif"
 		];
 
 		var i;
@@ -12223,7 +12225,9 @@ function PageExpand(page_expand_arguments){
 			"jpg",
 			"jpe",
 			"jpeg",
-			"png"
+			"png",
+			"webp",
+			"avif"
 		];
 
 		var i;
@@ -15507,7 +15511,9 @@ function PageExpand(page_expand_arguments){
 			"jpg",
 			"jpe",
 			"jpeg",
-			"png"
+			"png",
+			"webp",
+			"avif"
 		];
 
 		var i;
@@ -15601,7 +15607,9 @@ function PageExpand(page_expand_arguments){
 			"jpg",
 			"jpe",
 			"jpeg",
-			"png"
+			"png",
+			"webp",
+			"avif"
 		];
 
 		var i;
@@ -15675,7 +15683,9 @@ function PageExpand(page_expand_arguments){
 			"jpg",
 			"jpe",
 			"jpeg",
-			"png"
+			"png",
+			"webp",
+			"avif"
 		];
 
 		var i;
@@ -15734,7 +15744,9 @@ function PageExpand(page_expand_arguments){
 			"jpg",
 			"jpe",
 			"jpeg",
-			"png"
+			"png",
+			"webp",
+			"avif"
 		];
 
 		var i;
@@ -15799,7 +15811,9 @@ function PageExpand(page_expand_arguments){
 			"jpg",
 			"jpe",
 			"jpeg",
-			"png"
+			"png",
+			"webp",
+			"avif"
 		];
 
 		var i;
@@ -15915,7 +15929,9 @@ function PageExpand(page_expand_arguments){
 			"jpg",
 			"jpe",
 			"jpeg",
-			"png"
+			"png",
+			"webp",
+			"avif"
 		];
 
 		var i;
@@ -16024,7 +16040,9 @@ function PageExpand(page_expand_arguments){
 			"jpg",
 			"jpe",
 			"jpeg",
-			"png"
+			"png",
+			"webp",
+			"avif"
 		];
 
 		var i;
@@ -16092,7 +16110,9 @@ function PageExpand(page_expand_arguments){
 			"jpg",
 			"jpe",
 			"jpeg",
-			"png"
+			"png",
+			"webp",
+			"avif"
 		];
 
 		var i;
@@ -16244,7 +16264,9 @@ function PageExpand(page_expand_arguments){
 			"jpg",
 			"jpe",
 			"jpeg",
-			"png"
+			"png",
+			"webp",
+			"avif"
 		];
 
 		var i;
@@ -16337,7 +16359,9 @@ function PageExpand(page_expand_arguments){
 			"jpg",
 			"jpe",
 			"jpeg",
-			"png"
+			"png",
+			"webp",
+			"avif"
 		];
 
 		var i;
@@ -16449,7 +16473,9 @@ function PageExpand(page_expand_arguments){
 			"jpg",
 			"jpe",
 			"jpeg",
-			"png"
+			"png",
+			"webp",
+			"avif"
 		];
 
 		var i;
@@ -16530,7 +16556,9 @@ function PageExpand(page_expand_arguments){
 			"jpg",
 			"jpe",
 			"jpeg",
-			"png"
+			"png",
+			"webp",
+			"avif"
 		];
 
 		var i;
@@ -28211,7 +28239,7 @@ function PageExpand(page_expand_arguments){
 		if(work.bbs_name == "2ch"){
 			work.bbs_name = (function(){
 				var version = (function(){
-					var re = new RegExp("read[.]cgi[ \t]+ver[ \t]*([0-9]+)[.][0-9]+[.][0-9]+","i");
+					var re = new RegExp("read[.]cgi[ \t]+ver[ \t]*([0-9]+)[.][0-9]+","i");
 
 					// ver 06-07
 					var nodes = ElementGetElementsByClassName(document.body,"footer");
@@ -39291,7 +39319,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.20");
+				new UI_Text(parent,"PageExpand ver.1.5.22");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -39301,7 +39329,7 @@ function PageExpand(page_expand_arguments){
 				var tr = table.insertRow(-1);
 				new UI_Text(tr.insertCell(-1),'by');
 				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","https://hakuhin.jp/");
-				new UI_Text(tr.insertCell(-1),'2010-2019');
+				new UI_Text(tr.insertCell(-1),'2010-2022');
 				new UI_AnchorText(parent,"https://github.com/hakuhin/PageExpand","https://github.com/hakuhin/PageExpand");
 
 				// 翻訳者
@@ -40518,6 +40546,7 @@ function PageExpand(page_expand_arguments){
 				_body = DocumentCreateElement("div");
 				ElementSetStyle(_body,"margin:0px 0px 5px 0px;");
 				parent.appendChild(_body);
+
 
 				_textarea = DocumentCreateElement("textarea");
 				ElementSetStyle(_textarea,"width:100%; height:300px; box-sizing:border-box; display:block; background-color:#fff; margin-bottom:5px;");
@@ -50372,7 +50401,7 @@ function PageExpand(page_expand_arguments){
 
 			case "large_icon":
 				var resize_rect = ElementGetBoundingClientRect(_table_body);
-				var width = resize_rect.right - resize_rect.left;
+				var width = resize_rect.right - resize_rect.left - 1.0;
 				width -= _table_body.offsetWidth - (_table_body.clientWidth + _table_body.clientLeft);
 				width -= 4;
 				var style_w = 2 + 2;
@@ -50380,7 +50409,7 @@ function PageExpand(page_expand_arguments){
 				var add = (width - (_block_size.width * num)) / num;
 
 				var style = _style_item_container.style;
-				style.width = Math.floor(_block_size.width + add - style_w) + "px";
+				style.width = (_block_size.width + add - style_w) + "px";
 
 			default:
 				var style = _style_item_container.style;
@@ -50851,6 +50880,10 @@ function PageExpand(page_expand_arguments){
 								task = null;	
 							});
 							task.setExecuteFunc(function(){
+								if(!(input_mouse.getButtonLeft())){
+									task.release();
+									return;
+								}
 								if(!_column_dragging_border){
 									var mouse_pos = input_mouse.getPositionClient();
 									var vec_x = mouse_pos.x - old_pos.x;
@@ -50868,11 +50901,6 @@ function PageExpand(page_expand_arguments){
 									if(width < 10) width = 10;
 									column.setWidth(width);
 									_this.resize();
-								}
-
-								if(!(input_mouse.getButtonLeft())){
-									task.release();
-									return;
 								}
 							});
 						};
@@ -58206,7 +58234,7 @@ function PageExpand(page_expand_arguments){
 			mtx.invert();
 			_image_center = mtx.transformPosition({x:pos_x + client_w * 0.5,y:pos_y + client_h * 0.5});
 
-			var r = 1;
+			var r = 2;
 			if(pos_x <= r){
 			}else if(pos_y <= r){
 			}else if(pos_x >= max_x - r){
@@ -58412,8 +58440,8 @@ function PageExpand(page_expand_arguments){
 			}
 			_image_zoom = scale_x * _pixel_ratio;
 
-			var background_w = (client_w * 2) + actual_w * scale_x;
-			var background_h = (client_h * 2) + actual_h * scale_y;
+			var background_w = (client_w * 2) + actual_w * _image_zoom;
+			var background_h = (client_h * 2) + actual_h * _image_zoom;
 
 			_image_origin = {x:image_size.width  * 0.5 + border_width , y:image_size.height * 0.5 + border_width};
 			_image_scale = {x:scale_x,y:scale_y};
@@ -62150,6 +62178,9 @@ function PageExpand(page_expand_arguments){
 			menu_scriptarea_hint: {
 				message: "配列に格納して匿名関数を記述します。信頼の無い人物が作成したスクリプトを、絶対に書き込まないで下さい。悪意のあるスクリプトが含まれる恐れがあります。"
 			},
+			menu_scriptarea_unsupport: {
+				message: "ユーザースクリプトは現在動作しません😥（デフォルトのスクリプトが実行されます）"
+			},
 			menu_text_regexp_hint: {
 				message: "正規表現文字列を記述。[オプション] g…繰り返し処理、i…小文字と大文字を区別しない"
 			},
@@ -63570,6 +63601,9 @@ function PageExpand(page_expand_arguments){
 			menu_scriptarea_hint: {
 				message: "To describe the anonymous function to array. Please note so that it does not contain malicious code."
 			},
+			menu_scriptarea_unsupport: {
+				message: "UserScript doesn't work now. 😥"
+			},
 			menu_text_regexp_hint: {
 				message: "regular expression string. [flags] g...repeat. i...without case-sensitive."
 			},
@@ -64988,6 +65022,9 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_scriptarea_hint: {
 				message: "用来描述到数组的匿名函数。请注意，它不包含恶意代码。"
+			},
+			menu_scriptarea_unsupport: {
+				message: "UserScript doesn't work now. 😥"
 			},
 			menu_text_regexp_hint: {
 				message: "正则表达式字符串。 [标记] g...重复。 i...不包含。 case-敏感。"
