@@ -1,7 +1,7 @@
 {
   "default_locale": "en",
   "name": "__MSG_extension_name__",
-  "version": "1.5.22",
+  "version": "1.5.23",
   "manifest_version": 2,
   "description": "__MSG_extension_description__",
   "author": "hakuhin",
@@ -24,7 +24,7 @@
     "matches": [ "http://*/*" , "https://*/*" , "ftp://*/*" ],
     "run_at": "document_start"
   }],
-  "page_action": {
+  "browser_action": {
     "default_icon" : {
       "16": "icon16.png",
       "18": "icon18.png",
