@@ -2,10 +2,10 @@
 
 | platform | get |
 |---|---|
-| for Chromium | [download page](https://chrome.google.com/webstore/detail/bjnobgdfhefpilajplncgjjeopakpepc) |
+| for Chrome | [download page](https://chrome.google.com/webstore/detail/bjnobgdfhefpilajplncgjjeopakpepc) |
+| for Edge | [download page](https://microsoftedge.microsoft.com/addons/detail/pageexpand/jflifleljogfgepliabboeifpbalbeno) |
 | for Firefox | [download page](https://addons.mozilla.org/addon/pageexpand/) |
 | for Opera | [download page](https://addons.opera.com/extensions/details/pageexpand/) |
-| for Safari | [install](http://hakuhin.jp/download/page_expand/release/safari/page_expand.safariextz) |
 | for Greasemonkey | [install](https://hakuhin.github.io/PageExpand/GreaseMonkey/PageExpand.user.js) |
 
 ## Screenshot
