@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.5.22
+// @version        1.5.24
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @description:ja 画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、2chなどの主要掲示板の拡張表示など...
@@ -11380,6 +11380,96 @@
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.43
+		// --------------------------------------------------------------------------------
+		if(proj.version < 43){
+			// バージョン値
+			proj.version = 43;
+
+			// --------------------------------------------------------------------------------
+			// URLマッピング設定
+			// --------------------------------------------------------------------------------
+			// 画像検索サイト
+			var preset = getPreset(proj.urlmap,"image_search");
+			var filter = preset.filter.regexp.filter;
+			filter.splice(9,4);
+			filter.splice(6,2);
+			filter.splice(4,1);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義
+			// --------------------------------------------------------------------------------
+			// イメージ検索用
+			var obj = getPreset(proj.replacement_to_link,"direct_link_image_search");
+			var filter = obj.filter;
+			filter.splice(5,1);
+			filter.splice(2,1);
+
+			// 直リンク（汎用）
+			var obj = getPreset(proj.replacement_to_link,"direct_link_generic");
+			var filter = obj.filter;
+
+			filter.splice(2,2);
+			filter.splice(2,0,{
+				name:{
+					standard:"pbs.twimg.com (query)",
+					locales:{
+						ja:"pbs.twimg.com (query)",
+						en:"pbs.twimg.com (query)"
+					}
+				},
+				filter:{
+					type:"regexp",
+					asterisk:{
+						filter:[]
+					},
+					regexp:{
+						filter:[
+							{
+								pattern:"^(http|https)://pbs[.]twimg[.]com[/][^?]+[?].*format=.*$",
+								flags:{i:true,g:false}
+							}
+						]
+					}
+				},
+				enable_reflect_to_anchor:false,
+				enable_cache:true,
+				script:PageExpandProjectScriptObject_Create("ReplacementToLink_DirectLinkGeneric_Twimg_Query")
+			});
+			filter.splice(3,0,{
+				name:{
+					standard:"pbs.twimg.com (colon)",
+					locales:{
+						ja:"pbs.twimg.com (colon)",
+						en:"pbs.twimg.com (colon)"
+					}
+				},
+				filter:{
+					type:"regexp",
+					asterisk:{
+						filter:[]
+					},
+					regexp:{
+						filter:[
+							{
+								pattern:"^(http|https)://pbs[.]twimg[.]com[/][^.]+[.](jpg|png):.*$",
+								flags:{i:true,g:false}
+							}
+						]
+					}
+				},
+				enable_reflect_to_anchor:false,
+				enable_cache:true,
+				script:PageExpandProjectScriptObject_Create("ReplacementToLink_DirectLinkGeneric_Twimg_Coron")
+			});
+			filter.splice(4,4);
+			filter.splice(6,7);
+			filter.splice(11,1);
+
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
@@ -11577,58 +11667,6 @@
 			}catch(e){}
 		}
 
-		if(element.tagName == "LI"){
-
-			// AOL Image Search
-			try{
-				var org_src = element.dataset["imgdetailContent"];
-				if(org_src){
-					response({url:org_src});
-					return true;			
-				}
-			}catch(e){}
-
-			// 百度画像検索
-			try{
-				var a = ElementGetElementsByTagName(element,"a")[0];
-				if(a){
-					if(a.href.match(new RegExp("^[^:]+://image\\.baidu\\.com/search/detail[?]"))){
-						var image_url = element.dataset.objurl;
-						if(image_url){
-							response({url:image_url});
-							return true;
-						}
-					}
-				}
-			}catch(e){}
-		}
-
-		if(element.tagName == "A"){
-
-			// NAVER 画像検索
-			try{
-				var m = ElementGetClassName(element).match(new RegExp("thumb","i"));
-				if(m){
-					var node = ElementGetElementsByClassName(element,"_meta")[0];
-					if(node){
-						obj = JsonParse(ElementGetTextContent(node));
-						var image_url = obj["originalUrl"];
-						if(image_url){
-							response({url:decodeURIComponent(image_url)});
-							return true;
-						}
-					}
-				}
-			}catch(e){}
-
-			// BIGLOBE 画像検索
-			var org_imgsrc = element.getAttribute("org_imgsrc");
-			if(org_imgsrc){
-				response({url:org_imgsrc});
-				return true;
-			}
-		}
-
 		return false;
 	},
 	function(info,response){
@@ -11647,54 +11685,23 @@
 		var element = info.element;
 
 		// 画像検索上のサムネイル
-		var resolved_url = element.getAttribute("data-resolved-url-large");
-		if(resolved_url){
-			response({url:resolved_url});
-			return true;
-		}
-
-		return false;
-	},
-	function(info,response){
-		var element = info.element;
-
-		// ２カラムタイムライン上の画像サムネイル（twimg.com）
-		try{
-			var m = ElementGetClassName(element).match(new RegExp("(^| |\t|\n|-)(photoContainer)( |\t|\n|$)","i"));
+		if(element.tagName == "IMG"){
+			var m = element.src.match(/(http|https)(:[/][/]pbs[.]twimg[.]com[/](media|card_img)[/][^?]+)[?].*format=/);
 			if(m){
-				var image_url = element.getAttribute("data-image-url");
-				if(image_url){
-					var m = image_url.match("(http|https)://[^:]+");
-					if(m) image_url = m[0] + ":orig";
-					response({url:image_url});
-					return true;
-				}
-			}
-		}catch(e){
-		}		
-
-		return false;
-	},
-	function(info,response){
-		var element = info.element;
-
-		// ３カラムタイムライン上の画像サムネイル（twimg.com）
-		var result = (function(){
-			if(element.tagName != "A") return false;
-			if(!element.href.match(/(http|https):[/][/]twitter[.]com[/][^/]+[/]status[/][0-9]+[/]photo[/][0-9]+/)) return false;
-			return true;
-		})();
-
-		if(result){
-			var nodes = ElementGetElementsByTagName(element,"img");
-			var i;
-			var num = nodes.length;
-			for(i=0;i<num;i++){
-				var node = nodes[i];
-				var m = node.src.match(/(http|https)(:[/][/]pbs[.]twimg[.]com[/]media[/][^?]+)[?].*format=/);
-				if(m){
-					var q = StringGetQuery(node.src);
-					response({url:m[1]+m[2]+"." + q["format"] + ":orig"});
+				if((function (){
+					var allow_list = {"card.layoutLarge.media":1,"tweetPhoto":1};
+					var node = element;
+					while(node){
+						if(node.nodeType == 1){
+							if(allow_list[node.getAttribute("data-testid")]){
+								return true;
+							}
+						}
+						node = node.parentNode;
+					}
+					return false;
+				})()){
+					response({url:element.src});
 					return true;
 				}
 			}
@@ -13008,359 +13015,45 @@
 			]);
 
 			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「直リンク（汎用）」「Twitpic」
+			// ハイパーリンク置換定義「直リンク（汎用）」「pbs.twimg.com (query)」
 			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkGeneric_Twitpic" , [
-	
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-
-		// ローダーオブジェクトを作成
-		var loader = new Loader();
-
-		// 成功
-		loader.onload = function(str){
-			if(str.match(new RegExp("<img[^>]+?src=\"((http|https)://[^/]+/photos/(large|full)/[^\"]+)\"","i"))){
-				response({result:true,url:RegExp.$1});
-				return;
-			}
-			response({result:false});
-		};
-
-		// 失敗
-		loader.onerror = function(){
-			response({result:false});
-		};
-
-		// テキストの読み込み
-		loader.setMethod("GET");
-		loader.setURL(anchor_element.href);
-		loader.loadText();
-
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「直リンク（汎用）」「Twitter Photo」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkGeneric_TwitterPhoto" , [
+			attachItem( "ReplacementToLink_DirectLinkGeneric_Twimg_Query" , [
 	
 	function (info,response){
 		var anchor_element = info.anchor_element;
 
-		// # があれば終了
-		if(anchor_element.href.indexOf("#") >= 0){
-			response({result:false});
+		var small_url = anchor_element.href;
+		var m = small_url.match(/(http|https)(:[/][/]pbs[.]twimg[.]com[/])([^/]+)([/][^?]+)[?].*format=/);
+		if(m){
+			var q = StringGetQuery(small_url);
+			var large_url = m[1] + m[2] + m[3] + m[4];
+			if(m[3] == "media"){
+				large_url += "." + q["format"] + ":orig";
+			}else{
+				large_url += "?format=" + q["format"] + "&name=orig";
+			}
+			response({result:true,url:large_url,content_type:["image"]});
 		}
 
-		return false;
-	},
+		return true;
+	}
+
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク置換定義「直リンク（汎用）」「pbs.twimg.com (colon)」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToLink_DirectLinkGeneric_Twimg_Coron" , [
+	
 	function (info,response){
 		var anchor_element = info.anchor_element;
 
-		// ローダーオブジェクトを作成
-		var loader = new Loader();
-
-		// 成功
-		loader.onload = function(str){
-			var image_url;
-
-			// 高解像度
-			if(!image_url){
-				var m = str.match(new RegExp("<meta[^>]+?(property|name)[ \n\r\t]*=[ \n\r\t]*\"og:image\"[^>]*>","i"));
-				if(m){
-					m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
-					if(m){
-						m = m[1].match(new RegExp("https://pbs\\.twimg\\.com/media/.*","i"));
-						if(m){
-							image_url = m[0];
-						}
-					}
-				}
-			}
-
-			// 低解像度
-			if(!image_url){
-				var m = str.match(new RegExp('<img[^>]+src[ \n\r\t]*=[ \n\r\t]*"(https://pbs\\.twimg\\.com/media/[^"]+)"',"i"));
-				if(m) image_url = m[1];
-			}
-
-			if(image_url){
-				response({result:true,url:image_url,content_type:["image"]});
-				return;
-			}
-			response({result:false});
-		};
-
-		// 失敗
-		loader.onerror = function(){
-			response({result:false});
-		};
-
-		// テキストの読み込み
-		loader.setMethod("GET");
-		loader.setURL(anchor_element.href);
-		loader.loadText();
-
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「直リンク（汎用）」「Facebook Photo」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkGeneric_FacebookPhoto" , [
-	
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-
-		// ローダーオブジェクトを作成
-		var loader = new Loader();
-
-		// 成功
-		loader.onload = function(str){
-			var image_url;
-
-			// 高解像度
-			if(!image_url){
-				var m = str.match(new RegExp("<a[^>]+?class=\"fbPhotosPhotoActionsItem\"[^>]+?href=\"([^\"]+?[?][^\"]*dl=1)\"[^>]+?rel=\"ignore\"","i"));
-				if(m) image_url = m[1].replace(/&amp;/g, "&");
-			}
-
-			// 中解像度
-			if(!image_url){
-				var m = str.match(new RegExp("<img.+?id=\"fbPhotoImage\".+?src=\"([^\"]+?)\"","i"));
-				if(m) image_url = m[1].replace(/&amp;/g, "&");
-			}
-
-			if(image_url){
-				response({result:true,url:image_url});
-				return;
-			}
-			response({result:false});
-		};
-
-		// 失敗
-		loader.onerror = function(){
-			response({result:false});
-		};
-
-		// テキストの読み込み
-		loader.setMethod("GET");
-		loader.setURL(anchor_element.href);
-		loader.loadText();
-
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「直リンク（汎用）」「Google+ Photo」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkGeneric_GooglePlusPhoto" , [
-	
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-
-		// ローダーオブジェクトを作成
-		var loader = new Loader();
-
-		// 成功
-		loader.onload = function(str){
-			var image_url;
-
-			if(!image_url){
-				var m = str.match(new RegExp("<meta[^>]+?(property|name)[ \n\r\t]*=[ \n\r\t]*\"og:image\"[^>]*>","i"));
-				if(m){
-					m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
-					if(m) image_url = m[1];
-				}
-			}
-
-			if(!image_url){
-				var m = str.match(new RegExp("<meta[^>]+?(property|name)[ \n\r\t]*=[ \n\r\t]*\"twitter:image:src\"[^>]*>","i"));
-				if(m){
-					m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
-					if(m) image_url = m[1];
-				}
-			}
-
-			if(image_url){
-				var m = image_url.match(new RegExp("(.*)/(s[0-9]+)(|-[^/]+)/(.*?)$","i"))
-				if(m){
-					image_url = m[1] + "/s9999/" + m[4];
-				}
-
-				var m = image_url.match(new RegExp("(.*)/(w[0-9]+[-]h[0-9]+)(|-[^/]+)/(.*?)$","i"))
-				if(m){
-					image_url = m[1] + "/s9999/" + m[4];
-				}
-
-				response({result:true,url:image_url,content_type:["image"]});
-				return;
-			}
-			response({result:false});
-		};
-
-		// 失敗
-		loader.onerror = function(){
-			response({result:false});
-		};
-
-		// テキストの読み込み
-		loader.setMethod("GET");
-		loader.setURL(anchor_element.href);
-		loader.loadText();
-
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「直リンク（汎用）」「Picasa Photo」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkGeneric_PicasaPhoto" , [
-	
-	function(info,response){
-		var anchor_element = info.anchor_element;
-		if(anchor_element.href.match("^(http|https)://picasaweb\\.google\\.com/lh/photo/[0-9a-zA-Z]+(|[?].*)$","i")){
-			// ローダーオブジェクトを作成
-			var loader = new Loader();
-
-			// 成功
-			loader.onload = function(str){
-				if(str.match(new RegExp("<link.*?rel.*?=.*?\'image_src\'.*?href.*?=.*?\"(.*?)\"","i"))){
-					var image_url = RegExp.$1;
-					if(image_url.match(new RegExp("(.*)/(s[0-9]{1,3})(|-c)/(.*?)$","i"))){
-						image_url = RegExp.$1 + "/s9999/" + RegExp.$4;
-					}
-
-					response({result:true,url:image_url,content_type:["image"]});
-					return;
-				}
-				response({result:false});
-			};
-
-			// 失敗
-			loader.onerror = function(){
-				response({result:false});
-			};
-
-			// テキストの読み込み
-			loader.setMethod("GET");
-			loader.setURL(anchor_element.href);
-			loader.loadText();
-
-			return true;
+		var small_url = anchor_element.href;
+		var m = small_url.match(/(http|https)(:[/][/]pbs[.]twimg[.]com[/][^.]+)[.](jpg|png)[:]/);
+		if(m){
+			var large_url = m[1] + m[2] + "." + m[3] + ":orig";
+			response({result:true,url:large_url,content_type:["image"]});
 		}
-		
-		return false;
-	},
-	function (info,response){
-		var anchor_element = info.anchor_element;
-		if(anchor_element.href.match("^(http|https)://picasaweb\\.google\\.com/[0-9]+/[0-9a-zA-Z]+(|[?].*)#([0-9]+)$","i")){
-			var photo_id = RegExp.$3;
-
-			// ローダーオブジェクトを作成
-			var loader = new Loader();
-
-			// 成功
-			loader.onload = function(str){
-				var pos = str.indexOf(photo_id);
-				if(pos >= 0){
-					if(str.substring(pos).match(new RegExp("\"thumbnail\":[[][{]\"url\":\"(.*?)\"","i"))){
-						var image_url = RegExp.$1;
-						if(image_url.match(new RegExp("(.*)/(s[0-9]{1,3})(|-c)/(.*?)$","i"))){
-							image_url = RegExp.$1 + "/s9999/" + RegExp.$4;
-						}
-
-						response({result:true,url:image_url,content_type:["image"]});
-						return;
-					}
-				}
-				response({result:false});
-			};
-
-			// 失敗
-			loader.onerror = function(){
-				response({result:false});
-			};
-
-			// テキストの読み込み
-			loader.setMethod("GET");
-			loader.setURL(anchor_element.href);
-			loader.loadText();
-
-			return true;
-		}
-		
-		return false;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「直リンク（汎用）」「Tumblr」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkGeneric_Tumblr" , [
-	
-	function(info,response){
-		var anchor_element = info.anchor_element;
-
-		// ローダーオブジェクトを作成
-		var loader = new Loader();
-
-		// 成功
-		loader.onload = function(str){
-			// photo
-			if(str.match(new RegExp("<meta[ \n\r\t]+?property[ \n\r\t]*?=[ \n\r\t]*?\"og:image\"[ \n\r\t]+?content[ \n\r\t]*?=[ \n\r\t]*?\"([^\"]+?)\"","i"))){
-				var m = RegExp.$1.match(new RegExp("^.*\/(tumblr_.*)_[0-9]+\\..*?$","i"));
-				if(m){
-					var file_name = RegExp.$1;
-					var image_url;
-					var size = 0;
-					str.replace(new RegExp("\"(http:\/\/[^\"]*?\/" + file_name + "_)([0-9]+)(\\..*?)\"","gi"),function(str, p1, p2) {
-						var s = parseInt(RegExp.$2);
-						if(s > size){
-							size = s;
-							image_url = RegExp.$1 + RegExp.$2 + RegExp.$3;
-						}
-					});
-
-					response({result:true,url:image_url,content_type:["image"]});
-					return;
-				}
-
-			}
-
-			// player
-			if(str.match(new RegExp("<meta[ \n\r\t]+?name[ \n\r\t]*?=[ \n\r\t]*?\"twitter:player\"[ \n\r\t]+?content[ \n\r\t]*?=[ \n\r\t]*?\"([^\"]+?)\"","i"))){
-				var video_url = RegExp.$1.replace(/&amp;/g, "&");
-				video_url = video_url.replace(/&amp;/g, "&");
-				response({result:true,url:video_url});
-				return;
-			}
-
-			response({result:false});
-		};
-
-		// 失敗
-		loader.onerror = function(){
-			response({result:false});
-		};
-
-		// テキストの読み込み
-		loader.setMethod("GET");
-		loader.setURL(anchor_element.href);
-		loader.loadText();
 
 		return true;
 	}
@@ -13492,317 +13185,6 @@
 		loader.loadText();
 
 		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「直リンク（汎用）」「yfrog.com」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkGeneric_Yfrog" , [
-	
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-
-		// ローダーオブジェクトを作成
-		var loader = new Loader();
-
-		// 成功
-		loader.onload = function(str){
-			var image_url;
-
-			// 高解像度
-			if(!image_url){
-				var m = str.match(new RegExp('<img[^>]+id="main_image"[^>]*>',"i"));
-				if(m){
-					m = m[0].match(new RegExp("src[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
-					if(m) image_url = m[1];
-				}
-			}
-
-			if(image_url){
-				response({result:true,url:image_url,content_type:["image"]});
-				return;
-			}
-			response({result:false});
-		};
-
-		// 失敗
-		loader.onerror = function(){
-			response({result:false});
-		};
-
-		var url = anchor_element.href;
-		var m = url.match(new RegExp("yfrog\\.com/(.*)([?]|#|$)","i"));
-		if(m){
-			url = "https://twitter.yfrog.com/" + m[1] + "?sa=0";
-		}
-
-		// テキストの読み込み
-		loader.setMethod("GET");
-		loader.setURL(url);
-		loader.loadText();
-
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「直リンク（汎用）」「Giphy」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkGeneric_Giphy" , [
-	
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-
-		// ローダーオブジェクトを作成
-		var loader = new Loader();
-
-		// 成功
-		loader.onload = function(str){
-			var image_url;
-
-			var m = str.match(new RegExp("<meta[^>]+?(itemprop)[ \n\r\t]*=[ \n\r\t]*\"image\"[^>]*>","i"));
-			if(m){
-				m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
-				if(m) image_url = m[1];
-			}
-
-			if(image_url){
-				response({result:true,url:image_url,content_type:["image"]});
-				return;
-			}
-			response({result:false});
-		};
-
-		// 失敗
-		loader.onerror = function(){
-			response({result:false});
-		};
-
-		// テキストの読み込み
-		loader.setMethod("GET");
-		loader.setURL(anchor_element.href);
-		loader.loadText();
-
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「直リンク（汎用）」「Gyazo」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkGeneric_Gyazo" , [
-	
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-
-		// ローダーオブジェクトを作成
-		var loader = new Loader();
-
-		// 成功
-		loader.onload = function(str){
-			var image_url;
-
-			if(!image_url){
-				var m = str.match(new RegExp("<meta[^>]+?name[ \n\r\t]*=[ \n\r\t]*\"twitter:image\"[^>]*>","i"));
-				if(m){
-					m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
-					if(m) image_url = m[1];
-				}
-			}
-
-			if(!image_url){
-				var m = str.match(new RegExp('<img[^>]+class[ \n\r\t]*=[ \n\r\t]*"image"[^>]+>',"i"));
-				if(m){
-					m = m[0].match(new RegExp('src[ \n\r\t]*=[ \n\r\t]*"([^"]+?)"',"i"));
-					if(m){
-						m = m[1].match(new RegExp('(http|https)://i\\.gyazo\\.com/[0-9a-zA-Z]+\\.(bmp|jpg|jpeg|png)',"i"));
-						if(m) image_url = m[0];
-					}
-				}
-			}
-
-			if(image_url){
-				response({result:true,url:image_url,content_type:["image"]});
-				return;
-			}
-			response({result:false});
-		};
-
-		// 失敗
-		loader.onerror = function(){
-			response({result:false});
-		};
-
-		// テキストの読み込み
-		loader.setMethod("GET");
-		loader.setURL(anchor_element.href);
-		loader.loadText();
-
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「直リンク（汎用）」「Photozou Photo」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkGeneric_PhotozouPhoto" , [
-	
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-
-		// ローダーオブジェクトを作成
-		var loader = new Loader();
-
-		// 成功
-		loader.onload = function(str){
-			if(str.match(new RegExp("<meta.*?property.*?=.*?\"og:image\".*?content.*?=.*?\"(.*?)\"","i"))){
-				var image_url = RegExp.$1;
-				var m = image_url.match(new RegExp("_[0-9]+\\.v","i"));
-				if(m){
-					image_url = RegExp.leftContext + "_org.v" + RegExp.rightContext;
-				}
-
-				response({result:true,url:image_url});
-				return;
-			}
-			response({result:false});
-		};
-
-		// 失敗
-		loader.onerror = function(){
-			response({result:false});
-		};
-
-		// テキストの読み込み
-		loader.setMethod("GET");
-		loader.setURL(anchor_element.href);
-		loader.loadText();
-
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「直リンク（汎用）」「ついっぷる」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkGeneric_Twipple" , [
-	
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-
-		// ローダーオブジェクトを作成
-		var loader = new Loader();
-
-		// 成功
-		loader.onload = function(str){
-			var image_url;
-
-			var m = str.match(new RegExp("<meta[^>]+?(property|name)[ \n\r\t]*=[ \n\r\t]*\"og:image\"[^>]*>","i"));
-			if(m){
-				m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
-				if(m) image_url = m[1];
-			}
-
-			if(image_url){
-				var m = image_url.match(new RegExp("(thumb|large)","i"));
-				if(m){
-					image_url = RegExp.leftContext + "orig" + RegExp.rightContext;
-				}
-
-				response({result:true,url:image_url,content_type:["image"]});
-				return;
-			}
-			response({result:false});
-		};
-
-		// 失敗
-		loader.onerror = function(){
-			response({result:false});
-		};
-
-		// テキストの読み込み
-		loader.setMethod("GET");
-		loader.setURL(anchor_element.href);
-		loader.loadText();
-
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「直リンク（汎用）」「ついっぷる (直リンク)」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkGeneric_TwippleDirectLink" , [
-	
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-		var m = anchor_element.href.match(new RegExp("^(http|https)(://p.twpl.jp/show/)(orig|large|thumb)(/[0-9a-zA-Z]{4,}$)","i"));
-		if(m){
-			response({result:true,url:m[1]+m[2]+"orig"+m[4],content_type:["image"]});
-		}else{
-			response({result:false});
-		}
-
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「直リンク（汎用）」「blog.fc2.com」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkGeneric_BlogFc2Com" , [
-	
-	function(info,response){
-		var anchor_element = info.anchor_element;
-		if(anchor_element.href.match("^(http|https)://[a-z0-9]+?\\.blog\\.fc2\\.com/img/.+?./$","i")){
-			// ローダーオブジェクトを作成
-			var loader = new Loader();
-
-			// 成功
-			loader.onload = function(str){
-				var image_url;
-
-				var m = str.match(new RegExp('<a[^>]+?class[ \n\r\t]*=[ \n\r\t]*"[^"]*thickbox[^"]*"[^>]*>',"i"));
-				if(m){
-					m = m[0].match(new RegExp("href[ \n\r\t]*=[ \n\r\t]*\"(http://blog[-]imgs[-][0-9]+?\\.fc2\\.com/./././[a-z0-9_]+?/.+?)\"","i"));
-					if(m) image_url = m[1];
-				}
-
-				if(image_url){
-					response({result:true,url:image_url,content_type:["image"]});
-					return;
-				}
-				response({result:false});
-			};
-
-			// 失敗
-			loader.onerror = function(){
-				response({result:false});
-			};
-
-			// テキストの読み込み
-			loader.setMethod("GET");
-			loader.setURL(anchor_element.href);
-			loader.loadText();
-
-			return true;
-		}
-		
-		return false;
 	}
 
 			]);
@@ -14228,65 +13610,6 @@
 			]);
 
 			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「直リンク（汎用）」「Miiverse」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkGeneric_Miiverse" , [
-	
-	function(info,response){
-		var anchor_element = info.anchor_element;
-
-		// ローダーオブジェクトを作成
-		var loader = new Loader();
-
-		// 成功
-		loader.onload = function(str){
-			var image_url;
-
-			if(!image_url){
-				var m = str.match(new RegExp('<img[^>]+class[ \n\r\t]*=[ \n\r\t]*"[^"]*post-memo[^"]*"[^>]*>',"i"));
-				if(m){
-					m = m[0].match(new RegExp('<img[^>]+src[ \n\r\t]*=[ \n\r\t]*"([^"]+?)"',"i"));
-					if(m) image_url = m[1];
-				}
-			}
-			if(!image_url){
-				var m = str.match(new RegExp('<div[^>]+class[ \n\r\t]*=[ \n\r\t]*"[^"]*screenshot-container[^"]*"><img[^>]+>',"i"));
-				if(m){
-					m = m[0].match(new RegExp('<img[^>]+src[ \n\r\t]*=[ \n\r\t]*"([^"]+?)"',"i"));
-					if(m) image_url = m[1];
-				}
-			}
-			if(!image_url){
-				var m = str.match(new RegExp("<meta[^>]+?(property|name)[ \n\r\t]*=[ \n\r\t]*\"og:image\"[^>]*>","i"));
-				if(m){
-					m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
-					if(m) image_url = m[1];
-				}
-			}
-
-			if(image_url){
-				response({result:true,url:image_url,content_type:["image"]});
-				return;
-			}
-			response({result:false});
-		};
-
-		// 失敗
-		loader.onerror = function(){
-			response({result:false});
-		};
-
-		// テキストの読み込み
-		loader.setMethod("GET");
-		loader.setURL(anchor_element.href);
-		loader.loadText();
-
-		return false;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
 			// ハイパーリンク置換定義「イメージ検索用」「Google 画像検索」
 			// --------------------------------------------------------------------------------
 			attachItem( "ReplacementToLink_DirectLinkImageSearch_Google" , [
@@ -14333,36 +13656,6 @@
 			}
 		}
 
-		return false;
-	},
-	function(info,response){
-		response({result:false});
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「イメージ検索用」「Yahoo! JAPAN 画像検索」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkImageSearch_YahooJapan" , [
-
-	function (info,response){
-		var anchor_element = info.anchor_element;
-
-		var url = decodeURIComponent(anchor_element.href);
-		var m = url.match(new RegExp("^.*RU=([0-9a-zA-Z._]+)"));
-		if(m){
-			var base64 = m[1];
-			base64 = base64.replace(/[.]/g,"+");
-			base64 = base64.replace(/[_]/g,"/");
-			base64 = base64.replace(/[-]/g,"=");
-			var ary = Base64_To_ArrayBuffer(base64);
-			if(ary){
-				response({result:true,url:String_From_ArrayBuffer_As_UTF8(ary),content_type:["image"]});
-				return true;
-			}
-		}
 		return false;
 	},
 	function(info,response){
@@ -14465,50 +13758,6 @@
 	},
 	function(info,response){
 		response({result:false});
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// ハイパーリンク置換定義「イメージ検索用」「goo 画像検索」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToLink_DirectLinkImageSearch_Goo" , [
-	
-	function(info,response){
-		var anchor_element = info.anchor_element;
-
-		// ローダーオブジェクトを作成
-		var loader = new Loader();
-
-		// 成功
-		loader.onload = function(str){
-			var image_url;
-			var m = str.match('<p[^>]+class[ \n\r\t]*=[ \n\r\t]*"imgDetailTxtLimitLength"[^>]*>(.*)?</p>');
-			if(m){
-				m = m[1].match('<a[^>]+href[ \n\r\t]*=[ \n\r\t]*"([^"]+)');
-				if(m){
-					image_url = m[1];
-				}
-			}
-
-			if(image_url){
-				response({result:true,url:image_url});
-				return;
-			}
-			response({result:false});
-		};
-
-		// 失敗
-		loader.onerror = function(){
-			response({result:false});
-		};
-
-		// テキストの読み込み
-		loader.setMethod("GET");
-		loader.setURL(anchor_element.href);
-		loader.loadText();
-
 		return true;
 	}
 
@@ -16341,46 +15590,12 @@
 	
 	function(info,response){
 		var current_element = info.current_element;
-		var result = (function(){
-			var node = current_element.parentNode;
-			while(node){
-				if(node.nodeType != 1) break;
-				var m = ElementGetClassName(node).match(new RegExp("(^| )stream-media-grid-items( |$)","i"));
-				if(m){
-					return true;
-				}
-
-				// イメージ要素を含む
-				var nodes = ElementGetElementsByTagName(current_element,"img");
-				if(nodes.length){
-					return true;
-				}
-
-				// バックグラウンドイメージを含む
-				var nodes = ElementGetElementsByTagName(current_element,"*");
-				var i;
-				var num = nodes.length;
-				for(i=0;i<num;i++){
-					var style = ElementGetComputedStyle(nodes[i],null);
-					if(style){
-						if(style.backgroundImage != "none"){
-							return true;
-						}
-					}
-				}
-
-				node = node.parentNode;
-			}
-
-			return false;
-		})();
-
-		if(result){
-			return false;
+		if(!info.is_overridden_url){
+			response({result:false});
+			return true;
 		}
 
-		response({result:false});
-		return true;
+		return false;
 	},
 	function(info,response){
 		var current_element = info.current_element;
@@ -38187,7 +37402,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.22");
+				new UI_Text(parent,"PageExpand ver.1.5.24");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -44685,28 +43900,31 @@
 			// --------------------------------------------------------------------------------
 			(function(){
 				_item = DocumentCreateElement("a");
-				_item.href = "javascript:void(0);";
+				_item.href = "";
 				_style = _item.style;
 				ElementSetStyle(_item,"display:block; text-decoration: none; font-size:13px; color:#000; margin:0px 0px 2px; padding:5px 20px; border-radius:5px; line-height:1.0;");
 				ElementSetTextContent(_item,label);
 				parent.appendChild(_item);
 
-				_item.onclick = function(){
-					_this.onclick();
-				};
-				_item.onmouseover = function(){
-					mouse_over();
-				};
-				_item.onmousedown = function(){
-					mouse_down();
-				};
-				_item.onmouseup = function(){
-					mouse_over();
-				};
-				_item.onmouseout = function(){
-					normal();
-				};
-				normal();
+				if(_item.addEventListener){
+					_item.addEventListener("click",function(e){
+						_this.onclick();
+						e.preventDefault();
+					},false);
+					_item.addEventListener("mouseover",function(e){
+						mouse_over();
+					},false);
+					_item.addEventListener("mousedown",function(e){
+						mouse_down();
+					},false);
+					_item.addEventListener("mouseup",function(e){
+						mouse_over();
+					},false);
+					_item.addEventListener("mouseout",function(e){
+						normal();
+					},false);
+				}
+
 			})();
 		}
 
@@ -64591,17 +63809,16 @@
 		// 開放
 		// --------------------------------------------------------------------------------
 		_this.release = function(){
+			if(_released) return;
+			_released = true;
+
 			var queue = _this.queue;
 			while(queue != queue._next){
-				var next = queue._next;
-				if(next.onabort) next.onabort();
-				ElementRemove(next);
+				element_release(queue._next);
 			}
-			var queue = _this.queue_single;
-			while(queue != queue._next){
-				var next = queue._next;
-				if(next.onabort) next.onabort();
-				ElementRemove(next);
+			var queue_single = _this.queue_single;
+			while(queue_single != queue_single._next){
+				element_release(queue_single._next);
 			}
 		};
 
@@ -64625,16 +63842,22 @@
 			// 完了を通知
 			// --------------------------------------------------------------------------------
 			_element.complete = function(){
-				_thread_count -= 1;
+				element_loadend(_element);
 				dequeue();
+			};
+
+			// --------------------------------------------------------------------------------
+			// 識別番号を取得
+			// --------------------------------------------------------------------------------
+			_element.getId = function(){
+				return _element._unique;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 要素を破棄
 			// --------------------------------------------------------------------------------
 			_element.release = function(){
-				ElementRemove(_element);
-				_queue_count -= 1;
+				element_release(_element);
 				dequeue();
 			};
 
@@ -64642,7 +63865,7 @@
 			// 通常最前列に処理を追加
 			// --------------------------------------------------------------------------------
 			_element.attachFirst = function(){
-				ElementRemove(_element);
+				element_abort(_element);
 
 				var _prev = _this.queue;
 				var _next = _prev._next;
@@ -64658,7 +63881,7 @@
 			// 通常最後尾に追加
 			// --------------------------------------------------------------------------------
 			_element.attachLast = function(){
-				ElementRemove(_element);
+				element_abort(_element);
 
 				var _next = _this.queue;
 				var _prev = _next._prev;
@@ -64674,7 +63897,7 @@
 			// シングル最後尾に追加
 			// --------------------------------------------------------------------------------
 			_element.attachSingle = function(){
-				ElementRemove(_element);
+				element_abort(_element);
 
 				var _next = _this.queue_single;
 				var _prev = _next._prev;
@@ -64692,7 +63915,12 @@
 			(function(){
 				_element._prev = _element;
 				_element._next = _element;
+				_element._released = false;
+				_element._loading = false;
 
+				_elements[_unique] = _element;
+				_element._unique = _unique;
+				_unique += 1;
 				_queue_count += 1;
 			})();
 
@@ -64702,16 +63930,27 @@
 		// --------------------------------------------------------------------------------
 		// 要素のロード開始（内部用）
 		// --------------------------------------------------------------------------------
-		function ElementLoadStart(element){
-			ElementRemove(element);
+		function element_loadstart(element){
+			if(element._loading) return;
+			element._loading = true;
+			element_remove(element);
 			_thread_count += 1;
 			element.onstart();
 		}
 
 		// --------------------------------------------------------------------------------
+		// 要素のロード終了（内部用）
+		// --------------------------------------------------------------------------------
+		function element_loadend(element){
+			if(!(element._loading)) return;
+			element._loading = false;
+			_thread_count -= 1;
+		}
+
+		// --------------------------------------------------------------------------------
 		// 要素を外す（内部用）
 		// --------------------------------------------------------------------------------
-		function ElementRemove(element){
+		function element_remove(element){
 			var _prev = element._prev;
 			var _next = element._next;
 			_prev._next = _next;
@@ -64721,9 +63960,36 @@
 		}
 
 		// --------------------------------------------------------------------------------
+		// 要素を中止（内部用）
+		// --------------------------------------------------------------------------------
+		function element_abort(element){
+			element_remove(element);
+			if(!(element._loading)) return;
+			if(element.onabort){
+				element.onabort();
+			}
+			element_loadend(element);
+		}
+
+		// --------------------------------------------------------------------------------
+		// 要素を破棄（内部用）
+		// --------------------------------------------------------------------------------
+		function element_release(element){
+			if(element._released) return;
+			element._released = true;
+
+			element_abort(element);
+
+			delete _elements[element._unique];
+			_queue_count -= 1;
+		}
+
+		// --------------------------------------------------------------------------------
 		// デキュー（内部用）
 		// --------------------------------------------------------------------------------
 		function dequeue(){
+			if(_released) return;
+
 			// 通常キュー
 			while(_thread_count < _thread_max){
 				var element = _this.queue._next;
@@ -64732,7 +63998,7 @@
 				if(element == _this.queue){
 					break;
 				}
-				ElementLoadStart(element);
+				element_loadstart(element);
 			}
 
 			// シングルキュー
@@ -64740,10 +64006,17 @@
 				var element = _this.queue_single._next;
 
 				if(element != _this.queue_single){
-					ElementLoadStart(element);
+					element_loadstart(element);
 				}
 			}
 		}
+
+		// --------------------------------------------------------------------------------
+		// 要素を取得
+		// --------------------------------------------------------------------------------
+		_this.getElementById = function(id){
+			return _elements[id];
+		};
 
 		// --------------------------------------------------------------------------------
 		// キューの数を取得
@@ -64794,6 +64067,9 @@
 		var _thread_count;
 		var _thread_max;
 		var _error_count;
+		var _released;
+		var _unique;
+		var _elements;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
@@ -64803,6 +64079,9 @@
 			_thread_count = 0;
 			_this.setMaxThread(10);
 			_error_count = 0;
+			_released = false;
+			_unique = 1;
+			_elements = new Object();
 
 			var queue = new Object();
 			queue._prev = queue;
@@ -65407,60 +64686,60 @@
 		// リダイレクト先 URL をロード
 		// --------------------------------------------------------------------------------
 		_this.loadFinalURL = function(){
-			if(!(getEnable())){
-				loadError();
-				return;
-			}
 
-			// HTTP メソッド
-			_this.setMethod("GET");
-
-			// カレント URL
 			var current_url = _request.url;
-
-			// キャッシュがあれば返す
-			var url = redirect_url_dictionary.getRedirectURL(current_url);
-			if(url){
-				loadSuccess(url);
-				return;
-			}
-
-			function RetryCountInitialize(){
-				// 通常リトライ回数
-				_count = 1;
-				// シングルリトライ回数
-				_single_count = 0;
-			}
-
-			// リダイレクト回数
+			var latest_url = null;
+			var analyze_element = null;
 			var redirect_count = 16;
 
-			// タイムアウト
-			_request.timeout = 1000 * 10;
 
-			// 開始関数をセット
-			_queue_element.onstart = function(){
+			function release(){
+				if(analyze_element){
+					analyze_element.release();
+					analyze_element = null;
+				}
+			}
 
-				// 読み込みを開始する
-				var result = loadXMLHttpRequest(function(result,xhr){
+			function complete(){
+				if(latest_url){
+					loadSuccess(latest_url);
+					if(analyze_element){
+						analyze_element.success(latest_url);
+					}
+				}else{
+					loadError();
+					if(analyze_element){
+						analyze_element.failure();
+					}
+				}
+				release();
+			}
 
-					// ロード完了を通知
-					_queue_element.complete();
+			function check(){
+				redirect_count -= 1;
+				if(redirect_count < 0){
+					complete();
+					return false;
+				}
+				return true;
+			}
 
-					switch(_request.method){
-					case "HEAD":
-						// ロード成功
-						if(result){
-							// GET メソッドに変更
-							_this.setMethod("GET");
+			function loadHeader(){
+				if(!check()) return;
 
-							// キューに登録
-							RetryCountInitialize();
-							tryAttachElement(false);
+				_this.setMethod("HEAD");
+
+				// 開始関数をセット
+				_queue_element.onstart = function(){
+
+					// 読み込みを開始する
+					var result = loadXMLHttpRequest(function(result,xhr){
+
+						// ロード完了を通知
+						_queue_element.complete();
 
 						// 失敗
-						}else{
-							var redirect_url = null;
+						if(!result){
 							switch(xhr.status){
 							case 300:
 							case 301:
@@ -65468,125 +64747,132 @@
 							case 303:
 							case 307:
 								//	Location ヘッダを取得
-								redirect_url = xhr.getResponseHeader("Location");
-								break;
-							}
-
-							if(redirect_url){
-								// リダイレクト結果を辞書に登録
-								redirect_url_dictionary.addURL(_request.url,redirect_url);
-
-								// URL を更新
-								_request.url = redirect_url;
-
-								// リダイレクト回数オーバー
-								redirect_count -= 1;
-								if(redirect_count <= 0){
-									// 最後に取得したリダイレクト先を返す
-									loadSuccess(_request.url);
+								var url = xhr.getResponseHeader("Location");
+								if(url){
+									_request.url = latest_url = url;
+									loadHeader();
 									return;
 								}
-
-								// キューに登録
-								RetryCountInitialize();
-								tryAttachElement(false);
-
-							}else{
-								if(xhr.status == 401){
-									// 認証エラー
-									loadError();
-									return;
-								}else{
-									// キューに再登録
-									if(!tryAttachElement(false)){
-										// エラーで終了
-										loadError();
-										return;
-									}
-								}
 							}
+
+							complete();
+							return;
 						}
-						break;
 
-					case "GET":
-
-						// ロード成功
-						if(result){
-							// メタタグのリダイレクトを調べる
-							var redirect_url = null;
-							var m = xhr.responseText.match(new RegExp("<meta[^>]http-equiv[ \n\r\t]*=[ \n\r\t]*\"refresh\"[^>]*>","i"));
-							if(m){
-								m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"[0-9]+;URL=([^\"]+)\"","i"));
-								if(m){
-									redirect_url = m[1];
-								}
-							}
-
-							if(redirect_url){
-
-								// リダイレクト結果を辞書に登録
-								redirect_url_dictionary.addURL(_request.url,redirect_url);
-
-
-								// URL を更新
-								_request.url = redirect_url;
-
-								// リダイレクト回数オーバー
-								redirect_count -= 1;
-								if(redirect_count <= 0){
-									// 最後に取得したリダイレクト先を返す
-									loadSuccess(_request.url);
-									return;
-								}
-
-								// キューに登録
-								RetryCountInitialize();
-								tryAttachElement(false);
-
+						var redirected = Boolean(_request.url != xhr.responseURL);
+						if(redirected){
+							_request.url = latest_url = xhr.responseURL;
+							loadHeader();
+							return;
+						}else{
+							// テキスト系ならボディを解析する
+							var type = xhr.getResponseHeader("Content-Type");
+							if(type.match(/text[/]/)){
+								loadBody();
+								return;
 							}else{
-								var response_url = xhr.responseURL || _request.url;
-
-								// リダイレクト結果を辞書に登録
-								redirect_url_dictionary.addURL(_request.url,response_url);
-
-								// responseURL を返す
-								loadSuccess(response_url);
+								complete();
 								return;
 							}
+						}
+					});
+
+					if(!result){
+						// ロード完了を通知
+						_queue_element.complete();
+
+						complete();
+						return;
+					}
+				};
+
+				// キューに登録
+				_count = 1;
+				_single_count = 0;
+				tryAttachElement(false);
+			}
+
+			function loadBody(){
+				if(!check()) return;
+
+				_this.setMethod("GET");
+
+				// 開始関数をセット
+				_queue_element.onstart = function(){
+
+					// 読み込みを開始する
+					var result = loadXMLHttpRequest(function(result,xhr){
+
+						// ロード完了を通知
+						_queue_element.complete();
 
 						// 失敗
-						}else{
-							if(xhr.status == 401){
-								// 認証エラー
-								loadError();
-								return;
-							}else{
-								// キューに再登録
-								if(!tryAttachElement(false)){
-									// エラーで終了
-									loadError();
-									return;
-								}
+						if(!result){
+							complete();
+							return;
+						}
+
+						// メタタグのリダイレクトを調べる
+						var redirect_url = null;
+						var m = xhr.responseText.match(new RegExp("<meta[^>]http-equiv[ \n\r\t]*=[ \n\r\t]*\"refresh\"[^>]*>","i"));
+						if(m){
+							m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"[0-9]+;URL=([^\"]+)\"","i"));
+							if(m){
+								redirect_url = m[1];
 							}
 						}
-						break;
+
+						if(redirect_url){
+							_request.url = latest_url = redirect_url;
+							loadHeader();
+							return;
+						}
+
+						complete();
+					});
+		
+					if(!result){
+						// ロード完了を通知
+						_queue_element.complete();
+
+						complete();
+						return;
+					}
+				};
+
+				// キューに登録
+				_count = 1;
+				_single_count = 0;
+				tryAttachElement(false);
+			}
+
+			function start(){
+				loadHeader();
+			}
+
+			if(!(getEnable())){
+				complete();
+				return;
+			}
+
+			// タイムアウト
+			_request.timeout = 1000 * 10;
+
+			// リダイレクト辞書からの取得
+			analyze_element = redirect_url_dictionary.analyze(current_url);
+			if(!analyze_element){
+				redirect_url_dictionary.getRedirectURL(current_url,function (result){
+					if(result.redirected){
+						latest_url = result.url;
+						complete();
+					}else{
+						start();
 					}
 				});
+				return;
+			}
 
-				// ロードエラー
-				if(!result){
-					// ロード完了を通知
-					_queue_element.complete();
-
-					// エラーで終了
-					loadError();
-					return;
-				}
-			};
-
-			// キューに登録
-			RetryCountInitialize();
-			tryAttachElement(false);
+			start();
 		};
 
 		// --------------------------------------------------------------------------------
@@ -66007,7 +65293,7 @@
 		// --------------------------------------------------------------------------------
 		function loadError(){
 			loader_queue.addCountError();
-			if(_this.onerror)	_this.onerror();
+			if(_this.onerror) _this.onerror();
 			_queue_element.release();
 		}
 
@@ -66015,7 +65301,7 @@
 		// ロード成功（内部用）
 		// --------------------------------------------------------------------------------
 		function loadSuccess(v){
-			if(_this.onload)	_this.onload(v);
+			if(_this.onload) _this.onload(v);
 			_queue_element.release();
 		}
 
@@ -67628,43 +66914,119 @@
 		};
 
 		// --------------------------------------------------------------------------------
-		// 要素を作成
+		// 調査開始
 		// --------------------------------------------------------------------------------
-		function createElement(current_url){
-			var _element = new Object();
+		_this.analyze = function (current_url){
+
+			if(_analyze_dictionary[current_url]) return null;
+			if(_cache_dictionary[current_url]) return null;
+
+			var _analyze_element = new Object();
 
 			// --------------------------------------------------------------------------------
-			// 双方向リストを外す
+			// 開放
 			// --------------------------------------------------------------------------------
-			_element.release = function(){
-				_element.remove();
-				delete _dictionary[current_url];
+			_analyze_element.release = function(){
+				if(_analyze_element.released) return;
+				_analyze_element.released = true;
+				_analyze_element.event_dispatcher.release();
+				delete _analyze_dictionary[current_url];
+			};
+
+			// --------------------------------------------------------------------------------
+			// 調査成功
+			// --------------------------------------------------------------------------------
+			_analyze_element.success = function(url){
+				var element = _cache_dictionary[current_url];
+				if(element){
+					element.remove();
+				}else{
+					element = createCache(current_url);
+				}
+
+				element.setURL(url);
+
+				// 古い要素を破棄
+				if(_count >= _cache_max){
+					element = _this._next;
+					element.release();
+				}
+
+				_analyze_element.event_dispatcher.dispatchEvent("success",url);
+				_analyze_element.release();
+			};
+
+			// --------------------------------------------------------------------------------
+			// 調査失敗
+			// --------------------------------------------------------------------------------
+			_analyze_element.failure = function(){
+				_analyze_element.event_dispatcher.dispatchEvent("failure",null);
+				_analyze_element.release();
+			};
+
+			// --------------------------------------------------------------------------------
+			// 初期化
+			// --------------------------------------------------------------------------------
+			(function(){
+				_analyze_element.released = false;
+				_analyze_element.event_dispatcher = new EventDispatcher();
+				_analyze_dictionary[current_url] = _analyze_element;
+			})();
+
+			return _analyze_element;
+		};
+
+		// --------------------------------------------------------------------------------
+		// キャッシュを作成
+		// --------------------------------------------------------------------------------
+		function createCache(current_url){
+			var _cache_element = new Object();
+
+			// --------------------------------------------------------------------------------
+			// 開放
+			// --------------------------------------------------------------------------------
+			_cache_element.release = function(){
+				_cache_element.remove();
+				delete _cache_dictionary[current_url];
 				_count -= 1;
+			};
+
+			// --------------------------------------------------------------------------------
+			// 最新化
+			// --------------------------------------------------------------------------------
+			_cache_element.latest = function(){
+				_cache_element.remove();
+				var _next = _this._prev;
+				var _prev = _next._prev;
+				_prev._next = _cache_element;
+				_next._prev = _cache_element;
+				_cache_element._prev = _prev;
+				_cache_element._next = _next;
 			};
 
 			// --------------------------------------------------------------------------------
 			// 双方向リストを外す
 			// --------------------------------------------------------------------------------
-			_element.remove = function(){
-				var _prev = _element._prev;
-				var _next = _element._next;
+			_cache_element.remove = function(){
+				var _prev = _cache_element._prev;
+				var _next = _cache_element._next;
 				_prev._next = _next;
 				_next._prev = _prev;
-				_element._prev = _element;
-				_element._next = _element;
+				_cache_element._prev = _cache_element;
+				_cache_element._next = _cache_element;
 			};
 
 			// --------------------------------------------------------------------------------
 			// リダイレクト先 URL を取得
 			// --------------------------------------------------------------------------------
-			_element.getURL = function(){
+			_cache_element.getURL = function(){
 				return _url;
 			};
 
 			// --------------------------------------------------------------------------------
 			// リダイレクト先 URL をセット
 			// --------------------------------------------------------------------------------
-			_element.setURL = function(url){
+			_cache_element.setURL = function(url){
 				_url = url;
 			};
 
@@ -67677,58 +67039,68 @@
 			// 初期化
 			// --------------------------------------------------------------------------------
 			(function(){
-				_element._prev = _element;
-				_element._next = _element;
-				_dictionary[current_url] = _element;
+				_cache_element._prev = _cache_element;
+				_cache_element._next = _cache_element;
+				_cache_dictionary[current_url] = _cache_element;
 				_count += 1;
 			})();
 
-			return _element;
+			return _cache_element;
 		}
-
-		// --------------------------------------------------------------------------------
-		// URL を登録
-		// --------------------------------------------------------------------------------
-		_this.addURL = function(current_url,url){
-			var element = null;
-			element = _dictionary[current_url];
-			if(element){
-				element.remove();
-			}else{
-				// 要素を新規作成
-				element = createElement(current_url);
-			}
-
-			// 最新へ登録
-			element.setURL(url);
-			var _next = _this._prev;
-			var _prev = _next._prev;
-			_prev._next = element;
-			_next._prev = element;
-			element._prev = _prev;
-			element._next = _next;
-
-			// 古い要素を破棄
-			if(_count >= _cache_max){
-				element = _this._next;
-				element.release();
-			}
-		};
 
 		// --------------------------------------------------------------------------------
 		// リダイレクト先 URL を繰り返し取得する
 		// --------------------------------------------------------------------------------
-		_this.getRedirectURL = function(current_url){
-			var i;
-			var num = _repeat_max;
-			for(i=0;i<num;i++){
-				if(!_dictionary[current_url])	break;
-				if(current_url == _dictionary[current_url].getURL())	break;
-				current_url = _dictionary[current_url].getURL();
+		_this.getRedirectURL = function(current_url,callback){
+
+			var event_handler_success = null;
+			var event_handler_failure = null;
+
+			function complete(){
+				if(event_handler_success){
+					event_handler_success.release();
+					event_handler_success = null;
+				}
+				if(event_handler_failure){
+					event_handler_failure.release();
+					event_handler_failure = null;
+				}
+
+				var url = current_url;
+				var i;
+				var num = _repeat_max;
+				for(i=0;i<num;i++){
+					var cache_element = _cache_dictionary[url];
+					if(!cache_element) break;
+
+					cache_element.latest();
+
+					var next_url = cache_element.getURL();
+					if(url === next_url) break;
+					url = next_url;
+				}
+
+				callback({
+					redirected:Boolean(current_url !== url),
+					url:url
+				});	
 			}
 
-			if(i)	return current_url;
-			return null;
+			var analyze_element = _analyze_dictionary[current_url];
+			if(analyze_element){
+				var event_dispatcher = analyze_element.event_dispatcher;
+				event_handler_success = event_dispatcher.createEventHandler("success");
+				event_handler_success.setFunction(function(event){
+					complete();
+				});
+				event_handler_failure = event_dispatcher.createEventHandler("failure");
+				event_handler_failure.setFunction(function(event){
+					complete();
+				});
+				return;
+			}
+
+			complete();
 		};
 
 		// --------------------------------------------------------------------------------
@@ -67748,7 +67120,8 @@
 		// --------------------------------------------------------------------------------
 		// プライベート変数
 		// --------------------------------------------------------------------------------
-		var _dictionary;
+		var _analyze_dictionary;
+		var _cache_dictionary;
 		var _count;
 		var _cache_max;
 		var _repeat_max;
@@ -67757,7 +67130,8 @@
 		// 初期化
 		// --------------------------------------------------------------------------------
 		(function(){
-			_dictionary = new Object();
+			_analyze_dictionary = new Object();
+			_cache_dictionary = new Object();
 			_this._prev = _this;
 			_this._next = _this;
 			_count = 0;
@@ -68939,6 +68313,7 @@
 				_next._prev = _prev;
 				_event_handler._prev = _event_handler;
 				_event_handler._next = _event_handler;
+				_event_handler._func = null;
 
 				var list = _dictionary[name];
 				if(list){
@@ -76857,6 +76232,15 @@
 		}
 
 		return base + src;
+	}
+
+	// --------------------------------------------------------------------------------
+	// URL アドレスからオリジンを取得
+	// --------------------------------------------------------------------------------
+	function StringUrl_Get_Origin(url){
+		var m = url.match(new RegExp("^(http|https|ftp):[/][/][^.]+[.][^/]+","i"));
+		if(!m) return "";
+		return m[0];
 	}
 
 	// --------------------------------------------------------------------------------
