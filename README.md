@@ -59,28 +59,28 @@
  - By setting the URL, Can blocking web access.
 
 ## BBS Board
- - support (2ch.net, open2ch.net, jbbs.livedoor.jp, 2chan.net, 4chan.org, reddit.com)
+ - support (5ch.net, open2ch.net, jbbs.livedoor.jp, 2chan.net, 4chan.org, reddit.com)
  - You can open the BBS Board from menu.
  - This works as the app. (tab and sidebar)
  - Is displayed the board list. (Category Panel)
  - Is displayed the thread list. (Catalog Panel)
 
 ## Extend display BBS
- - support (2ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, logsoku.com, mimizun.com, 2chan.net, 4chan.org, 8chan.co, reddit.com, dic.nicovideo.jp, open2ch.net)
+ - support (5ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, logsoku.com, mimizun.com, 2chan.net, 4chan.org, 8chan.co, reddit.com, dic.nicovideo.jp, open2ch.net)
  - Hovering the mouse cursor in URL of the "response number", Display popup.
  - Hovering the mouse cursor in URL of the "ID", Display popup. (Remove by click.)
  - Display the follower count. (Remove by click.)
 
 ## Change into Direct Link
  - Search sites (google, yahoo.co.jp)
- - BBS sites (2ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, logsoku.com)
+ - BBS sites (5ch.net, machi.to, bbspink.com, jbbs.livedoor.jp, logsoku.com)
  - Other sites (twitter.com, facebook.com)
 
 ## Redirect to Image Link
  - (In the initial setting, Particular site only.)
- - SNS sites (instagr.am, flickr.com, twitpic.com, pic.twitter.com, facebook.com, plus.google.com, picasaweb.google.com, tumblr.com, yfrog.com, campl.us, giphy.com, gyazo.com, photozou.jp, twipple.jp, blog.fc2.com, deviantART, seiga.nicovideo.jp, pixiv.net[change referer must], Miiverse)
- - search sites (google, *.yahoo.com, bing.com, aol.com, yandex.ru, baidu.com, naver.com)
+ - SNS sites (pbs.twimg.com, deviantART, seiga.nicovideo.jp, pixiv.net[change referer must])
+ - search sites (google, *.yahoo.com, bing.com, yandex.ru)
  - Other sites (Wikipedia)
 
 ## Specification
- - [http://hakuhin.jp/browser_extension/page_expand.html](http://hakuhin.jp/browser_extension/page_expand.html)
+ - [https://hakuhin.jp/browser_extension/page_expand.html](https://hakuhin.jp/browser_extension/page_expand.html)
