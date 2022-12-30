@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.5.24
+// @version        1.5.25
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @description:ja 画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、2chなどの主要掲示板の拡張表示など...
@@ -3339,48 +3339,6 @@
 		};
 
 		// --------------------------------------------------------------------------------
-		// nicovideo のビデオサムネイルを表示するか
-		// --------------------------------------------------------------------------------
-		_this.getVisibleThumbnailVideoNicovideo = function(){
-			return _proj_ins.expand_video.nicovideo.visible_thumbnail_video;
-		};
-
-		// --------------------------------------------------------------------------------
-		// nicovideo のマイリストサムネイルを表示するか
-		// --------------------------------------------------------------------------------
-		_this.getVisibleThumbnailMylistNicovideo = function(){
-			return _proj_ins.expand_video.nicovideo.visible_thumbnail_mylist;
-		};
-
-		// --------------------------------------------------------------------------------
-		// nicovideo のユーザーサムネイルを表示するか
-		// --------------------------------------------------------------------------------
-		_this.getVisibleThumbnailUserNicovideo = function(){
-			return _proj_ins.expand_video.nicovideo.visible_thumbnail_user;
-		};
-
-		// --------------------------------------------------------------------------------
-		// nicovideo のコミュニティサムネイルを表示するか
-		// --------------------------------------------------------------------------------
-		_this.getVisibleThumbnailCommunityNicovideo = function(){
-			return _proj_ins.expand_video.nicovideo.visible_thumbnail_community;
-		};
-
-		// --------------------------------------------------------------------------------
-		// nicovideo の生放送サムネイルを表示するか
-		// --------------------------------------------------------------------------------
-		_this.getVisibleThumbnailLiveNicovideo = function(){
-			return _proj_ins.expand_video.nicovideo.visible_thumbnail_live;
-		};
-
-		// --------------------------------------------------------------------------------
-		// nicovideo の静画サムネイルを表示するか
-		// --------------------------------------------------------------------------------
-		_this.getVisibleThumbnailSeigaNicovideo = function(){
-			return _proj_ins.expand_video.nicovideo.visible_thumbnail_seiga;
-		};
-
-		// --------------------------------------------------------------------------------
 		// dailymotion の録画ビデオを表示するか
 		// --------------------------------------------------------------------------------
 		_this.getVisibleVideoDailymotion = function(){
@@ -3392,20 +3350,6 @@
 		// --------------------------------------------------------------------------------
 		_this.getVisibleVideoVimeo = function(){
 			return _proj_ins.expand_video.vimeo.visible_video;
-		};
-
-		// --------------------------------------------------------------------------------
-		// fc2video の録画ビデオを表示するか
-		// --------------------------------------------------------------------------------
-		_this.getVisibleVideoFc2video = function(){
-			return _proj_ins.expand_video.fc2video.visible_video;
-		};
-
-		// --------------------------------------------------------------------------------
-		// LiveLeak の録画ビデオを表示するか
-		// --------------------------------------------------------------------------------
-		_this.getVisibleVideoLiveleak = function(){
-			return _proj_ins.expand_video.liveleak.visible_video;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -3499,66 +3443,6 @@
 		};
 
 		// --------------------------------------------------------------------------------
-		// nicovideo ビデオサムネイルのインライン表示のスタイルシート
-		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandVideoNicovideoInlineThumbnailVideo = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_video.inline.nicovideo.thumbnail_video;
-			}
-			return "";
-		};
-
-		// --------------------------------------------------------------------------------
-		// nicovideo マイリストサムネイルのインライン表示のスタイルシート
-		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandVideoNicovideoInlineThumbnailMylist = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_video.inline.nicovideo.thumbnail_mylist;
-			}
-			return "";
-		};
-
-		// --------------------------------------------------------------------------------
-		// nicovideo ユーザーサムネイルのインライン表示のスタイルシート
-		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandVideoNicovideoInlineThumbnailUser = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_video.inline.nicovideo.thumbnail_user;
-			}
-			return "";
-		};
-
-		// --------------------------------------------------------------------------------
-		// nicovideo コミュニティサムネイルのインライン表示のスタイルシート
-		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandVideoNicovideoInlineThumbnailCommunity = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_video.inline.nicovideo.thumbnail_community;
-			}
-			return "";
-		};
-
-		// --------------------------------------------------------------------------------
-		// nicovideo 生放送サムネイルのインライン表示のスタイルシート
-		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandVideoNicovideoInlineThumbnailLive = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_video.inline.nicovideo.thumbnail_live;
-			}
-			return "";
-		};
-
-		// --------------------------------------------------------------------------------
-		// nicovideo 静画サムネイルのインライン表示のスタイルシート
-		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandVideoNicovideoInlineThumbnailSeiga = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_video.inline.nicovideo.thumbnail_seiga;
-			}
-			return "";
-		};
-
-		// --------------------------------------------------------------------------------
 		// dailymotion インライン表示ビデオのスタイルシート
 		// --------------------------------------------------------------------------------
 		_this.getStyleSheetExpandVideoDailymotionInlineVideo  = function(){
@@ -3574,26 +3458,6 @@
 		_this.getStyleSheetExpandVideoVimeoInlineVideo = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.vimeo.video;
-			}
-			return "";
-		};
-
-		// --------------------------------------------------------------------------------
-		// fc2video インライン表示ビデオのスタイルシート
-		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandVideoFc2videoInlineVideo = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_video.inline.fc2video.video;
-			}
-			return "";
-		};
-
-		// --------------------------------------------------------------------------------
-		// LiveLeak インライン表示ビデオのスタイルシート
-		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandVideoLiveleakInlineVideo = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_video.inline.liveleak.video;
 			}
 			return "";
 		};
@@ -11470,6 +11334,53 @@
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.44
+		// --------------------------------------------------------------------------------
+		if(proj.version < 44){
+			// バージョン値
+			proj.version = 44;
+
+			// --------------------------------------------------------------------------------
+			// ビデオ展開定義
+			// --------------------------------------------------------------------------------
+			update(proj.expand_video,"*",function(obj){
+				delete obj.fc2video;
+				delete obj.liveleak;
+				var nicovideo = obj.nicovideo;
+				delete nicovideo.visible_thumbnail_video;
+				delete nicovideo.visible_thumbnail_mylist;
+				delete nicovideo.visible_thumbnail_user;
+				delete nicovideo.visible_thumbnail_community;
+				delete nicovideo.visible_thumbnail_live;
+				delete nicovideo.visible_thumbnail_seiga;
+			});
+
+			// --------------------------------------------------------------------------------
+			// インラインフレーム展開定義
+			// --------------------------------------------------------------------------------
+			removePreset("expand_iframe","expand_flash_inline");
+
+			// --------------------------------------------------------------------------------
+			// スタイルシート定義
+			// --------------------------------------------------------------------------------
+			update(proj.style_sheet,"*",function(obj){
+				var inline = obj.expand_video.inline;
+				delete inline.fc2video;
+				delete inline.liveleak;
+				var nicovideo = inline.nicovideo;
+				delete nicovideo.thumbnail_video;
+				delete nicovideo.thumbnail_mylist;
+				delete nicovideo.thumbnail_user;
+				delete nicovideo.thumbnail_community;
+				delete nicovideo.thumbnail_live;
+				delete nicovideo.thumbnail_seiga;
+			});
+
+		}
+		if(exit())	return proj;
+
+
 		return proj;
 	}
 
@@ -16664,167 +16575,6 @@
 		// 開放時に実行されるイベント
 		var event_handler = event_dispatcher.createEventHandler("release");
 		event_handler.setFunction(function (result){
-			if(analyze_div_prev){
-				analyze_div_prev.release();
-				analyze_div_prev = null;
-			}
-			if(analyze_div_next){
-				analyze_div_next.release();
-				analyze_div_next = null;
-			}
-			if(event_handler){
-				event_handler.release();
-				event_handler = null;
-			}
-		});
-
-		response();
-		return false;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// インラインフレーム展開定義「Flash のインライン表示」
-			// --------------------------------------------------------------------------------
-			attachItem( "ExpandIframe_InlineScriptAllow_ExpandFlashInline" , [
-	
-	function(info,response){
-		var anchor_element = info.anchor_element;
-		var parent = anchor_element.parentNode;
-		if(parent){
-			var width = ElementGetClientWidth(parent);
-
-			// 親の幅が小さすぎる場合インライン表示しない
-			if(width < 50){
-				response({result:false});
-				return true;
-			}
-		}
-
-		return false;
-	},
-	function(info,response){
-		var anchor_element = info.anchor_element;
-		var url = info.url;
-
-		var ext_list = [
-			"swf"
-		];
-
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// Flash の拡張子である場合、インライン表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
-				return true;
-			}
-		}
-
-		return false;
-	},
-	function(info,response){
-		// インライン表示しない
-		response({result:false});
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// インラインフレーム展開定義「Flash のインライン表示」
-			// --------------------------------------------------------------------------------
-			attachItem( "ExpandIframe_InlineScriptInsert_ExpandFlashInline" , [
-	
-	function(info,response){
-
-		var anchor_element = info.anchor_element;
-		var iframe = info.iframe_element;
-		var event_dispatcher = info.event_dispatcher;
-
-		// ピクセル値によるサイズ指定
-		var width  = 640;
-		var height = 480;
-
-		// スクロール補正
-		var revise_scroll = new DocumentReviseScroll();
-		revise_scroll.executeAttachElementBefore(iframe);
-
-		// div_dummy を作成
-		var div_dummy = DocumentCreateElement("div");
-		var analyze_div_dummy = new ElementAnalyzeManager(div_dummy,true);
-		ElementSetStyle(div_dummy,ElementGetStyle(iframe));
-		DomNode_InsertAfter(anchor_element,div_dummy);
-
-		// 改行を作成
-		var div_prev = DocumentCreateElement("div");
-		var analyze_div_prev = new ElementAnalyzeManager(div_prev,true);
-		ElementSetStyle(div_prev,"height:0px;");
-		DomNode_InsertAfter(anchor_element,div_prev);
-
-		// div を挿入
-		DomNode_InsertAfter(div_prev,div_dummy);
-
-		// 改行を作成
-		var div_next = DocumentCreateElement("div");
-		var analyze_div_next = new ElementAnalyzeManager(div_next,true);
-		ElementSetStyle(div_next,"height:0px");
-		DomNode_InsertAfter(div_dummy,div_next);
-
-		// スタイルのサイズを取得
-		div_dummy.style.width  = "0px";
-		div_dummy.style.height = "0px";
-		var bounding_size = ElementGetBoundingClientRect(div_dummy);
-		var style_w = bounding_size.right  - bounding_size.left;
-		var style_h = bounding_size.bottom - bounding_size.top;
-
-		// 親の幅を取得
-		var width_max = ElementGetClientWidth(div_dummy.parentNode);
-
-		// エレメントのサイズ
-		width  -= style_w;
-		height -= style_h;
-
-		// 最大幅補正
-		var w = width_max - style_w;
-		if(w < width){
-			height *= w / width;
-			width = w;
-		}
-
-		// サイズをセット
-		div_dummy.style.width  = width  + "px";
-		div_dummy.style.height = height + "px";
-		iframe.style.width  = width  + "px";
-		iframe.style.height = height + "px";
-
-		// スクロール補正
-		revise_scroll.executeAttachElementAfter(iframe);
-
-		// クリック時に実行されるイベント
-		function click_func(e){
-			// iframe を挿入
-			DomNode_InsertAfter(div_dummy,iframe);
-			// div_dummy を解放
-			if(analyze_div_dummy){
-				analyze_div_dummy.release();
-				analyze_div_dummy = null;
-			}
-		}
-		if(div_dummy.addEventListener){
-			div_dummy.addEventListener("click",click_func,true);
-		}else if(div_dummy.attachEvent){
-			div_dummy.attachEvent("onclick",click_func);
-		}
-
-		// 開放時に実行されるイベント
-		var event_handler = event_dispatcher.createEventHandler("release");
-		event_handler.setFunction(function (result){
-			if(analyze_div_dummy){
-				analyze_div_dummy.release();
-				analyze_div_dummy = null;
-			}
 			if(analyze_div_prev){
 				analyze_div_prev.release();
 				analyze_div_prev = null;
@@ -36561,72 +36311,6 @@
 					_setting_define.update();
 					projectModify();
 				};
-
-				// ビデオサムネイルを表示
-				var check_box_nicovideo_visible_thumbnail_video = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_video"));
-				check_box_nicovideo_visible_thumbnail_video.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.nicovideo.visible_thumbnail_video = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-
-				// マイリストサムネイルを表示
-				var check_box_nicovideo_visible_thumbnail_mylist = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_mylist"));
-				check_box_nicovideo_visible_thumbnail_mylist.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.nicovideo.visible_thumbnail_mylist = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-
-				// ユーザーサムネイルを表示
-				var check_box_nicovideo_visible_thumbnail_user = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_user"));
-				check_box_nicovideo_visible_thumbnail_user.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.nicovideo.visible_thumbnail_user = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-
-				// コミュニティサムネイルを表示
-				var check_box_nicovideo_visible_thumbnail_community = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_community"));
-				check_box_nicovideo_visible_thumbnail_community.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.nicovideo.visible_thumbnail_community = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-
-				// 生放送サムネイルを表示
-				var check_box_nicovideo_visible_thumbnail_live = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_live"));
-				check_box_nicovideo_visible_thumbnail_live.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.nicovideo.visible_thumbnail_live = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-
-				// 静画サムネイルを表示
-				var check_box_nicovideo_visible_thumbnail_seiga = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo_visible_thumbnail_seiga"));
-				check_box_nicovideo_visible_thumbnail_seiga.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.nicovideo.visible_thumbnail_seiga = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
 				new UI_Break(form_parent);
 
 				// タイトル
@@ -36675,52 +36359,6 @@
 				};
 				new UI_Break(form_parent);
 
-				// タイトル
-				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_fc2video"));
-
-				// グループ
-				var group = new UI_GroupContainer(form_parent);
-				var group_parent = group.getElement();
-
-				// video.fc2.com の設定
-				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_fc2video_check_box_container"));
-				var parent = container.getElement();
-
-				// ビデオを表示
-				var check_box_fc2video_visible_video = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_fc2video_visible_video"));
-				check_box_fc2video_visible_video.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.fc2video.visible_video = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-				new UI_Break(form_parent);
-
-				// タイトル
-				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_liveleak"));
-
-				// グループ
-				var group = new UI_GroupContainer(form_parent);
-				var group_parent = group.getElement();
-
-				// www.liveleak.com の設定
-				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_liveleak_check_box_container"));
-				var parent = container.getElement();
-
-				// ビデオを表示
-				var check_box_liveleak_visible_video = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_liveleak_visible_video"));
-				check_box_liveleak_visible_video.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.liveleak.visible_video = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-				new UI_Break(form_parent);
-
 				// データの関連付け
 				_setting_define.attachDefineData(define);
 				_setting_define.setDefineAssetName("expand_video");
@@ -36745,26 +36383,10 @@
 					check_box_youtube_visible_video.setValue(c.youtube.visible_video);
 					// nicovideo ビデオ表示
 					check_box_nicovideo_visible_video.setValue(c.nicovideo.visible_video);
-					// nicovideo ビデオサムネイル表示
-					check_box_nicovideo_visible_thumbnail_video.setValue(c.nicovideo.visible_thumbnail_video);
-					// nicovideo マイリストサムネイル表示
-					check_box_nicovideo_visible_thumbnail_mylist.setValue(c.nicovideo.visible_thumbnail_mylist);
-					// nicovideo ユーザーサムネイル表示
-					check_box_nicovideo_visible_thumbnail_user.setValue(c.nicovideo.visible_thumbnail_user);
-					// nicovideo コミュニティサムネイル表示
-					check_box_nicovideo_visible_thumbnail_community.setValue(c.nicovideo.visible_thumbnail_community);
-					// nicovideo 生放送サムネイル表示
-					check_box_nicovideo_visible_thumbnail_live.setValue(c.nicovideo.visible_thumbnail_live);
-					// nicovideo 静画サムネイル表示
-					check_box_nicovideo_visible_thumbnail_seiga.setValue(c.nicovideo.visible_thumbnail_seiga);
 					// dailymotion ビデオ表示
 					check_box_dailymotion_visible_video.setValue(c.dailymotion.visible_video);
 					// vimeo ビデオ表示
 					check_box_vimeo_visible_video.setValue(c.vimeo.visible_video);
-					// fc2video ビデオ表示
-					check_box_fc2video_visible_video.setValue(c.fc2video.visible_video);
-					// LiveLeak ビデオ表示
-					check_box_liveleak_visible_video.setValue(c.liveleak.visible_video);
 				};
 
 				// リロード
@@ -37091,72 +36713,6 @@
 					_setting_define.update();
 					projectModify();
 				};
-				new UI_BreakItem(parent);
-
-				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_video"));
-				var text_input_expand_video_nicovideo_inline_thumbnail_video = new UI_TextInput(parent);
-				text_input_expand_video_nicovideo_inline_thumbnail_video.oninput = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.expand_video.inline.nicovideo.thumbnail_video = v;
-					});
-					_setting_define.update();
-					projectModify();
-				};
-				new UI_BreakItem(parent);
-
-				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_mylist"));
-				var text_input_expand_video_nicovideo_inline_thumbnail_mylist = new UI_TextInput(parent);
-				text_input_expand_video_nicovideo_inline_thumbnail_mylist.oninput = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.expand_video.inline.nicovideo.thumbnail_mylist = v;
-					});
-					_setting_define.update();
-					projectModify();
-				};
-				new UI_BreakItem(parent);
-
-				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_user"));
-				var text_input_expand_video_nicovideo_inline_thumbnail_user = new UI_TextInput(parent);
-				text_input_expand_video_nicovideo_inline_thumbnail_user.oninput = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.expand_video.inline.nicovideo.thumbnail_user = v;
-					});
-					_setting_define.update();
-					projectModify();
-				};
-				new UI_BreakItem(parent);
-
-				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_community"));
-				var text_input_expand_video_nicovideo_inline_thumbnail_community = new UI_TextInput(parent);
-				text_input_expand_video_nicovideo_inline_thumbnail_community.oninput = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.expand_video.inline.nicovideo.thumbnail_community = v;
-					});
-					_setting_define.update();
-					projectModify();
-				};
-				new UI_BreakItem(parent);
-
-				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_live"));
-				var text_input_expand_video_nicovideo_inline_thumbnail_live = new UI_TextInput(parent);
-				text_input_expand_video_nicovideo_inline_thumbnail_live.oninput = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.expand_video.inline.nicovideo.thumbnail_live = v;
-					});
-					_setting_define.update();
-					projectModify();
-				};
-				new UI_BreakItem(parent);
-
-				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga"));
-				var text_input_expand_video_nicovideo_inline_thumbnail_seiga = new UI_TextInput(parent);
-				text_input_expand_video_nicovideo_inline_thumbnail_seiga.oninput = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.expand_video.inline.nicovideo.thumbnail_seiga = v;
-					});
-					_setting_define.update();
-					projectModify();
-				};
 
 				// www.dailymotion.com の設定
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_dailymotion"));
@@ -37186,33 +36742,6 @@
 					projectModify();
 				};
 
-				// video.fc2.com の設定
-				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_fc2video"));
-				var parent = container.getElement();
-
-				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_fc2video_inline_video"));
-				var text_input_expand_video_fc2video_inline_video = new UI_TextInput(parent);
-				text_input_expand_video_fc2video_inline_video.oninput = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.expand_video.inline.fc2video.video = v;
-					});
-					_setting_define.update();
-					projectModify();
-				};
-
-				// LiveLeak の設定
-				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_liveleak"));
-				var parent = container.getElement();
-
-				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_liveleak_inline_video"));
-				var text_input_expand_video_liveleak_inline_video = new UI_TextInput(parent);
-				text_input_expand_video_liveleak_inline_video.oninput = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.expand_video.inline.liveleak.video = v;
-					});
-					_setting_define.update();
-					projectModify();
-				};
 				new UI_Break(form_parent);
 
 				// タイトル
@@ -37256,16 +36785,8 @@
 					text_input_expand_video_inline_video_element.setValue(c.expand_video.inline.video_element.video);
 					text_input_expand_video_youtube_inline_video.setValue(c.expand_video.inline.youtube.video);
 					text_input_expand_video_nicovideo_inline_video.setValue(c.expand_video.inline.nicovideo.video);
-					text_input_expand_video_nicovideo_inline_thumbnail_video.setValue(c.expand_video.inline.nicovideo.thumbnail_video);
-					text_input_expand_video_nicovideo_inline_thumbnail_mylist.setValue(c.expand_video.inline.nicovideo.thumbnail_mylist);
-					text_input_expand_video_nicovideo_inline_thumbnail_user.setValue(c.expand_video.inline.nicovideo.thumbnail_user);
-					text_input_expand_video_nicovideo_inline_thumbnail_community.setValue(c.expand_video.inline.nicovideo.thumbnail_community);
-					text_input_expand_video_nicovideo_inline_thumbnail_live.setValue(c.expand_video.inline.nicovideo.thumbnail_live);
-					text_input_expand_video_nicovideo_inline_thumbnail_seiga.setValue(c.expand_video.inline.nicovideo.thumbnail_seiga);
 					text_input_expand_video_dailymotion_inline_video.setValue(c.expand_video.inline.dailymotion.video);
 					text_input_expand_video_vimeo_inline_video.setValue(c.expand_video.inline.vimeo.video);
-					text_input_expand_video_fc2video_inline_video.setValue(c.expand_video.inline.fc2video.video);
-					text_input_expand_video_liveleak_inline_video.setValue(c.expand_video.inline.liveleak.video);
 					text_input_expand_iframe_inline.setValue(c.expand_iframe.inline);
 				};
 
@@ -37402,7 +36923,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.24");
+				new UI_Text(parent,"PageExpand ver.1.5.25");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -43362,24 +42883,12 @@
 						visible_video:false
 					},
 					nicovideo:{
-						visible_video:false,
-						visible_thumbnail_video:false,
-						visible_thumbnail_mylist:false,
-						visible_thumbnail_user:false,
-						visible_thumbnail_community:false,
-						visible_thumbnail_live:false,
-						visible_thumbnail_seiga:false
+						visible_video:false
 					},
 					dailymotion:{
 						visible_video:false
 					},
 					vimeo:{
-						visible_video:false
-					},
-					fc2video:{
-						visible_video:false
-					},
-					liveleak:{
 						visible_video:false
 					}
 				}
@@ -43446,24 +42955,12 @@
 								video:""
 							},
 							nicovideo:{
-								video:"",
-								thumbnail_video:"",
-								thumbnail_mylist:"",
-								thumbnail_user:"",
-								thumbnail_community:"",
-								thumbnail_live:"",
-								thumbnail_seiga:""
+								video:""
 							},
 							dailymotion:{
 								video:""
 							},
 							vimeo:{
-								video:""
-							},
-							fc2video:{
-								video:""
-							},
-							liveleak:{
 								video:""
 							}
 						}
@@ -47048,13 +46545,13 @@
 			// --------------------------------------------------------------------------------
 			(function(){
 				_button = DocumentCreateElement("button");
-				ElementSetStyle(_button,"position:relative; width:24px; height:24px; vertical-align:top;");
+				ElementSetStyle(_button,"position:relative; width:24px; height:24px; vertical-align:top; padding:0px;");
 				_button.onclick = clickMenuCategory;
 				parent.appendChild(_button);
 
 				_image = DocumentCreateElement("img");
 				ElementSetStyle(_image,CSSTextGetInitialImageElement());
-				ElementAddStyle(_image,"vertical-align:top; margin:0px -6px; pointer-events:inherit;");
+				ElementAddStyle(_image,"vertical-align:top; margin:0px auto; display:block; pointer-events:inherit;");
 				_button.appendChild(_image);
 
 				_label = DocumentCreateElement("div");
@@ -51243,17 +50740,16 @@
 		}
 
 		// 動画を展開
-		function expand_player(){
+		function expand_player(path){
 
 			// 展開処理の完了
 			function expand_player_complete(){
 			}
 
 			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var loader = null;
 			var iframe = null;
 			var iframe_analyze_work = null;
-			var iframe_url = null;
+			var iframe_url = "https://www.mixcloud.com/widget/iframe/?hide_cover=1&light=1&feed=" + encodeURIComponent(path);
 			var event_handler = null;
 			var limitter_element = null;
 			var observer_remove = null;
@@ -51266,13 +50762,6 @@
 
 			// インラインフレームを破棄
 			function releaseIframe(e){
-				// ローダーを中断
-				if(loader){
-					loader.onload = null;
-					loader.onerror = null;
-					loader = null;
-				}
-
 				// アドレスの登録を外す
 				if(iframe_url){
 					address_collection.removeAddress("sound",iframe_url);
@@ -51320,124 +50809,94 @@
 			event_handler = event_dispatcher.createEventHandler("release");
 			event_handler.setFunction(releaseIframe);
 
-			// テキストの読み込み
-			loader = new Loader();
-			loader.onload = function(str){
-				var m = str.match(new RegExp("<meta[^>]+name[ \n\r\t]*=[ \n\r\t]*\"twitter:player\"[^>]*>","i"));
-				if(m){
-					m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
-					if(m){
-						iframe_url = m[1];
-						iframe_url = iframe_url.replace(new RegExp("^//"),"https://");
-					}
-				}
+			// 混在コンテンツの展開が可能か
+			if(!(project.checkAllowExpandIframeElement(iframe_url))){
+				releaseIframe();
+				complete();
+				return;
+			}
 
-				// アドレス取得失敗
-				if(!iframe_url){
-					releaseIframe();
-					return;
-				}
-
-				// 混在コンテンツの展開が可能か
-				if(!(project.checkAllowExpandIframeElement(iframe_url))){
+			// 重複チェック
+			if(project.getDisableSameInlineSound()){
+				if(address_collection.hasAddress("sound",iframe_url)){
+					iframe_url = null;
 					releaseIframe();
 					complete();
 					return;
 				}
+				// アドレスを登録
+				address_collection.addAddress("sound",iframe_url);
+			}
 
-				// 重複チェック
-				if(project.getDisableSameInlineSound()){
-					if(address_collection.hasAddress("sound",iframe_url)){
-						iframe_url = null;
-						releaseIframe();
-						complete();
-						return;
-					}
-					// アドレスを登録
-					address_collection.addAddress("sound",iframe_url);
-				}
+			// インラインフレームを作成
+			iframe = DocumentCreateElement('iframe');
+			iframe.frameBorder = "0";
+			iframe.scrolling = "no";
+			iframe.allowFullscreen = true;
 
-				// インラインフレームを作成
-				iframe = DocumentCreateElement('iframe');
-				iframe.frameBorder = "0";
-				iframe.scrolling = "no";
-				iframe.allowFullscreen = true;
+			// スタイルをセット
+			ElementSetStyle(iframe,project.getStyleSheetExpandSoundMixcloudInlinePlayer());
 
-				// スタイルをセット
-				ElementSetStyle(iframe,project.getStyleSheetExpandSoundMixcloudInlinePlayer());
+			// 高さを設定
+			iframe.style.height = 120 + "px";
 
-				// 高さを設定
-				var m = str.match(new RegExp("<meta[^>]+name[ \n\r\t]*=[ \n\r\t]*\"twitter:player:height\"[^>]*>","i"));
-				if(m){
-					m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"([^\"]+?)\"","i"));
-					if(m){
-						iframe.style.height = parseInt(m[1]) + "px";
+			// 解析ワーク作成
+			iframe_analyze_work = AnalyzeWorkCreate(iframe);
 
-					}
-				}
+			// 解析辞書登録オプション
+			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
+			attach_options.SetOutsider();
 
-				// 解析ワーク作成
-				iframe_analyze_work = AnalyzeWorkCreate(iframe);
+			// 解析辞書登録
+			analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
 
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
+			// インラインフレームのリムーブ監視
+			observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
+			observer_remove.setFunction(dispatchEventRelease);
 
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
+			// メディアプレイヤー UI
+			media_player_ui = new MediaPlayerExtendUI(iframe);
+			var event_handler_close = media_player_ui.createEventHandler("close");
+			event_handler_close.setFunction(dispatchEventRelease);
 
-				// インラインフレームのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-				observer_remove.setFunction(dispatchEventRelease);
+			function responseInsert(){
+				if(!iframe)	return;
 
-				// メディアプレイヤー UI
-				media_player_ui = new MediaPlayerExtendUI(iframe);
-				var event_handler_close = media_player_ui.createEventHandler("close");
-				event_handler_close.setFunction(dispatchEventRelease);
+				limitter_element = element_limitter_sound.createElement();
+				limitter_element.onattach = function(){
+					iframe.src = iframe_url;
+				};
+				limitter_element.onremove = function(){
+					iframe.src = "";
+				};
+				limitter_element.setElementHitArea(iframe);
 
-				function responseInsert(){
-					if(!iframe)	return;
+				// 更新
+				limitter_element.update();
+			}
 
-					limitter_element = element_limitter_sound.createElement();
-					limitter_element.onattach = function(){
-						iframe.src = iframe_url;
-					};
-					limitter_element.onremove = function(){
-						iframe.src = "";
-					};
-					limitter_element.setElementHitArea(iframe);
-
-					// 更新
-					limitter_element.update();
-				}
-
-				// コールバック関数を実行
-				project.executeScriptInsertInlineSound(element,iframe,work.event_dispatcher,responseInsert);
-			};
-
-			// ロードエラー
-			loader.onerror = function(){
-				expand_player_complete();
-				complete();
-			};
-
-			loader.setMethod("GET");
-			loader.setURL(url);
-			loader.loadText();
+			// コールバック関数を実行
+			project.executeScriptInsertInlineSound(element,iframe,work.event_dispatcher,responseInsert);
 		}
 
 		if(project.getVisiblePlayerMixcloud()){
 
 			// mixcloud.com へのリンク
 			var allow_list = [
-				"^(http|https)://[^.]+\\.mixcloud\\.com/[^/]+/[^/]+(/$|[?]|$)",
-				"^(http|https)://i\\.mixcloud\\.com/[a-zA-Z0-9]+$"
+				"^(http|https)://[^.]+\\.mixcloud\\.com/([^/]+)[/]([^/]+)[/]([?]|$)"
 			];
+
+			var forbid_user = {live:1,discover:1,upload:1,pro:1};
+			var forbid_name = {stream:1,uploads:1,favorites:1,listens:1,playlists:1};
+
 			num = allow_list.length;
 			for(i=0;i<num;i++){
-				if(url.match(new RegExp(allow_list[i],"i"))){
-					expand_player();
-					return;
+				var m = url.match(new RegExp(allow_list[i],"i"));
+				if(m){
+					if(!(forbid_user[m[2]]) && !(forbid_name[m[3]])){
+						expand_player("/"+m[2]+"/"+m[3]+"/");
+						return;
+					}
 				}
 			}
 		}
@@ -51479,10 +50938,6 @@
 			ElementExpandInlineVideoDailymotion(param);
 			// vimeo
 			ElementExpandInlineVideoVimeo(param);
-			// fc2_video
-			ElementExpandInlineVideoFc2video(param);
-			// liveleak
-			ElementExpandInlineVideoLiveleak(param);
 		}
 
 		// コールバック関数を実行
@@ -51945,9 +51400,7 @@
 		// .nicovideo.jp 内では動作禁止
 		var deny_list = [
 			"*://nicovideo.jp/*",
-			"*://*.nicovideo.jp/*",
-			"*://niconico.com/*",
-			"*://*.niconico.com/*"
+			"*://*.nicovideo.jp/*"
 		];
 		var i;
 		var num = deny_list.length;
@@ -51964,16 +51417,12 @@
 
 				// 展開処理の完了
 				function expand_video_complete(){
-					// ビデオサムネイル展開
-					if(project.getVisibleThumbnailVideoNicovideo()){
-						expand_thumbnail_video(video_id,language);
-					}
 				}
 
 				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
 				var iframe = null;
 				var iframe_analyze_work = null;
-				var iframe_url = "http://embed.nicovideo.jp/watch/" + video_id;
+				var iframe_url = "https://embed.nicovideo.jp/watch/" + video_id;
 				var event_handler = null;
 				var limitter_element = null;
 				var observer_remove = null;
@@ -52102,758 +51551,10 @@
 			})();
 		}
 
-		// ビデオサムネイルを展開
-		function expand_thumbnail_video(video_id,language){
-			(function(){
-				if(!language)	language = "ext";
-				var thumbnail_video_url = "http://" + language + ".nicovideo.jp/thumb/" + video_id;
-
-				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-				var iframe = null;
-				var iframe_analyze_work = null;
-				var event_handler = null;
-				var observer_remove = null;
-
-				// 開放イベントを発行
-				function dispatchEventRelease(e){
-					event_dispatcher.dispatchEvent("release",null);
-				}
-
-				// インラインフレームを破棄
-				function releaseIframe(e){
-					// アドレスの登録を外す
-					if(thumbnail_video_url){
-						address_collection.removeAddress("video",thumbnail_video_url);
-						thumbnail_video_url = null;
-					}
-
-					// イベントハンドラを破棄
-					if(event_handler){
-						event_handler.release();
-						event_handler = null;
-					}
-
-					// 監視を破棄
-					if(observer_remove){
-						observer_remove.release();
-						observer_remove = null;
-					}
-
-					// 解析辞書除外
-					if(iframe_analyze_work){
-						analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-						iframe_analyze_work = null;
-					}
-
-					// インラインフレームを外す
-					if(iframe){
-						DomNodeRemove(iframe);
-						iframe = null;
-					}
-				}
-
-				// 混在コンテンツの展開が可能か
-				if(!(project.checkAllowExpandIframeElement(thumbnail_video_url))){
-					releaseIframe();
-					complete();
-					return;
-				}
-
-				// 重複チェック
-				if(project.getDisableSameInlineVideo()){
-					if(address_collection.hasAddress("video",thumbnail_video_url)){
-						thumbnail_video_url = null;
-						releaseIframe();
-						complete();
-						return;
-					}
-					// アドレスを登録
-					address_collection.addAddress("video",thumbnail_video_url);
-				}
-
-				// イベントハンドラを作成
-				event_handler = event_dispatcher.createEventHandler("release");
-				event_handler.setFunction(releaseIframe);
-
-				iframe = DocumentCreateElement('iframe');
-				iframe.frameBorder = "0";
-				iframe.scrolling = "no";
-
-				// 読み込み開始
-				iframe.src = thumbnail_video_url;
-
-				// スタイルをセット
-				ElementSetStyle(iframe,project.getStyleSheetExpandVideoNicovideoInlineThumbnailVideo());
-
-				// 解析ワーク作成
-				iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-				// インラインフレームのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-				observer_remove.setFunction(dispatchEventRelease);
-
-				function responseInsert(){
-					if(!iframe)	return;
-				}
-				// コールバック関数を実行
-				project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
-			})();
-		}
-
-		// マイリストサムネイルを展開
-		function expand_thumbnail_mylist(mylist_id){
-			(function(){
-				var thumbnail_mylist_url = "http://ext.nicovideo.jp/thumb_mylist/" + mylist_id;
-
-				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-				var iframe = null;
-				var iframe_analyze_work = null;
-				var event_handler = null;
-				var observer_remove = null;
-
-				// 開放イベントを発行
-				function dispatchEventRelease(e){
-					event_dispatcher.dispatchEvent("release",null);
-				}
-
-				// インラインフレームを破棄
-				function releaseIframe(e){
-					// アドレスの登録を外す
-					if(thumbnail_mylist_url){
-						address_collection.removeAddress("video",thumbnail_mylist_url);
-						thumbnail_mylist_url = null;
-					}
-
-					// イベントハンドラを破棄
-					if(event_handler){
-						event_handler.release();
-						event_handler = null;
-					}
-
-					// 監視を破棄
-					if(observer_remove){
-						observer_remove.release();
-						observer_remove = null;
-					}
-
-					// 解析辞書除外
-					if(iframe_analyze_work){
-						analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-						iframe_analyze_work = null;
-					}
-
-					// インラインフレームを外す
-					if(iframe){
-						DomNodeRemove(iframe);
-						iframe = null;
-					}
-				}
-
-				// 混在コンテンツの展開が可能か
-				if(!(project.checkAllowExpandIframeElement(thumbnail_mylist_url))){
-					releaseIframe();
-					complete();
-					return;
-				}
-
-				// 重複チェック
-				if(project.getDisableSameInlineVideo()){
-					if(address_collection.hasAddress("video",thumbnail_mylist_url)){
-						thumbnail_mylist_url = null;
-						releaseIframe();
-						complete();
-						return;
-					}
-					// アドレスを登録
-					address_collection.addAddress("video",thumbnail_mylist_url);
-				}
-
-				// イベントハンドラを作成
-				event_handler = event_dispatcher.createEventHandler("release");
-				event_handler.setFunction(releaseIframe);
-
-				iframe = DocumentCreateElement('iframe');
-				iframe.frameBorder = "0";
-				iframe.scrolling = "no";
-				// 読み込み開始
-				iframe.src = thumbnail_mylist_url;
-
-				// スタイルをセット
-				ElementSetStyle(iframe,project.getStyleSheetExpandVideoNicovideoInlineThumbnailMylist());
-
-				// 解析ワーク作成
-				iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-				// インラインフレームのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-				observer_remove.setFunction(dispatchEventRelease);
-
-				function responseInsert(){
-					if(!iframe)	return;
-				}
-				// コールバック関数を実行
-				project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
-			})();
-		}
-
-		// ユーザーサムネイルを展開
-		function expand_thumbnail_user(user_id){
-			(function(){
-				var thumbnail_user_url = "http://ext.nicovideo.jp/thumb_user/" + user_id;
-
-				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-				var iframe = null;
-				var iframe_analyze_work = null;
-				var event_handler = null;
-				var observer_remove = null;
-
-				// 開放イベントを発行
-				function dispatchEventRelease(e){
-					event_dispatcher.dispatchEvent("release",null);
-				}
-
-				// インラインフレームを破棄
-				function releaseIframe(e){
-					// アドレスの登録を外す
-					if(thumbnail_user_url){
-						address_collection.removeAddress("video",thumbnail_user_url);
-						thumbnail_user_url = null;
-					}
-
-					// イベントハンドラを破棄
-					if(event_handler){
-						event_handler.release();
-						event_handler = null;
-					}
-
-					// 監視を破棄
-					if(observer_remove){
-						observer_remove.release();
-						observer_remove = null;
-					}
-
-					// 解析辞書除外
-					if(iframe_analyze_work){
-						analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-						iframe_analyze_work = null;
-					}
-
-					// インラインフレームを外す
-					if(iframe){
-						DomNodeRemove(iframe);
-						iframe = null;
-					}
-				}
-
-				// 混在コンテンツの展開が可能か
-				if(!(project.checkAllowExpandIframeElement(thumbnail_user_url))){
-					releaseIframe();
-					complete();
-					return;
-				}
-
-				// 重複チェック
-				if(project.getDisableSameInlineVideo()){
-					if(address_collection.hasAddress("video",thumbnail_user_url)){
-						thumbnail_user_url = null;
-						releaseIframe();
-						complete();
-						return;
-					}
-					// アドレスを登録
-					address_collection.addAddress("video",thumbnail_user_url);
-				}
-
-				// イベントハンドラを作成
-				event_handler = event_dispatcher.createEventHandler("release");
-				event_handler.setFunction(releaseIframe);
-
-				iframe = DocumentCreateElement('iframe');
-				iframe.frameBorder = "0";
-				iframe.scrolling = "no";
-				// 読み込み開始
-				iframe.src = thumbnail_user_url;
-
-				// スタイルをセット
-				ElementSetStyle(iframe,project.getStyleSheetExpandVideoNicovideoInlineThumbnailUser());
-
-				// 解析ワーク作成
-				iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-				// インラインフレームのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-				observer_remove.setFunction(dispatchEventRelease);
-
-				function responseInsert(){
-					if(!iframe)	return;
-				}
-				// コールバック関数を実行
-				project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
-			})();
-		}
-
-		// コミュニティサムネイルを展開
-		function expand_thumbnail_community(community_id){
-			(function(){
-				var thumbnail_community_url = "http://ext.nicovideo.jp/thumb_community/" + community_id;
-
-				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-				var iframe = null;
-				var iframe_analyze_work = null;
-				var event_handler = null;
-				var observer_remove = null;
-
-				// 開放イベントを発行
-				function dispatchEventRelease(e){
-					event_dispatcher.dispatchEvent("release",null);
-				}
-
-				// インラインフレームを破棄
-				function releaseIframe(e){
-					// アドレスの登録を外す
-					if(thumbnail_community_url){
-						address_collection.removeAddress("video",thumbnail_community_url);
-						thumbnail_community_url = null;
-					}
-
-					// イベントハンドラを破棄
-					if(event_handler){
-						event_handler.release();
-						event_handler = null;
-					}
-
-					// 監視を破棄
-					if(observer_remove){
-						observer_remove.release();
-						observer_remove = null;
-					}
-
-					// 解析辞書除外
-					if(iframe_analyze_work){
-						analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-						iframe_analyze_work = null;
-					}
-
-					// インラインフレームを外す
-					if(iframe){
-						DomNodeRemove(iframe);
-						iframe = null;
-					}
-				}
-
-				// 混在コンテンツの展開が可能か
-				if(!(project.checkAllowExpandIframeElement(thumbnail_community_url))){
-					releaseIframe();
-					complete();
-					return;
-				}
-
-				// 重複チェック
-				if(project.getDisableSameInlineVideo()){
-					if(address_collection.hasAddress("video",thumbnail_community_url)){
-						thumbnail_community_url = null;
-						releaseIframe();
-						complete();
-						return;
-					}
-					// アドレスを登録
-					address_collection.addAddress("video",thumbnail_community_url);
-				}
-
-				// イベントハンドラを作成
-				event_handler = event_dispatcher.createEventHandler("release");
-				event_handler.setFunction(releaseIframe);
-
-				iframe = DocumentCreateElement('iframe');
-				iframe.frameBorder = "0";
-				iframe.scrolling = "no";
-				// 読み込み開始
-				iframe.src = thumbnail_community_url;
-
-				// スタイルをセット
-				ElementSetStyle(iframe,project.getStyleSheetExpandVideoNicovideoInlineThumbnailCommunity());
-
-				// 解析ワーク作成
-				iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-				// インラインフレームのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-				observer_remove.setFunction(dispatchEventRelease);
-
-				function responseInsert(){
-					if(!iframe)	return;
-				}
-				// コールバック関数を実行
-				project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
-			})();
-		}
-
-		// 生放送サムネイルを展開
-		function expand_thumbnail_live(live_id){
-			(function(){
-				var thumbnail_live_url = "http://live.nicovideo.jp/embed/" + live_id;
-
-				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-				var iframe = null;
-				var iframe_analyze_work = null;
-				var event_handler = null;
-				var observer_remove = null;
-
-				// 開放イベントを発行
-				function dispatchEventRelease(e){
-					event_dispatcher.dispatchEvent("release",null);
-				}
-
-				// インラインフレームを破棄
-				function releaseIframe(e){
-					// アドレスの登録を外す
-					if(thumbnail_live_url){
-						address_collection.removeAddress("video",thumbnail_live_url);
-						thumbnail_live_url = null;
-					}
-
-					// イベントハンドラを破棄
-					if(event_handler){
-						event_handler.release();
-						event_handler = null;
-					}
-
-					// 監視を破棄
-					if(observer_remove){
-						observer_remove.release();
-						observer_remove = null;
-					}
-
-					// 解析辞書除外
-					if(iframe_analyze_work){
-						analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-						iframe_analyze_work = null;
-					}
-
-					// インラインフレームを外す
-					if(iframe){
-						DomNodeRemove(iframe);
-						iframe = null;
-					}
-				}
-
-				// 混在コンテンツの展開が可能か
-				if(!(project.checkAllowExpandIframeElement(thumbnail_live_url))){
-					releaseIframe();
-					complete();
-					return;
-				}
-
-				// 重複チェック
-				if(project.getDisableSameInlineVideo()){
-					if(address_collection.hasAddress("video",thumbnail_live_url)){
-						thumbnail_live_url = null;
-						releaseIframe();
-						complete();
-						return;
-					}
-					// アドレスを登録
-					address_collection.addAddress("video",thumbnail_live_url);
-				}
-
-				// イベントハンドラを作成
-				event_handler = event_dispatcher.createEventHandler("release");
-				event_handler.setFunction(releaseIframe);
-
-				iframe = DocumentCreateElement('iframe');
-				iframe.frameBorder = "0";
-				iframe.scrolling = "no";
-				// 読み込み開始
-				iframe.src = thumbnail_live_url;
-
-				// スタイルをセット
-				ElementSetStyle(iframe,project.getStyleSheetExpandVideoNicovideoInlineThumbnailLive());
-
-				// 解析ワーク作成
-				iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-				// インラインフレームのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-				observer_remove.setFunction(dispatchEventRelease);
-
-				function responseInsert(){
-					if(!iframe)	return;
-				}
-				// コールバック関数を実行
-				project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
-			})();
-		}
-
-		// 静画サムネイルを展開
-		function expand_thumbnail_seiga(seiga_id){
-			(function(){
-				var thumbnail_seiga_url = "http://ext.seiga.nicovideo.jp/thumb/" + seiga_id;
-
-				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-				var iframe = null;
-				var iframe_analyze_work = null;
-				var event_handler = null;
-				var observer_remove = null;
-
-				// 開放イベントを発行
-				function dispatchEventRelease(e){
-					event_dispatcher.dispatchEvent("release",null);
-				}
-
-				// インラインフレームを破棄
-				function releaseIframe(e){
-					// アドレスの登録を外す
-					if(thumbnail_seiga_url){
-						address_collection.removeAddress("video",thumbnail_seiga_url);
-						thumbnail_seiga_url = null;
-					}
-
-					// イベントハンドラを破棄
-					if(event_handler){
-						event_handler.release();
-						event_handler = null;
-					}
-
-					// 監視を破棄
-					if(observer_remove){
-						observer_remove.release();
-						observer_remove = null;
-					}
-
-					// 解析辞書除外
-					if(iframe_analyze_work){
-						analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-						iframe_analyze_work = null;
-					}
-
-					// インラインフレームを外す
-					if(iframe){
-						DomNodeRemove(iframe);
-						iframe = null;
-					}
-				}
-
-				// 混在コンテンツの展開が可能か
-				if(!(project.checkAllowExpandIframeElement(thumbnail_seiga_url))){
-					releaseIframe();
-					complete();
-					return;
-				}
-
-				// 重複チェック
-				if(project.getDisableSameInlineVideo()){
-					if(address_collection.hasAddress("video",thumbnail_seiga_url)){
-						thumbnail_seiga_url = null;
-						releaseIframe();
-						complete();
-						return;
-					}
-					// アドレスを登録
-					address_collection.addAddress("video",thumbnail_seiga_url);
-				}
-
-				// イベントハンドラを作成
-				event_handler = event_dispatcher.createEventHandler("release");
-				event_handler.setFunction(releaseIframe);
-
-				// 解析ワーク作成
-				iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-				iframe = DocumentCreateElement('iframe');
-				iframe.frameBorder = "0";
-				iframe.scrolling = "no";
-				// 読み込み開始
-				iframe.src = thumbnail_seiga_url;
-
-				// スタイルをセット
-				ElementSetStyle(iframe,project.getStyleSheetExpandVideoNicovideoInlineThumbnailSeiga());
-
-				// インラインフレームのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-				observer_remove.setFunction(dispatchEventRelease);
-
-				function responseInsert(){
-					if(!iframe)	return;
-				}
-				// コールバック関数を実行
-				project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
-			})();
-		}
-
-		// マイリスト
-		if(project.getVisibleThumbnailMylistNicovideo()){
-			var allow_list_mylist = [
-				"*://*.nicovideo.jp/mylist/*",
-				"*://nicovideo.jp/mylist/*",
-				"*://nico.ms/mylist/*"
-			];
-			num = allow_list_mylist.length;
-			for(i=0;i<num;i++){
-				if(StringUrlMatchAsteriskWord(url,allow_list_mylist[i])){
-					var w = "/mylist/";
-					var s = url.indexOf(w);
-					if(s >= 0){
-						s += w.length;
-						var e = url.indexOf("?",s);
-						var mylist_id;
-						if(e >= 0)	mylist_id = url.substring(s,e);
-						else		mylist_id = url.substring(s);
-						// 数値
-						if(mylist_id.match(/([0-9]+$)/i)){
-							expand_thumbnail_mylist(RegExp.$1);
-							return;
-						}
-					}
-				}
-			}
-		}
-
-		// ユーザー
-		if(project.getVisibleThumbnailUserNicovideo()){
-			var allow_list_user = [
-				"*://*.nicovideo.jp/user/*",
-				"*://nicovideo.jp/user/*",
-				"*://*.niconico.com/user/*",
-				"*://niconico.com/user/*",
-				"*://nico.ms/user/*"
-			];
-			num = allow_list_user.length;
-			for(i=0;i<num;i++){
-				if(StringUrlMatchAsteriskWord(url,allow_list_user[i])){
-					var w = "/user/";
-					var s = url.indexOf(w);
-					if(s >= 0){
-						s += w.length;
-						var e = url.indexOf("?",s);
-						var user_id;
-						if(e >= 0)	user_id = url.substring(s,e);
-						else		user_id = url.substring(s);
-						// 数値
-						if(user_id.match(/([0-9]+$)/i)){
-							expand_thumbnail_user(RegExp.$1);
-							return;
-						}
-					}
-				}
-			}
-		}
-
-		// コミュニティ
-		if(project.getVisibleThumbnailCommunityNicovideo()){
-			var allow_list_community = [
-				"*://*.nicovideo.jp/community/*",
-				"*://nicovideo.jp/community/*",
-				"*://*.niconico.com/community/*",
-				"*://niconico.com/community/*",
-				"*://nico.ms/community/*"
-			];
-			num = allow_list_community.length;
-			for(i=0;i<num;i++){
-				if(StringUrlMatchAsteriskWord(url,allow_list_community[i])){
-					if(url.match(/community\/(co[0-9]+)/i)){
-						expand_thumbnail_community(RegExp.$1);
-						return;
-					}
-				}
-			}
-		}
-
-		// ライブ
-		if(project.getVisibleThumbnailLiveNicovideo()){
-			var allow_list_live = [
-				"*://live.nicovideo.jp/watch/lv*",
-				"*://live.niconico.com/watch/lv*",
-				"*://nico.ms/lv*"
-			];
-			num = allow_list_live.length;
-			for(i=0;i<num;i++){
-				if(StringUrlMatchAsteriskWord(url,allow_list_live[i])){
-					if(url.match(/\/(lv[0-9]+)/i)){
-						expand_thumbnail_live(RegExp.$1);
-						return;
-					}
-				}
-			}
-
-			var allow_list_nsen = [
-				"*://live.nicovideo.jp/watch/nsen/*"
-			];
-			num = allow_list_nsen.length;
-			for(i=0;i<num;i++){
-				if(StringUrlMatchAsteriskWord(url,allow_list_nsen[i])){
-					if(url.match(/(nsen\/.+)/i)){
-						expand_thumbnail_live(RegExp.$1);
-						return;
-					}
-				}
-			}
-		}
-
-		// 静画
-		if(project.getVisibleThumbnailSeigaNicovideo()){
-			var allow_list_seiga = [
-				"*://seiga.nicovideo.jp/watch/mg*",
-				"*://nico.ms/mg*"
-			];
-			num = allow_list_seiga.length;
-			for(i=0;i<num;i++){
-				if(StringUrlMatchAsteriskWord(url,allow_list_seiga[i])){
-					if(url.match(/\/(mg[0-9]+)/i)){
-						expand_thumbnail_seiga(RegExp.$1);
-						return;
-					}
-				}
-			}
-		}
-
 		// nicovideo.jp へのリンク
 		var allow_list_video = [
 			"(http|https)://.*\\.nicovideo\\.jp/watch/",
 			"(http|https)://nicovideo\\.jp/watch/",
-			"(http|https)://.*\\.niconico\\.com/watch/",
-			"(http|https)://niconico\\.com/watch/",
 			"(http|https)://nico\\.ms/.*/",
 			"(http|https)://nico\\.ms/"
 		];
@@ -52907,9 +51608,6 @@
 				if(video_id){
 					if(project.getVisibleVideoNicovideo()){
 						expand_video(video_id,language);
-						return;
-					}else if(project.getVisibleThumbnailVideoNicovideo()){
-						expand_thumbnail_video(video_id,language);
 						return;
 					}
 				}
@@ -53288,435 +51986,6 @@
 							}
 						}
 					}
-				}
-			}
-		}
-
-		// 完了
-		complete();
-	}
-
-	// --------------------------------------------------------------------------------
-	// インラインビデオ fc2video
-	// --------------------------------------------------------------------------------
-	function ElementExpandInlineVideoFc2video(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-		function complete(){
-		}
-
-		// アンセキュアチェック
-		if(!project.checkAllowUnsecure(url)){
-			complete();
-			return;
-		}
-
-		// video.fc2.com 内では動作禁止
-		var deny_list = [
-			"*://video.fc2.com/*"
-		];
-		var i;
-		var num = deny_list.length;
-		for(i=0;i<num;i++){
-			if(StringUrlMatchAsteriskWord(document.URL,deny_list[i])){
-				return;
-			}
-		}
-
-		// 動画を展開
-		function expand_video(url){
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var video = null;
-			var video_analyze_work = null;
-			var video_url = url;
-			var event_handler = null;
-			var limitter_element = null;
-			var observer_remove = null;
-			var media_player_ui = null;
-
-			// 開放イベントを発行
-			function dispatchEventRelease(e){
-				event_dispatcher.dispatchEvent("release",null);
-			}
-
-			// インラインフレームを破棄
-			function releaseElement(e){
-				// アドレスの登録を外す
-				if(video_url){
-					address_collection.removeAddress("video",video_url);
-					video_url = null;
-				}
-
-				// イベントハンドラを破棄
-				if(event_handler){
-					event_handler.release();
-					event_handler = null;
-				}
-
-				if(limitter_element){
-					limitter_element.onremove = null;
-					limitter_element.release();
-					limitter_element = null;
-				}
-
-				// 監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// メディアプレイヤー UI を破棄
-				if(media_player_ui){
-					media_player_ui.release();
-					media_player_ui = null;
-				}
-
-				// 解析辞書除外
-				if(video_analyze_work){
-					analyze_work_dictionary.removeAnalyzeWork(video_analyze_work);
-					video_analyze_work = null;
-				}
-
-				// インラインフレームを外す
-				if(video){
-					DomNodeRemove(video);
-					video = null;
-				}
-			}
-
-			// 混在コンテンツの展開が可能か
-			if(!(project.checkAllowExpandEmbedElement(video_url))){
-				releaseElement();
-				complete();
-				return;
-			}
-
-			// 重複チェック
-			if(project.getDisableSameInlineVideo()){
-				if(address_collection.hasAddress("video",video_url)){
-					video_url = null;
-					releaseElement();
-					complete();
-					return;
-				}
-				// アドレスを登録
-				address_collection.addAddress("video",video_url);
-			}
-
-			var embed;
-			video = DocumentCreateElement('div');
-
-			// スタイルをセット
-			ElementSetStyle(video,project.getStyleSheetExpandVideoFc2videoInlineVideo());
-
-			// イベントハンドラを作成
-			event_handler = event_dispatcher.createEventHandler("release");
-			event_handler.setFunction(releaseElement);
-
-			// 解析ワーク作成
-			video_analyze_work = AnalyzeWorkCreate(video);
-
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			attach_options.SetOutsider();
-
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(video_analyze_work,attach_options);
-
-			// インラインフレームのリムーブ監視
-			observer_remove = new DomNodeObserverRemoveFromDocument(video);
-			observer_remove.setFunction(dispatchEventRelease);
-
-			// メディアプレイヤー UI
-			media_player_ui = new MediaPlayerExtendUI(video);
-			var event_handler_close = media_player_ui.createEventHandler("close");
-			event_handler_close.setFunction(dispatchEventRelease);
-
-			function responseInsert(){
-				if(!video)	return;
-
-				limitter_element = element_limitter_video.createElement();
-				limitter_element.onattach = function(){
-					if(!embed){
-						embed = DocumentCreateElement('embed');
-						embed.type = "application/x-shockwave-flash";
-						embed.width = "100%";
-						embed.height = "100%";
-						embed.setAttribute("bgcolor","#ffffff");
-						embed.setAttribute("quality","high");
-						embed.setAttribute("wmode","transparent");
-						embed.setAttribute("align","middle");
-						embed.setAttribute("allowScriptAccess","sameDomain");
-						embed.setAttribute("pluginspage","http://www.macromedia.com/go/getflashplayer");
-						embed.setAttribute("allowFullScreen","true");
-						embed.src = video_url;
-						video.appendChild(embed);
-					}
-				};
-				limitter_element.onremove = function(){
-					if(embed){
-						DomNodeRemove(embed);
-						embed = null;
-					}
-				};
-				limitter_element.setElementHitArea(video);
-
-				// 更新
-				limitter_element.update();
-			}
-
-			// コールバック関数を実行
-			project.executeScriptInsertInlineVideo(element,video,work.event_dispatcher,responseInsert);
-		}
-
-		if(project.getVisibleVideoFc2video()){
-			var allow_list = [
-				"*://video.fc2.com/content/*",
-				"*://video.fc2.com/*/content/*"
-			];
-			num = allow_list.length;
-			for(i=0;i<num;i++){
-				if(StringUrlMatchAsteriskWord(url,allow_list[i])){
-					var w = "/content/";
-					var s = url.indexOf(w);
-					if(s >= 0){
-						s += w.length;
-						var m = url.substring(s).match(/^[0-9a-z]+/i);
-						if(m){
-							var video_id = m[0];
-							expand_video("http://video.fc2.com/flv2.swf?i=" + video_id);
-							return;
-						}
-					}
-				}
-			}
-		}
-
-		// 完了
-		complete();
-	}
-
-	// --------------------------------------------------------------------------------
-	// インラインビデオ liveleak
-	// --------------------------------------------------------------------------------
-	function ElementExpandInlineVideoLiveleak(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-		function complete(){
-		}
-
-		// アンセキュアチェック
-		if(!project.checkAllowUnsecure(url)){
-			complete();
-			return;
-		}
-
-		// liveleak.com 内では動作禁止
-		var deny_list = [
-			"*://liveleak.com/*",
-			"*://*.liveleak.com/*"
-		];
-		var i;
-		var num = deny_list.length;
-		for(i=0;i<num;i++){
-			if(StringUrlMatchAsteriskWord(document.URL,deny_list[i])){
-				return;
-			}
-		}
-
-		// 動画を展開
-		function expand_video(video_id,language){
-
-			// 展開処理の完了
-			function expand_video_complete(){
-			}
-
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var loader = null;
-			var iframe = null;
-			var iframe_analyze_work = null;
-			var iframe_url = null;
-			var event_handler = null;
-			var limitter_element = null;
-			var observer_remove = null;
-			var media_player_ui = null;
-
-			// 開放イベントを発行
-			function dispatchEventRelease(e){
-				event_dispatcher.dispatchEvent("release",null);
-			}
-
-			// インラインフレームを破棄
-			function releaseIframe(e){
-				// ローダーを中断
-				if(loader){
-					loader.onload = null;
-					loader.onerror = null;
-					loader = null;
-				}
-
-				// アドレスの登録を外す
-				if(iframe_url){
-					address_collection.removeAddress("video",iframe_url);
-					iframe_url = null;
-				}
-
-				// イベントハンドラを破棄
-				if(event_handler){
-					event_handler.release();
-					event_handler = null;
-				}
-
-				if(limitter_element){
-					limitter_element.onremove = null;
-					limitter_element.release();
-					limitter_element = null;
-				}
-
-				// 監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// メディアプレイヤー UI を破棄
-				if(media_player_ui){
-					media_player_ui.release();
-					media_player_ui = null;
-				}
-
-				// 解析辞書除外
-				if(iframe_analyze_work){
-					analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-					iframe_analyze_work = null;
-				}
-
-				// インラインフレームを外す
-				if(iframe){
-					DomNodeRemove(iframe);
-					iframe = null;
-				}
-			}
-
-			// テキストの読み込み
-			loader = new Loader();
-			loader.onload = function(str){
-
-				// video_id 抽出
-				if(str.match(new RegExp(".*generate_embed_code_generator_html[(][\'\"]([0-9a-z_]+)[\'\"][)].*","i"))){
-					iframe_url = "http://www.liveleak.com/ll_embed?f=" + RegExp.$1;
-				}
-
-				// アドレス取得失敗
-				if(!iframe_url){
-					expand_video_complete();
-					releaseIframe();
-					return;
-				}
-
-				// 混在コンテンツの展開が可能か
-				if(!(project.checkAllowExpandIframeElement(iframe_url))){
-					releaseIframe();
-					complete();
-					return;
-				}
-
-				// 重複チェック
-				if(project.getDisableSameInlineVideo()){
-					if(address_collection.hasAddress("video",iframe_url)){
-						iframe_url = null;
-						releaseIframe();
-						complete();
-						return;
-					}
-					// アドレスを登録
-					address_collection.addAddress("video",iframe_url);
-				}
-
-				// インラインフレームを作成
-				iframe = DocumentCreateElement('iframe');
-				iframe.frameBorder = "0";
-				iframe.scrolling = "no";
-				iframe.allowFullscreen = true;
-
-				// スタイルをセット
-				ElementSetStyle(iframe,project.getStyleSheetExpandVideoLiveleakInlineVideo());
-
-				// イベントハンドラを作成
-				event_handler = event_dispatcher.createEventHandler("release");
-				event_handler.setFunction(releaseIframe);
-
-				// 解析ワーク作成
-				iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-				// インラインフレームのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-				observer_remove.setFunction(dispatchEventRelease);
-
-				// メディアプレイヤー UI
-				media_player_ui = new MediaPlayerExtendUI(iframe);
-				var event_handler_close = media_player_ui.createEventHandler("close");
-				event_handler_close.setFunction(dispatchEventRelease);
-
-				function responseInsert(){
-					if(!iframe)	return;
-
-					limitter_element = element_limitter_video.createElement();
-					limitter_element.onattach = function(){
-						iframe.src = iframe_url;
-					};
-					limitter_element.onremove = function(){
-						iframe.src = "";
-					};
-					limitter_element.setElementHitArea(iframe);
-
-					// 更新
-					limitter_element.update();
-				}
-
-				// コールバック関数を実行
-				project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
-			};
-
-			// ロードエラー
-			loader.onerror = function(){
-				expand_video_complete();
-				complete();
-			};
-
-			loader.setMethod("GET");
-			loader.setURL(url);
-			loader.loadText();
-		}
-
-		if(project.getVisibleVideoLiveleak()){
-
-			// www.liveleak.com へのリンク
-			var allow_list_video = [
-				"(http|https)://www\\.liveleak\\.com/view[?].*(i=[a-z0-9_]).*",
-				"(http|https)://.*?\\.liveleak\\.com/.*/view[?].*(i=[a-z0-9_]).*"
-			];
-			num = allow_list_video.length;
-			for(i=0;i<num;i++){
-				if(url.match(new RegExp(allow_list_video[i],"i"))){
-					expand_video(url);
 				}
 			}
 		}
@@ -59899,24 +58168,6 @@
 			menu_setting_expand_video_inline_nicovideo_visible_video: {
 				message: "ビデオを表示"
 			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_video: {
-				message: "ビデオサムネイルを表示"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_mylist: {
-				message: "マイリストサムネイルを表示"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_user: {
-				message: "ユーザーサムネイルを表示"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_community: {
-				message: "コミュニティサムネイルを表示"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_live: {
-				message: "生放送サムネイルを表示"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_seiga: {
-				message: "静画サムネイルを表示"
-			},
 			menu_setting_expand_video_inline_dailymotion: {
 				message: "www.dailymotion.com の設定"
 			},
@@ -59933,24 +58184,6 @@
 				message: "vimeo.com の設定"
 			},
 			menu_setting_expand_video_inline_video_visible_video: {
-				message: "ビデオを表示"
-			},
-			menu_setting_expand_video_inline_fc2video: {
-				message: "video.fc2.com の設定"
-			},
-			menu_setting_expand_video_inline_fc2video_check_box_container: {
-				message: "video.fc2.com の設定"
-			},
-			menu_setting_expand_video_inline_fc2video_visible_video: {
-				message: "ビデオを表示"
-			},
-			menu_setting_expand_video_inline_liveleak: {
-				message: "www.liveleak.com の設定"
-			},
-			menu_setting_expand_video_inline_liveleak_check_box_container: {
-				message: "www.liveleak.com の設定"
-			},
-			menu_setting_expand_video_inline_liveleak_visible_video: {
 				message: "ビデオを表示"
 			},
 			menu_setting_expand_iframe: {
@@ -60037,24 +58270,6 @@
 			menu_setting_style_sheet_expand_video_nicovideo_inline_video: {
 				message: "ビデオのインライン表示"
 			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_video: {
-				message: "ビデオサムネイルのインライン表示"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_mylist: {
-				message: "マイリストサムネイルのインライン表示"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_user: {
-				message: "ユーザーサムネイルのインライン表示"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_community: {
-				message: "コミュニティサムネイルのインライン表示"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_live: {
-				message: "生放送サムネイルのインライン表示"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga: {
-				message: "静画サムネイルのインライン表示"
-			},
 			menu_setting_style_sheet_expand_video_dailymotion: {
 				message: "www.dailymotion.com の設定"
 			},
@@ -60065,18 +58280,6 @@
 				message: "vimeo.com の設定"
 			},
 			menu_setting_style_sheet_expand_video_vimeo_inline_video: {
-				message: "ビデオのインライン表示"
-			},
-			menu_setting_style_sheet_expand_video_fc2video: {
-				message: "video.fc2.com の設定"
-			},
-			menu_setting_style_sheet_expand_video_fc2video_inline_video: {
-				message: "ビデオのインライン表示"
-			},
-			menu_setting_style_sheet_expand_video_liveleak: {
-				message: "www.liveleak.com の設定"
-			},
-			menu_setting_style_sheet_expand_video_liveleak_inline_video: {
 				message: "ビデオのインライン表示"
 			},
 			menu_setting_style_sheet_expand_iframe: {
@@ -61322,24 +59525,6 @@
 			menu_setting_expand_video_inline_nicovideo_visible_video: {
 				message: "enable video"
 			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_video: {
-				message: "enable video thumbnail"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_mylist: {
-				message: "enable mylist thumbnail"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_user: {
-				message: "enable user thumbnail"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_community: {
-				message: "enable community thumbnail"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_live: {
-				message: "enable live broadcast thumbnail"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_seiga: {
-				message: "enable seiga thumbnail"
-			},
 			menu_setting_expand_video_inline_dailymotion: {
 				message: "www.dailymotion.com Setting"
 			},
@@ -61356,24 +59541,6 @@
 				message: "vimeo.com Setting"
 			},
 			menu_setting_expand_video_inline_video_visible_video: {
-				message: "enable video"
-			},
-			menu_setting_expand_video_inline_fc2video: {
-				message: "video.fc2.com Setting"
-			},
-			menu_setting_expand_video_inline_fc2video_check_box_container: {
-				message: "video.fc2.com Setting"
-			},
-			menu_setting_expand_video_inline_fc2video_visible_video: {
-				message: "enable video"
-			},
-			menu_setting_expand_video_inline_liveleak: {
-				message: "www.liveleak.com Setting"
-			},
-			menu_setting_expand_video_inline_liveleak_check_box_container: {
-				message: "www.liveleak.com Setting"
-			},
-			menu_setting_expand_video_inline_liveleak_visible_video: {
 				message: "enable video"
 			},
 			menu_setting_expand_iframe: {
@@ -61460,24 +59627,6 @@
 			menu_setting_style_sheet_expand_video_nicovideo_inline_video: {
 				message: "Video Inline Display"
 			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_video: {
-				message: "Video Thumbnail Inline Display"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_mylist: {
-				message: "Mylist Thumbnail Inline Display"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_user: {
-				message: "User Thumbnail Inline Display"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_community: {
-				message: "Community Thumbnail Inline Display"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_live: {
-				message: "Live Broadcast Thumbnail Inline Display"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga: {
-				message: "Seiga Thumbnail Inline Display"
-			},
 			menu_setting_style_sheet_expand_video_dailymotion: {
 				message: "www.dailymotion.com Setting"
 			},
@@ -61488,18 +59637,6 @@
 				message: "vimeo.com Setting"
 			},
 			menu_setting_style_sheet_expand_video_vimeo_inline_video: {
-				message: "Video Inline Display"
-			},
-			menu_setting_style_sheet_expand_video_fc2video: {
-				message: "video.fc2.com Setting"
-			},
-			menu_setting_style_sheet_expand_video_fc2video_inline_video: {
-				message: "Video Inline Display"
-			},
-			menu_setting_style_sheet_expand_video_liveleak: {
-				message: "www.liveleak.com Setting"
-			},
-			menu_setting_style_sheet_expand_video_liveleak_inline_video: {
 				message: "Video Inline Display"
 			},
 			menu_setting_style_sheet_expand_iframe: {
@@ -62744,24 +60881,6 @@
 			menu_setting_expand_video_inline_nicovideo_visible_video: {
 				message: "启用视频"
 			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_video: {
-				message: "启用视频缩略图"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_mylist: {
-				message: "启用 我的列表 缩略图"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_user: {
-				message: "启用 用户 缩略图"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_community: {
-				message: "启用 社区 缩略图"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_live: {
-				message: "启用 现场直播 缩略图"
-			},
-			menu_setting_expand_video_inline_nicovideo_visible_thumbnail_seiga: {
-				message: "启用 世佳 缩略图"
-			},
 			menu_setting_expand_video_inline_dailymotion: {
 				message: "www.dailymotion.com 设置"
 			},
@@ -62778,24 +60897,6 @@
 				message: "vimeo.com 设置"
 			},
 			menu_setting_expand_video_inline_video_visible_video: {
-				message: "启用视频"
-			},
-			menu_setting_expand_video_inline_fc2video: {
-				message: "video.fc2.com 设置"
-			},
-			menu_setting_expand_video_inline_fc2video_check_box_container: {
-				message: "video.fc2.com 设置"
-			},
-			menu_setting_expand_video_inline_fc2video_visible_video: {
-				message: "启用视频"
-			},
-			menu_setting_expand_video_inline_liveleak: {
-				message: "www.liveleak.com 设置"
-			},
-			menu_setting_expand_video_inline_liveleak_check_box_container: {
-				message: "www.liveleak.com 设置"
-			},
-			menu_setting_expand_video_inline_liveleak_visible_video: {
 				message: "启用视频"
 			},
 			menu_setting_expand_iframe: {
@@ -62882,24 +60983,6 @@
 			menu_setting_style_sheet_expand_video_nicovideo_inline_video: {
 				message: "视频内联显示"
 			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_video: {
-				message: "视频缩略图内联显示"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_mylist: {
-				message: "我的列表 缩略图内联显示"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_user: {
-				message: "用户 缩略图内联显示"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_community: {
-				message: "社区 缩略图内联显示"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_live: {
-				message: "现场直播 缩略图内联显示"
-			},
-			menu_setting_style_sheet_expand_video_nicovideo_inline_thumbnail_seiga: {
-				message: "世佳 缩略图内联显示"
-			},
 			menu_setting_style_sheet_expand_video_dailymotion: {
 				message: "www.dailymotion.com 设置"
 			},
@@ -62910,18 +60993,6 @@
 				message: "vimeo.com 设置"
 			},
 			menu_setting_style_sheet_expand_video_vimeo_inline_video: {
-				message: "视频内联显示"
-			},
-			menu_setting_style_sheet_expand_video_fc2video: {
-				message: "video.fc2.com 设置"
-			},
-			menu_setting_style_sheet_expand_video_fc2video_inline_video: {
-				message: "视频内联显示"
-			},
-			menu_setting_style_sheet_expand_video_liveleak: {
-				message: "www.liveleak.com 设置"
-			},
-			menu_setting_style_sheet_expand_video_liveleak_inline_video: {
 				message: "视频内联显示"
 			},
 			menu_setting_style_sheet_expand_iframe: {
@@ -64738,25 +62809,20 @@
 						// ロード完了を通知
 						_queue_element.complete();
 
-						// 失敗
-						if(!result){
-							switch(xhr.status){
-							case 300:
-							case 301:
-							case 302:
-							case 303:
-							case 307:
-								//	Location ヘッダを取得
-								var url = xhr.getResponseHeader("Location");
-								if(url){
-									_request.url = latest_url = url;
-									loadHeader();
-									return;
-								}
+						switch(xhr.status){
+						case 300:
+						case 301:
+						case 302:
+						case 303:
+						case 307:
+						case 308:
+							//	Location ヘッダを取得
+							var url = xhr.getResponseHeader("Location");
+							if(url){
+								_request.url = latest_url = url;
+								loadHeader();
+								return;
 							}
-
-							complete();
-							return;
 						}
 
 						var redirected = Boolean(_request.url != xhr.responseURL);
@@ -64764,17 +62830,18 @@
 							_request.url = latest_url = xhr.responseURL;
 							loadHeader();
 							return;
-						}else{
+						}
+						
+						if(result){
 							// テキスト系ならボディを解析する
 							var type = xhr.getResponseHeader("Content-Type");
 							if(type.match(/text[/]/)){
 								loadBody();
 								return;
-							}else{
-								complete();
-								return;
 							}
 						}
+
+						complete();
 					});
 
 					if(!result){
