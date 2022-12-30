@@ -37,7 +37,7 @@
 ## Expand Video Player
  - (In the initial setting, Particular site only.)
  - If there is a URL of the video file, Display the &lt;video&gt; element.
- - If there is a link to a video site,Display the video player. (youtube.com, nicovideo.jp, dailymotion.com, vimeo.com, video.fc2.com, liveleak.com)
+ - If there is a link to a video site,Display the video player. (youtube.com, nicovideo.jp, dailymotion.com, vimeo.com)
 
 ## Expand Short Url
  - If there is a short URL, Link is changed into redirect last.
