@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.5.26
+// @version        1.5.27
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @description:ja 画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、2chなどの主要掲示板の拡張表示など...
@@ -4231,38 +4231,32 @@
 			return s;
 		}
 
+		// data URL
+		var data_parser = DataURL_Parser(url);
+		if(data_parser){
+			var mimetype = data_parser.mimetype;
+			var hash = "";
+			var ext = "";
+			var crc32 = new CRC32();
+			crc32.initialize();
+			if(data_parser.format == "base64"){
+				crc32.setPosition(0);
+				var ary_buffer = Base64_To_ArrayBuffer(url.slice(data_parser.data_offset));
+				hash = crc32.getFromArrayBuffer(ary_buffer,ary_buffer.byteLength);
+				ext = FileSignature_To_Ext_From_ArrayBuffer(ary_buffer);
+			}else{
+				crc32.setPosition(data_parser.data_offset);
+				hash = crc32.getFromString(url,data_parser.data_size);
+			}
+
+			if(!ext) ext = MIMEType_To_Ext(mimetype);
+			mimetype = mimetype.replace(/[/]/g,"-");
+			url = "data:" + mimetype + "/" + hash.toString(16).toUpperCase();
+			if(ext) url = url + "." + ext;
+		}
+
+		var parser = URL_Parser(url);
 		var kebab_url = url.replace(/\//g,"-");
-		var pathname = "";
-		var origin = "";
-		var domain = "";
-		var filename = "";
-		var name = "";
-		var ext = "";
-		var query = "";
-		var fragment = "";
-
-		var m;
-		m = url.match(/([?].*?)(#|$)/);
-		if(m) query = m[1];
-		m = url.match(/([#].*)$/);
-		if(m) fragment = m[1];
-
-		var index = url.length;
-		m = url.match(/(#|[?])/);
-		if(m) index = m.index;
-		pathname = url.substr(0,index);
-
-		m = pathname.match(/([^/]+)(\/*)$/);
-		if(m) filename = m[1];
-		m = filename.match(/(.*?)([.]|$)/);
-		if(m) name = m[1];
-		m = filename.match(/.*?[.](.*)$/);
-		if(m) ext = m[1];
-
-		m = pathname.match(/.*?:\/\/[^/]*/);
-		if(m) origin = m[0];
-		m = origin.match(/.*?:\/\/(.*?)(:|$)/);
-		if(m) domain = m[1];
 
 		var date = new Date();
 		var year = ntos(date.getFullYear(),4);
@@ -4277,13 +4271,13 @@
 		str = detail;
 		str = str.replace(/<url>/gi,url);
 		str = str.replace(/<kebab-url>/gi,kebab_url);
-		str = str.replace(/<origin>/gi,origin);
-		str = str.replace(/<domain>/gi,domain);
-		str = str.replace(/<filename>/gi,filename);
-		str = str.replace(/<name>/gi,name);
-		str = str.replace(/<ext>/gi,ext);
-		str = str.replace(/<query>/gi,query);
-		str = str.replace(/<fragment>/gi,fragment);
+		str = str.replace(/<origin>/gi,parser.origin);
+		str = str.replace(/<domain>/gi,parser.domain);
+		str = str.replace(/<filename>/gi,parser.filename);
+		str = str.replace(/<name>/gi,parser.name);
+		str = str.replace(/<ext>/gi,parser.ext);
+		str = str.replace(/<query>/gi,parser.search);
+		str = str.replace(/<fragment>/gi,parser.hash);
 
 		str = str.replace(/<year>/gi,year);
 		str = str.replace(/<month>/gi,month);
@@ -4293,6 +4287,17 @@
 		str = str.replace(/<second>/gi,second);
 		str = str.replace(/<millisecond>/gi,millisecond);
 		str = str.replace(/<unixtime>/gi,unixtime);
+
+		// 最後尾が拡張子ではない場合付与
+		var m = str.match(new RegExp("[.]([^.]*?)$"));
+		if((function(){
+			if(m){
+				if(m[1] == parser.ext) return false;
+			}
+			return true;
+		})()){
+			str += parser.ext;
+		}
 
 		return str;
 	}
@@ -4310,9 +4315,11 @@
 			if(!f) continue;
 			if(f.match(/^[. ]+$/)) continue;
 			f = f.replace(/^[. ]*(.*?)[. ]*$/,"$1");
+			f = f.replace(/[":*?<>|~]/g,"-");
 			e.push(f);
 		}
-		return e.join("/").replace(new RegExp("[\":*?<>|~]","ig"),"-");
+
+		return e.join("/");
 	}
 
 	// --------------------------------------------------------------------------------
@@ -12075,9 +12082,27 @@
 	
 	function(info,response){
 		var anchor_element = info.anchor_element;
-
 		var url = anchor_element.href;
-		if(url.search("^(http|https|data):") >= 0){
+
+		var result = (function(){
+
+			// 通常のURL
+			var url_parser = URL_Parser(url);
+			if(url_parser.protocol.match(/^(http|https|ftp):/i)){
+				return true;
+			}
+
+			// DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				return true;
+			}
+
+			return false;
+		})();
+
+
+		if(result){
 
 			// Downloader オブジェクトを作成
 			var downloader = new Downloader();
@@ -12109,39 +12134,41 @@
 	
 	function(info,response){
 		var anchor_element = info.anchor_element;
-
 		var url = anchor_element.href;
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png",
-			"webp",
-			"avif"
-		];
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			if(url.search(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i")) >= 0){
+		var result = (function(){
 
-				// Downloader オブジェクトを作成
-				var downloader = new Downloader();
-
-				// ダウンロード設定
-				downloader.setURL(url);
-				//downloader.setFileName(url);
-				downloader.setSaveAs(false);
-				downloader.setSilent(true);
-				downloader.setAllowSameRequest(false);
-
-				// ダウンロード開始
-				downloader.start();
-
-				break;
+			// 画像の拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(bmp|gif|jpg|jpe|jpeg|png|webp|avif)$/i)){
+				return true;
 			}
+
+			// 画像の DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^image[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+
+			// Downloader オブジェクトを作成
+			var downloader = new Downloader();
+
+			// ダウンロード設定
+			downloader.setURL(url);
+			//downloader.setFileName(url);
+			downloader.setSaveAs(false);
+			downloader.setSilent(true);
+			downloader.setAllowSameRequest(false);
+
+			// ダウンロード開始
+			downloader.start();
 		}
 
 		return false;
@@ -12160,9 +12187,26 @@
 	
 	function(info,response){
 		var anchor_element = info.anchor_element;
-
 		var url = anchor_element.href;
-		if(url.search("^(http|https|data):") >= 0){
+
+		var result = (function(){
+
+			// 通常のURL
+			var url_parser = URL_Parser(url);
+			if(url_parser.protocol.match(/^(http|https|ftp):/i)){
+				return true;
+			}
+
+			// DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				return true;
+			}
+
+			return false;
+		})();
+
+		if(result){
 
 			// ユーザーリストからアイテムを作成
 			var item = download_list_user.createItem();
@@ -12188,33 +12232,35 @@
 	
 	function(info,response){
 		var anchor_element = info.anchor_element;
-
 		var url = anchor_element.href;
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png",
-			"webp",
-			"avif"
-		];
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			if(url.search(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i")) >= 0){
+		var result = (function(){
 
-				// ユーザーリストからアイテムを作成
-				var item = download_list_user.createItem();
-
-				// ダウンロード設定
-				item.setURL(url);
-				//item.setFileName(url);
-
-				break;
+			// 画像の拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(bmp|gif|jpg|jpe|jpeg|png|webp|avif)$/i)){
+				return true;
 			}
+
+			// 画像の DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^image[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+
+			// ユーザーリストからアイテムを作成
+			var item = download_list_user.createItem();
+
+			// ダウンロード設定
+			item.setURL(url);
+			//item.setFileName(url);
 		}
 
 		return false;
@@ -14372,18 +14418,28 @@
 		var anchor_element = info.anchor_element;
 		var url = info.url;
 
-		var ext_list = [
-			"txt"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// テキストの拡張子である場合、インライン表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// テキストの拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(txt)$/i)){
 				return true;
 			}
+
+			// テキストの DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^text[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -14718,27 +14774,29 @@
 		var current_element = info.current_element;
 		var url = info.url;
 
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png",
-			"webp",
-			"avif"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が画像の拡張子である場合、ポップアップ表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// 画像の拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(bmp|gif|jpg|jpe|jpeg|png|webp|avif)$/i)){
 				return true;
 			}
-		}
 
+			// 画像の DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^image[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
+		}
 		return false;
 	},
 	function(info,response){
@@ -14814,25 +14872,28 @@
 		var current_element = info.current_element;
 		var url = info.url;
 
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png",
-			"webp",
-			"avif"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が画像の拡張子である場合、ポップアップ表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// 画像の拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(bmp|gif|jpg|jpe|jpeg|png|webp|avif)$/i)){
 				return true;
 			}
+
+			// 画像の DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^image[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -14890,25 +14951,28 @@
 		var current_element = info.current_element;
 		var url = info.url;
 
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png",
-			"webp",
-			"avif"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が画像の拡張子である場合、サムネイル表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// 画像の拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(bmp|gif|jpg|jpe|jpeg|png|webp|avif)$/i)){
 				return true;
 			}
+
+			// 画像の DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^image[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -14951,25 +15015,28 @@
 		var current_element = info.current_element;
 		var url = info.url;
 
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png",
-			"webp",
-			"avif"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が画像の拡張子である場合、ポップアップ表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// 画像の拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(bmp|gif|jpg|jpe|jpeg|png|webp|avif)$/i)){
 				return true;
 			}
+
+			// 画像の DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^image[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -15018,25 +15085,28 @@
 		var current_element = info.current_element;
 		var url = info.url;
 
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png",
-			"webp",
-			"avif"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が画像の拡張子である場合、サムネイル表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// 画像の拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(bmp|gif|jpg|jpe|jpeg|png|webp|avif)$/i)){
 				return true;
 			}
+
+			// 画像の DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^image[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -15136,25 +15206,28 @@
 		var current_element = info.current_element;
 		var url = info.url;
 
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png",
-			"webp",
-			"avif"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が画像の拡張子である場合、サムネイル表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// 画像の拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(bmp|gif|jpg|jpe|jpeg|png|webp|avif)$/i)){
 				return true;
 			}
+
+			// 画像の DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^image[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -15247,25 +15320,28 @@
 		var anchor_element = info.anchor_element;
 		var url = info.url;
 
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png",
-			"webp",
-			"avif"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が画像の拡張子である場合、サムネイル表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// 画像の拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(bmp|gif|jpg|jpe|jpeg|png|webp|avif)$/i)){
 				return true;
 			}
+
+			// 画像の DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^image[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -15317,25 +15393,28 @@
 		var anchor_element = info.anchor_element;
 		var url = info.url;
 
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png",
-			"webp",
-			"avif"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が画像の拡張子である場合、ポップアップ表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// 画像の拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(bmp|gif|jpg|jpe|jpeg|png|webp|avif)$/i)){
 				return true;
 			}
+
+			// 画像の DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^image[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -15471,25 +15550,28 @@
 		var current_element = info.current_element;
 		var url = info.url;
 
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png",
-			"webp",
-			"avif"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が画像の拡張子である場合、サムネイル表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// 画像の拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(bmp|gif|jpg|jpe|jpeg|png|webp|avif)$/i)){
 				return true;
 			}
+
+			// 画像の DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^image[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -15532,25 +15614,28 @@
 		var current_element = info.current_element;
 		var url = info.url;
 
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png",
-			"webp",
-			"avif"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が画像の拡張子である場合、ポップアップ表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// 画像の拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(bmp|gif|jpg|jpe|jpeg|png|webp|avif)$/i)){
 				return true;
 			}
+
+			// 画像の DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^image[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -15646,25 +15731,28 @@
 		var current_element = info.current_element;
 		var url = info.url;
 
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png",
-			"webp",
-			"avif"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が画像の拡張子である場合、サムネイル表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// 画像の拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(bmp|gif|jpg|jpe|jpeg|png|webp|avif)$/i)){
 				return true;
 			}
+
+			// 画像の DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^image[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -15729,25 +15817,28 @@
 		var current_element = info.current_element;
 		var url = info.url;
 
-		var ext_list = [
-			"bmp",
-			"gif",
-			"jpg",
-			"jpe",
-			"jpeg",
-			"png",
-			"webp",
-			"avif"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が画像の拡張子である場合、ポップアップ表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// 画像の拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(bmp|gif|jpg|jpe|jpeg|png|webp|avif)$/i)){
 				return true;
 			}
+
+			// 画像の DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^image[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -16005,24 +16096,28 @@
 		var anchor_element = info.anchor_element;
 		var url = info.url;
 
-		var ext_list = [
-			"mp3",
-			"wav",
-			"ogg",
-			"m4a",
-			"aac",
-			"midi",
-			"mid"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL がサウンドの拡張子である場合、インライン表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// オーディオの拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(mp3|wav|ogg|m4a|aac|midi|mid)$/i)){
 				return true;
 			}
+
+			// オーディオの DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^audio[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -16310,24 +16405,28 @@
 		var anchor_element = info.anchor_element;
 		var url = info.url;
 
-		var ext_list = [
-			"mp4",
-			"webm",
-			"avi",
-			"m4v",
-			"ogv",
-			"mpg",
-			"mpeg"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// URL が動画の拡張子である場合、インライン表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// ビデオの拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(mp4|webm|avi|m4v|ogv|mpg|mpeg)$/i)){
 				return true;
 			}
+
+			// ビデオの DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^video[/]/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -16507,18 +16606,28 @@
 		var anchor_element = info.anchor_element;
 		var url = info.url;
 
-		var ext_list = [
-			"pdf"
-		];
+		var result = (function(){
 
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			// PDF の拡張子である場合、インライン表示を試みる
-			if(url.match(new RegExp("^.*/.+\\." + ext_list[i] + "($|[#?:].*$)","i"))){
-				response({result:true});
+			// PDFの拡張子
+			var url_parser = URL_Parser(url);
+			if(url_parser.ext.match(/^(pdf)$/i)){
 				return true;
 			}
+
+			// PDFの DataURL
+			var data_parser = DataURL_Parser(url);
+			if(data_parser){
+				if(data_parser.mimetype.match(/^application[/]pdf/i)){
+					return true;
+				}
+			}
+
+			return false;
+		})();
+
+		if(result){
+			response({result:true});
+			return true;
 		}
 
 		return false;
@@ -36952,7 +37061,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.26");
+				new UI_Text(parent,"PageExpand ver.1.5.27");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -62374,7 +62483,7 @@
 				// 読み込みを開始する
 				var result;
 				if(use_blob_url_scheme){
-					var result = loadBinary(function(result,xhr){
+					var result = loadArrayBufferList(function(result,xhr){
 
 						// ロード完了を通知
 						_queue_element.complete();
@@ -62382,9 +62491,18 @@
 						// ロード成功
 						if(result){
 							if(xhr.responseData){
-								// blob URL を作成
-								var blob_url = BlobURLCreate(new Blob([xhr.responseData],{type:xhr.getResponseHeader("Content-Type")||"image/png"}));
-								// data URL scheme による画像の読み込み
+								var blob_list = (function(){
+									var list = xhr.responseData;
+									var ary = new Array();
+									var num = list.length;
+									var i;
+									for(i=0;i<num;i++){
+										ary.push(new Blob([list[i]]));
+									}
+									return ary;
+								})();
+								var blob = new Blob(blob_list,{type:xhr.getResponseHeader("Content-Type")||"image/png"});
+								var blob_url = BlobURLCreate(blob);
 								tryLoadDataUriScheme({responseData:blob_url});
 							}else{
 								// Image による画像の読み込み
@@ -63303,26 +63421,28 @@
 		// --------------------------------------------------------------------------------
 		// バイナリ読み込み（内部用）
 		// --------------------------------------------------------------------------------
-		function loadBinary(response){
+		function loadArrayBufferList(response){
 			if(!requestVerify()) return false;
 
 			if(0){
-				var ary_buffer = null;
+				var ary_buffer_list = null;
 				return requestBackground(response , {
 					command:"loadBinaryString",
 					command_dictionary:{
 						"data":function(receive){
-							if(!ary_buffer) ary_buffer = new ArrayBuffer(receive.total);
+							if(!ary_buffer_list) ary_buffer_list = new Array();
 							var i;
-							var n =receive.data.length;
-							var a = new Int8Array(ary_buffer,receive.pos);
-							for(i=0;i<n;i++){
+							var size = receive.data.length;
+							var ary_buffer = new ArrayBuffer(size);
+							var a = new Int8Array(ary_buffer);
+							for(i=0;i<size;i++){
 								a[i] = receive.data.charCodeAt(i) & 0xff;
 							}
+							ary_buffer_list.push(ary_buffer);
 						},
 						"xhr":function(receive){
 							var xhr = receive.data;
-							xhr.responseData = ary_buffer;
+							xhr.responseData = ary_buffer_list;
 						}
 					}
 				});
@@ -63582,8 +63702,10 @@
 					return;
 				}
 
-				// Firefox版 Tampermonkey にてエラーが返らないので除外
-				if(_this._url.search(new RegExp("^(data|blob):","i")) >= 0){
+				var file_name = ProjectDownloadSaveFile_Sanitize(_this._file_name || project.getSaveFileDownload(_this._url));
+
+				// ファイル名が長すぎるとフリーズするので回避
+				if(file_name.length > 65535){
 					callback({
 						state:"unsupported",
 						response:{}
@@ -63594,7 +63716,7 @@
 				var dl_options = {
 					url:_this._url,
 					saveAs:_this._save_as,
-					name:ProjectDownloadSaveFile_Sanitize(_this._file_name || project.getSaveFileDownload(_this._url)),
+					name:file_name,
 					onload:function(e){
 						callback({
 							state:"complete",
@@ -73144,6 +73266,20 @@
 		};
 
 		// --------------------------------------------------------------------------------
+		// 文字列から CRC32 を取得
+		// --------------------------------------------------------------------------------
+		this.getFromString = function (buffer,size){
+			size += _pos;
+			while(_pos<size){
+				var code = buffer.charCodeAt(_pos);
+				_crc32 = _table[(_crc32 ^ ((code >>> 8) & 0xff)) & 0xff] ^ (_crc32 >>> 8);
+				_crc32 = _table[(_crc32 ^ ((code >>> 0) & 0xff)) & 0xff] ^ (_crc32 >>> 8);
+				_pos ++;
+			}
+			return (_crc32 ^ 0xffffffff) >>> 0;
+		};
+
+		// --------------------------------------------------------------------------------
 		// プライベート変数
 		// --------------------------------------------------------------------------------
 		var _crc32;
@@ -73188,6 +73324,110 @@
 		// --------------------------------------------------------------------------------
 		this.initialize();
 
+	}
+
+	// --------------------------------------------------------------------------------
+	// MIMEタイプから拡張子を取得
+	// --------------------------------------------------------------------------------
+	function MIMEType_To_Ext(type){
+
+		var upper = "";
+		var lower = "";
+		var m = type.match(/(.*)[/](.*)/);
+		if(m) return "";
+		upper = m[1].toLowerCase();
+		lower = m[2].toLowerCase();
+
+		var dic = {
+			"image":{
+				"png":"png",
+				"bmp":"bmp",
+				"gif":"gif",
+				"jpg":"jpg",
+				"jpeg":"jpeg",
+				"svg+xml":"svg",
+				"tiff":"tiff",
+				"webp":"webp",
+				"vnd.microsoft.icon":"ico"
+			},
+			"audio":{
+				"aac":"aac",
+				"midi":"mid",
+				"x-midi":"mid",
+				"mpeg":"mp3",
+				"ogg":"oga",
+				"wav":"wav",
+				"webm":"weba",
+			},
+			"video":{
+				"x-msvideo":"avi",
+				"mpeg":"mpeg",
+				"ogg":"ogv",
+				"mp2t":"ts",
+				"webm":"webm",
+				"mp4":"mp4"
+			},
+			"text":{
+				"css":"css",
+				"csv":"csv",
+				"html":"html",
+				"javascript":"js",
+				"plain":"txt"
+			},
+			"application":{
+				"octet-stream":"bin",
+				"x-bzip":"bz",
+				"x-bzip2":"bz2",
+				"gzip":"gz",
+				"json":"json",
+				"x-httpd-php":"php",
+				"vnd.rar":"rar",
+				"rtf":"rtf",
+				"x-tar":"tar",
+				"xml":"xml",
+				"zip":"zip",
+				"x-7z-compressed":"7z",
+			}
+
+		}
+
+		var o = dic[upper];
+		if(!o) return "";
+
+		return o[lower] || "";
+	}
+
+	// --------------------------------------------------------------------------------
+	// シグネチャーから拡張子を取得
+	// --------------------------------------------------------------------------------
+	function FileSignature_To_Ext_From_ArrayBuffer(ary_buffer){
+		var data_view = new DataView(ary_buffer);
+		var size = ary_buffer.byteLength;
+
+		if(size < 2) return "";
+		switch(data_view.getUint16(0,false)){
+		case 0x424D:
+			return "bmp";
+		case 0xFFD8:
+			return "jpg";
+		}
+
+		if(size < 4) return "";
+		switch(data_view.getUint32(0,false) >>> 8){
+		case 0x474946:
+			return "gif";
+		}
+		switch(data_view.getUint32(0,false)){
+		case 0x52494646:
+			return "webp";
+		}
+
+		if(size < 8) return "";
+		if((data_view.getUint32(0,false) == 0x89504E47) && (data_view.getUint32(4,false) == 0x0D0A1A0A)){
+			return "png";
+		}
+
+		return "";
 	}
 
 	// --------------------------------------------------------------------------------
@@ -74336,10 +74576,206 @@
 	// --------------------------------------------------------------------------------
 	// URL アドレスからオリジンを取得
 	// --------------------------------------------------------------------------------
-	function StringUrl_Get_Origin(url){
-		var m = url.match(new RegExp("^(http|https|ftp):[/][/][^.]+[.][^/]+","i"));
-		if(!m) return "";
-		return m[0];
+	function URL_Get_Origin(url){
+		return URL_Parser(url).origin;
+	}
+
+	// --------------------------------------------------------------------------------
+	// URL パーサー
+	// --------------------------------------------------------------------------------
+	function URL_Parser(url){
+
+		var protocol = "";
+		var username = "";
+		var password = "";
+		var port = "";
+		var host = "";
+		var hostname = "";
+		var origin = "";
+		var pathname = "";
+		var filename = "";
+		var name = "";
+		var ext = "";
+		var search = "";
+		var hash = "";
+		var special_scheme;
+
+		try{
+			var parser = new URL(url);
+			pathname = parser.pathname;
+			var m = pathname.match(/([^/]+)([/]*)$/);
+			if(m) filename = m[1];
+			m = filename.match(/[.]([^.]*)$/);
+			if(m){
+				ext = m[1];
+				name = RegExp.leftContext;
+			}else{
+				name = filename;
+			}
+
+			return {
+				protocol:parser.protocol,
+				username:parser.username,
+				password:parser.password,
+				port:parser.port,
+				host:parser.host,
+				hostname:parser.hostname,
+				origin:parser.origin,
+				pathname:pathname,
+				filename:filename,
+				name:name,
+				ext:ext,
+				search:parser.search,
+				hash:parser.hash
+			};
+
+		}catch(e){
+		}
+
+
+		var m;
+		var n = url;
+		if(url.length <= 2048){
+			m = n.match(/([#].*)$/);
+			if(m){
+				hash = m[1];
+				n = RegExp.leftContext;
+			}
+
+			m = n.match(/([?].*)/);
+			if(m){
+				search = m[1];
+				n = RegExp.leftContext;
+			}
+
+			m = n.match(/^([^:]+:)/);
+			if(m){
+				protocol = m[1];
+				n = RegExp.rightContext;
+			}
+
+			m = protocol.match(/^(http|https|ftp|file|ws|wss):/);
+			special_scheme = Boolean(m);
+			if(special_scheme){
+				m = n.match(/^([/]*)/);
+				if(m){
+					n = RegExp.rightContext;
+				}
+				if(protocol.match(/^(file):/)){
+					n = "/" + n;
+				}
+				m = n.match(/^([^/]*)/);
+				if(m){
+					pathname = RegExp.rightContext;
+					n = m[1];
+				}
+			}else{
+				pathname = n;
+				n = "";
+			}
+
+			m = pathname.match(/([^/]+)([/]*)$/);
+			if(m) filename = m[1];
+			m = filename.match(/[.]([^.]*)$/);
+			if(m){
+				ext = m[1];
+				name = RegExp.leftContext;
+			}else{
+				name = filename;
+			}
+
+			m = n.match(/([^@]*)@/);
+			if(m){
+				host = RegExp.rightContext; 
+				n = m[1];
+			}else{
+				host = n;
+				n = "";
+			}
+
+			m = host.match(/:([^:]*)$/);
+			if(m){
+				port = m[1];
+				hostname = RegExp.leftContext;
+			}else{
+				hostname = host;
+			}
+
+			m = n.match(/[:]([^:]*)$/);
+			if(m){
+				password = m[1];
+				username = RegExp.leftContext;
+			}else{
+				username = n;
+			}
+
+			if(special_scheme){
+				origin = protocol + "//" + hostname;
+				if(port) origin += ":" + port;
+			}
+
+		}
+
+		return {
+			protocol:protocol,
+			username:username,
+			password:password,
+			port:port,
+			host:host,
+			hostname:hostname,
+			origin:origin,
+			pathname:pathname,
+			filename:filename,
+			name:name,
+			ext:ext,
+			search:search,
+			hash:hash
+		};
+	}
+
+	// --------------------------------------------------------------------------------
+	// Data URL パーサー
+	// --------------------------------------------------------------------------------
+	function DataURL_Parser(url){
+		var mimetype = "";
+		var charset = "";
+		var format = "";
+		var offset = 0;
+
+		var m;
+		m = url.match(/^data:/i);
+		if(!m) return null;
+
+		offset = url.indexOf(",");
+		if(offset < 0) return null;
+
+		var ary = url.slice(5,offset).split(";");
+		var s;
+		s = ary.shift() || "";
+		m = s.match(/.+[/].+/);
+		if(m){
+			mimetype = m[0];
+			s = ary.shift() || "";
+		}
+		m = s.match(/^charset=(.*)/i);
+		if(m){
+			charset = m[1];
+			s = ary.shift() || "";
+		}
+		if(s.match(/^base64$/i)){
+			format = "base64";
+		}else{
+			format = "text";
+		}
+		offset += 1;
+
+		return {
+			mimetype:mimetype,
+			charset:charset,
+			format:format,
+			data_offset:offset,
+			data_size:(url.length - offset)
+		};
 	}
 
 	// --------------------------------------------------------------------------------
