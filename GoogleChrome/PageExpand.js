@@ -66,6 +66,7 @@ function PageExpand(page_expand_arguments){
 	var download_list_user;
 
 	// アドレス関連
+	var url_info_dictionary;
 	var address_collection;
 
 	// タスク関連
@@ -99,9 +100,6 @@ function PageExpand(page_expand_arguments){
 
 	// ビデオ管理
 	var element_limitter_video;
-
-	// リダイレクト辞書
-	var redirect_url_dictionary;
 
 	// 解析辞書
 	var analyze_work_dictionary;
@@ -187,6 +185,9 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// アドレスコレクション
+		if(!url_info_dictionary){
+			url_info_dictionary = new UrlInfoDictionary();
+		}
 		if(!address_collection){
 			address_collection = new AddressCollection();
 		}
@@ -273,11 +274,6 @@ function PageExpand(page_expand_arguments){
 		// ビデオ管理
 		if(!element_limitter_video){
 			element_limitter_video = new ElementLimiterByCount();
-		}
-
-		// リダイレクト辞書
-		if(!redirect_url_dictionary){
-			redirect_url_dictionary = new RedirectUrlDictionary();
 		}
 
 		// 解析辞書
@@ -376,12 +372,6 @@ function PageExpand(page_expand_arguments){
 			analyze_work_dictionary = null;
 		}
 
-		// リダイレクト辞書
-		if(redirect_url_dictionary){
-			redirect_url_dictionary.release();
-			redirect_url_dictionary = null;
-		}
-
 		// ビデオ管理
 		if(element_limitter_video){
 			element_limitter_video.release();
@@ -435,6 +425,10 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// アドレス関連
+		if(url_info_dictionary){
+			url_info_dictionary.release();
+			url_info_dictionary = null;
+		}
 		if(address_collection){
 			address_collection.release();
 			address_collection = null;
@@ -2018,6 +2012,13 @@ function PageExpand(page_expand_arguments){
 		};
 
 		// --------------------------------------------------------------------------------
+		// ロードのキャッシュモード（メディア用）
+		// --------------------------------------------------------------------------------
+		_this.getLoadCacheModeForMedia = function(){
+			return _proj_ins.download.load.cache_for_media;
+		};
+
+		// --------------------------------------------------------------------------------
 		// ダウンロードスレッドの最大数
 		// --------------------------------------------------------------------------------
 		_this.getDownloadThreadMax = function(){
@@ -3068,16 +3069,6 @@ function PageExpand(page_expand_arguments){
 		};
 
 		// --------------------------------------------------------------------------------
-		// イメージのソースタイプを取得
-		// --------------------------------------------------------------------------------
-		_this.getSourceLoadExpandImage = function(){
-			if(_proj_ins.expand_image){
-				return _proj_ins.expand_image.load.src_type;
-			}
-			return "mixed_content";
-		};
-
-		// --------------------------------------------------------------------------------
 		// イメージのアンロードが有効であるか取得
 		// --------------------------------------------------------------------------------
 		_this.getEnableUnloadExpandImage = function(){
@@ -3226,6 +3217,28 @@ function PageExpand(page_expand_arguments){
 				return _proj_ins.expand_video.inline.video_max;
 			}
 			return 0;
+		};
+
+		// --------------------------------------------------------------------------------
+		// インライン表示ビデオの最大許容限界
+		// --------------------------------------------------------------------------------
+		_this.getWidthMaxInlineVideo = function(){
+			var v;
+			if(_proj_ins.expand_video){
+				v = _proj_ins.expand_video.inline.width_max;
+			}
+			v = Number(v) || 0;
+			if(v < 100) v = 100;
+			return v;
+		};
+		_this.getHeightMaxInlineVideo = function(){
+			var v;
+			if(_proj_ins.expand_video){
+				v = _proj_ins.expand_video.inline.height_max;
+			}
+			v = Number(v) || 0;
+			if(v < 100) v = 100;
+			return v;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -4198,30 +4211,6 @@ function PageExpand(page_expand_arguments){
 			return s;
 		}
 
-		// data URL
-		var data_parser = DataURL_Parser(url);
-		if(data_parser){
-			var mimetype = data_parser.mimetype;
-			var hash = "";
-			var ext = "";
-			var crc32 = new CRC32();
-			crc32.initialize();
-			if(data_parser.format == "base64"){
-				crc32.setPosition(0);
-				var ary_buffer = Base64_To_ArrayBuffer(url.slice(data_parser.data_offset));
-				hash = crc32.getFromArrayBuffer(ary_buffer,ary_buffer.byteLength);
-				ext = FileSignature_To_Ext_From_ArrayBuffer(ary_buffer);
-			}else{
-				crc32.setPosition(data_parser.data_offset);
-				hash = crc32.getFromString(url,data_parser.data_size);
-			}
-
-			if(!ext) ext = MIMEType_To_Ext(mimetype);
-			mimetype = mimetype.replace(/[/]/g,"-");
-			url = "data:" + mimetype + "/" + hash.toString(16).toUpperCase();
-			if(ext) url = url + "." + ext;
-		}
-
 		var parser = URL_Parser(url);
 		var kebab_url = url.replace(/\//g,"-");
 
@@ -4256,14 +4245,12 @@ function PageExpand(page_expand_arguments){
 		str = str.replace(/<unixtime>/gi,unixtime);
 
 		// 最後尾が拡張子ではない場合付与
-		var m = str.match(new RegExp("[.]([^.]*?)$"));
-		if((function(){
-			if(m){
-				if(m[1] == parser.ext) return false;
+		if(parser.ext){
+			var ext0 = "." + parser.ext;
+			var ext1 = str.slice(-ext0.length);
+			if(ext0 != ext1){
+				str += ext0;
 			}
-			return true;
-		})()){
-			str += parser.ext;
 		}
 
 		return str;
@@ -11375,6 +11362,27 @@ function PageExpand(page_expand_arguments){
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.46
+		// --------------------------------------------------------------------------------
+		if(proj.version < 46){
+			// バージョン値
+			proj.version = 46;
+
+			update(proj.expand_image,"*",function(obj){
+				delete obj.load.src_type;
+			});
+			update(proj.expand_video,"*",function(obj){
+				var o = obj.inline;
+				o.width_max = 720;
+				o.height_max = 480;
+			});
+			proj.download.load.cache_for_media = "default";
+
+		}
+		if(exit())	return proj;
+
+
 		return proj;
 	}
 
@@ -13567,8 +13575,11 @@ function PageExpand(page_expand_arguments){
 			// クエリを取得
 			var query = StringGetQuery(url);
 			if(query.imgurl){
-				response({result:true,url:decodeURIComponent(decodeURIComponent(query.imgurl)),content_type:["image"]});
-				return true;
+				try{
+					var image_url = decodeURIComponent(decodeURIComponent(query.imgurl));
+					response({result:true,url:image_url,content_type:["image"]});
+					return true;
+				}catch(e){}
 			}
 		}
 
@@ -13715,55 +13726,26 @@ function PageExpand(page_expand_arguments){
 	function(info,response){
 		var anchor_element = info.anchor_element;
 
-		var ext_list = [
-			"jpg",
-			"jpeg",
-			"png",
-			"gif",
-			"svg",
-			"ogg"
-		];
-
-		var i;
-		var num = ext_list.length;
-		for(i=0;i<num;i++){
-			if(anchor_element.href.match(new RegExp("^.*/.+:.+\\." + ext_list[i] + "($|&|[?])","i"))){
-				break;
-			}
-		}
-		if(i != num){
-			// ローダーオブジェクトを作成
+		if((function(){
+			var url_parser = URL_Parser(anchor_element.href);
+			if(url_parser.name.match(/:/) && url_parser.ext.match(/^(bmp|gif|jpg|jpeg|png|svg|webp|avif)$/i)) return true;
+			return false;
+		})()){
 			var loader = new Loader();
-
-			// 成功
 			loader.onload = function(str){
-				// audio
-				if(str.match(new RegExp("<div[ ]class=\"fullImageLink\".*?<audio[ ].*?<source.*?src=\"(.*?)\"","i"))){
-					response({result:true,url:RegExp.$1});
-					return;
-				}
-
-				// svg
-				if(str.match(new RegExp("<div[ ]class=\"fullImageLink\".*?<a href=\".*?\\.svg\".*?<img.*?src=\"(.*?)\"","i"))){
-					response({result:true,url:RegExp.$1,content_type:["image"]});
-					return;
-				}
-
-				// 高解像度画像
-				if(str.match(new RegExp("<div[ ]class=\"fullImageLink\".*?<a href=\"(.*?)\"","i"))){
-					response({result:true,url:RegExp.$1,content_type:["image"]});
-					return;
+				var m = str.match(/<meta[^>]+?property="og:image"[^>]+?content="([^">]+)"[^>]*>[^">]/i);
+				if(m){
+					var url = m[1];
+					m = url.match(/([/][/]upload[.]wikimedia[.]org[/]wikipedia[/][^/]+[/])thumb[/]([^/]+[/][^/]+[/].*?)[/]/i);
+					if(m) url = "https:" + m[1] + m[2];
+					response({result:true,url:url,content_type:["image"]});
 				}
 
 				response({result:false});
 			};
-
-			// 失敗
 			loader.onerror = function(){
 				response({result:false});
 			};
-
-			// テキストの読み込み
 			loader.setMethod("GET");
 			loader.setURL(anchor_element.href);
 			loader.loadText();
@@ -16312,6 +16294,10 @@ function PageExpand(page_expand_arguments){
 		var width  = bounding_size.right  - bounding_size.left;
 		var height = bounding_size.bottom  - bounding_size.top;
 
+		// ビデオの最大サイズ
+		var width_max  = project.getWidthMaxInlineVideo();
+		var height_max  = project.getHeightMaxInlineVideo();
+
 		// スタイルのサイズを取得
 		style.width  = "0px";
 		style.height = "0px";
@@ -16320,17 +16306,29 @@ function PageExpand(page_expand_arguments){
 		var style_h = bounding_size.bottom - bounding_size.top;
 
 		// 親の幅を取得
-		var width_max = ElementGetClientWidth(video.parentNode);
+		var parent_width = ElementGetClientWidth(video.parentNode);
+		if(width_max > parent_width)	width_max = parent_width;
 
 		// エレメントのサイズ
 		width  -= style_w;
 		height -= style_h;
+
+		// サイズ情報があれば使用
+		if(video.videoWidth)  width  = video.videoWidth;
+		if(video.videoHeight) height = video.videoHeight;
 
 		// 最大幅補正
 		var w = width_max - style_w;
 		if(w < width){
 			height *= w / width;
 			width = w;
+		}
+
+		// 最大高補正
+		var h = height_max - style_h;
+		if(h < height){
+			width *= h / height;
+			height = h;
 		}
 
 		// サイズをセット
@@ -32589,372 +32587,610 @@ function PageExpand(page_expand_arguments){
 				loadPageExpandProject(function(e){});
 			};
 
-			// XMLHttpRequest 通信
-			function requestXHR(param,options,sendResponse){
-				var loader_queue_element = loader_queue.createElement();
-				var queue_id = loader_queue_element.getId();
-				sendResponse({type:"id",data:queue_id},{complete:false});
+			// fetch
+			command_dictionary["fetch"] = function (param,options,sendResponse){
+				try{
+					var released = false;
+					var event_handler_disconnect;
+					var xhr_queue_element;
+					var timeout_handle = null;
+					var fetch_abort = null;
 
-				var fetch_abort = null;
-				var xhr = null;
-				var event_handler_disconnect = options.event_dispatcher.createEventHandler("disconnect");
-				event_handler_disconnect.setFunction(function(){
-					loader_queue_element.release();
-				});
-				loader_queue_element.onstart = function(){
 					var request = param.request;
+					var response = {
+						ok:false,
+						readyState:0,
+						status:0,
+						allresponseheaders:"",
+						responseURL:"",
+						redirected:false,
+						errorText:""
+					};
+					var progress = {
+						bytesLoaded:0,
+						bytesTotal:0
+					};
+					
+					var abort = function(){
+						try{
+							release_timeout();
+							fetch_abort.abort();
+						}catch(e){
+						}
+					};
+					var release_timeout = function(){
+						if(timeout_handle !== null){
+							clearTimeout(timeout_handle);
+							timeout_handle = null;
+						}
+					};
+					var release = function(){
+						if(released) return;
+						released = true;
 
-					var xhr_queue_element = _xhr_queue_dictionary.createElement(request.url);
-					xhr_queue_element.setData({url:request.current_url});
+						abort();
 
-					// fetchを優先的に使用
-					try{
-						var response = new Object();
-						response.readyState = 0;
-						response.status = 0;
-						response.responseHeaders = "";
-						response.response = null;
-						response.responseText = "";
-
-						var timeout_handle = null;
-
-						var fetch_response_header = function(){
-							if(!xhr_queue_element) return;
+						release_timeout();
+						if(xhr_queue_element){
 							xhr_queue_element.release();
 							xhr_queue_element = null;
-						};
-
-						var fetch_complete = function(fetch_response){
-							fetch_response_header();
-	
-							if(!loader_queue_element) return;
-							loader_queue_element.complete();
-							loader_queue_element.release();
-							loader_queue_element = null;
-
+						}
+						if(event_handler_disconnect){
 							event_handler_disconnect.release();
 							event_handler_disconnect = null;
+						}
+					};
 
-							if(timeout_handle !== null){
-								clearTimeout(timeout_handle);
-								request.timeout = null;
+					event_handler_disconnect = options.event_dispatcher.createEventHandler("disconnect");
+					event_handler_disconnect.setFunction(function(){
+						release();
+					});
+
+					var complete = function(){
+						release();
+						sendResponse({state:"head",data:response},{complete:false});
+						sendResponse({state:"complete"},{complete:true});
+					};
+
+					var success = function(){
+						if(released) return;
+						response.readyState = 4;
+						complete();
+					};
+
+					var failure = function(msg){
+						if(released) return;
+						response.ok = false;
+						response.status = 0;
+						response.readyState = 4;
+						response.errorText = msg;
+						complete();
+					};
+					var rejected = function(e){
+						failure(e.message);
+					};
+
+					fetch_abort = new AbortController();
+					if(request.timeout){
+						timeout_handle = setTimeout(function(){
+							timeout_handle = null;
+							abort();
+						},request.timeout);
+					}
+					var fetch_option = new Object();
+					fetch_option.signal = fetch_abort.signal;
+					fetch_option.method = request.method;
+					fetch_option.headers = (function(){
+						var o = new Headers();
+						var i = request.headers;
+						for(var n in i){
+							o.append(n,i[n]);
+						}
+						return o;
+					})();
+					fetch_option.body = request.data;
+					if(request.cache) fetch_option.cache = request.cache;
+					if(request.redirect) fetch_option.redirect = request.redirect;
+
+					xhr_queue_element = _xhr_queue_dictionary.createElement(request.url);
+					xhr_queue_element.setData({url:request.currentURL});
+
+					var fetch_promise = fetch(request.url,fetch_option);
+
+					fetch_promise.then(
+						function(r){
+							fetch_response = r;
+							response.ok = r.ok;
+							response.readyState = 3;
+							response.status = r.status;
+							var response_headers = r.headers;
+							var headers = new Array();
+							response_headers.forEach(function(v,k){
+								headers.push(k + ": " + v);
+							});
+							response.allresponseheaders = headers.join("\r\n");
+							response.responseURL = r.url;
+							response.redirected = r.redirected;
+							sendResponse({state:"head",data:response},{complete:false});
+
+							if(!r.body){
+								success();
+								return;
+							}
+							var reader = r.body.getReader();
+							var reader_reading;
+							var reader_success;
+
+							switch(request.responseType){
+							case "arraybuffer":
+								(function (){
+									var blob_list = new Array();
+									reader_reading = function(ary_u8){
+										blob_list.push(new Blob([ary_u8]));
+									};
+									reader_success = function(){
+										var blob = new Blob(blob_list);
+										var pos = 0;
+										var read_size = 1024 * 1024 * 16;
+										var total = blob.size;
+										var f = function (){
+											var file_reader = new FileReader();
+											file_reader.onloadend = function(){
+												if(released) return;
+
+												if(file_reader.error){
+													failure(file_reader.error);
+													return;
+												}
+
+												sendResponse(
+													{
+														state:"body",
+														data:{
+															pos:pos,
+															total:total,
+															data:file_reader.result
+														}
+													},{complete:false}
+												);
+
+												pos += read_size;
+												if(pos < total){
+													f();
+													return;
+												}
+
+												success();
+											};
+											file_reader.readAsBinaryString(blob.slice(pos,pos+read_size));
+										};
+										f();
+									};
+								})();
+								break;
+							case "dataurischeme":
+								(function (){
+									var blob_list = new Array();
+									reader_reading = function(value){
+										blob_list.push(new Blob([value]));
+									};
+									reader_success = function(){
+										var file_reader = new FileReader();
+										file_reader.onloadend = function(e){
+											if(released) return;
+
+											if(file_reader.error){
+												failure(file_reader.error);
+												return;
+											}
+
+											var pos = 0;
+											var read_size = 1024 * 1024 * 16;
+											var total = file_reader.result.length;
+											var f = function (){
+												if(released) return;
+
+												sendResponse(
+													{
+														state:"body",
+														data:{
+															pos:pos,
+															total:total,
+															data:file_reader.result.slice(pos,pos+read_size)
+														}
+													},{complete:false}
+												);
+
+												pos += read_size;
+												if(pos < total){
+													execute_queue.attachLast(f,null);
+													return;
+												}
+
+												success();
+											};
+											execute_queue.attachLast(f,null);
+										};
+
+										var options = {
+											type:response_headers.get("Content-Type")
+										};
+										var blob = new Blob(blob_list,options);
+										file_reader.readAsDataURL(blob);
+									};
+								})();
+								break;
+							case "blob":
+							case "arraybufferlist":
+							case "binarystring":
+								(function (){
+									var text_decoder = new TextDecoder("x-user-defined");
+									var decode_options = {stream:true};
+									var pos = 0;
+									reader_reading = function(ary_u8){
+										sendResponse(
+											{
+												state:"body",
+												data:{
+													pos:pos,
+													data:text_decoder.decode(ary_u8,decode_options)
+												}
+											},{complete:false}
+										);
+										pos += ary_u8.byteLength;
+									};
+									reader_success = function(){
+										success();
+									};
+								})();
+								break;
+							default:
+								(function (){
+									var charset = "utf-8";
+									var mime_type = request.overrideMimeType || "";
+									var m = mime_type.match(new RegExp("text/plain; charset=([a-zA-Z-_]+)"));
+									if(m) charset = m[1];
+									var text_decoder = new TextDecoder(charset);
+									var decode_options = {stream:true};
+									var pos = 0;
+									reader_reading = function(ary_u8){
+										sendResponse(
+											{
+												state:"body",
+												data:{
+													pos:pos,
+													data:text_decoder.decode(ary_u8,decode_options)
+												}
+											},{complete:false}
+										);
+										pos += ary_u8.byteLength;
+									};
+									reader_success = function(){
+										success();
+									};
+								})();
+								break;
 							}
 
-							response.readyState = 4;
-							response.responseURL = fetch_response.url;
+							var loaded = 0;
+							var total = parseInt(response_headers.get("Content-Length")) || 0;
 
-							request.oncomplete(response,function(){
-								response.response = null;
-								sendResponse({type:"xhr",data:response},{complete:true});
-							});
-						};
+							var pull = function (){
+								var p = reader.read();
+								p.then(function(result){
+									if(result.done){
+										reader.releaseLock();
+										reader_success();
+										return;
+									}
 
-						var fetch_option = new Object();
+									loaded += result.value.byteLength;
+									progress.bytesLoaded = loaded || 0;
+									progress.bytesTotal = total || 0;
 
-						fetch_abort = new AbortController();
-						if(request.timeout){
-							timeout_handle = setTimeout(function(){
-								loader_queue_element.release();
-								timeout_handle = null;
-							},request.timeout);
+									sendResponse(
+										{
+											state:"progress",
+											data:progress
+										},
+										{complete:false}
+									);
+
+
+									reader_reading(result.value);
+									pull();
+								},rejected);	
+
+							};
+							pull();
+
+						},
+						rejected
+					);
+				}catch(e){
+					response.errorText = e.message;
+					release();
+					sendResponse(
+						{state:"unsupported"},
+						{complete:true}
+					);
+				}
+
+			};
+
+			// XMLHttpRequest
+			command_dictionary["xhr"] = function (param,options,sendResponse){
+				try{
+					var released = false;
+					var event_handler_disconnect;
+					var xhr_queue_element;
+					var xhr;
+
+					var request = param.request;
+					var response = {
+						ok:false,
+						readyState:0,
+						status:0,
+						allresponseheaders:"",
+						responseURL:"",
+						redirected:false,
+						errorText:""
+					};
+					var progress = {
+						bytesLoaded:0,
+						bytesTotal:0
+					};
+					
+					var abort = function(){
+						try{
+							xhr.abort();
+						}catch(e){
 						}
-						fetch_option.signal = fetch_abort.signal;
-						fetch_option.method = request.method;
-						fetch_option.headers = request.headers;
-						fetch_option.body = request.data;
-						if(request.cache) fetch_option.cache = request.cache;
-						if(request.redirect) fetch_option.redirect = request.redirect;
+					};
 
-						var fetch_request = new Request(request.url,fetch_option);
-						var fetch_promise = fetch(fetch_request);
-						fetch_promise.then(
-							function(fetch_response){
-								fetch_response_header();
+					var release = function(){
+						if(released) return;
+						released = true;
 
-								response.readyState = 3;
-								response.status = fetch_response.status;
-								var response_headers = fetch_response.headers;
-								var headers = new Array();
-								response_headers.forEach(function(v,k){
-									headers.push(k + ": " + v);
-								});
-								response.responseHeaders = headers.join("\r\n");
+						abort();
 
-								var loaded = 0;
-								var total = parseInt(response_headers.get("Content-Length")) || 0;
-								var body = fetch_response.body;
-								var body_list = new Array();
-								var reader = null;
+						try{
+							xhr.onloadend = null;
+							xhr.onreadystatechange = null;
+							xhr.onprogress = null;
+						}catch(e){
+						}
 
-								var xhr_progress = function (){
-									var p = reader.read();
-									p.then(function(result){
-										if(result.done){
-											reader.releaseLock();
+						if(xhr_queue_element){
+							xhr_queue_element.release();
+							xhr_queue_element = null;
+						}
+						if(event_handler_disconnect){
+							event_handler_disconnect.release();
+							event_handler_disconnect = null;
+						}
 
-											var blob = new Blob( body_list );
+						xhr = null;
+					};
 
-											switch(request.responseType){
-											case "blob":
-												response.response = blob;
-												fetch_complete(fetch_response);
-												break;
-											case "arraybuffer":
-												var file_reader = new FileReader();
-												file_reader.onloadend = function(e){
-													if(!file_reader.error){
-														response.response = file_reader.result;
-													}
-													fetch_complete(fetch_response);
-												};
-												file_reader.readAsArrayBuffer(blob);
-												response.response = blob;
-												break;
-											default:
-												var file_reader = new FileReader();
-												file_reader.onloadend = function(e){
-													if(!file_reader.error){
-														var charset = "utf-8";
-														var mime_type = request.override_mime_type || "";
-														var m = mime_type.match(new RegExp("text/plain; charset=([a-zA-Z-_]+)"));
-														if(m) charset = m[1];
-														var text_decoder = new TextDecoder(charset);
-														var ary_u8 = new Uint8Array(file_reader.result);
-														response.responseText = text_decoder.decode(ary_u8);
-													}
-													fetch_complete(fetch_response);
-												};
-												file_reader.readAsArrayBuffer(blob);
-												break;
-											}
+					event_handler_disconnect = options.event_dispatcher.createEventHandler("disconnect");
+					event_handler_disconnect.setFunction(function(){
+						release();
+					});
+
+					var complete = function(){
+						release();
+						sendResponse({state:"head",data:response},{complete:false});
+						sendResponse({state:"complete"},{complete:true});
+					};
+
+					var success = function(){
+						if(released) return;
+						response.readyState = 4;
+						complete();
+					};
+
+					var failure = function(msg){
+						if(released) return;
+						response.ok = false;
+						response.status = 0;
+						response.readyState = 4;
+						response.errorText = msg;
+						complete();
+					};
+
+					xhr_queue_element = _xhr_queue_dictionary.createElement(request.url);
+					xhr_queue_element.setData({url:request.currentURL});
+
+					xhr = new XMLHttpRequest();
+					xhr.onloadend = function(r){
+						response.ok = Boolean((200 <= xhr.status && xhr.status < 300) || xhr.status == 304);
+						response.status = xhr.status;
+						response.allresponseheaders = xhr.getAllResponseHeaders() || "";
+						response.responseURL = xhr.responseURL;
+						response.redirected = Boolean((xhr.responseURL) && (request.url != xhr.responseURL));
+						sendResponse({state:"head",data:response},{complete:false});
+
+						switch(request.responseType){
+						case "blob":
+						case "arraybuffer":
+						case "arraybufferlist":
+						case "binarystring":
+							(function (){
+								var blob = xhr.response;
+								if(!blob){
+									success();
+									return;
+								}
+
+								var pos = 0;
+								var read_size = 1024 * 1024 * 16;
+								var total = blob.size;
+								var f = function (){
+									var file_reader = new FileReader();
+									file_reader.onloadend = function(){
+										if(released) return;
+
+										if(file_reader.error){
+											failure(file_reader.error);
 											return;
 										}
 
-										var ary = result.value;
-										body_list.push(ary);
-										loaded += ary.byteLength;
+										sendResponse(
+											{
+												state:"body",
+												data:{
+													pos:pos,
+													total:total,
+													data:file_reader.result
+												}
+											},{complete:false}
+										);
 
-										sendResponse({type:"progress",data:{
-											loaded:loaded,
-											total:total,
-										}},{complete:false});
+										pos += read_size;
+										if(pos < total){
+											f();
+											return;
+										}
 
-										xhr_progress();
-									},
-									function(){
-										fetch_complete(fetch_response);
-									});	
+										success();
+									};
+									file_reader.readAsBinaryString(blob.slice(pos,pos+read_size));
 								};
+								f();
 
-								if(body){
-									reader = body.getReader();
-									xhr_progress();
-								}else{
-									fetch_complete(fetch_response);
+							})();
+							break;
+
+						case "dataurischeme":
+							(function (){
+								var blob = xhr.response;
+								if(!blob){
+									success();
+									return;
 								}
-							},
-							function(fetch_response){
-								fetch_complete(fetch_response);
-							}
-						);
-						return;
-					}catch(e){
-					}
 
+								var file_reader = new FileReader();
+								file_reader.onloadend = function(){
+									if(released) return;
 
-					// XMLHttpRequest を使用
-					xhr = new XMLHttpRequest();
+									if(file_reader.error){
+										failure(file_reader.error);
+										return;
+									}
 
-					xhr.onreadystatechange = function(){
-						if(xhr.readyState < 2) return;
-						xhr.onreadystatechange = null;
-						xhr_response_header();
-					};
-					xhr.onloadend = function(r){
-						xhr_complete();
+									var pos = 0;
+									var read_size = 1024 * 1024 * 16;
+									var total = file_reader.result.length;
+									var f = function (){
+										if(released) return;
+
+										sendResponse(
+											{
+												state:"body",
+												data:{
+													pos:pos,
+													total:total,
+													data:file_reader.result.slice(pos,pos+read_size)
+												}
+											},{complete:false}
+										);
+
+										pos += read_size;
+										if(pos < total){
+											execute_queue.attachLast(f,null);
+											return;
+										}
+
+										success();
+									};
+									execute_queue.attachLast(f,null);
+
+								};
+								file_reader.readAsDataURL(blob);
+							})();
+							break;
+						default:
+							(function (){
+								var pos = 0;
+								var read_size = 1024 * 1024 * 16;
+								var total = xhr.responseText.length;
+								var f = function (){
+									if(released) return;
+
+									sendResponse(
+										{
+											state:"body",
+											data:{
+												pos:pos,
+												total:total,
+												data:xhr.responseText.slice(pos,pos+read_size)
+											}
+										},{complete:false}
+									);
+
+									pos += read_size;
+									if(pos < total){
+										execute_queue.attachLast(f,null);
+										return;
+									}
+
+									success();
+								};
+								execute_queue.attachLast(f,null);
+							})();
+							break;
+						}
+
 					};
 					xhr.onprogress = function(e){
-						sendResponse({type:"progress",data:{
-							loaded:(e.loaded || 0),
-							total:(e.total || 0),
-						}},{complete:false});
-					};
-					var xhr_response_header = function(){
-						if(!xhr_queue_element) return;
-						xhr_queue_element.release();
-						xhr_queue_element = null;
-					};					
-					var xhr_complete = function(){
-						xhr_response_header();
-
-						if(!loader_queue_element) return;
-						loader_queue_element.complete();
-						loader_queue_element.release();
-						loader_queue_element = null;
-
-						event_handler_disconnect.release();
-						event_handler_disconnect = null;
-
-						xhr.onreadystatechange = null;
-						xhr.onloadend = null;
-						xhr.onprogress = null;
-
-						request.oncomplete(xhr,function(){
-							var response = new Object();
-							response.readyState = 4;
-							response.status = xhr.status;
-							response.responseHeaders = xhr.getAllResponseHeaders() || "";
-							xhr = null;
-							sendResponse({type:"xhr",data:response},{complete:true});
-						});
+						progress.bytesLoaded = e.loaded || 0;
+						progress.bytesTotal = e.total || 0;
+						sendResponse(
+							{
+								state:"progress",
+								data:progress
+							},
+							{complete:false}
+						);
 					};
 
-					try{
-						xhr.open(request.method,request.url,true);
-						var headers = request.headers;
-						for(var name in headers){
-							xhr.setRequestHeader(name,headers[name]);
-						}
-						if(xhr.overrideMimeType && request.override_mime_type){
-							xhr.overrideMimeType(request.override_mime_type);
-						}
-						if(request.timeout){
-							xhr.timeout = request.timeout;
-						}
-						if(request.responseType){
+					xhr.open(request.method,request.url,true);
+
+					var headers = request.headers;
+					for(var name in headers){
+						xhr.setRequestHeader(name,headers[name]);
+					}
+					if(request.overrideMimeType){
+						if(xhr.overrideMimeType) xhr.overrideMimeType(request.overrideMimeType);
+					}
+					if(request.timeout){
+						xhr.timeout = request.timeout;
+					}
+					if(request.responseType){
+						switch(request.responseType){
+						case "blob":
+						case "arraybuffer":
+						case "arraybufferlist":
+						case "dataurischeme":
+						case "binarystring":
+							xhr.responseType = "blob";
+							break;
+						default:
 							xhr.responseType = request.responseType;
+							break;
 						}
-						xhr.send(request.data);
-					}catch(e){
-						xhr_complete();
 					}
-				};
-				loader_queue_element.onabort = function(){
-					if(fetch_abort) fetch_abort.abort();
-					if(xhr) xhr.abort();
-				};
-				if(param.single){
-					loader_queue_element.attachSingle();
-				}else{
-					loader_queue_element.attachLast();
+					xhr.send(request.data);
+				}catch(e){
+					response.errorText = e.message;
+					release();
+					sendResponse(
+						{state:"unsupported"},
+						{complete:true}
+					);
 				}
-			};
 
-			// XMLHttpRequest 通信
-			command_dictionary["loadXMLHttpRequest"] = function(param,options,sendResponse){
-				var request = param.request;
-				request.oncomplete = function(xhr,callback){
-					var text = "";
-					var text_size = 1024 * 1024 * 16;
-					var text_pos = text_size;
-					var pos = 0;
-					var total = xhr.responseText.length;
-					var send_size = text_size / 128;
-					var f = function (){
-						if(text_size <= text_pos){
-							text = xhr.responseText.substr(pos,text_size);
-							text_pos = 0;
-						}
-						sendResponse({type:"data",pos:pos,total:total,data:text.substr(text_pos,send_size)},{complete:false});
-
-						text_pos += send_size;
-						pos += send_size;
-						if(pos < total){
-							execute_queue.attachLast(f,null);
-							return;
-						}
-						callback();
-					};
-					execute_queue.attachLast(f,null);
-				};
-				requestXHR(param,options,sendResponse);
-			};
-
-			// data URI scheme 読み込み
-			command_dictionary["loadDataUriScheme"] = function(param,options,sendResponse){
-				var request = param.request;
-				request.responseType = "blob";
-				request.oncomplete = function(xhr,callback){
-					if(!(xhr.response)){
-						callback();
-						return;
-					}
-					var file_reader = new FileReader();
-					file_reader.onloadend = function(){
-						if(file_reader.error){
-							callback();
-							return;
-						}
-						var i = 0;
-						var size = 1024 * 128;
-						var total = file_reader.result.length;
-						var f = function (){
-							sendResponse({type:"data",pos:i,total:total,data:file_reader.result.substr(i,size)},{complete:false});
-
-							i += size;
-							if(i < total){
-								execute_queue.attachLast(f,null);
-								return;
-							}
-							callback();
-						};
-						execute_queue.attachLast(f,null);
-					};
-					file_reader.readAsDataURL(xhr.response);
-				};
-				requestXHR(param,options,sendResponse);
-			};
-
-			// BinaryString 読み込み
-			command_dictionary["loadBinaryString"] = function(param,options,sendResponse){
-				var request = param.request;
-				request.responseType = "blob";
-				request.oncomplete = function(xhr,callback){
-					if(!(xhr.response)){
-						callback();
-						return;
-					}
-					var blob = xhr.response;
-					var pos = 0;
-					var read_size = 1024 * 1024 * 16;
-					var total = blob.size;
-					var exec = function (){
-						var file_reader = new FileReader();
-						file_reader.onloadend = function(){
-							if(file_reader.error){
-								callback();
-								return;
-							}
-							sendResponse({type:"data",pos:pos,total:total,data:file_reader.result},{complete:false});
-
-							pos += read_size;
-							if(pos < total){
-								exec();
-								return;
-							}
-							callback();
-						};
-						file_reader.readAsBinaryString(blob.slice(pos,pos+read_size));
-					};
-					exec();
-				};
-				requestXHR(param,options,sendResponse);
-			};
-
-			// キャッシュへ読み込み
-			command_dictionary["loadToCache"] = function(param,options,sendResponse){
-				var request = param.request;
-				request.responseType = "blob";
-				request.oncomplete = function(xhr,callback){
-					callback();
-				};
-				requestXHR(param,options,sendResponse);
-			};
-
-			// 読み込み中止
-			command_dictionary["abortLoaderQueue"] = function(param,sender,sendResponse){
-				var element = loader_queue.getElementById(param.id);
-				if(element) element.release();
 			};
 
 			// ダウンロード
@@ -32966,7 +33202,7 @@ function PageExpand(page_expand_arguments){
 					},
 					{complete:true}
 				);
-			}
+			};
 
 			// ポップアップアクションを追加
 			command_dictionary["attachPopupAction"] = function(param,options,sendResponse){
@@ -33137,15 +33373,11 @@ function PageExpand(page_expand_arguments){
 							if(xhr_queue_element){
 								tab = xhr_queue_element.getData();
 								xhr_queue_element.release();
-							}else{
-								tab = {url:""};
 							}
 						}else{
 							tab = _tabs[details.tabId];
-
-							// 初期化が完了していない
-							if(!tab) return;
 						}
+						tab = tab || {url:""};
 
 						// ウェブリクエスト用オブジェクトを取得
 						var web_request = page_expand_project.getWebRequest(tab.url,details.url);
@@ -33364,6 +33596,7 @@ function PageExpand(page_expand_arguments){
 
 						var xhr_queue_element = null;
 						var event_dispatcher = null;
+						var blob_url = null;
 						var item = {
 							contentType:"",
 							bytesLoaded:0,
@@ -33379,6 +33612,10 @@ function PageExpand(page_expand_arguments){
 								if(xhr_queue_element){
 									xhr_queue_element.release();
 									xhr_queue_element = null;
+								}
+								if(blob_url){
+									BlobURLRevoke(blob_url);
+									blob_url = null;
 								}
 							}
 							function success(){
@@ -33423,7 +33660,35 @@ function PageExpand(page_expand_arguments){
 								);
 							}
 
-							var file_name = ProjectDownloadSaveFile_Sanitize(request.file_name || project.getSaveFileDownload(request.url));
+							var data_parser = DataURL_Parser(request.url);
+							if(data_parser){
+								var mimetype = data_parser.mimetype;
+								var ary_buffer;
+								if(data_parser.format == "base64"){
+									ary_buffer = Base64_To_ArrayBuffer(request.url.slice(data_parser.data_offset));
+								}else{
+									var text_encoder = new TextEncoder();
+									var ary_u8 = text_encoder.encode(request.url.slice(data_parser.data_offset));
+									ary_buffer = ary_u8.buffer;
+									if(!mimetype) mimetype = "text/plain";
+								}
+
+								var crc32 = new CRC32();
+								crc32.initialize();
+								var hash = crc32.getFromArrayBuffer(ary_buffer,ary_buffer.byteLength);
+								var ext = MIMEType_To_Ext(mimetype);
+								if(!ext) ext = FileSignature_To_Ext_From_ArrayBuffer(ary_buffer);
+								if(!mimetype) mimetype = MIMEType_From_Ext(ext);
+
+								// 短いアドレスを生成
+								request.short_url = "data:" + mimetype.replace(/[/]/g,"-") + "/" + hash.toString(16).toUpperCase();
+								if(ext) request.short_url += "." + ext;
+
+								var blob = new Blob([ary_buffer],{type:mimetype});
+								request.url = blob_url = BlobURLCreate(blob);
+							}
+
+							var file_name = ProjectDownloadSaveFile_Sanitize(request.file_name || project.getSaveFileDownload(request.short_url || request.url));
 
 							// ファイル名が長すぎるとフリーズするので回避
 							if(file_name.length > 65535){
@@ -34454,6 +34719,7 @@ function PageExpand(page_expand_arguments){
 			// --------------------------------------------------------------------------------
 			var _stepper_load_thread_max;
 			var _stepper_load_timeout;
+			var _combo_box_load_cache_for_media;
 			var _stepper_download_thread_max;
 			var _combo_box_conflict_type;			
 			var _form_container_download_save_file_simple;
@@ -34505,6 +34771,20 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 				new UI_TextHint(parent,_i18n.getMessage("menu_setting_download_load_timeout_hint"));
+				new UI_Break(_content_window);
+
+				// キャッシュモード（メディア用）
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_download_load_cache_for_media"));
+				var parent = container.getElement();
+				_combo_box_load_cache_for_media = new UI_ComboBox(parent);
+				_combo_box_load_cache_for_media.attachItem(_i18n.getMessage("menu_setting_expand_image_load_cache_for_media_combo_box_item_default"),"default");
+				_combo_box_load_cache_for_media.attachItem(_i18n.getMessage("menu_setting_expand_image_load_cache_for_media_combo_box_item_no_store"),"no-store");
+				_combo_box_load_cache_for_media.attachItem(_i18n.getMessage("menu_setting_expand_image_load_cache_for_media_combo_box_item_force_cache"),"force-cache");
+				_combo_box_load_cache_for_media.onchange = function(v){
+					download.load.cache_for_media = v;
+					projectModify();
+				};
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_download_load_cache_for_media_hint"));
 				new UI_Break(_content_window);
 
 				// ダウンロード設定
@@ -34676,6 +34956,8 @@ function PageExpand(page_expand_arguments){
 				_stepper_load_thread_max.setValue(download.load.thread_max);
 				// タイムアウト
 				_stepper_load_timeout.setValue(download.load.timeout);
+				// キャッシュモード（メディア用）
+				_combo_box_load_cache_for_media.setValue(download.load.cache_for_media);
 				// 最大同時ダウンロード数
 				_stepper_download_thread_max.setValue(download.download.thread_max);
 				// ファイル名衝突時の処理
@@ -37332,22 +37614,6 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				// イメージのソースタイプ
-				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_image_load_src_type"));
-				var parent = container.getElement();
-				var combo_box_load_src_type = new UI_ComboBox(parent);
-				combo_box_load_src_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_src_type_combo_box_item_url"),"url");
-				combo_box_load_src_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_src_type_combo_box_item_mixed_content"),"mixed_content");
-				combo_box_load_src_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_src_type_combo_box_item_data_uri_scheme"),"data_uri_scheme");
-				combo_box_load_src_type.onchange = function(v){
-					_setting_define.getSelectedDefinitions(function(c){
-						c.load.src_type = v;
-					});
-
-					_setting_define.update();
-					projectModify();
-				};
-
 				// イメージのアンロード設定
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_image_load_unload_check_box_container"));
 				var parent = container.getElement();
@@ -37439,8 +37705,6 @@ function PageExpand(page_expand_arguments){
 					stepper_popup_allow_slcale_less_then.setValue(c.reduced_image.popup_allow_slcale_less_then);
 					// 読み込み進捗表示
 					check_box_image_load_enable_notify.setValue(c.load.enable_notify);
-					// 読み込みソースタイプ
-					combo_box_load_src_type.setValue(c.load.src_type);
 					// イメージのアンロードを有効
 					check_box_enable_unload.setValue(c.load.enable_unload);
 					_form_container_unload.setVisible(c.load.enable_unload);
@@ -37751,6 +38015,38 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
+				// ビデオの表示サイズ
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_size"));
+				var parent = container.getElement();
+				// 幅の最大許容限界（ピクセル値）
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_expand_video_inline_width_max"));
+				var stepper_inline_width_max = new UI_NumericStepper(parent);
+				stepper_inline_width_max.setMinimum(100);
+				stepper_inline_width_max.setMaximum(9999999);
+				stepper_inline_width_max.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.inline.width_max = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
+				new UI_BreakItem(parent);
+
+				// 高さの最大許容限界（ピクセル値）
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_expand_video_inline_height_max"));
+				var stepper_inline_height_max = new UI_NumericStepper(parent);
+				stepper_inline_height_max.setMinimum(100);
+				stepper_inline_height_max.setMaximum(9999999);
+				stepper_inline_height_max.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.inline.height_max = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
+
 				// リンクからインライン表示する条件
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_script_allow"));
 				var parent = container.getElement();
@@ -37905,6 +38201,10 @@ function PageExpand(page_expand_arguments){
 					check_box_inline_disable_same_video.setValue(c.inline.disable_same_video);
 					// 最大同時表示数
 					stepper_inline_video_max.setValue(c.inline.video_max);
+					// 幅の最大許容限界（ピクセル値）
+					stepper_inline_width_max.setValue(c.inline.width_max);
+					// 高さの最大許容限界（ピクセル値）
+					stepper_inline_height_max.setValue(c.inline.height_max);
 					// リンクからインライン表示する条件
 					script_obj_editer_inline_script_allow.setScriptObject(c.inline.script_allow);
 					// エレメントの挿入位置
@@ -38455,7 +38755,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.27");
+				new UI_Text(parent,"PageExpand ver.1.5.28");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -39053,7 +39353,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function UI_TextHint(parent,label){
 			var div = DocumentCreateElement("div");
-			ElementSetStyle(div,"margin:-3px 0px 3px 0px; line-height:1.0; font-size:11px; color:#aaa;");
+			ElementSetStyle(div,"margin:0px 0px 3px 0px; line-height:1.0; font-size:11px; color:#aaa;");
 			ElementSetTextContent(div,label);
 			parent.appendChild(div);
 			return div;
@@ -44337,7 +44637,6 @@ function PageExpand(page_expand_arguments){
 					load:{
 						enable_notify:false,
 						enable_unload:false,
-						src_type:"mixed_content",
 						unload_allow_size_more_then:0
 					}
 				}
@@ -44388,6 +44687,8 @@ function PageExpand(page_expand_arguments){
 					inline:{
 						disable_same_video:false,
 						video_max:10,
+						width_max:720,
+						height_max:480,
 						script_allow:PageExpandProjectScriptObject_Create("ExpandVideo_InlineScriptAllow_Default"),
 						script_insert:PageExpandProjectScriptObject_Create("ExpandVideo_InlineScriptInsert_Default")
 					},
@@ -51534,10 +51835,9 @@ function PageExpand(page_expand_arguments){
 								PopupReducedImageReleaseAll(element);
 
 								// イメージを複製
-								var image_clone = ImageClone(thumbnail_image);
-
-								// ロード完了
-								ImageGetLoaded(image_clone,function(){
+								var loader = new Loader();
+								loader.setURL(thumbnail_image.src);
+								loader.onload = function(image_clone){
 									if(!thumbnail_image)	return;
 
 									// ポップアップイメージ
@@ -51548,7 +51848,8 @@ function PageExpand(page_expand_arguments){
 									popup_image.setElementBeginArea(thumbnail_image);
 									popup_image.setOriginalURL(thumbnail_url);
 									AnalyzeWorkSetPopupImage(work,popup_image);
-								});
+								};
+								loader.loadImage();
 							}
 						}
 
@@ -52047,13 +52348,13 @@ function PageExpand(page_expand_arguments){
 
 					limitter_element = element_limitter_sound.createElement();
 					limitter_element.onattach = function(){
-						audio.preload = "metadata";
-						audio.src = audio_url;
-						audio.load();
+						//audio.preload = "metadata";
+						//audio.src = audio_url;
+						//audio.load();
 					};
 					limitter_element.onremove = function(){
 						audio.preload = "none";
-						audio.src = "";
+						//audio.src = "";
 						audio.load();
 					};
 					limitter_element.setElementHitArea(audio);
@@ -52657,13 +52958,13 @@ function PageExpand(page_expand_arguments){
 
 					limitter_element = element_limitter_video.createElement();
 					limitter_element.onattach = function(){
-						video.preload = "metadata";
-						video.src = video_url;
-						video.load();
+						//video.preload = "metadata";
+						//video.src = video_url;
+						//video.load();
 					};
 					limitter_element.onremove = function(){
 						video.preload = "none";
-						video.src = "";
+						//video.src = "";
 						video.load();
 					};
 					limitter_element.setElementHitArea(video);
@@ -53941,10 +54242,9 @@ function PageExpand(page_expand_arguments){
 
 			if(allow){
 				// ポップアップイメージ
-				var image = ImageClone(element);
-
-				// ロード完了
-				ImageGetLoaded(image,function(){
+				var loader = new Loader();
+				loader.setURL(element.src);
+				loader.onload = function(image){
 					if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
 					if(released) return;
 
@@ -53953,7 +54253,7 @@ function PageExpand(page_expand_arguments){
 					popup_image.setElementAnchor(element);
 					popup_image.setElementHitArea(element);
 					popup_image.setElementBeginArea(element);
-					popup_image.setOriginalURL(image.src);
+					popup_image.setOriginalURL(element.src);
 					popup_image.ontrim = function (){
 						if(!popup_image) return;
 
@@ -54016,7 +54316,8 @@ function PageExpand(page_expand_arguments){
 					};
 					popup_image.ontrim();
 					AnalyzeWorkSetPopupImage(work,popup_image);
-				});
+				};
+				loader.loadImage();
 			}else{
 				// 解放イベント発行
 				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
@@ -58981,6 +59282,21 @@ function PageExpand(page_expand_arguments){
 			menu_setting_download_load_timeout_hint: {
 				message: "タイムアウトエラーと判定する時間をミリ秒で指定。0 で無制限。"
 			},
+			menu_setting_download_load_cache_for_media: {
+				message: "キャッシュモード（メディア用）"
+			},
+			menu_setting_download_load_cache_for_media_hint: {
+				message: "通常は変更の必要はありません。fetch API を経由し、かつメディア系の読み込み時に作用します。"
+			},
+			menu_setting_expand_image_load_cache_for_media_combo_box_item_default: {
+				message: "デフォルトの最適な動作"
+			},
+			menu_setting_expand_image_load_cache_for_media_combo_box_item_no_store: {
+				message: "キャッシュを使用せず、必ずリクエストする"
+			},
+			menu_setting_expand_image_load_cache_for_media_combo_box_item_force_cache: {
+				message: "キャッシュが残ってる限り、二度とリクエストしない（一生古いデータのまま）"
+			},
 			menu_setting_download_download: {
 				message: "ダウンロード設定"
 			},
@@ -59534,18 +59850,6 @@ function PageExpand(page_expand_arguments){
 			menu_setting_expand_image_load_start_type_scroll: {
 				message: "スクロールと連動して読み込む"
 			},
-			menu_setting_expand_image_load_src_type: {
-				message: "イメージのソースタイプ"
-			},
-			menu_setting_expand_image_load_src_type_combo_box_item_url: {
-				message: "すべて URL 形式"
-			},
-			menu_setting_expand_image_load_src_type_combo_box_item_mixed_content: {
-				message: "Data URI scheme に変換（混在コンテンツのみ）"
-			},
-			menu_setting_expand_image_load_src_type_combo_box_item_data_uri_scheme: {
-				message: "Data URI scheme に変換（すべて）"
-			},
 			menu_setting_expand_image_load_unload_check_box_container: {
 				message: "イメージのアンロード設定"
 			},
@@ -59617,6 +59921,15 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_setting_expand_video_inline_video_max: {
 				message: "最大同時表示数"
+			},
+			menu_setting_expand_video_inline_size: {
+				message: "ビデオの表示サイズ"
+			},
+			menu_setting_expand_video_inline_width_max: {
+				message: "幅の最大許容限界（ピクセル値）"
+			},
+			menu_setting_expand_video_inline_height_max: {
+				message: "高さの最大許容限界（ピクセル値）"
 			},
 			menu_setting_expand_video_inline_script_allow: {
 				message: "リンクからインライン表示する条件"
@@ -60341,6 +60654,21 @@ function PageExpand(page_expand_arguments){
 			menu_setting_download_load_timeout_hint: {
 				message: "If specify 0, timeout is no limit."
 			},
+			menu_setting_download_load_cache_for_media: {
+				message: "Cache MODE (for Media)"
+			},
+			menu_setting_download_load_cache_for_media_hint: {
+				message: "Normally, you do not need to change. Use \"fetch API\" and works when \"loading media\"."
+			},
+			menu_setting_expand_image_load_cache_for_media_combo_box_item_default: {
+				message: "default (best)"
+			},
+			menu_setting_expand_image_load_cache_for_media_combo_box_item_no_store: {
+				message: "don't use cache."
+			},
+			menu_setting_expand_image_load_cache_for_media_combo_box_item_force_cache: {
+				message: "If cache exists, don't request. (forever old data)"
+			},
 			menu_setting_download_download: {
 				message: "Download Setting"
 			},
@@ -60894,18 +61222,6 @@ function PageExpand(page_expand_arguments){
 			menu_setting_expand_image_load_start_type_scroll: {
 				message: "Conjunction with the scroll"
 			},
-			menu_setting_expand_image_load_src_type: {
-				message: "Image Source Format"
-			},
-			menu_setting_expand_image_load_src_type_combo_box_item_url: {
-				message: "URL (all)"
-			},
-			menu_setting_expand_image_load_src_type_combo_box_item_mixed_content: {
-				message: "Data URI scheme (only mixed content)"
-			},
-			menu_setting_expand_image_load_src_type_combo_box_item_data_uri_scheme: {
-				message: "Data URI scheme (all)"
-			},
 			menu_setting_expand_image_load_unload_check_box_container: {
 				message: "Unload Image Setting"
 			},
@@ -60977,6 +61293,15 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_setting_expand_video_inline_video_max: {
 				message: "Maximum number of simultaneous display"
+			},
+			menu_setting_expand_video_inline_size: {
+				message: "Inline Video Size"
+			},
+			menu_setting_expand_video_inline_width_max: {
+				message: "Maximum allowed width (pixel)"
+			},
+			menu_setting_expand_video_inline_height_max: {
+				message: "Maximum allowed height (pixel)"
 			},
 			menu_setting_expand_video_inline_script_allow: {
 				message: "Condition to display inline from a link"
@@ -61700,6 +62025,21 @@ function PageExpand(page_expand_arguments){
 			menu_setting_download_load_timeout_hint: {
 				message: "如果指定为 0，超时时间没有限制。"
 			},
+			menu_setting_download_load_cache_for_media: {
+				message: "Cache MODE (for Media)"
+			},
+			menu_setting_download_load_cache_for_media_hint: {
+				message: "Normally, you do not need to change. Use \"fetch API\" and works when \"loading media\"."
+			},
+			menu_setting_expand_image_load_cache_for_media_combo_box_item_default: {
+				message: "default (best)"
+			},
+			menu_setting_expand_image_load_cache_for_media_combo_box_item_no_store: {
+				message: "don't use cache."
+			},
+			menu_setting_expand_image_load_cache_for_media_combo_box_item_force_cache: {
+				message: "If cache exists, don't request. (forever old data)"
+			},
 			menu_setting_download_download: {
 				message: "下载设置"
 			},
@@ -62253,18 +62593,6 @@ function PageExpand(page_expand_arguments){
 			menu_setting_expand_image_load_start_type_scroll: {
 				message: "滚动结合"
 			},
-			menu_setting_expand_image_load_src_type: {
-				message: "图片源格式"
-			},
-			menu_setting_expand_image_load_src_type_combo_box_item_url: {
-				message: "URL (所有)"
-			},
-			menu_setting_expand_image_load_src_type_combo_box_item_mixed_content: {
-				message: "数据 URI 方案 (只有混合内容)"
-			},
-			menu_setting_expand_image_load_src_type_combo_box_item_data_uri_scheme: {
-				message: "数据 URI 方案 (所有)"
-			},
 			menu_setting_expand_image_load_unload_check_box_container: {
 				message: "卸载图片设置"
 			},
@@ -62336,6 +62664,15 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_setting_expand_video_inline_video_max: {
 				message: "同时显示的最大数目"
+			},
+			menu_setting_expand_video_inline_size: {
+				message: "Inline Video Size"
+			},
+			menu_setting_expand_video_inline_width_max: {
+				message: "Maximum allowed width (pixel)"
+			},
+			menu_setting_expand_video_inline_height_max: {
+				message: "Maximum allowed height (pixel)"
 			},
 			menu_setting_expand_video_inline_script_allow: {
 				message: "从链接显示内联的条件"
@@ -62919,6 +63256,324 @@ function PageExpand(page_expand_arguments){
 
 
 	// --------------------------------------------------------------------------------
+	// UrlInfo辞書
+	// --------------------------------------------------------------------------------
+	function UrlInfoDictionary(){
+		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// UrlInfo
+		// --------------------------------------------------------------------------------
+		function UrlInfo(url){
+			this.url = url;
+			this.id = _unique_id;
+			_unique_id += 1;
+			_url_count += 1;
+		}
+		UrlInfo.prototype = {
+			release : function(){
+				if(!this.url) return;
+				var key = this.url.toLowerCase();
+				delete _dictionary[key];
+				delete this.url;
+				this.releaseBlobURL();
+				_url_count -= 1;
+			},
+			getId : function(){
+				return this.id;
+			},
+			getURL : function(){
+				return this.url;
+			},
+			analyzeRedirect : function(){
+				var _this = this;
+				if(this.analyze_redirect) return null;
+				if(this.redirect !== undefined) return null;
+
+				var _analyze_element = this.analyze_redirect = new Object();
+
+				// --------------------------------------------------------------------------------
+				// 開放
+				// --------------------------------------------------------------------------------
+				_analyze_element.release = function(){
+					if(_analyze_element.released) return;
+					_analyze_element.released = true;
+					_analyze_element.event_dispatcher.release();
+					delete _this.analyze_redirect;
+				};
+
+				// --------------------------------------------------------------------------------
+				// 調査成功
+				// --------------------------------------------------------------------------------
+				_analyze_element.success = function(redirect){
+					_this.redirect = redirect;
+					_analyze_element.event_dispatcher.dispatchEvent("success",null);
+					_analyze_element.release();
+				};
+
+				// --------------------------------------------------------------------------------
+				// 調査失敗
+				// --------------------------------------------------------------------------------
+				_analyze_element.failure = function(e){
+					_this.redirect = null;
+					_analyze_element.event_dispatcher.dispatchEvent("failure",e);
+					_analyze_element.release();
+				};
+
+				// --------------------------------------------------------------------------------
+				// 初期化
+				// --------------------------------------------------------------------------------
+				(function(){
+					_analyze_element.released = false;
+					_analyze_element.event_dispatcher = new EventDispatcher();
+				})();
+
+				return _analyze_element;
+			},
+			getRedirect : function(callback){
+				var _this = this;
+				var event_handler_success = null;
+				var event_handler_failure = null;
+
+				function complete(){
+					if(event_handler_success){
+						event_handler_success.release();
+						event_handler_success = null;
+					}
+					if(event_handler_failure){
+						event_handler_failure.release();
+						event_handler_failure = null;
+					}
+					callback(_this.redirect);	
+				}
+
+				var analyze_element = _this.analyze_redirect;
+				if((function (){
+					if(!analyze_element) return true;
+					if(_this.redirect !== undefined) return true;
+					return false;
+				})()){
+					complete();
+					return;
+				}
+
+				var event_dispatcher = analyze_element.event_dispatcher;
+				event_handler_success = event_dispatcher.createEventHandler("success");
+				event_handler_success.setFunction(function(event){
+					complete();
+				});
+				event_handler_failure = event_dispatcher.createEventHandler("failure");
+				event_handler_failure.setFunction(function(event){
+					complete();
+				});
+			},
+			analyzeBlobURL : function(){
+				var _this = this;
+				if(this.analyze_blob_url) return null;
+				if(this.blob_url !== undefined) return null;
+
+				var _analyze_element = this.analyze_blob_url = new Object();
+
+				// --------------------------------------------------------------------------------
+				// 開放
+				// --------------------------------------------------------------------------------
+				_analyze_element.release = function(){
+					if(_analyze_element.released) return;
+					_analyze_element.released = true;
+					_analyze_element.event_dispatcher.release();
+					delete _this.analyze_blob_url;
+				};
+
+				// --------------------------------------------------------------------------------
+				// 調査成功
+				// --------------------------------------------------------------------------------
+				_analyze_element.success = function(blob_url){
+					_this.blob_url = blob_url;
+					_analyze_element.event_dispatcher.dispatchEvent("success",null);
+					_analyze_element.release();
+				};
+
+				// --------------------------------------------------------------------------------
+				// 調査失敗
+				// --------------------------------------------------------------------------------
+				_analyze_element.failure = function(e){
+					_this.blob_url = "";
+					_analyze_element.event_dispatcher.dispatchEvent("failure",e);
+					_analyze_element.release();
+				};
+
+				// --------------------------------------------------------------------------------
+				// 初期化
+				// --------------------------------------------------------------------------------
+				(function(){
+					_analyze_element.released = false;
+					_analyze_element.event_dispatcher = new EventDispatcher();
+				})();
+
+				return _analyze_element;
+			},
+			getBlobURL : function(callback){
+				var _this = this;
+				var event_handler_success = null;
+				var event_handler_failure = null;
+
+				function complete(){
+					if(event_handler_success){
+						event_handler_success.release();
+						event_handler_success = null;
+					}
+					if(event_handler_failure){
+						event_handler_failure.release();
+						event_handler_failure = null;
+					}
+					callback(_this.blob_url);	
+				}
+
+				var analyze_element = _this.analyze_blob_url;
+				if((function (){
+					if(!analyze_element) return true;
+					if(_this.blob_url !== undefined) return true;
+					return false;
+				})()){
+					complete();
+					return;
+				}
+
+				var event_dispatcher = analyze_element.event_dispatcher;
+				event_handler_success = event_dispatcher.createEventHandler("success");
+				event_handler_success.setFunction(function(event){
+					complete();
+				});
+				event_handler_failure = event_dispatcher.createEventHandler("failure");
+				event_handler_failure.setFunction(function(event){
+					complete();
+				});
+			},
+			releaseBlobURL : function(){
+				if(this.blob_url){
+					BlobURLRevoke(this.blob_url);
+					delete this.blob_url;
+				}
+			},
+			getMimeType : function(){
+				return this.mimetype;
+			},
+			setMimeType : function(v){
+				this.mimetype = v;
+			},
+			getExt : function(){
+				return this.ext;
+			},
+			setExt : function(v){
+				this.ext = v;
+			},		
+			getRefCount : function(){
+				return this.ref_count;
+			},
+			addRefCount : function(v){
+				this.ref_count += v;
+			},
+			url : "",
+			id : 0,
+			analyze_redirect : null,
+			analyze_blob_url : null,
+			redirect : undefined,
+			blob_url : undefined,
+			category : "",
+			mimetype : "",
+			ext : "",
+			ref_count : 0
+		};
+
+		// --------------------------------------------------------------------------------
+		// 開放
+		// --------------------------------------------------------------------------------
+		_this.release = function(){
+			var key;
+			for(key in _dictionary){
+				_dictionary[key].release();
+			}
+			_dictionary = null;
+		};
+
+		// --------------------------------------------------------------------------------
+		// URLを登録
+		// --------------------------------------------------------------------------------
+		_this.addURL = function(url){
+			var key = url.toLowerCase();
+			var obj = _dictionary[key];
+			if(!obj){
+				_dictionary[key] = obj = new UrlInfo(url);
+			}
+			return obj;
+		};
+
+		// --------------------------------------------------------------------------------
+		// UrlInfo を取得
+		// --------------------------------------------------------------------------------
+		_this.getUrlInfo = function(url){
+			var key = url.toLowerCase();
+			var obj = _dictionary[key];
+			return obj;
+		};
+
+		// --------------------------------------------------------------------------------
+		// リダイレクト先を取得
+		// --------------------------------------------------------------------------------
+		_this.getRedirectURL = function(current_url,callback){
+			var redirected = false;
+			var item = _this.getUrlInfo(current_url);
+
+			var complete = function(){
+				callback({
+					redirected:redirected,
+					url_info:item
+				});
+			};
+
+			if(!item){
+				complete();
+				return;
+			}
+
+			var i = 0;
+			var f = function(){
+				item.getRedirect(function(next){
+					if(next){
+						redirected = true;
+						item = next;
+						i++;
+						if(i < _repeat_max){
+							f();
+							return;
+						}
+					}
+					complete();
+				});
+			};
+
+			f();
+		};
+
+		// --------------------------------------------------------------------------------
+		// プライベート変数
+		// --------------------------------------------------------------------------------
+		var _dictionary;
+		var _unique_id;
+		var _url_count;
+		var _repeat_max;
+
+		// --------------------------------------------------------------------------------
+		// 初期化
+		// --------------------------------------------------------------------------------
+		_dictionary = new Object();
+		_unique_id = 0;
+		_url_count = 0;
+		_repeat_max = 16;
+	}
+
+
+	// --------------------------------------------------------------------------------
 	// アドレスコレクション
 	// --------------------------------------------------------------------------------
 	function AddressCollection(){
@@ -63376,116 +64031,191 @@ function PageExpand(page_expand_arguments){
 			while(queue != queue._next){
 				element_release(queue._next);
 			}
-			var queue_single = _this.queue_single;
-			while(queue_single != queue_single._next){
-				element_release(queue_single._next);
+
+			var i;
+			var num = _rules.length;
+			for(i=0;i<num;i++){
+				var rule = _rules[i];
+				rule.release();
 			}
 		};
 
 		// --------------------------------------------------------------------------------
 		// 要素を作成
 		// --------------------------------------------------------------------------------
-		_this.createElement = function(){
-			var _element = new Object();
+		_this.createElement = function (){
+			return new Element(0);
+		};
 
+		// --------------------------------------------------------------------------------
+		// 要素
+		// --------------------------------------------------------------------------------
+		function Element(rule_id){
+			this._prev = this;
+			this._next = this;
+			this._released = false;
+			this._waiting = false;
+			this._loading = false;
+			this._rule = _rules[rule_id];
+
+			_elements[_unique] = this;
+			this._unique = _unique;
+			_unique += 1;
+			_queue_count += 1;
+		}
+		Element.prototype = {
 			// --------------------------------------------------------------------------------
 			// 開始イベント
 			// --------------------------------------------------------------------------------
-			_element.onstart = function(){};
+			onstart : function(){},
 
 			// --------------------------------------------------------------------------------
 			// 中止イベント
 			// --------------------------------------------------------------------------------
-			_element.onabort = function(){};
+			onabort : function(){},
 
 			// --------------------------------------------------------------------------------
 			// 完了を通知
 			// --------------------------------------------------------------------------------
-			_element.complete = function(){
-				element_loadend(_element);
+			complete : function(){
+				element_remove(this);
+				element_loadend(this);
 				dequeue();
-			};
+			},
 
 			// --------------------------------------------------------------------------------
 			// 識別番号を取得
 			// --------------------------------------------------------------------------------
-			_element.getId = function(){
-				return _element._unique;
-			};
+			getId : function(){
+				return this._unique;
+			},
 
 			// --------------------------------------------------------------------------------
-			// 要素を破棄
+			// 要素を破棄（中止の発火なし、デキューあり）
 			// --------------------------------------------------------------------------------
-			_element.release = function(){
-				element_release(_element);
+			release : function(){
+				element_release(this);
 				dequeue();
-			};
+			},
+
+			// --------------------------------------------------------------------------------
+			// 中止
+			// --------------------------------------------------------------------------------
+			abort : function(){
+				element_abort(this);
+				dequeue();
+			},
 
 			// --------------------------------------------------------------------------------
 			// 通常最前列に処理を追加
 			// --------------------------------------------------------------------------------
-			_element.attachFirst = function(){
-				element_abort(_element);
+			attachFirst : function(){
+				element_abort(this);
 
 				var _prev = _this.queue;
 				var _next = _prev._next;
-				_prev._next = _element;
-				_next._prev = _element;
-				_element._prev = _prev;
-				_element._next = _next;
+				_prev._next = this;
+				_next._prev = this;
+				this._prev = _prev;
+				this._next = _next;
+				this._waiting = true;
 
 				dequeue();
-			};
+			},
 
 			// --------------------------------------------------------------------------------
 			// 通常最後尾に追加
 			// --------------------------------------------------------------------------------
-			_element.attachLast = function(){
-				element_abort(_element);
+			attachLast : function(){
+				element_abort(this);
 
 				var _next = _this.queue;
 				var _prev = _next._prev;
-				_prev._next = _element;
-				_next._prev = _element;
-				_element._prev = _prev;
-				_element._next = _next;
+				_prev._next = this;
+				_next._prev = this;
+				this._prev = _prev;
+				this._next = _next;
+				this._waiting = true;
 
 				dequeue();
-			};
-
-			// --------------------------------------------------------------------------------
-			// シングル最後尾に追加
-			// --------------------------------------------------------------------------------
-			_element.attachSingle = function(){
-				element_abort(_element);
-
-				var _next = _this.queue_single;
-				var _prev = _next._prev;
-				_prev._next = _element;
-				_next._prev = _element;
-				_element._prev = _prev;
-				_element._next = _next;
-
-				dequeue();
-			};
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_element._prev = _element;
-				_element._next = _element;
-				_element._released = false;
-				_element._loading = false;
-
-				_elements[_unique] = _element;
-				_element._unique = _unique;
-				_unique += 1;
-				_queue_count += 1;
-			})();
-
-			return _element;
+			}
 		};
+
+		// --------------------------------------------------------------------------------
+		// ルールを作成
+		// --------------------------------------------------------------------------------
+		_this.createRule = function (){
+			return new Rule();
+		};
+
+		// --------------------------------------------------------------------------------
+		// 要素
+		// --------------------------------------------------------------------------------
+		var Rule = (function(){
+			function Rule(){
+				this._thread_count = 0
+				this._thread_max = 0;
+				this._cooltime = 0;
+				this._time_handler = null;
+			}
+			Rule.prototype = {
+
+				// --------------------------------------------------------------------------------
+				// 開放
+				// --------------------------------------------------------------------------------
+				release : function(){
+					Rule_clear_timer(this);
+				},
+
+				// --------------------------------------------------------------------------------
+				// 最大数をセット
+				// --------------------------------------------------------------------------------
+				setMaxThread : function(v){
+					this._thread_max = v;
+				},
+
+				// --------------------------------------------------------------------------------
+				// 待機時間をセット
+				// --------------------------------------------------------------------------------
+				setCoolTime : function(v){
+					this._cooltime = v;
+				}
+
+			};
+
+			return Rule;
+		})();
+		function Rule_loadstart(rule){
+			rule._thread_count += 1;
+		}
+		function Rule_loadend(rule){
+			var full = Boolean(rule._thread_count >= rule._thread_max);
+			rule._thread_count -= 1;
+
+			if(!full) return;
+			if(!rule._cooltime) return;
+
+			// クールダウン
+			Rule_clear_timer(rule);
+			rule._time_handler = setTimeout(function(){
+				Rule_clear_timer(rule);
+				dequeue();
+			},rule._cooltime);
+		}
+		function Rule_clear_timer(rule){
+			if(rule._time_handler !== null){
+				clearTimeout(rule._time_handler);
+				rule._time_handler = null;
+			}
+		}
+		function Rule_can_generated(rule){
+			if(rule._thread_count >= rule._thread_max) return false;
+			if(Rule_is_freezing(rule)) return false;
+			return true;
+		}
+		function Rule_is_freezing(rule){
+			return Boolean(rule._time_handler !== null);
+		}
 
 		// --------------------------------------------------------------------------------
 		// 要素のロード開始（内部用）
@@ -63495,6 +64225,7 @@ function PageExpand(page_expand_arguments){
 			element._loading = true;
 			element_remove(element);
 			_thread_count += 1;
+			Rule_loadstart(element._rule);
 			element.onstart();
 		}
 
@@ -63505,6 +64236,7 @@ function PageExpand(page_expand_arguments){
 			if(!(element._loading)) return;
 			element._loading = false;
 			_thread_count -= 1;
+			Rule_loadend(element._rule);
 		}
 
 		// --------------------------------------------------------------------------------
@@ -63517,17 +64249,18 @@ function PageExpand(page_expand_arguments){
 			_next._prev = _prev;
 			element._prev = element;
 			element._next = element;
+			element._waiting = false;
 		}
 
 		// --------------------------------------------------------------------------------
 		// 要素を中止（内部用）
 		// --------------------------------------------------------------------------------
 		function element_abort(element){
-			element_remove(element);
-			if(!(element._loading)) return;
-			if(element.onabort){
-				element.onabort();
+			if((element._loading) || (element._waiting)){
+				var f = element.onabort;
+				if(f) f();
 			}
+			element_remove(element);
 			element_loadend(element);
 		}
 
@@ -63538,7 +64271,8 @@ function PageExpand(page_expand_arguments){
 			if(element._released) return;
 			element._released = true;
 
-			element_abort(element);
+			element_remove(element);
+			element_loadend(element);
 
 			delete _elements[element._unique];
 			_queue_count -= 1;
@@ -63550,23 +64284,18 @@ function PageExpand(page_expand_arguments){
 		function dequeue(){
 			if(_released) return;
 
-			// 通常キュー
-			while(_thread_count < _thread_max){
-				var element = _this.queue._next;
+			var left = _this.queue;
+			var element = left._next;
+			while(true){
+				if(element == _this.queue) break;
+				if(_thread_count >= _thread_max) break;
 
-				// キューが空
-				if(element == _this.queue){
-					break;
-				}
-				element_loadstart(element);
-			}
-
-			// シングルキュー
-			if(_thread_count <= 0){
-				var element = _this.queue_single._next;
-
-				if(element != _this.queue_single){
+				if(Rule_can_generated(element._rule)){
 					element_loadstart(element);
+					element = left._next;
+				}else{
+					left = element;
+					element = element._next;
 				}
 			}
 		}
@@ -63630,6 +64359,7 @@ function PageExpand(page_expand_arguments){
 		var _released;
 		var _unique;
 		var _elements;
+		var _rules;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
@@ -63642,744 +64372,1261 @@ function PageExpand(page_expand_arguments){
 			_released = false;
 			_unique = 1;
 			_elements = new Object();
+			_rules = new Array();
 
 			var queue = new Object();
 			queue._prev = queue;
 			queue._next = queue;
 			_this.queue = queue;
 
-			var queue_single = new Object();
-			queue_single._prev = queue_single;
-			queue_single._next = queue_single;
-			_this.queue_single = queue_single;
+			// デフォルトのルール
+			var rule = _this.createRule();
+			rule.setCoolTime(100);
+			rule.setMaxThread(0x7FFFFFFF);
+			_rules.push(rule);
 		})();
 	}
 
 	// --------------------------------------------------------------------------------
 	// ローダー
 	// --------------------------------------------------------------------------------
-	function Loader(){
-		var _this = this;
+	var Loader = (function(){
 
 		// --------------------------------------------------------------------------------
-		// ロード成功イベント
+		// 定数
 		// --------------------------------------------------------------------------------
-		_this.onload = function(){};
+		var QUEUE_ATTACH_TYPE = {FIRST:0,LAST:1};
+		var XHR_TYPE = {BY_ORIGIN:0,ONLY_BACKGROUND:1};
 
 		// --------------------------------------------------------------------------------
-		// ロード失敗イベント
+		// 初期化
 		// --------------------------------------------------------------------------------
-		_this.onerror = function(){};
+		function init_request(){
+			var o = this.request;
+			for(var k in o){ delete o[k]; };
+			o.headers = new Object(),
+			o.method = "GET",
+			o.url = "",
+			o.data = null,
+			o.timeout = project.getLoadTimeout()
+			o.overrideMimeType = "";
+			o.responseType = "text";
+		}
+		function init_response(o){
+			var o = this.response;
+			for(var k in o){ delete o[k]; };
+			o.readyState = 0;
+			o.status = 0;
+			o.headers = new ResponseHeadersParser("");
+			o.responseURL = "";
+			o.redirected = false;
+			o.response = null;
+			o.responseText = "";
+			o.errorText = "";
+			o.ok = false;
 
-		// --------------------------------------------------------------------------------
-		// ロード進捗イベント
-		// --------------------------------------------------------------------------------
-		_this.onprogress = function(response){};
-
-		// --------------------------------------------------------------------------------
-		// リクエストヘッダを設定
-		// --------------------------------------------------------------------------------
-		_this.setRequestHeader = function(name,value){
-			_request.headers[name] = value;
-		};
-
-		// --------------------------------------------------------------------------------
-		// オーバーライドコンテンツタイプを設定
-		// --------------------------------------------------------------------------------
-		_this.overrideMimeType = function(type){
-			_request.override_mime_type = type;
-		};
-
-		// --------------------------------------------------------------------------------
-		// メソッドを設定
-		// --------------------------------------------------------------------------------
-		_this.setMethod = function(method){
-			_request.method = method;
-		};
-
-		// --------------------------------------------------------------------------------
-		// アドレスを設定
-		// --------------------------------------------------------------------------------
-		_this.setURL = function(url){
-			_request.url = url;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 送信データを設定
-		// --------------------------------------------------------------------------------
-		_this.setSendData = function(data){
-			_request.data = data;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 画像をロード
-		// --------------------------------------------------------------------------------
-		_this.loadImage = function(){
-			if(!(getEnable())){
-				loadError();
-				return;
+		}
+		function init_progress(o){
+			var o = this.progress;
+			for(var k in o){ delete o[k]; };
+			o.bytesLoaded = 0;
+			o.bytesTotal = 0;
+		}
+		function init_verify_check(){
+			var url_parser = this.url_parser = URL_Parser(this.request.url);
+			if(!url_parser.protocol.match(/^(http|https|ftp|data|blob):/)){
+				this.response.errorText = "protocol is not supported.";
+				return false;
 			}
+			this.url_info = url_info_dictionary.addURL(this.request.url);
 
-			// Image による画像の読み込み
-			function tryLoadImage(){
-				// アンセキュアチェック
-				if(!project.checkAllowUnsecure(_request.url)){
-					loadError();
-					return;
+			if(project.checkAccessBlock(this.request.url)){
+				this.response.errorText = "Access Block";
+				if(project.getEnableOutputLog()){
+					ConsoleLog({type:"AccessBlock",current_url:document.URL,url:this.request.url,call:"Loader"});
 				}
+				return false;
+			}
+			return true;
+		}
 
-				// 開始関数を変更
-				_queue_element.onstart = function(){
+		// --------------------------------------------------------------------------------
+		// 発火
+		// --------------------------------------------------------------------------------
+		function dispatch_onprogress(){
+			var f = this.onprogress;
+			if(f) f(this.progress);
+		}
+		function dispatch_onload(v){
+			var f = this.onload;
+			if(f) f(v);
+		}
+		function dispatch_onerror(){
+			loader_queue.addCountError();
+			var f = this.onerror;
+			if(f) f(this.response.errorText);
+		}
 
-					var image = document.createElement("img");
-					function removeEvent(){
-						image.onload = null;
-						image.onerror = null;
+		// --------------------------------------------------------------------------------
+		// fetch（コンテントで実行）
+		// --------------------------------------------------------------------------------
+		function request_content_fetch(callback){
+			try{
+				var _this = this;
+				var released = false;
+				var event_handler_release;
+				var event_handler_abort;
+				var timeout_handle = null;
+				var fetch_abort = null;
+
+				var request = _this.request;
+				var response = _this.response;
+				var progress = _this.progress;
+
+				var abort = function(){
+					try{
+						release_timeout();
+						fetch_abort.abort();
+					}catch(e){
 					}
-					image.onload = function(){
-						removeEvent();
-						// ロード完了を通知
-						_queue_element.complete();
-						// イメージを返す
-						loadSuccess(image);
-					};
-					image.onerror = function(){
-						removeEvent();
-						// ロード完了を通知
-						_queue_element.complete();
-						// キューに再登録
-						if(!tryAttachElement(false)){
-							// エラーで終了
-							loadError();
-							return;
-						}
-					};
+				};
+				var release_timeout = function(){
+					if(timeout_handle !== null){
+						clearTimeout(timeout_handle);
+						timeout_handle = null;
+					}
+				};
+				var release = function(){
+					if(released) return;
+					released = true;
 
-					// 読み込み開始
-					image.src = _request.url;
+					abort();
+
+					release_timeout();
+					if(event_handler_abort){
+						event_handler_abort.release();
+						event_handler_abort = null;
+					}
+					if(event_handler_release){
+						event_handler_release.release();
+						event_handler_release = null;
+					}
 				};
 
-				// 通常リトライ回数
-				_count = 1;
-				// シングルリトライ回数
-				_single_count = 1;
-				// キューに登録
-				tryAttachElement(true);
-			}
+				event_handler_release = _this._event_dispatcher.createEventHandler("release");
+				event_handler_release.setFunction(function(){
+					release();
+				});
+				event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
+				event_handler_abort.setFunction(function(){
+					release();
+				});
 
-			// data URL scheme による画像の読み込み
-			function tryLoadDataUriScheme(xhr){
-
-				// 開始関数を変更
-				_queue_element.onstart = function(){
-
-					var image = document.createElement("img");
-					function removeEvent(){
-						image.onload = null;
-						image.onerror = null;
-					}
-					image.onload = function(){
-						removeEvent();
-						// ロード完了を通知
-						_queue_element.complete();
-						// イメージを返す
-						loadSuccess(image);
-					};
-					image.onerror = function(){
-						removeEvent();
-						// ロード完了を通知
-						_queue_element.complete();
-						// キューに再登録
-						if(!tryAttachElement(false)){
-							// Image による画像の読み込み
-							tryLoadImage();
-							return;
-						}
-					};
-
-					// 読み込み開始
-					image.src = xhr.responseData;
+				var complete = function(){
+					release();
+					callback({state:"complete"});
 				};
 
-				// 通常リトライ回数
-				_count = 1;
-				// シングルリトライ回数
-				_single_count = 0;
-				// キューに登録
-				tryAttachElement(true);
-			}
+				var success = function(){
+					if(released) return;
+					response.readyState = 4;
+					complete();
+				};
 
-			// 通常リトライ回数
-			_count = 1;
-			// シングルリトライ回数
-			_single_count = 1;
-			// 開始関数をセット
-			_queue_element.onstart = function(){
+				var failure = function(msg){
+					if(released) return;
+					response.ok = false;
+					response.status = 0;
+					response.readyState = 4;
+					response.errorText = msg;
+					complete();
+				};
+				var rejected = function(e){
+					failure(e.message);
+				};
 
-				// ソースタイプ
-				var use_blob_url_scheme = false;
-				var use_data_uri_scheme = false;
-				switch(project.getSourceLoadExpandImage()){
-				case "mixed_content":
-					if(project.getSecureCurrent() && (_request.url.indexOf("http://") == 0)){
-						use_blob_url_scheme = true;
-					}
-					break;
-				case "data_uri_scheme":
-					use_data_uri_scheme = true;
-					break;
+				fetch_abort = new AbortController();
+				if(request.timeout){
+					timeout_handle = setTimeout(function(){
+						timeout_handle = null;
+						abort();
+					},request.timeout);
 				}
+				var fetch_option = new Object();
+				fetch_option.signal = fetch_abort.signal;
+				fetch_option.method = request.method;
+				fetch_option.headers = (function(){
+					var o = new Headers();
+					var i = request.headers;
+					for(var n in i){
+						o.append(n,i[n]);
+					}
+					return o;
+				})();
+				fetch_option.body = request.data;
+				if(request.cache) fetch_option.cache = request.cache;
+				if(request.redirect) fetch_option.redirect = request.redirect;
 
-				// 読み込みを開始する
-				var result;
-				if(use_blob_url_scheme){
-					var result = loadArrayBufferList(function(result,xhr){
+				var fetch_promise = fetch(request.url,fetch_option);
 
-						// ロード完了を通知
-						_queue_element.complete();
+				fetch_promise.then(
+					function(r){
+						fetch_response = r;
+						response.ok = r.ok;
+						response.readyState = 3;
+						response.status = r.status;
+						var response_headers = r.headers;
+						var headers = new Array();
+						response_headers.forEach(function(v,k){
+							headers.push(k + ": " + v);
+						});
+						response.headers = new ResponseHeadersParser(headers.join("\r\n"));
+						response.responseURL = r.url;
+						response.redirected = r.redirected;
 
-						// ロード成功
-						if(result){
-							if(xhr.responseData){
-								var blob_list = (function(){
-									var list = xhr.responseData;
-									var ary = new Array();
-									var num = list.length;
-									var i;
-									for(i=0;i<num;i++){
-										ary.push(new Blob([list[i]]));
+						if(!r.body){
+							success();
+							return;
+						}
+						var reader = r.body.getReader();
+						var reader_reading;
+						var reader_success;
+
+						switch(request.responseType){
+						case "blob":
+							(function (){
+								var blob_list = new Array();
+								reader_reading = function(value){
+									blob_list.push(new Blob([value]));
+								};
+								reader_success = function(){
+									var options = {
+										type:response_headers.get("Content-Type")
+									};
+									response.response = new Blob(blob_list,options);
+									success();
+								};
+							})();
+							break;
+						case "arraybufferlist":
+							(function (){
+								var ary_buffer_list = new Array();
+								reader_reading = function(value){
+									ary_buffer_list.push(value);
+								};
+								reader_success = function(){
+									response.response = ary_buffer_list;
+									success();
+								};
+							})();
+							break;
+						case "arraybuffer":
+						case "dataurischeme":
+						case "binarystring":
+							(function (){
+								var blob_list = new Array();
+								reader_reading = function(value){
+									blob_list.push(new Blob([value]));
+								};
+								reader_success = function(){
+									var file_reader = new FileReader();
+									file_reader.onloadend = function(e){
+										if(released) return;
+
+										if(file_reader.error){
+											failure(file_reader.error);
+										}else{
+											if(request.responseType == "arraybuffer"){
+												response.response = file_reader.result;
+											}else{
+												response.responseText = file_reader.result;
+											}
+											success();
+										}
+									};
+
+									var options = {
+										type:response_headers.get("Content-Type")
+									};
+									var blob = new Blob(blob_list,options);
+
+									switch(request.responseType){
+									case "arraybuffer":
+										file_reader.readAsArrayBuffer(blob);
+										break;
+									case "dataurischeme":
+										file_reader.readAsDataURL(blob);
+										break;
+									case "binarystring":
+										file_reader.readAsBinaryString(blob);
+										break;
 									}
-									return ary;
-								})();
-								var blob = new Blob(blob_list,{type:xhr.getResponseHeader("Content-Type")||"image/png"});
-								var blob_url = BlobURLCreate(blob);
-								tryLoadDataUriScheme({responseData:blob_url});
-							}else{
-								// Image による画像の読み込み
-								tryLoadImage();
-							}
+								};
+							})();
+							break;
+						default:
+							(function (){
+								var charset = "utf-8";
+								var mime_type = request.overrideMimeType || "";
+								var m = mime_type.match(new RegExp("text/plain; charset=([a-zA-Z-_]+)"));
+								if(m) charset = m[1];
+								var text_decoder = new TextDecoder(charset);
+								var decode_options = {stream:true};
+								var str_list = new Array();
+								reader_reading = function(value){
+									var ary_u8 = new Uint8Array(value);
+									str_list.push(text_decoder.decode(ary_u8,decode_options));
+								};
+								reader_success = function(){
+									response.responseText = str_list.join("");
+									success();
+								};
+							})();
+							break;
+						}
 
-						// 失敗
-						}else{
-							if(xhr.status == 0){
-								// Image による画像の読み込み
-								tryLoadImage();
-							}else if(xhr.status == 401){
-								// 認証エラー
-								loadError();
-							}else{
-								// キューに再登録
-								if(!tryAttachElement(false)){
-									// Image による画像の読み込み
-									tryLoadImage();
+						var loaded = 0;
+						var total = parseInt(response_headers.get("Content-Length")) || 0;
+
+						var pull = function (){
+							var p = reader.read();
+							p.then(function(result){
+								if(result.done){
+									reader.releaseLock();
+									reader_success();
+									return;
 								}
+
+								loaded += result.value.byteLength;
+								progress.bytesLoaded = loaded || 0;
+								progress.bytesTotal = total || 0;
+								dispatch_onprogress.call(_this);
+
+								reader_reading(result.value);
+								pull();
+							},rejected);	
+
+						};
+						pull();
+
+					},
+					rejected
+				);
+			}catch(e){
+				response.errorText = e.message;
+				release();
+				callback({state:"unsupported"});
+			}
+
+		}
+
+		// --------------------------------------------------------------------------------
+		// xhr（コンテントで実行）
+		// --------------------------------------------------------------------------------
+		function request_content_xhr(callback){
+			try{
+				var _this = this;
+				var released = false;
+				var event_handler_release;
+				var event_handler_abort;
+				var xhr;
+
+				var request = _this.request;
+				var response = _this.response;
+				var progress = _this.progress;
+
+				var abort = function(){
+					try{
+						xhr.abort();
+					}catch(e){
+					}
+				};
+
+				var release = function(){
+					if(released) return;
+					released = true;
+
+					abort();
+
+					try{
+						xhr.onloadend = null;
+						xhr.onreadystatechange = null;
+						xhr.onprogress = null;
+					}catch(e){
+					}
+
+					if(event_handler_abort){
+						event_handler_abort.release();
+						event_handler_abort = null;
+					}
+					if(event_handler_release){
+						event_handler_release.release();
+						event_handler_release = null;
+					}
+
+					xhr = null;
+				};
+
+				event_handler_release = _this._event_dispatcher.createEventHandler("release");
+				event_handler_release.setFunction(function(){
+					release();
+				});
+				event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
+				event_handler_abort.setFunction(function(){
+					release();
+				});
+
+				var complete = function(){
+					release();
+					callback({state:"complete"});
+				};
+
+				var success = function(){
+					if(released) return;
+					complete();
+				};
+
+				var failure = function(msg){
+					if(released) return;
+					response.ok = false;
+					response.status = 0;
+					response.readyState = 4;
+					response.errorText = msg;
+					complete();
+				};
+
+				xhr = new XMLHttpRequest();
+				xhr.onloadend = function(r){
+					response.ok = Boolean((200 <= xhr.status && xhr.status < 300) || xhr.status == 304)
+					response.status = xhr.status;
+					response.headers = new ResponseHeadersParser(xhr.getAllResponseHeaders());
+					response.responseURL = xhr.responseURL;
+					response.redirected = Boolean((xhr.responseURL) && (request.url != xhr.responseURL));
+
+					switch(request.responseType){
+					case "blob":
+						(function (){
+							response.response = xhr.response;
+							success();
+						})();
+						break;
+					case "arraybuffer":
+						(function (){
+							response.response = xhr.response;
+							success();
+						})();
+						break;
+					case "arraybufferlist":
+						(function (){
+							var blob = xhr.response;
+							if(!blob){
+								success();
+								return;
 							}
-						}
-					});
-				}else if(use_data_uri_scheme){
-					var result = loadDataUriScheme(function(result,xhr){
 
-						// ロード完了を通知
-						_queue_element.complete();
+							var ary_buffer_list = new Array();
+							var pos = 0;
+							var read_size = 1024 * 1024 * 16;
+							var total = blob.size;
+							var f = function (){
+								var file_reader = new FileReader();
+								file_reader.onloadend = function(){
+									if(released) return;
 
-						// ロード成功
-						if(result){
-							if(xhr.responseData){
-								// data URL scheme による画像の読み込み
-								tryLoadDataUriScheme(xhr);
-							}else{
-								// Image による画像の読み込み
-								tryLoadImage();
+									if(file_reader.error){
+										failure(file_reader.error);
+										return;
+									}
+
+									ary_buffer_list.push(file_reader.result);
+
+									pos += read_size;
+									if(pos < total){
+										f();
+										return;
+									}
+
+									response.response = ary_buffer_list;
+									success();
+								};
+								file_reader.readAsArrayBuffer(blob.slice(pos,pos+read_size));
+							};
+							f();
+						})();
+						break;
+					case "dataurischeme":
+					case "binarystring":
+						(function (){
+							var blob = xhr.response;
+							if(!blob){
+								success();
+								return;
 							}
 
-						// 失敗
-						}else{
-							if(xhr.status == 0){
-								// Image による画像の読み込み
-								tryLoadImage();
-							}else if(xhr.status == 401){
-								// 認証エラー
-								loadError();
-							}else{
-								// キューに再登録
-								if(!tryAttachElement(false)){
-									// Image による画像の読み込み
-									tryLoadImage();
+							var file_reader = new FileReader();
+							file_reader.onloadend = function(e){
+								if(released) return;
+
+								if(file_reader.error){
+									failure(file_reader.error);
+								}else{
+									response.responseText = file_reader.result;
+									success();
 								}
+							};
+
+							switch(request.responseType){
+							case "dataurischeme":
+								file_reader.readAsDataURL(blob);
+								break;
+							case "binarystring":
+								file_reader.readAsBinaryString(blob);
+								break;
 							}
-						}
-					});
-				}else{
-					result = loadToCache(function(result,xhr){
-
-						// ロード完了を通知
-						_queue_element.complete();
-
-						// ロード成功
-						if(result){
-
-							// Imageによる画像の読み込み
-							tryLoadImage();
-
-						// 失敗
-						}else{
-							if(xhr.status == 0){
-								// Imageによる画像の読み込み
-								tryLoadImage();
-							}else if(xhr.status == 401){
-								// 認証エラー
-								loadError();
-							}else{
-								// キューに再登録
-								if(!tryAttachElement(false)){
-									// Imageによる画像の読み込み
-									tryLoadImage();
-								}
-							}
-						}
-					});
-				}
-
-				// ロードエラー
-				if(!result){
-					// ロード完了を通知
-					_queue_element.complete();
-					// Imageによる画像の読み込み
-					tryLoadImage();
-					return;
-				}
-			};
-
-			// キューに登録
-			tryAttachElement(false);
-		};
-
-		// --------------------------------------------------------------------------------
-		// オーディオをロード
-		// --------------------------------------------------------------------------------
-		_this.loadAudio = function(){
-			var error = false;
-			// 無効
-			if(!(getEnable())){
-				error = true;
-			}
-			// オーディオ未対応
-			if(!(window.HTMLAudioElement)){
-				error = true;
-			}
-			// エラー
-			if(error){
-				loadError();
-				return;
-			}
-
-			// HTTP メソッド
-			_this.setMethod("HEAD");
-
-			// 通常リトライ回数
-			_count = 1;
-			// シングルリトライ回数
-			_single_count = 0;
-			// 開始関数をセット
-			_queue_element.onstart = function(){
-
-				// 読み込みを開始する
-				var result = loadXMLHttpRequest(function(result,xhr){
-
-					// ロード完了を通知
-					_queue_element.complete();
-
-					// ロード成功
-					if(result){
-
-						// オーディオを生成
-						var audio = document.createElement("audio");
-
-						if(audio.canPlayType(xhr.getResponseHeader("Content-Type")) !== ""){
-							// コントロール有効
-							audio.controls = true;
-							// 自動再生無し
-							audio.autoplay = false;
-							// プリロードを設定
-							audio.preload = "none";
-							// ロード開始
-							audio.src = _request.url;
-							// オーディオを返す
-							loadSuccess(audio);
-						}else{
-							// エラーで終了
-							loadError();
-						}
-
-					// 失敗
-					}else{
-						if(xhr.status == 401){
-							// 認証エラー
-							loadError();
-							return;
-						}else{
-							// キューに再登録
-							if(!tryAttachElement(false)){
-								// エラーで終了
-								loadError();
-								return;
-							}
-						}
+						})();
+						break;
+					default:
+						(function (){
+							response.responseText = xhr.responseText;
+							success();
+						})();
+						break;
 					}
-				});
 
-				// ロードエラー
-				if(!result){
-					// ロード完了を通知
-					_queue_element.complete();
+				};
+				xhr.onprogress = function(e){
+					progress.bytesLoaded = e.loaded || 0;
+					progress.bytesTotal = e.total || 0;
+					dispatch_onprogress.call(_this);
+				};
 
-					// エラーで終了
-					loadError();
-					return;
+				xhr.open(request.method,request.url,true);
+
+				var headers = request.headers;
+				for(var name in headers){
+					xhr.setRequestHeader(name,headers[name]);
 				}
-			};
-
-			// キューに登録
-			tryAttachElement(false);
-		};
-
-		// --------------------------------------------------------------------------------
-		// ビデオをロード
-		// --------------------------------------------------------------------------------
-		_this.loadVideo = function(){
-			var error = false;
-			// 無効
-			if(!(getEnable())){
-				error = true;
-			}
-			// ビデオ未対応
-			if(!(window.HTMLVideoElement)){
-				error = true;
-			}
-			// エラー
-			if(error){
-				loadError();
-				return;
-			}
-
-			// HTTP メソッド
-			_this.setMethod("HEAD");
-
-			// 通常リトライ回数
-			_count = 1;
-			// シングルリトライ回数
-			_single_count = 0;
-			// 開始関数をセット
-			_queue_element.onstart = function(){
-
-				// 読み込みを開始する
-				var result = loadXMLHttpRequest(function(result,xhr){
-
-					// ロード完了を通知
-					_queue_element.complete();
-
-					// ロード成功
-					if(result){
-
-						// ビデオを生成
-						var video = DocumentCreateElement("video");
-
-						if(video.canPlayType(xhr.getResponseHeader("Content-Type")) !== ""){
-							// コントロール有効
-							video.controls = true;
-							// 自動再生無し
-							video.autoplay = false;
-							// プリロードを設定
-							video.preload = "none";
-							// ロード開始
-							video.src = _request.url;
-							// ビデオを返す
-							loadSuccess(video);
-						}else{
-							// エラーで終了
-							loadError();
-						}
-
-					// 失敗
-					}else{
-						if(xhr.status == 401){
-							// 認証エラー
-							loadError();
-							return;
-						}else{
-							// キューに再登録
-							if(!tryAttachElement(false)){
-								// エラーで終了
-								loadError();
-								return;
-							}
-						}
+				if(request.overrideMimeType){
+					if(xhr.overrideMimeType) xhr.overrideMimeType(request.overrideMimeType);
+				}
+				if(request.timeout){
+					xhr.timeout = request.timeout;
+				}
+				if(request.responseType){
+					switch(request.responseType){
+					case "arraybufferlist":
+					case "dataurischeme":
+					case "binarystring":
+						xhr.responseType = "blob";
+						break;
+					default:
+						xhr.responseType = request.responseType;
+						break;
 					}
-				});
+				}
+				xhr.send(request.data);
+			}catch(e){
+				response.errorText = e.message;
+				release();
+				callback({state:"unsupported"});
+			}
+		}
 
-				// ロードエラー
-				if(!result){
-					// ロード完了を通知
-					_queue_element.complete();
 
-					// エラーで終了
-					loadError();
-					return;
+		// --------------------------------------------------------------------------------
+		// バックグラウンド通信
+		// --------------------------------------------------------------------------------
+		function request_background_fetch(callback){
+			request_background.call(this,"fetch",callback);
+		}
+		function request_background_xhr(callback){
+			request_background.call(this,"xhr",callback);
+		}
+		function request_background(command,callback){
+			_this = this;
+
+			var request = _this.request;
+			var response = _this.response;
+			var progress = _this.progress;
+
+			var complete_func;
+			var receive_body_init;
+			var receive_body_exec;
+
+			var commands = {
+				"unsupported":function(){
+					callback({state:"unsupported"});
+				},
+				"progress":function(r){
+					progress.bytesLoaded = r.bytesLoaded || 0;
+					progress.bytesTotal = r.bytesTotal || 0;
+					dispatch_onprogress.call(_this);
+				},
+				"head":function(r){
+					response.ok = r.ok;
+					response.readyState = r.readyState;
+					response.status = r.status;
+					response.headers = new ResponseHeadersParser(r.allresponseheaders);
+					response.responseURL = r.responseURL;
+					response.redirected = r.redirected;
+					response.errorText = r.errorText;
+				},
+				"body":function(r){
+					commands["body"] = receive_body_exec;
+					receive_body_init(r);
+					receive_body_exec(r);
 				}
 			};
 
-			// キューに登録
-			tryAttachElement(false);
-		};
-
-		// --------------------------------------------------------------------------------
-		// テキストをロード
-		// --------------------------------------------------------------------------------
-		_this.loadText = function(){
-			if(!(getEnable())){
-				loadError();
-				return;
+			function createUint8Array(r){
+				var n = r.data.length;
+				var a = new Uint8Array(n);
+				var i;
+				for(i=0;i<n;i++){
+					a[i] = r.data.charCodeAt(i) & 0xff;
+				}
+				return a;
 			}
 
-			// 通常リトライ回数
-			_count = 1;
-			// シングルリトライ回数
-			_single_count = 0;
-			// 開始関数をセット
-			_queue_element.onstart = function(){
-
-				// 読み込みを開始する
-				var result = loadXMLHttpRequest(function(result,xhr){
-
-					// ロード完了を通知
-					_queue_element.complete();
-
-					// ロード成功
-					if(result){
-						// responseText を返す
-						loadSuccess(xhr.responseText);
-						return;
-
-					// 失敗
-					}else{
-						if(xhr.status == 401){
-							// 認証エラー
-							loadError();
-						}else{
-							// キューに再登録
-							if(!tryAttachElement(false)){
-								// エラーで終了
-								loadError();
-								return;
-							}
+			switch(request.responseType){
+			case "blob":
+				(function(){
+					var ary = null;
+					receive_body_init = function (r){
+						ary = new Array();
+					};
+					receive_body_exec = function (r){
+						var a = createUint8Array(r);
+						ary.push(new Blob([a]));
+					};
+					complete_func = function (){
+						if(ary){
+							var options = {
+								type:response.headers.getResponseHeader("Content-Type")
+							};
+							response.response = new Blob(ary,options); 
 						}
-					}
-				});
-
-				// ロードエラー
-				if(!result){
-					// ロード完了を通知
-					_queue_element.complete();
-
-					// エラーで終了
-					loadError();
-					return;
-				}
-			};
-
-			// キューに登録
-			tryAttachElement(false);
-
-		};
-
-		// --------------------------------------------------------------------------------
-		// DataURIScheme をロード
-		// --------------------------------------------------------------------------------
-		_this.loadDataUriScheme = function(){
-			if(!(getEnable())){
-				loadError();
-				return;
+						callback({state:"complete"});
+					};
+				})();
+				break;
+			case "arraybuffer":
+				(function(){
+					var a = null;
+					receive_body_init = function (r){
+						a = new Uint8Array(r.total);
+					};
+					receive_body_exec = function (r){
+						var p = r.pos;
+						var i;
+						var n = r.data.length;
+						for(i=0;i<n;i++){
+							a[p] = r.data.charCodeAt(i) & 0xff;
+							p++;
+						}
+					};
+					complete_func = function (){
+						response.response = a;
+						callback({state:"complete"});
+					};
+				})();
+				break;
+			case "arraybufferlist":
+				(function(){
+					var ary = null;
+					receive_body_init = function (r){
+						ary = new Array();
+					};
+					receive_body_exec = function (r){
+						var a = createUint8Array(r);
+						ary.push(a);
+					};
+					complete_func = function (){
+						response.response = ary;
+						callback({state:"complete"});
+					};
+				})();
+				break;
+			case "dataurischeme":
+			case "binarystring":
+			default:
+				(function(){
+					var ary = null;
+					receive_body_init = function (r){
+						ary = new Array();
+					};
+					receive_body_exec = function (r){
+						ary.push(r.data);
+					};
+					complete_func = function (){
+						response.responseText = (ary || []).join("");
+						callback({state:"complete"});
+					};
+				})();
+				break;
 			}
+			commands["complete"] = complete_func;
 
-			// 通常リトライ回数
-			_count = 1;
-			// シングルリトライ回数
-			_single_count = 1;
-			// 開始関数をセット
-			_queue_element.onstart = function(){
+			var send_Request = ObjectCopy(_this.request);
+			send_Request.currentURL = document.URL;
 
-				// 読み込みを開始する
-				var result = loadDataUriScheme(function(result,xhr){
-
-					// ロード完了を通知
-					_queue_element.complete();
-
-					// ロード成功
-					if(result){
-						loadSuccess(xhr.responseData);
-						return;
-
-					// 失敗
-					}else{
-						if(xhr.status == 401){
-							// 認証エラー
-							loadError();
-						}else{
-							// キューに再登録
-							if(!tryAttachElement(false)){
-								// エラーで終了
-								loadError();
-								return;
-							}
-						}
-					}
-				});
-
-				// ロードエラー
-				if(!result){
-					// ロード完了を通知
-					_queue_element.complete();
-
-					// エラーで終了
-					loadError();
-					return;
-				}
-			};
-
-			// キューに登録
-			tryAttachElement(false);
-
-		};
+			extension_message.sendRequest({command:command,request:send_Request,single:false}, function(receive) {
+				var f = commands[receive.state];
+				if(f) f(receive.data);
+			});
+		}
 
 		// --------------------------------------------------------------------------------
-		// リダイレクト先 URL をロード
+		// media
 		// --------------------------------------------------------------------------------
-		_this.loadFinalURL = function(){
+		function request_element(param,callback){
+			var _this = this;
 
-			var current_url = _request.url;
-			var latest_url = null;
-			var analyze_element = null;
-			var redirect_count = 16;
-
+			var released = false;
+			var event_handler_release;
+			var event_handler_abort;
+			var queue_element = loader_queue.createElement();
+			var element;
 
 			function release(){
-				if(analyze_element){
-					analyze_element.release();
-					analyze_element = null;
-				}
-			}
+				if(released) return;
+				released = true;
 
-			function complete(){
-				if(latest_url){
-					loadSuccess(latest_url);
-					if(analyze_element){
-						analyze_element.success(latest_url);
-					}
-				}else{
-					loadError();
-					if(analyze_element){
-						analyze_element.failure();
-					}
+				if(element){
+					element.removeEventListener("load",success);
+					element.removeEventListener("loadedmetadata",success);
+					element.removeEventListener("error",failure);
 				}
+				if(event_handler_abort){
+					event_handler_abort.release();
+					event_handler_abort = null;
+				}
+				if(event_handler_release){
+					event_handler_release.release();
+					event_handler_release = null;
+				}
+				if(queue_element){
+					queue_element.complete();
+					queue_element.release();
+					queue_element = null;
+				}
+			};
+			function success(){
+				if(released) return;
 				release();
+				callback.call(_this,element);
+			}
+			function failure(){
+				if(released) return;
+				release();
+				dispatch_onerror.call(_this);
 			}
 
-			function check(){
-				redirect_count -= 1;
-				if(redirect_count < 0){
-					complete();
-					return false;
+			init_progress.call(_this);
+			init_response.call(_this);
+
+			event_handler_release = _this._event_dispatcher.createEventHandler("release");
+			event_handler_release.setFunction(function(){
+				release();
+			});
+			event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
+			event_handler_abort.setFunction(function(){
+				failure();
+			});
+
+			queue_element.onstart = function(){
+				element = DocumentCreateElement(param.tagName);
+				if(param.tagName == "IMG"){
+				}else{
+					element.controls = true;
+					element.autoplay = false;
+					element.preload = "metadata";
 				}
-				return true;
+				element.addEventListener("load",success);
+				element.addEventListener("loadedmetadata",success);
+				element.addEventListener("error",failure);
+				element.src = param.url;
+			};
+
+			queue_element.onabort = function(){
+				_this.abort();
+			};
+
+			switch(_this._queue_attch_type){
+			case QUEUE_ATTACH_TYPE.FIRST:
+				queue_element.attachFirst();
+				break;
+			default:
+				queue_element.attachLast();
+				break;
+			}
+		}
+		function load_element(param){
+			var _this = this;
+
+			function requestElement(url){
+				if(!url){
+					dispatch_onerror.call(_this);
+					return;
+				}
+
+				request_element.call(_this,{tagName:param.tagName,url:url},function(element){
+					dispatch_onload.call(_this,element);
+				});
 			}
 
-			function loadHeader(){
-				if(!check()) return;
+			_this.request.cache = project.getLoadCacheModeForMedia();
 
-				_this.setMethod("HEAD");
+			var current_url_parser = URL_Parser(document.URL);
+			if((function(){
+				if(_this.url_parser.protocol.match(/^(blob):/)) return true;
+				if(_this.url_parser.protocol.match(/^(data):/)) return false;
+				if(param.useBlobCache) return false;
+				if(current_url_parser.protocol.match(/^(https):/) && _this.url_parser.protocol.match(/^(http):/)) return false;
+				return true;
+			})()){
+				// 通常アドレスを使用する
+				requestElement(_this.request.url);
+				return;
+			}
 
-				// 開始関数をセット
-				_queue_element.onstart = function(){
+			// Blob キャッシュを使用する
+			var analyze_element = _this.url_info.analyzeBlobURL();
+			_this.url_info.getBlobURL(function(blob_url){
+				_this._queue_attch_type = QUEUE_ATTACH_TYPE.FIRST;
+				requestElement(blob_url);
+			});
 
-					// 読み込みを開始する
-					var result = loadXMLHttpRequest(function(result,xhr){
+			if(!analyze_element) return;
 
-						// ロード完了を通知
-						_queue_element.complete();
+			_this.setResponseType("blob");
 
-						switch(xhr.status){
-						case 300:
-						case 301:
-						case 302:
-						case 303:
-						case 307:
-						case 308:
-							//	Location ヘッダを取得
-							var url = xhr.getResponseHeader("Location");
-							if(url){
-								_request.url = latest_url = url;
-								loadHeader();
-								return;
-							}
-						}
+			load.call(_this,function(){
+				var blob = _this.response.response;
+				if(blob){
+					var blob_url = BlobURLCreate(blob);
+					analyze_element.success(blob_url);
+				}else{
+					analyze_element.failure();
+				}
+			});
 
-						var redirected = Boolean(_request.url != xhr.responseURL);
-						if(redirected){
-							_request.url = latest_url = xhr.responseURL;
-							loadHeader();
-							return;
-						}
-						
-						if(result){
-							// テキスト系ならボディを解析する
-							var type = xhr.getResponseHeader("Content-Type");
-							if(type.match(/text[/]/)){
-								loadBody();
-								return;
-							}
-						}
+		}
 
-						complete();
-					});
+		// --------------------------------------------------------------------------------
+		// 読み込みを開始
+		// --------------------------------------------------------------------------------
+		function load(callback){
+			var _this = this;
 
-					if(!result){
-						// ロード完了を通知
-						_queue_element.complete();
+			var event_handler_release;
+			var event_handler_abort;
+			var queue_element = loader_queue.createElement();
+			var load_methods = new Array();
+			var commands;
 
-						complete();
+			var replied = false;
+			function reply(){
+				if(replied) return;
+				replied = true;
+				callback.call(_this);
+			}
+			function release(){
+				if(event_handler_abort){
+					event_handler_abort.release();
+					event_handler_abort = null;
+				}
+				if(event_handler_release){
+					event_handler_release.release();
+					event_handler_release = null;
+				}
+				if(queue_element){
+					queue_element.complete();
+					queue_element.release();
+					queue_element = null;
+				}
+				command = {};
+			};
+			function success(){
+				var mimetype = _this.response.headers.getResponseHeader("Content-Type")
+				if(mimetype) _this.url_info.setMimeType(mimetype);
+				release();
+				reply();
+			}
+			function failure(){
+				release();
+				reply();
+			}
+
+			function load_init(){
+				init_progress.call(_this);
+				init_response.call(_this);
+			}
+
+			function load_exec(){
+				var f = load_methods[0];
+				if(!f){
+					failure();
+					return;
+				}
+
+				load_init();
+
+				f.call(_this,function(v){
+					var f = commands[v.state];
+					if(f) f();
+				});
+			}
+
+			load_init();
+
+			event_handler_release = _this._event_dispatcher.createEventHandler("release");
+			event_handler_release.setFunction(function(){
+				release();
+			});
+			event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
+			event_handler_abort.setFunction(function(){
+				failure();
+			});
+
+			commands = {
+				"complete" : function(){
+					success();
+				},
+				"retry" : function(){
+					load_exec();
+				},
+				"unsupported" : function(){
+					load_methods.shift();
+					load_exec();
+				}
+			};
+
+			var current_url_parser = URL_Parser(document.URL);
+			if((function(){
+				if(_this.url_parser.protocol.match(/blob|data/)) return false;
+				if(this._xhr_type == XHR_TYPE.ONLY_BACKGROUND) return true;
+				return Boolean(current_url_parser.origin != _this.url_parser.origin);
+			})()){
+				load_methods.push(request_background_fetch);
+				load_methods.push(request_background_xhr);
+			}else{
+				load_methods.push(request_content_fetch);
+				load_methods.push(request_content_xhr);
+			}
+
+			queue_element.onstart = function(){
+				load_exec();
+			};
+			queue_element.onabort = function(){
+				_this.abort();
+			};
+
+			switch(_this._queue_attch_type){
+			case QUEUE_ATTACH_TYPE.FIRST:
+				queue_element.attachFirst();
+				break;
+			default:
+				queue_element.attachLast();
+				break;
+			}
+
+		}
+
+		// --------------------------------------------------------------------------------
+		// コンストラクタ
+		// --------------------------------------------------------------------------------
+		var Loader = function(){
+			this.request = new Object();
+			this.response = new Object();
+			this.progress = new Object();
+			init_request.call(this);
+			init_response.call(this);
+			init_progress.call(this);
+			this._event_dispatcher = new EventDispatcher();
+			this.setTimeout(project.getLoadTimeout());
+		};
+		Loader.prototype = {
+
+			// --------------------------------------------------------------------------------
+			// 開放
+			// --------------------------------------------------------------------------------
+			release : function(){
+				this._event_dispatcher.dispatchEvent("release",null);
+				if(this._event_dispatcher){
+					this._event_dispatcher.release();
+					this._event_dispatcher = null;
+				}
+			},
+
+			// --------------------------------------------------------------------------------
+			// 中止
+			// --------------------------------------------------------------------------------
+			abort : function(){
+				this._event_dispatcher.dispatchEvent("abort",null);
+			},
+
+			// --------------------------------------------------------------------------------
+			// イベント
+			// --------------------------------------------------------------------------------
+			onload : function(){},
+			onerror : function(){},
+			onprogress : function(){},
+
+			// --------------------------------------------------------------------------------
+			// setter
+			// --------------------------------------------------------------------------------
+			setRequestHeader : function(name,value){
+				this.request.headers[name] = value;
+			},
+			overrideMimeType : function(type){
+				this.request.overrideMimeType = type;
+			},
+			setTimeout : function(time){
+				this.request.timeout = time || 0;
+			},
+			setMethod : function(method){
+				this.request.method = (method || "").toLowerCase();
+			},
+			setURL : function(url){
+				this.request.url = url;
+			},
+			setResponseType : function(type){
+				this.request.responseType = (type || "").toLowerCase();
+			},
+			setSendData : function(data){
+				this.request.data = data;
+			},
+
+			// --------------------------------------------------------------------------------
+			// 読み込みを開始（ヘッダのみ）
+			// --------------------------------------------------------------------------------
+			loadResponseHeader : function(){
+				var _this = this;
+				if(!init_verify_check.call(_this)){
+					dispatch_onerror.call(_this);
+					return;
+				}
+
+				this.setMethod("head");
+				this.setResponseType("blob");
+
+				load.call(_this,function(){
+					var response = _this.response;
+					if(response.ok){
+						dispatch_onload.call(_this,response.headers);
+					}else{
+						dispatch_onerror.call(_this);
+					}
+				});
+			},
+
+			// --------------------------------------------------------------------------------
+			// 読み込みを開始（任意のタイプ）
+			// --------------------------------------------------------------------------------
+			load : function(){
+				var _this = this;
+				if(!init_verify_check.call(_this)){
+					dispatch_onerror.call(_this);
+					return;
+				}
+
+				load.call(_this,function(){
+					var response = _this.response;
+					if(response.ok){
+						dispatch_onload.call(_this,response);
+					}else{
+						dispatch_onerror.call(_this);
+					}
+				});
+			},
+
+			// --------------------------------------------------------------------------------
+			// 読み込みを開始（テキスト形式）
+			// --------------------------------------------------------------------------------
+			loadText : function(){
+				var _this = this;
+				if(!init_verify_check.call(_this)){
+					dispatch_onerror.call(_this);
+					return;
+				}
+
+				this.setResponseType("text");
+				_this._queue_attch_type = QUEUE_ATTACH_TYPE.FIRST;
+
+				load.call(_this,function(){
+					var response = _this.response;
+					if(response.ok){
+						dispatch_onload.call(_this,response.responseText);
+					}else{
+						dispatch_onerror.call(_this);
+					}
+				});
+			},
+
+			// --------------------------------------------------------------------------------
+			// 読み込みを開始（DataUriScheme 形式）
+			// --------------------------------------------------------------------------------
+			loadDataUriScheme : function(){
+				var _this = this;
+				if(!init_verify_check.call(_this)){
+					dispatch_onerror.call(_this);
+					return;
+				}
+
+				this.setResponseType("dataurischeme");
+
+				load.call(_this,function(){
+					var response = _this.response;
+					if(response.ok){
+						dispatch_onload.call(_this,response.responseText);
+					}else{
+						dispatch_onerror.call(_this);
+					}
+				});
+			},
+
+			// --------------------------------------------------------------------------------
+			// 読み込みを開始（IMG要素を生成）
+			// --------------------------------------------------------------------------------
+			loadImage : function(){
+				if(!init_verify_check.call(this)){
+					dispatch_onerror.call(this);
+					return;
+				}
+
+				load_element.call(this,{
+					tagName:"IMG",
+					useBlobCache:true
+				});
+			},
+
+			// --------------------------------------------------------------------------------
+			// 読み込みを開始（AUDIO要素を生成）
+			// --------------------------------------------------------------------------------
+			loadAudio : function(){
+				if(!init_verify_check.call(this)){
+					dispatch_onerror.call(this);
+					return;
+				}
+
+				if(!(window.HTMLAudioElement)){
+					this.response.errorText = "not support HTMLAudioElement";
+					dispatch_onerror.call(_this);
+					return;
+				}
+
+				load_element.call(this,{
+					tagName:"AUDIO",
+					useBlobCache:false
+				});
+			},
+			// --------------------------------------------------------------------------------
+			// 読み込みを開始（VIDEO要素を生成）
+			// --------------------------------------------------------------------------------
+			loadVideo : function(){
+				if(!init_verify_check.call(this)){
+					dispatch_onerror.call(this);
+					return;
+				}
+
+				if(!(window.HTMLVideoElement)){
+					this.response.errorText = "not support HTMLVideoElement";
+					dispatch_onerror.call(_this);
+					return;
+				}
+
+				load_element.call(this,{
+					tagName:"VIDEO",
+					useBlobCache:false
+				});
+			},
+
+			// --------------------------------------------------------------------------------
+			// 読み込みを開始（リダイレクト先を検出）
+			// --------------------------------------------------------------------------------
+			loadFinalURL : function(){
+				var _this = this;
+				if(!init_verify_check.call(_this)){
+					dispatch_onerror.call(_this);
+					return;
+				}
+
+				var redirect_max = 16;
+				var request_url = _this.request.url;
+				var url_info = url_info_dictionary.addURL(_this.request.url);
+				var analyze_element;
+
+				_this.setTimeout(1000 * 10);
+				_this.setResponseType("text");
+				_this._xhr_type = XHR_TYPE.ONLY_BACKGROUND;
+				_this._queue_attch_type = QUEUE_ATTACH_TYPE.FIRST;
+
+				function success(next_url){
+					url_info = url_info_dictionary.addURL(next_url);
+					analyze_element.success(url_info);
+				}
+
+				function failure(){
+					analyze_element.failure();
+				}
+
+				var redirect_status = {"300":1,"301":1,"302":1,"303":1,"307":1,"308":1};
+				function loadHeader(){
+					_this.setURL(url_info.getURL());
+					if(!init_verify_check.call(_this)){
+						failure();
 						return;
 					}
-				};
 
-				// キューに登録
-				_count = 1;
-				_single_count = 0;
-				tryAttachElement(false);
-			}
+					_this.setMethod("HEAD");
+					load.call(_this,function(){
+						var response = _this.response;
+						var headers = response.headers;
 
-			function loadBody(){
-				if(!check()) return;
+						if(redirect_status[response.status]){
+							//	Location ヘッダを取得
+							var url = headers.getResponseHeader("Location");
+							if(url){
+								success(url);
+								return;
+							}
+						}
 
-				_this.setMethod("GET");
-
-				// 開始関数をセット
-				_queue_element.onstart = function(){
-
-					// 読み込みを開始する
-					var result = loadXMLHttpRequest(function(result,xhr){
-
-						// ロード完了を通知
-						_queue_element.complete();
-
-						// 失敗
-						if(!result){
-							complete();
+						// リダイレクトが発生した
+						if(response.redirected){
+							success(response.responseURL);
 							return;
 						}
+
+						if((function(){
+							if(!(response.ok)) return false;
+
+							var total = parseInt(headers.getResponseHeader("Content-Length")) || 0;
+							if(!total) return false;
+							if(total > 1024 * 10) return false;
+
+							var mimetype = headers.getResponseHeader("Content-Type");
+							if(!(mimetype.match(/^text[/]/))) return false;
+
+							return true;
+						})()){
+							loadBody();
+							return;
+						}
+
+						failure();
+					});
+				}
+
+				function loadBody(){
+					_this.setMethod("GET");
+					load.call(_this,function(){
+						var response = _this.response;
 
 						// メタタグのリダイレクトを調べる
 						var redirect_url = null;
-						var m = xhr.responseText.match(new RegExp("<meta[^>]http-equiv[ \n\r\t]*=[ \n\r\t]*\"refresh\"[^>]*>","i"));
+						var m = response.responseText.match(new RegExp("<meta[^>]http-equiv[ \n\r\t]*=[ \n\r\t]*\"refresh\"[^>]*>","i"));
 						if(m){
 							m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"[0-9]+;URL=([^\"]+)\"","i"));
 							if(m){
@@ -64388,518 +65635,74 @@ function PageExpand(page_expand_arguments){
 						}
 
 						if(redirect_url){
-							_request.url = latest_url = redirect_url;
-							loadHeader();
+							success(redirect_url);
 							return;
 						}
 
-						complete();
+						failure();
 					});
-		
-					if(!result){
-						// ロード完了を通知
-						_queue_element.complete();
-
-						complete();
-						return;
-					}
-				};
-
-				// キューに登録
-				_count = 1;
-				_single_count = 0;
-				tryAttachElement(false);
-			}
-
-			function start(){
-				loadHeader();
-			}
-
-			if(!(getEnable())){
-				complete();
-				return;
-			}
-
-			// タイムアウト
-			_request.timeout = 1000 * 10;
-
-			// リダイレクト辞書からの取得
-			analyze_element = redirect_url_dictionary.analyze(current_url);
-			if(!analyze_element){
-				redirect_url_dictionary.getRedirectURL(current_url,function (result){
-					if(result.redirected){
-						latest_url = result.url;
-						complete();
-					}else{
-						start();
-					}
-				});
-				return;
-			}
-
-			start();
-		};
-
-		// --------------------------------------------------------------------------------
-		// レスポンスヘッダをロード
-		// --------------------------------------------------------------------------------
-		_this.loadResponseHeader = function(){
-			if(!(getEnable())){
-				loadError();
-				return;
-			}
-
-			// HTTP メソッド
-			_this.setMethod("HEAD");
-
-			// 通常リトライ回数
-			_count = 1;
-			// シングルリトライ回数
-			_single_count = 0;
-			// 開始関数をセット
-			_queue_element.onstart = function(){
-
-				// 読み込みを開始する
-				var result = loadXMLHttpRequest(function(result,xhr){
-
-					// ロード完了を通知
-					_queue_element.complete();
-
-					// ロード成功
-					if(result){
-						// レスポンスヘッダオブジェクトを返す
-						loadSuccess(new ResponseHeadersParser(xhr.getAllResponseHeaders()));
-						return;
-
-					// 失敗
-					}else{
-						if(xhr.status == 401){
-							// 認証エラー
-							loadError();
-							return;
-						}else{
-							// キューに再登録
-							if(!tryAttachElement(false)){
-								// エラーで終了
-								loadError();
-								return;
-							}
-						}
-					}
-				});
-
-				// ロードエラー
-				if(!result){
-					// ロード完了を通知
-					_queue_element.complete();
-
-					// エラーで終了
-					loadError();
-					return;
 				}
-			};
 
-			// キューに登録
-			tryAttachElement(false);
+				function analyze(){
+					analyze_element = url_info.analyzeRedirect();
+					url_info.getRedirect(function(next){
+						redirect_max -= 1;
 
-		};
-
-		// --------------------------------------------------------------------------------
-		// アクセス可能か取得（内部用）
-		// --------------------------------------------------------------------------------
-		function getEnable(){
-			if(project.checkAccessBlock(_request.url)){
-				if(project.getEnableOutputLog()){
-					ConsoleLog({type:"AccessBlock",current_url:document.URL,url:_request.url,call:"Cross-Origin XMLHttpRequest"});
-				}
-				return false;
-			}
-			return true;
-		}
-
-		// --------------------------------------------------------------------------------
-		// 要素をキューに登録（内部用）
-		// --------------------------------------------------------------------------------
-		function tryAttachElement(first){
-			if(_count > 0){
-				_single_type = false;
-				_count -= 1;
-				if(first)	_queue_element.attachFirst();
-				else		_queue_element.attachLast();
-				return true;
-			}else if(_single_count > 0){
-				_single_type = true;
-				_single_count -= 1;
-				_queue_element.attachSingle();
-				return true;
-			}
-			return false;
-		}
-
-		// --------------------------------------------------------------------------------
-		// エラーチェック（内部用）
-		// --------------------------------------------------------------------------------
-		function requestVerify(){
-			// アドレスチェック
-			if(!(_request.url)){
-				return false;
-			}
-
-			// プロトコルチェック
-			if(!_request.url.match(new RegExp("^(http|https|ftp)://(.*)$","i"))){
-				return false;
-			}
-			
-			return true;
-		}
-
-		// --------------------------------------------------------------------------------
-		// バックグラウンド通信（内部用）
-		// --------------------------------------------------------------------------------
-		function requestBackground(response,options){
-			_request.current_url = WindowGetOwnerURL(window);
-			var command_dictionary = {
-				"progress":function(receive){
-					loadProgress(receive.data);
-				},
-				"xhr":function(receive){
-					var xhr = receive.data;
-					if(xhr.readyState != 4) return;
-
-					xhr.getAllResponseHeaders = function(){
-						return xhr.responseHeaders;
-					};
-
-					var response_header = new ResponseHeadersParser(xhr.responseHeaders);
-					xhr.getResponseHeader = response_header.getResponseHeader;
-
-					if((200 <= xhr.status && xhr.status < 300) || xhr.status == 304){
-						// 成功を返す
-						response(true,xhr);
-					}else{
-						// 失敗を返す
-						response(false,xhr);
-					}
-				}
-			}
-			extension_message.sendRequest({command:options.command,request:_request,single:_single_type}, function(receive) {
-				var f = options.command_dictionary[receive.type];
-				if(f) f(receive);
-				
-				var f = command_dictionary[receive.type];
-				if(f) f(receive);
-			});
-
-			return true;
-		}
-
-		// --------------------------------------------------------------------------------
-		// XHR 通信（内部用）
-		// --------------------------------------------------------------------------------
-		function requestXHR(response,options){
-			// XMLHttpRequest 作成
-			var xhr = null;
-			xhr = new XMLHttpRequest();
-			if(!xhr) return false;
-
-			var received = false;
-			var released = false;
-			var release = function(){
-				released = true;
-				xhr.onreadystatechange = null;
-				xhr.onprogress = null;
-			};
-
-			xhr.onreadystatechange = function(r){
-				if(released) return;
-				if(xhr.readyState != 4) return;
-				received = true;
-				release();
-
-				if((200 <= xhr.status && xhr.status < 300) || xhr.status == 304){
-					var onload = options.onload;
-					if(!onload){
-						onload = function(xhr , callback){
-							callback(true);
-						};
-					}
-					onload(xhr , function(result){
-						response(result , xhr);
-					});
-				}else{
-					response(false , xhr);
-				}
-			};
-			xhr.onprogress = function(e){
-				if(released) return;
-				loadProgress(e);
-			};
-
-			try{
-				xhr.open(_request.method,_request.url,true);
-				if(options.onopen) options.onopen(xhr);
-
-				var headers = _request.headers;
-				for(var name in headers){
-					xhr.setRequestHeader(name,headers[name]);
-				}
-				if(_request.override_mime_type){
-					if(xhr.overrideMimeType) xhr.overrideMimeType(_request.override_mime_type);
-				}
-				if(_request.timeout){
-					xhr.timeout = _request.timeout;
-				}
-				if(_request.response_type){
-					xhr.responseType = _request.response_type;
-				}
-				xhr.send(_request.data);
-			}catch(e){
-				release();
-				return Boolean(received);
-			}
-
-			return true;
-		}
-
-		// --------------------------------------------------------------------------------
-		// XMLHttpRequest を利用してロード（内部用）
-		// --------------------------------------------------------------------------------
-		function loadXMLHttpRequest(response){
-			if(!requestVerify()) return false;
-
-			var current_origin = URL_Get_Origin(WindowGetOwnerURL(window));
-			var request_origin = URL_Get_Origin(_request.url);
-			if(current_origin != request_origin){
-				var responseText = [];
-				return requestBackground(response , {
-					command:"loadXMLHttpRequest",
-					command_dictionary:{
-						"data":function(receive){
-							responseText.push(receive.data);
-						},
-						"xhr":function(receive){
-							var xhr = receive.data;
-							xhr.responseText = responseText.join("");
-							responseText.length = 0;
-						}
-					}
-				});
-			}
-
-			var options = {};
-			return requestXHR(response , options);
-		}
-
-		// --------------------------------------------------------------------------------
-		// data URI scheme 読み込み（内部用）
-		// --------------------------------------------------------------------------------
-		function loadDataUriScheme(response){
-			if(!requestVerify()) return false;
-
-			if(1){
-				var dataUriScheme = [];
-				return requestBackground(response , {
-					command:"loadDataUriScheme",
-					command_dictionary:{
-						"data":function(receive){
-							dataUriScheme.push(receive.data);
-						},
-						"xhr":function(receive){
-							var xhr = receive.data;
-							xhr.responseData = dataUriScheme.join("");
-							dataUriScheme.length = 0;
-						}
-					}
-				});
-			}
-			
-			var options = {
-				onopen:function(xhr){
-					if(xhr.responseType !== undefined){
-						if(window.FileReader){
-							_request.response_type = "blob";
-							options.onload = function(xhr , callback){
-								var file_reader = new FileReader();
-								file_reader.onload = function(){
-									xhr.responseData = file_reader.result;
-									callback(true);
-								};
-								file_reader.onerror = function(){
-									callback(false);
-								};
-								file_reader.readAsDataURL(xhr.response);
-							};
-						}else{
-							_request.response_type = "arraybuffer";
-							options.onload = function(xhr , callback){
-								Base64_From_ArrayBuffer_Async(xhr.response,function(base64){
-									xhr.responseData = "data:" + xhr.getResponseHeader("Content-Type") + ";base64," + base64;
-									callback(true);
-								});
-							};
-						}
-					}else if(xhr.overrideMimeType){
-						_request.override_mime_type = "text/plain; charset=x-user-defined";
-						options.onload = function(xhr , callback){
-							Base64_From_XUserDefined_Async(xhr.responseText,function(base64){
-								xhr.responseData = "data:" + xhr.getResponseHeader("Content-Type") + ";base64," + base64;
-								callback(true);
+						if((function(){
+							if(!next) return true;
+							if(redirect_max <= 0) return true;
+							return false;
+						})()){
+							url_info_dictionary.getRedirectURL(request_url,function (result){
+								if(result.redirected){
+									dispatch_onload.call(_this,result.url_info.getURL());
+								}else{
+									dispatch_onerror.call();
+								}
 							});
-						};
-					}
-				}			
-			};
-
-			return requestXHR(response , options);
-		}
-
-		// --------------------------------------------------------------------------------
-		// バイナリ読み込み（内部用）
-		// --------------------------------------------------------------------------------
-		function loadArrayBufferList(response){
-			if(!requestVerify()) return false;
-
-			if(1){
-				var ary_buffer_list = null;
-				return requestBackground(response , {
-					command:"loadBinaryString",
-					command_dictionary:{
-						"data":function(receive){
-							if(!ary_buffer_list) ary_buffer_list = new Array();
-							var i;
-							var size = receive.data.length;
-							var ary_buffer = new ArrayBuffer(size);
-							var a = new Int8Array(ary_buffer);
-							for(i=0;i<size;i++){
-								a[i] = receive.data.charCodeAt(i) & 0xff;
-							}
-							ary_buffer_list.push(ary_buffer);
-						},
-						"xhr":function(receive){
-							var xhr = receive.data;
-							xhr.responseData = ary_buffer_list;
+							return;
 						}
-					}
-				});
-			}
 
-			var options = {
-				onopen:function(xhr){
-					if(xhr.responseType !== undefined){
-						_request.response_type = "arraybuffer";
-						options.onload = function(xhr , callback){
-							xhr.responseData = xhr.response;
-							callback(true);
-						};
-					}else if(xhr.overrideMimeType){
-						_request.override_mime_type = "text/plain; charset=x-user-defined";
-						options.onload = function(xhr , callback){
-							var x_user_defined = xhr.responseText;
-							var i;
-							var num = x_user_defined.length;
-							var ary_u8 = new Uint8Array(num);
-							for(i=0;i<num;i++){
-								ary_u8[i] = x_user_defined.charCodeAt(i) & 0xff;
-							}
-							xhr.responseData = ary_u8;
-							callback(true);
-						};
-					}
-				}			
-			};
+						url_info = next;
+						analyze();
+					});
 
-			return requestXHR(response , options);
-		}
+					if(!analyze_element) return;
 
-		// --------------------------------------------------------------------------------
-		// キャッシュへ読み込み（内部用）
-		// --------------------------------------------------------------------------------
-		function loadToCache(response){
-			if(!requestVerify()) return false;
+					// ヘッダの読み込み
+					loadHeader();
+				}
 
-			if(1){
-				return requestBackground(response , {
-					command:"loadToCache",
-					command_dictionary:{
-					}
-				});
-			}
+				analyze();
+			},
 
-			var options = {
-				onopen:function(xhr){
-					if(xhr.responseType !== undefined){
-						if(window.FileReader){
-							_request.response_type = "blob";
-						}else{
-							_request.response_type = "arraybuffer";
-						}
-					}
-				}			
-			};
+			request : {},
+			response : {},
+			progress : {},
+			url_parser : null,
+			url_info : null,
+			_queue_attch_type : QUEUE_ATTACH_TYPE.LAST,
+			_xhr_type : XHR_TYPE.BY_ORIGIN
+		};
 
-			return requestXHR(response , options);
-		}
-
-		// --------------------------------------------------------------------------------
-		// ロード失敗（内部用）
-		// --------------------------------------------------------------------------------
-		function loadError(){
-			loader_queue.addCountError();
-			if(_this.onerror) _this.onerror();
-			_queue_element.release();
-		}
-
-		// --------------------------------------------------------------------------------
-		// ロード成功（内部用）
-		// --------------------------------------------------------------------------------
-		function loadSuccess(v){
-			if(_this.onload) _this.onload(v);
-			_queue_element.release();
-		}
-
-		// --------------------------------------------------------------------------------
-		// 進捗イベント発行（内部用）
-		// --------------------------------------------------------------------------------
-		function loadProgress(e){
-			if(_this.onprogress){
-				_this.onprogress({
-					bytesLoaded:(e.loaded || 0),
-					bytesTotal:(e.total || 0)
-				});
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _request;
-		var _queue_element;
-		var _count;
-		var _single_count;
-		var _single_type;
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_request = {
-				headers:new Object(),
-				method:"GET",
-				url:"",
-				data:null,
-				timeout:project.getLoadTimeout()
-			};
-			_count = 0;
-			_single_count = 0;
-			_queue_element = loader_queue.createElement();
-		})();
-	}
+		return Loader;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// ダウンローダー
 	// --------------------------------------------------------------------------------
 	function Downloader(){
 		var _this = this;
+
+		// --------------------------------------------------------------------------------
+		// デストラクタ
+		// --------------------------------------------------------------------------------
+		function destructor(){
+			if(_this._blob_url){
+				BlobURLRevoke(_this._blob_url);
+				_this._blob_url = null;
+			}
+		}
 
 		// --------------------------------------------------------------------------------
 		// URL をセット
@@ -64963,12 +65766,14 @@ function PageExpand(page_expand_arguments){
 						queue_element.release();
 
 						if(_this.oncomplete) _this.oncomplete(param);
+						destructor();
 						break;					
 					case "unsupported":
 						exec();
 						break;
 					}
 				};
+
 
 				exec();
 			};
@@ -64995,10 +65800,12 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		(function(){
 			_this._url = "";
+			_this._short_url = "";
 			_this._file_name = "";
 			_this._save_as = false;
 			_this._silent = true;
 			_this._allow_same_request = false;
+			_this._blob_url = null;
 
 			download_methods = new Array();
 
@@ -65032,6 +65839,7 @@ function PageExpand(page_expand_arguments){
 					command:"download",
 					current_url:WindowGetOwnerURL(window),
 					url:_this._url,
+					short_url:_this._short_url,
 					file_name:_this._file_name,
 					save_as:_this._save_as,
 					silent:_this._silent
@@ -65056,7 +65864,7 @@ function PageExpand(page_expand_arguments){
 				var anchor_download = function (data_url){
 					anchor.target = "PageExpandDownload";
 					anchor.href = data_url;
-					anchor.download = ProjectDownloadSaveFile_Sanitize(_this._file_name || project.getSaveFileDownload(_this._url));
+					anchor.download = ProjectDownloadSaveFile_Sanitize(_this._file_name || project.getSaveFileDownload(_this._short_url || _this._url));
 					document.body.appendChild(anchor);
 					anchor.click();
 					DomNodeRemove(anchor);
@@ -66408,245 +67216,6 @@ function PageExpand(page_expand_arguments){
 		_this._prio_prev = _this;
 		_this._prio_next = _this;
 		_root_task = _this.createTask(null);
-	}
-
-	// --------------------------------------------------------------------------------
-	// リダイレクト辞書
-	// --------------------------------------------------------------------------------
-	function RedirectUrlDictionary(){
-		var _this = this;
-
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-		};
-
-		// --------------------------------------------------------------------------------
-		// 調査開始
-		// --------------------------------------------------------------------------------
-		_this.analyze = function (current_url){
-
-			if(_analyze_dictionary[current_url]) return null;
-			if(_cache_dictionary[current_url]) return null;
-
-			var _analyze_element = new Object();
-
-			// --------------------------------------------------------------------------------
-			// 開放
-			// --------------------------------------------------------------------------------
-			_analyze_element.release = function(){
-				if(_analyze_element.released) return;
-				_analyze_element.released = true;
-				_analyze_element.event_dispatcher.release();
-				delete _analyze_dictionary[current_url];
-			};
-
-			// --------------------------------------------------------------------------------
-			// 調査成功
-			// --------------------------------------------------------------------------------
-			_analyze_element.success = function(url){
-				var element = _cache_dictionary[current_url];
-				if(element){
-					element.remove();
-				}else{
-					element = createCache(current_url);
-				}
-
-				element.setURL(url);
-
-				// 古い要素を破棄
-				if(_count >= _cache_max){
-					element = _this._next;
-					element.release();
-				}
-
-				_analyze_element.event_dispatcher.dispatchEvent("success",url);
-				_analyze_element.release();
-			};
-
-			// --------------------------------------------------------------------------------
-			// 調査失敗
-			// --------------------------------------------------------------------------------
-			_analyze_element.failure = function(){
-				_analyze_element.event_dispatcher.dispatchEvent("failure",null);
-				_analyze_element.release();
-			};
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_analyze_element.released = false;
-				_analyze_element.event_dispatcher = new EventDispatcher();
-				_analyze_dictionary[current_url] = _analyze_element;
-			})();
-
-			return _analyze_element;
-		};
-
-		// --------------------------------------------------------------------------------
-		// キャッシュを作成
-		// --------------------------------------------------------------------------------
-		function createCache(current_url){
-			var _cache_element = new Object();
-
-			// --------------------------------------------------------------------------------
-			// 開放
-			// --------------------------------------------------------------------------------
-			_cache_element.release = function(){
-				_cache_element.remove();
-				delete _cache_dictionary[current_url];
-				_count -= 1;
-			};
-
-			// --------------------------------------------------------------------------------
-			// 最新化
-			// --------------------------------------------------------------------------------
-			_cache_element.latest = function(){
-				_cache_element.remove();
-				var _next = _this._prev;
-				var _prev = _next._prev;
-				_prev._next = _cache_element;
-				_next._prev = _cache_element;
-				_cache_element._prev = _prev;
-				_cache_element._next = _next;
-			};
-
-			// --------------------------------------------------------------------------------
-			// 双方向リストを外す
-			// --------------------------------------------------------------------------------
-			_cache_element.remove = function(){
-				var _prev = _cache_element._prev;
-				var _next = _cache_element._next;
-				_prev._next = _next;
-				_next._prev = _prev;
-				_cache_element._prev = _cache_element;
-				_cache_element._next = _cache_element;
-			};
-
-			// --------------------------------------------------------------------------------
-			// リダイレクト先 URL を取得
-			// --------------------------------------------------------------------------------
-			_cache_element.getURL = function(){
-				return _url;
-			};
-
-			// --------------------------------------------------------------------------------
-			// リダイレクト先 URL をセット
-			// --------------------------------------------------------------------------------
-			_cache_element.setURL = function(url){
-				_url = url;
-			};
-
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _url;
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_cache_element._prev = _cache_element;
-				_cache_element._next = _cache_element;
-				_cache_dictionary[current_url] = _cache_element;
-				_count += 1;
-			})();
-
-			return _cache_element;
-		}
-
-		// --------------------------------------------------------------------------------
-		// リダイレクト先 URL を繰り返し取得する
-		// --------------------------------------------------------------------------------
-		_this.getRedirectURL = function(current_url,callback){
-
-			var event_handler_success = null;
-			var event_handler_failure = null;
-
-			function complete(){
-				if(event_handler_success){
-					event_handler_success.release();
-					event_handler_success = null;
-				}
-				if(event_handler_failure){
-					event_handler_failure.release();
-					event_handler_failure = null;
-				}
-
-				var url = current_url;
-				var i;
-				var num = _repeat_max;
-				for(i=0;i<num;i++){
-					var cache_element = _cache_dictionary[url];
-					if(!cache_element) break;
-
-					cache_element.latest();
-
-					var next_url = cache_element.getURL();
-					if(url === next_url) break;
-					url = next_url;
-				}
-
-				callback({
-					redirected:Boolean(current_url !== url),
-					url:url
-				});	
-			}
-
-			var analyze_element = _analyze_dictionary[current_url];
-			if(analyze_element){
-				var event_dispatcher = analyze_element.event_dispatcher;
-				event_handler_success = event_dispatcher.createEventHandler("success");
-				event_handler_success.setFunction(function(event){
-					complete();
-				});
-				event_handler_failure = event_dispatcher.createEventHandler("failure");
-				event_handler_failure.setFunction(function(event){
-					complete();
-				});
-				return;
-			}
-
-			complete();
-		};
-
-		// --------------------------------------------------------------------------------
-		// キャッシュ最大数をセット
-		// --------------------------------------------------------------------------------
-		_this.setMaxCache = function(v){
-			_cache_max = v;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 繰り返し最大数をセット
-		// --------------------------------------------------------------------------------
-		_this.setMaxRepeat = function(v){
-			_cache_max = v;
-		};
-
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _analyze_dictionary;
-		var _cache_dictionary;
-		var _count;
-		var _cache_max;
-		var _repeat_max;
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_analyze_dictionary = new Object();
-			_cache_dictionary = new Object();
-			_this._prev = _this;
-			_this._next = _this;
-			_count = 0;
-			_cache_max = 256;
-			_repeat_max = 16;
-		})();
 	}
 
 	// --------------------------------------------------------------------------------
@@ -75034,15 +75603,7 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// MIMEタイプから拡張子を取得
 	// --------------------------------------------------------------------------------
-	function MIMEType_To_Ext(type){
-
-		var upper = "";
-		var lower = "";
-		var m = type.match(/(.*)[/](.*)/);
-		if(m) return "";
-		upper = m[1].toLowerCase();
-		lower = m[2].toLowerCase();
-
+	var MIMEType_To_Ext = (function(){
 		var dic = {
 			"image":{
 				"png":"png",
@@ -75093,14 +75654,75 @@ function PageExpand(page_expand_arguments){
 				"zip":"zip",
 				"x-7z-compressed":"7z",
 			}
+		};
 
-		}
+		return function (type){
+			var upper = "";
+			var lower = "";
+			var m = (type||"").match(/(.*)[/](.*)/);
+			if(!m) return "";
+			upper = m[1].toLowerCase();
+			lower = m[2].toLowerCase();
 
-		var o = dic[upper];
-		if(!o) return "";
+			var o = dic[upper];
+			if(!o) return "";
 
-		return o[lower] || "";
-	}
+			return o[lower] || "";
+		};
+	})();
+
+	// --------------------------------------------------------------------------------
+	// 拡張子からMIMEタイプを取得
+	// --------------------------------------------------------------------------------
+	var MIMEType_From_Ext = (function(){
+		var dic = {
+			"png":"image/png",
+			"bmp":"image/bmp",
+			"gif":"image/gif",
+			"jpg":"image/jpg",
+			"jpeg":"image/jpeg",
+			"svg":"image/svg+xml",
+			"tiff":"image/tiff",
+			"webp":"image/webp",
+			"ico":"image/vnd.microsoft.icon",
+
+			"aac":"audio/aac",
+			"mid":"audio/midi",
+			"mp3":"audio/mpeg",
+			"oga":"audio/ogg",
+			"wav":"audio/wav",
+			"weba":"audio/webm",
+			"avi":"video/x-msvideo",
+			"mpeg":"video/mpeg",
+			"ogv":"video/ogg",
+			"ts":"video/mp2t",
+			"webm":"video/webm",
+			"mp4":"video/mp4",
+
+			"css":"text/css",
+			"csv":"text/csv",
+			"html":"text/html",
+			"js":"text/javascript",
+			"txt":"text/plain",
+
+			"bin":"application/octet-stream",
+			"bz":"application/x-bzip",
+			"bz2":"application/x-bzip2",
+			"gz":"application/gzip",
+			"json":"application/json",
+			"php":"application/x-httpd-php",
+			"rar":"application/vnd.rar",
+			"rtf":"application/rtf",
+			"tar":"application/x-tar",
+			"xml":"application/xml",
+			"zip":"application/zip",
+			"7z":"application/x-7z-compressed"
+		};
+
+		return function (ext){
+			return dic[(ext||"").toLowerCase()] || "";
+		};
+	})();
 
 	// --------------------------------------------------------------------------------
 	// シグネチャーから拡張子を取得
@@ -75573,43 +76195,42 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// 半角カタカナから全角カタカナに変換
 	// --------------------------------------------------------------------------------
-	function StringConvertFromKatakanaFullToKatakanaHalf(s){
-		var r;
-		var code;
-		var data;
+	var StringConvertFromKatakanaFullToKatakanaHalf = (function(){
+		var data_g = ["ガ","ギ","グ","ゲ","ゴ","ザ","ジ","ズ","ゼ","ゾ","ダ","ヂ","ヅ","デ","ド","バ","ビ","ブ","ベ","ボ"];
+		var re_g = new RegExp("ｶﾞ|ｷﾞ|ｸﾞ|ｹﾞ|ｺﾞ|ｻﾞ|ｼﾞ|ｽﾞ|ｾﾞ|ｿﾞ|ﾀﾞ|ﾁﾞ|ﾂﾞ|ﾃﾞ|ﾄﾞ|ﾊﾞ|ﾋﾞ|ﾌﾞ|ﾍﾞ|ﾎﾞ","g");
+		var data_p = ["パ","ピ","プ","ペ","ポ"];
+		var re_p = new RegExp("ﾊﾟ|ﾋﾟ|ﾌﾟ|ﾍﾟ|ﾎﾟ","g");
+		var data_o = ["。","「","」","、","・","ヲ","ァ","ィ","ゥ","ェ","ォ","ャ","ュ","ョ","ッ","ー","ア","イ","ウ","エ","オ","カ","キ","ク","ケ","コ","サ","シ","ス","セ","ソ","タ","チ","ツ","テ","ト","ナ","ニ","ヌ","ネ","ノ","ハ","ヒ","フ","ヘ","ホ","マ","ミ","ム","メ","モ","ヤ","ユ","ヨ","ラ","リ","ル","レ","ロ","ワ","ン","゛","゜"];
+		var re_o = new RegExp("[｡-ﾟ]","g");
 
-		// 濁点
-		data = ["ガ","ギ","グ","ゲ","ゴ","ザ","ジ","ズ","ゼ","ゾ","ダ","ヂ","ヅ","デ","ド","バ","ビ","ブ","ベ","ボ"];
-		r = new RegExp("ｶﾞ|ｷﾞ|ｸﾞ|ｹﾞ|ｺﾞ|ｻﾞ|ｼﾞ|ｽﾞ|ｾﾞ|ｿﾞ|ﾀﾞ|ﾁﾞ|ﾂﾞ|ﾃﾞ|ﾄﾞ|ﾊﾞ|ﾋﾞ|ﾌﾞ|ﾍﾞ|ﾎﾞ","g");
-		s = s.replace(r, function(c){
-			code = c.charCodeAt(0);
-			if(code <= 65409)	return data[code-65398];
-			if(code >= 65418)	return data[code-65418 + 15];
-			return data[code-65410 + 12];
-		});
+		return function (s){
+			// 濁点
+			s = s.replace(re_g, function(c){
+				var code = c.charCodeAt(0);
+				if(code <= 65409)	return data_g[code-65398];
+				if(code >= 65418)	return data_g[code-65418 + 15];
+				return data_g[code-65410 + 12];
+			});
 
-		// 半濁点
-		data = ["パ","ピ","プ","ペ","ポ"];
-		r = new RegExp("ﾊﾟ|ﾋﾟ|ﾌﾟ|ﾍﾟ|ﾎﾟ","g");
-		s = s.replace(r, function(c){
-			code = c.charCodeAt(0);
-			return data[code-65418];
-		});
+			// 半濁点
+			s = s.replace(re_p, function(c){
+				var code = c.charCodeAt(0);
+				return data_p[code-65418];
+			});
 
-		// その他
-		data = ["。","「","」","、","・","ヲ","ァ","ィ","ゥ","ェ","ォ","ャ","ュ","ョ","ッ","ー","ア","イ","ウ","エ","オ","カ","キ","ク","ケ","コ","サ","シ","ス","セ","ソ","タ","チ","ツ","テ","ト","ナ","ニ","ヌ","ネ","ノ","ハ","ヒ","フ","ヘ","ホ","マ","ミ","ム","メ","モ","ヤ","ユ","ヨ","ラ","リ","ル","レ","ロ","ワ","ン","゛","゜"];
-		r = new RegExp("[｡-ﾟ]","g");
-		s = s.replace(r, function(c){
-			return data[c.charCodeAt(0)-65377];
-		});
+			// その他
+			s = s.replace(re_o, function(c){
+				return data_o[c.charCodeAt(0)-65377];
+			});
 
-		return s;
-	}
+			return s;
+		};
+	})();
 
 	// --------------------------------------------------------------------------------
 	// 全角カタカナから半角カタカナに変換
 	// --------------------------------------------------------------------------------
-	function StringConvertFromKatakanaHalfToKatakanaFull(s){
+	var StringConvertFromKatakanaHalfToKatakanaFull = (function(){
 		var data = new Object();
 		data["。"] = "｡"; data["「"] = "｢"; data["」"] = "｣"; data["、"] = "､"; data["・"] = "･";
 		data["ヲ"] = "ｦ";
@@ -75631,10 +76252,13 @@ function PageExpand(page_expand_arguments){
 		data["バ"] = "ﾊﾞ"; data["ビ"] = "ﾋﾞ"; data["ブ"] = "ﾌﾞ"; data["ベ"] = "ﾍﾞ"; data["ボ"] = "ﾎﾞ";
 		data["パ"] = "ﾊﾟ"; data["ピ"] = "ﾋﾟ"; data["プ"] = "ﾌﾟ"; data["ペ"] = "ﾍﾟ"; data["ポ"] = "ﾎﾟ";
 		var r = new RegExp("[、。「」゛゜ァ-ロワヲン・ー]","g");
-		return s.replace(r, function(c){
-			return data[c];
-		});
-	}
+
+		return function (s){
+			return s.replace(r, function(c){
+				return data[c];
+			});
+		};
+	})();
 
 	// --------------------------------------------------------------------------------
 	// ひらがなからカタカナに変換
@@ -75936,14 +76560,20 @@ function PageExpand(page_expand_arguments){
 		try{
 			var parser = new URL(url);
 			pathname = parser.pathname;
-			var m = pathname.match(/([^/]+)([/]*)$/);
-			if(m) filename = m[1];
-			m = filename.match(/[.]([^.]*)$/);
-			if(m){
-				ext = m[1];
-				name = RegExp.leftContext;
-			}else{
-				name = filename;
+			if(pathname.length <= 2048){
+				var m = pathname.match(/([^/]+)([/]*)$/);
+				if(m) filename = m[1];
+				m = filename.match(/[.]([^.]*)$/);
+				if(m){
+					ext = m[1];
+					name = RegExp.leftContext;
+				}else{
+					name = filename;
+				}
+				m = ext.match(/^([^":*?<>|~]+)/);
+				if(m){
+					ext = m[1];
+				}
 			}
 
 			return {
@@ -78883,35 +79513,38 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// エレメントのクライアント領域のコンテンツ矩形を取得
 	// --------------------------------------------------------------------------------
-	function ElementGetContentClientRect(element){
-		var rect = ElementGetBoundingClientRect(element);
-		var style = ElementGetComputedStyle(element,null);
-		if(style){
-			var re = new RegExp("^([-0-9.]+)px$","i");
-			var list = [
-				{style:"paddingLeft"   ,key:"left"   ,sign: 1},
-				{style:"paddingRight"  ,key:"right"  ,sign:-1},
-				{style:"paddingTop"    ,key:"top"    ,sign: 1},
-				{style:"paddingBottom" ,key:"bottom" ,sign:-1},
-				{style:"borderLeftWidth"   ,key:"left"   ,sign: 1},
-				{style:"borderRightWidth"  ,key:"right"  ,sign:-1},
-				{style:"borderTopWidth"    ,key:"top"    ,sign: 1},
-				{style:"borderBottomWidth" ,key:"bottom" ,sign:-1}
-			];
-			var i;
-			var num = list.length;
-			for(i=0;i<num;i++){
-				var param = list[i];
-				if(style[param.style]){
-					var m = style[param.style].match(re);
-					if(m){
-						rect[param.key] += parseFloat(m[0]) * param.sign;
+	var ElementGetContentClientRect = (function(){
+		var re = new RegExp("^([-0-9.]+)px$","i");
+		var list = [
+			{style:"paddingLeft"   ,key:"left"   ,sign: 1},
+			{style:"paddingRight"  ,key:"right"  ,sign:-1},
+			{style:"paddingTop"    ,key:"top"    ,sign: 1},
+			{style:"paddingBottom" ,key:"bottom" ,sign:-1},
+			{style:"borderLeftWidth"   ,key:"left"   ,sign: 1},
+			{style:"borderRightWidth"  ,key:"right"  ,sign:-1},
+			{style:"borderTopWidth"    ,key:"top"    ,sign: 1},
+			{style:"borderBottomWidth" ,key:"bottom" ,sign:-1}
+		];
+
+		return function (element){
+			var rect = ElementGetBoundingClientRect(element);
+			var style = ElementGetComputedStyle(element,null);
+			if(style){
+				var i;
+				var num = list.length;
+				for(i=0;i<num;i++){
+					var param = list[i];
+					if(style[param.style]){
+						var m = style[param.style].match(re);
+						if(m){
+							rect[param.key] += parseFloat(m[0]) * param.sign;
+						}
 					}
 				}
 			}
-		}
-		return rect;
-	}
+			return rect;
+		};
+	})();
 
 	// --------------------------------------------------------------------------------
 	// エレメントのクライアント領域の可視矩形を取得
@@ -79254,7 +79887,7 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// スタイルから各サイズ情報を取得する
 	// --------------------------------------------------------------------------------
-	function ComputedStyleGetSize(style){
+	var ComputedStyleGetSize = (function(){
 		var re = new RegExp("([-0-9.]+)px","i");
 		var list = [
 			{ i:"width"  , o:"width"  },
@@ -79272,24 +79905,27 @@ function PageExpand(page_expand_arguments){
 			{ i:"marginRight"  , o:"marginRight"  },
 			{ i:"marginBottom" , o:"marginBottom" }
 		];
-		var i;
-		var num = list.length;
-		var obj = new Object();
-		for(i=0;i < num;i++){
-			var p = list[i];
-			var m = style[p.i].match(re);
-			if(m){
-				obj[p.o] = parseFloat(m[1]);
-			}else{
-				obj[p.o] = 0;
+
+		return function (style){
+			var i;
+			var num = list.length;
+			var obj = new Object();
+			for(i=0;i < num;i++){
+				var p = list[i];
+				var m = style[p.i].match(re);
+				if(m){
+					obj[p.o] = parseFloat(m[1]);
+				}else{
+					obj[p.o] = 0;
+				}
 			}
-		}
-		obj.clientWidth  = obj.width  + obj.paddingLeft + obj.paddingRight;
-		obj.clientHeight = obj.height + obj.paddingTop + obj.paddingBottom;
-		obj.offsetWidth  = obj.clientWidth  + obj.borderLeft + obj.borderRight;
-		obj.offsetHeight = obj.clientHeight + obj.borderTop + obj.borderBottom;
-		return obj;
-	}
+			obj.clientWidth  = obj.width  + obj.paddingLeft + obj.paddingRight;
+			obj.clientHeight = obj.height + obj.paddingTop + obj.paddingBottom;
+			obj.offsetWidth  = obj.clientWidth  + obj.borderLeft + obj.borderRight;
+			obj.offsetHeight = obj.clientHeight + obj.borderTop + obj.borderBottom;
+			return obj;
+		};
+	})();
 
 	// --------------------------------------------------------------------------------
 	// スタイルからパディングサイズを取得
@@ -79320,7 +79956,7 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// スタイルからボーダーサイズを取得
 	// --------------------------------------------------------------------------------
-	function ComputedStyleGetBoaderWidth(style){
+	var ComputedStyleGetBoaderWidth = (function(){
 		var re = new RegExp("([-0-9.]+)px","i");
 		var list = [
 			{ i:"borderLeftWidth"   , o:"left"   },
@@ -79328,20 +79964,23 @@ function PageExpand(page_expand_arguments){
 			{ i:"borderTopWidth"    , o:"right"  },
 			{ i:"borderBottomWidth" , o:"bottom" }
 		];
-		var i;
-		var num = list.length;
-		var obj = new Object();
-		for(i=0;i < num;i++){
-			var p = list[i];
-			var m = style[p.i].match(re);
-			if(m){
-				obj[p.o] = parseFloat(m[1]);
-			}else{
-				obj[p.o] = 0;
+
+		return function (style){
+			var i;
+			var num = list.length;
+			var obj = new Object();
+			for(i=0;i < num;i++){
+				var p = list[i];
+				var m = style[p.i].match(re);
+				if(m){
+					obj[p.o] = parseFloat(m[1]);
+				}else{
+					obj[p.o] = 0;
+				}
 			}
-		}
-		return obj;
-	}
+			return obj;
+		};
+	})();
 
 	// --------------------------------------------------------------------------------
 	// スタイルの transform を設定
@@ -79903,35 +80542,38 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// DOM ツリーのクライアント領域のコンテンツ矩形を取得
 	// --------------------------------------------------------------------------------
-	function DomTreeGetContentClientRect(element){
-		var rect = DomTreeGetBoundingClientRect(element);
-		var style = ElementGetComputedStyle(element,null);
-		if(style){
-			var re = new RegExp("^([-0-9.]+)px$","i");
-			var list = [
-				{style:"paddingLeft"   ,key:"left"   ,sign: 1},
-				{style:"paddingRight"  ,key:"right"  ,sign:-1},
-				{style:"paddingTop"    ,key:"top"    ,sign: 1},
-				{style:"paddingBottom" ,key:"bottom" ,sign:-1},
-				{style:"borderLeftWidth"   ,key:"left"   ,sign: 1},
-				{style:"borderRightWidth"  ,key:"right"  ,sign:-1},
-				{style:"borderTopWidth"    ,key:"top"    ,sign: 1},
-				{style:"borderBottomWidth" ,key:"bottom" ,sign:-1}
-			];
-			var i;
-			var num = list.length;
-			for(i=0;i<num;i++){
-				var param = list[i];
-				if(style[param.style]){
-					var m = style[param.style].match(re);
-					if(m){
-						rect[param.key] += parseFloat(m[0]) * param.sign;
+	var DomTreeGetContentClientRect = (function(){
+		var re = new RegExp("^([-0-9.]+)px$","i");
+		var list = [
+			{style:"paddingLeft"   ,key:"left"   ,sign: 1},
+			{style:"paddingRight"  ,key:"right"  ,sign:-1},
+			{style:"paddingTop"    ,key:"top"    ,sign: 1},
+			{style:"paddingBottom" ,key:"bottom" ,sign:-1},
+			{style:"borderLeftWidth"   ,key:"left"   ,sign: 1},
+			{style:"borderRightWidth"  ,key:"right"  ,sign:-1},
+			{style:"borderTopWidth"    ,key:"top"    ,sign: 1},
+			{style:"borderBottomWidth" ,key:"bottom" ,sign:-1}
+		];
+
+		return function (element){
+			var rect = DomTreeGetBoundingClientRect(element);
+			var style = ElementGetComputedStyle(element,null);
+			if(style){
+				var i;
+				var num = list.length;
+				for(i=0;i<num;i++){
+					var param = list[i];
+					if(style[param.style]){
+						var m = style[param.style].match(re);
+						if(m){
+							rect[param.key] += parseFloat(m[0]) * param.sign;
+						}
 					}
 				}
 			}
-		}
-		return rect;
-	}
+			return rect;
+		};
+	})();
 
 	// --------------------------------------------------------------------------------
 	// エレメント複製
@@ -80598,54 +81240,85 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// イメージの読み込みが完了したか取得する
 	// --------------------------------------------------------------------------------
-	function ImageGetLoaded (image,func) {
+	function ImageGetLoaded (image,callback) {
 
-		function addEvent(){
-			var event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
-			event_handler_release.setFunction(function(){
-				removeEvent();
-			});
+		var event_handler_release;
+		var event_handler_load;
+		var event_handler_error;
+		var timer;
+		var released = false;
 
-			var removeEvent = function(){
-				if(event_handler_release){
-					event_handler_release.release();
-					event_handler_release = null;
-				}
-				if(image.removeEventListener){
-					image.removeEventListener("load" ,complete);
-					image.removeEventListener("error",complete);
-				}
-				func();
-			};
+		function release(){
+			if(released) return;
+			released = true;
 
-			var complete = function(){
-				removeEvent();
-				func();
-			};
-
-			if(image.addEventListener){
-				image.addEventListener("load" ,complete);
-				image.addEventListener("error",complete);
+			if(event_handler_release){
+				event_handler_release.release();
+				event_handler_release = null;
+			}
+			if(event_handler_load){
+				image.removeEventListener("load" ,event_handler_load);
+				event_handler_load = null;
+			}
+			if(event_handler_error){
+				image.removeEventListener("error",event_handler_error);
+				event_handler_error = null;
+			}
+			if(timer){
+				timer.release();
+				timer = null;
 			}
 		}
 
-		if(image.complete){
-			if(image.naturalHeight === 0){
-				var timer = new Timer(1000,1);
-				timer.oncomplete = function(){
-					if(image.complete){
-						func();
-					}else{
-						addEvent();
-					}
-				};
-				timer.start();
+		function complete(){
+			release();
+			callback();
+		}
+
+		function success(){
+			if(released) return;
+			complete();
+		}
+
+		function failure(){
+			if(released) return;
+			complete();
+		}
+
+		event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
+		event_handler_release.setFunction(function(){
+			release();
+		});
+
+		function add_event(){
+			event_handler_load = success;
+			event_handler_error = failure;
+			image.addEventListener("load" ,event_handler_load);
+			image.addEventListener("error",event_handler_error);
+		}
+
+		// ロード中
+		if(!image.complete){
+			add_event();
+			return;
+		}
+
+		// ロード完了
+		if(image.naturalHeight !== 0){
+			complete();
+			return;
+		}
+
+		// 念のために１秒待機
+		timer = new Timer(1000,1);
+		timer.oncomplete = function(){
+			if(image.complete){
+				complete();
 			}else{
-				func();
+				add_event();
 			}
-		}else{
-			addEvent();
-		}
+		};
+		timer.start();
 	}
 
 	// --------------------------------------------------------------------------------
