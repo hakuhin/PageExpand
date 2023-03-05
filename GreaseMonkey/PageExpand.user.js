@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.5.28
+// @version        1.5.29
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @description:ja 画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、2chなどの主要掲示板の拡張表示など...
@@ -1188,19 +1188,15 @@
 							for(var p in urlmap_proj){
 								proj_obj[p] = urlmap_proj[p];
 							}
-							proj_obj.enable_unsecure = urlmap.urlmap.enable_unsecure;
-							proj_obj.enable_mixed_content = urlmap.urlmap.enable_mixed_content;
+							proj_obj.mixed_passive_content = urlmap.urlmap.mixed_passive_content;
+							proj_obj.mixed_active_content = urlmap.urlmap.mixed_active_content;
 						}
 						if(expand_bbs){
 							proj_obj.expand_bbs = expand_bbs.expand_bbs;
 						}
 
 						// セキュアページ
-						if(url.indexOf("https://") == 0){
-							proj_obj.current_secure = true;
-						}else{
-							proj_obj.current_secure = false;
-						}
+						proj_obj.current_secure = Boolean(url.indexOf("https://") == 0);
 					}
 
 					cache_obj.project = proj_obj;
@@ -1304,8 +1300,8 @@
 								}
 							}
 						}
-						proj_obj.enable_unsecure = urlmap.enable_unsecure;
-						proj_obj.enable_mixed_content = urlmap.enable_mixed_content;
+						proj_obj.mixed_passive_content = urlmap.mixed_passive_content;
+						proj_obj.mixed_active_content = urlmap.mixed_active_content;
 					}
 
 					// 掲示板拡張
@@ -1948,8 +1944,8 @@
 			_proj_ins = new Object();
 			_proj_ins.enable = _proj_src.enable;
 			_proj_ins.current_secure = _proj_src.current_secure;
-			_proj_ins.enable_unsecure = _proj_src.enable_unsecure;
-			_proj_ins.enable_mixed_content = _proj_src.enable_mixed_content;
+			_proj_ins.mixed_passive_content = _proj_src.mixed_passive_content;
+			_proj_ins.mixed_active_content = _proj_src.mixed_active_content;
 			_proj_ins.standard = _proj_src.standard;
 			_proj_ins.download = _proj_src.download;
 
@@ -2141,30 +2137,43 @@
 		};
 
 		// --------------------------------------------------------------------------------
-		// アンセキュアなアクセスが許可されているか
+		// 混在コンテンツか
 		// --------------------------------------------------------------------------------
-		_this.checkAllowUnsecure = function(url){
-			if(_proj_ins.enable_unsecure)	return true;
-
+		_this.checkMixedContent = function(url){
 			if(_proj_ins.current_secure){
 				if(url.indexOf("http://") == 0){
-					return false;
+					return true;
 				}
 			}
-			return true;
+			return false;
+		};
+
+		// --------------------------------------------------------------------------------
+		// パッシブコンテンツのアドレスを修正
+		// --------------------------------------------------------------------------------
+		_this.fixURL_PassiveContent = function(url){
+			if(_proj_ins.mixed_passive_content == "unsafe") return url;
+			if(_this.checkMixedContent(url)){
+				return "https://" + url.slice(7);
+			}
+			return url;
+		};
+
+		// --------------------------------------------------------------------------------
+		// アクティブコンテンツのアドレスを修正
+		// --------------------------------------------------------------------------------
+		_this.fixURL_ActiveContent = function(url){
+			if(_proj_ins.mixed_active_content == "unsafe") return url;
+			if(_this.checkMixedContent(url)){
+				return "https://" + url.slice(7);
+			}
+			return url;
 		};
 
 		// --------------------------------------------------------------------------------
 		// IFRAME 要素の展開が可能か
 		// --------------------------------------------------------------------------------
 		_this.checkAllowExpandIframeElement = function(url){
-			return true;
-		};
-
-		// --------------------------------------------------------------------------------
-		// EMBED 要素の展開が可能か
-		// --------------------------------------------------------------------------------
-		_this.checkAllowExpandEmbedElement = function(url){
 			return true;
 		};
 
@@ -3102,6 +3111,26 @@
 		};
 
 		// --------------------------------------------------------------------------------
+		// イメージのソースタイプを取得
+		// --------------------------------------------------------------------------------
+		_this.getSourceLoadExpandImage = function(){
+			if(_proj_ins.expand_image){
+				return _proj_ins.expand_image.load.src_type;
+			}
+			return "blob_url";
+		};
+
+		// --------------------------------------------------------------------------------
+		// イメージのデコードタイプを取得
+		// --------------------------------------------------------------------------------
+		_this.getDecodeLoadExpandImage = function(){
+			if(_proj_ins.expand_image){
+				return _proj_ins.expand_image.load.decode;
+			}
+			return "pre-decode";
+		};
+
+		// --------------------------------------------------------------------------------
 		// イメージのアンロードが有効であるか取得
 		// --------------------------------------------------------------------------------
 		_this.getEnableUnloadExpandImage = function(){
@@ -3209,6 +3238,16 @@
 			}else{
 				response({result:false});
 			}
+		};
+
+		// --------------------------------------------------------------------------------
+		// オーディオのソースタイプを取得
+		// --------------------------------------------------------------------------------
+		_this.getSourceAudioElement = function(){
+			if(_proj_ins.expand_sound){
+				return _proj_ins.expand_sound.audio_element.src_type;
+			}
+			return "url";
 		};
 
 		// --------------------------------------------------------------------------------
@@ -3338,6 +3377,16 @@
 		};
 
 		// --------------------------------------------------------------------------------
+		// ビデオのソースタイプを取得
+		// --------------------------------------------------------------------------------
+		_this.getSourceVideoElement = function(){
+			if(_proj_ins.expand_video){
+				return _proj_ins.expand_video.video_element.src_type;
+			}
+			return "url";
+		};
+
+		// --------------------------------------------------------------------------------
 		// youtube のビデオを表示するか
 		// --------------------------------------------------------------------------------
 		_this.getVisibleVideoYoutube = function(){
@@ -3368,41 +3417,49 @@
 		// --------------------------------------------------------------------------------
 		// テキストインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandTextInline = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_text.inline;
+		_this.getStyleSheetExpandTextInline = function(url){
+			var o = _proj_ins.style_sheet.expand_text;
+			if(_this.checkMixedContent(url)){
+				return o.inline_unsafe;
+			}else{
+				return o.inline;
 			}
-			return "";
 		};
 
 		// --------------------------------------------------------------------------------
 		// サムネイルイメージのスタイルシート
 		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandImageThumbnail = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_image.thumbnail;
+		_this.getStyleSheetExpandImageThumbnail = function(url){
+			var o = _proj_ins.style_sheet.expand_image;
+			if(_this.checkMixedContent(url)){
+				return o.thumbnail_unsafe;
+			}else{
+				return o.thumbnail;
 			}
-			return "";
 		};
 
 		// --------------------------------------------------------------------------------
 		// ポップアップイメージのスタイルシート
 		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandImagePopup = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_image.popup;
+		_this.getStyleSheetExpandImagePopup = function(url){
+			var o = _proj_ins.style_sheet.expand_image;
+			if(_this.checkMixedContent(url)){
+				return o.popup_unsafe;
+			}else{
+				return o.popup;
 			}
-			return "";
 		};
 
 		// --------------------------------------------------------------------------------
 		// サウンドインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandSoundInlineAudioElement = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_sound.inline.audio_element.audio;
+		_this.getStyleSheetExpandSoundInlineAudioElement = function(url){
+			var o = _proj_ins.style_sheet.expand_sound.inline.audio_element;
+			if(_this.checkMixedContent(url)){
+				return o.audio_unsafe;
+			}else{
+				return o.audio;
 			}
-			return "";
 		};
 
 		// --------------------------------------------------------------------------------
@@ -3428,11 +3485,13 @@
 		// --------------------------------------------------------------------------------
 		// ビデオインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandVideoInlineVideoElement = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_video.inline.video_element.video;
+		_this.getStyleSheetExpandVideoInlineVideoElement = function(url){
+			var o = _proj_ins.style_sheet.expand_video.inline.video_element;
+			if(_this.checkMixedContent(url)){
+				return o.video_unsafe;
+			}else{
+				return o.video;
 			}
-			return "";
 		};
 
 		// --------------------------------------------------------------------------------
@@ -3478,11 +3537,13 @@
 		// --------------------------------------------------------------------------------
 		// インラインフレームのインライン表示のスタイルシート
 		// --------------------------------------------------------------------------------
-		_this.getStyleSheetExpandIframeInline = function(){
-			if(_proj_ins.style_sheet){
-				return _proj_ins.style_sheet.expand_iframe.inline;
+		_this.getStyleSheetExpandIframeInline = function(url){
+			var o = _proj_ins.style_sheet.expand_iframe;
+			if(_this.checkMixedContent(url)){
+				return o.inline_unsafe;
+			}else{
+				return o.inline;
 			}
-			return "";
 		};
 
 		// --------------------------------------------------------------------------------
@@ -11411,6 +11472,49 @@
 				o.height_max = 480;
 			});
 			proj.download.load.cache_for_media = "default";
+
+		}
+		if(exit())	return proj;
+
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.47
+		// --------------------------------------------------------------------------------
+		if(proj.version < 47){
+			// バージョン値
+			proj.version = 47;
+
+			update(proj.expand_image,"*",function(obj){
+				obj.load.src_type = "blob_url";
+				obj.load.decode = "pre-decode";
+			});
+			update(proj.expand_sound,"*",function(obj){
+				obj.audio_element.src_type = "url";
+			});
+			update(proj.expand_video,"*",function(obj){
+				obj.video_element.src_type = "url";
+			});
+			update(proj.style_sheet,"simple",function(obj){
+				obj.expand_text.inline_unsafe = "margin:2px 0px 2px 0px; border:2px #F00 solid;";
+				obj.expand_image.thumbnail_unsafe = "margin:2px 0px 2px 0px; background-color:#FFF; border:2px #F00 solid;";
+				obj.expand_image.popup_unsafe = "background-color:#FFF; border:2px #F00 solid;";
+				obj.expand_sound.inline.audio_element.audio_unsafe = "margin:2px 0px 2px 0px; border:2px #F00 solid;";
+				obj.expand_video.inline.video_element.video_unsafe = "margin:2px 0px 2px 0px; border:2px #F00 solid; width:720px; height:405px;"
+				obj.expand_iframe.inline_unsafe = "margin:2px 0px 2px 0px; background-color:#FFF; border:2px #F00 solid;";
+			});
+			update(proj.style_sheet,"default",function(obj){
+				obj.expand_text.inline_unsafe = "margin:2px 0px 2px 0px; border:2px #F00 solid; padding:4px; background-color:#FFF; display:block;";
+				obj.expand_image.thumbnail_unsafe = "margin:2px 0px 2px 0px; border:2px #F00 solid; padding:1px; background-color:#FFF;";
+				obj.expand_image.popup_unsafe = "margin:0px; border:2px #F00 solid; padding:1px; background-color:#FFF;";
+				obj.expand_sound.inline.audio_element.audio_unsafe = "margin:2px 0px 2px 0px; border:2px #F00 solid; padding:1px; background-color:#FFF;";
+				obj.expand_video.inline.video_element.video_unsafe = "margin:2px 0px 2px 0px; border:2px #F00 solid; background-color:#F00; width:720px; height:405px;";
+				obj.expand_iframe.inline_unsafe = "margin:2px 0px 2px 0px; border:2px #F00 solid; padding:1px; background-color:#FFF;";
+			});
+			update(proj.urlmap,"*",function(obj){
+				delete obj.enable_unsecure;
+				delete obj.enable_mixed_content;
+				obj.mixed_passive_content = "unsafe";
+				obj.mixed_active_content = "safe";
+			});
 
 		}
 		if(exit())	return proj;
@@ -33765,8 +33869,8 @@
 				_url_edit_container.attachObject(c.filter);
 
 				// セキュリティ
-				_check_box_enable_unsecure.setValue(c.enable_unsecure);
-				_check_box_enable_mixed_content.setValue(c.enable_mixed_content);
+				_combo_box_mixed_passive_content.setValue(c.mixed_passive_content);
+				_combo_box_mixed_active_content.setValue(c.mixed_active_content);
 
 				// 定義
 				var i;
@@ -33832,8 +33936,8 @@
 			var _text_input_name;
 			var _check_box_enable_urlmap;
 			var _url_edit_container;
-			var _check_box_enable_unsecure;
-			var _check_box_enable_mixed_content;
+			var _combo_box_mixed_passive_content;
+			var _combo_box_mixed_active_content;
 			var _ui_define;
 			var _ui_define_select_params = [
 				{asset:"access_block",type:PageExpandConfig.MENU_TYPE_SETTING_ACCESS_BLOCK,select:"multiple" },
@@ -33926,33 +34030,6 @@
 					projectModify();
 				};
 
-				// セキュリティ
-				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_urlmap_unsecure_check_box_container"));
-				var parent = container.getElement();
-
-				// アンセキュア
-				_check_box_enable_unsecure = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_urlmap_enable_unsecure"));
-				_check_box_enable_unsecure.onchange = function(v){
-					getSelectedUrlMaps(function(c){
-						c.enable_unsecure = v;
-					});
-					_urlmap_list.update();
-					projectModify();
-				};
-				new UI_TextHint(parent,_i18n.getMessage("menu_setting_urlmap_enable_unsecure_hint"));
-				new UI_BreakItem(parent);
-
-				// 混在コンテンツ
-				_check_box_enable_mixed_content = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_urlmap_enable_mixed_content"));
-				_check_box_enable_mixed_content.onchange = function(v){
-					getSelectedUrlMaps(function(c){
-						c.enable_mixed_content = v;
-					});
-					_urlmap_list.update();
-					projectModify();
-				};
-				new UI_TextHint(parent,_i18n.getMessage("menu_setting_urlmap_enable_mixed_content_hint"));
-
 				// 定義
 				_ui_define = new Array();
 				var i;
@@ -34029,6 +34106,40 @@
 						}
 					})();
 				}
+
+
+				// 混在パッシブコンテンツのセキュリティ
+				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_urlmap_mixed_passive_content_container"));
+				var parent = container.getElement();
+
+				_combo_box_mixed_passive_content = new UI_ComboBox(parent);
+				_combo_box_mixed_passive_content.attachItem(_i18n.getMessage("menu_setting_urlmap_mixed_passive_content_unsafe"),"unsafe");
+				_combo_box_mixed_passive_content.attachItem(_i18n.getMessage("menu_setting_urlmap_mixed_passive_content_safe"),"safe");
+				_combo_box_mixed_passive_content.onchange = function(v){
+					getSelectedUrlMaps(function(c){
+						c.mixed_passive_content = v;
+					});
+					_urlmap_list.update();
+					projectModify();
+				};
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_urlmap_mixed_passive_content_hint"));
+
+				// 混在アクティブコンテンツのセキュリティ
+				var container = new UI_LineContainer(form_parent_enable,_i18n.getMessage("menu_setting_urlmap_mixed_active_content_container"));
+				var parent = container.getElement();
+
+				_combo_box_mixed_active_content = new UI_ComboBox(parent);
+				_combo_box_mixed_active_content.attachItem(_i18n.getMessage("menu_setting_urlmap_mixed_active_content_unsafe"),"unsafe");
+				_combo_box_mixed_active_content.attachItem(_i18n.getMessage("menu_setting_urlmap_mixed_active_content_safe"),"safe");
+				_combo_box_mixed_active_content.onchange = function(v){
+					getSelectedUrlMaps(function(c){
+						c.mixed_active_content = v;
+					});
+					_urlmap_list.update();
+					projectModify();
+				};
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_urlmap_mixed_active_content_hint"));
+
 			})();
 		}
 
@@ -35953,6 +36064,36 @@
 					projectModify();
 				};
 
+				// イメージのソースタイプ
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_image_load_src_type"));
+				var parent = container.getElement();
+				var combo_box_load_src_type = new UI_ComboBox(parent);
+				combo_box_load_src_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_src_type_combo_box_item_url"),"url");
+				combo_box_load_src_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_src_type_combo_box_item_blob_url"),"blob_url");
+				combo_box_load_src_type.onchange = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.load.src_type = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
+
+				// イメージのデコードタイプ
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_image_load_decode"));
+				var parent = container.getElement();
+				var combo_box_load_decode = new UI_ComboBox(parent);
+				combo_box_load_decode.attachItem(_i18n.getMessage("menu_setting_expand_image_load_decode_combo_box_item_auto"),"auto");
+				combo_box_load_decode.attachItem(_i18n.getMessage("menu_setting_expand_image_load_decode_combo_box_item_pre_decode"),"pre-decode");
+				combo_box_load_decode.onchange = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.load.decode = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
+
 				// イメージのアンロード設定
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_image_load_unload_check_box_container"));
 				var parent = container.getElement();
@@ -36044,6 +36185,10 @@
 					stepper_popup_allow_slcale_less_then.setValue(c.reduced_image.popup_allow_slcale_less_then);
 					// 読み込み進捗表示
 					check_box_image_load_enable_notify.setValue(c.load.enable_notify);
+					// ソースタイプ
+					combo_box_load_src_type.setValue(c.load.src_type);
+					// デコードタイプ
+					combo_box_load_decode.setValue(c.load.decode);
 					// イメージのアンロードを有効
 					check_box_enable_unload.setValue(c.load.enable_unload);
 					_form_container_unload.setVisible(c.load.enable_unload);
@@ -36190,6 +36335,21 @@
 					_setting_define.update();
 					projectModify();
 				};
+
+				// イメージのソースタイプ
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_element_src_type"));
+				var parent = container.getElement();
+				var combo_box_audio_element_src_type = new UI_ComboBox(parent);
+				combo_box_audio_element_src_type.attachItem(_i18n.getMessage("menu_setting_expand_sound_inline_element_src_type_combo_box_item_url"),"url");
+				combo_box_audio_element_src_type.attachItem(_i18n.getMessage("menu_setting_expand_sound_inline_element_src_type_combo_box_item_blob_url"),"blob_url");
+				combo_box_audio_element_src_type.onchange = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.audio_element.src_type = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
 				new UI_Break(form_parent);
 
 				// タイトル
@@ -36258,6 +36418,8 @@
 					script_obj_editer_inline_script_insert.setScriptObject(c.inline.script_insert);
 					// HTMLAudioElement を表示する条件
 					script_obj_editer_audio_element_script_allow.setScriptObject(c.audio_element.script_allow);
+					// ソースタイプ
+					combo_box_audio_element_src_type.setValue(c.audio_element.src_type);
 					// soundcloud プレイヤー表示
 					check_box_soundcloud_visible_player_html5.setValue(c.soundcloud.visible_player_html5);
 					// mixcloud プレイヤー表示
@@ -36432,6 +36594,21 @@
 					_setting_define.update();
 					projectModify();
 				};
+
+				// イメージのソースタイプ
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_element_src_type"));
+				var parent = container.getElement();
+				var combo_box_video_element_src_type = new UI_ComboBox(parent);
+				combo_box_video_element_src_type.attachItem(_i18n.getMessage("menu_setting_expand_video_inline_element_src_type_combo_box_item_url"),"url");
+				combo_box_video_element_src_type.attachItem(_i18n.getMessage("menu_setting_expand_video_inline_element_src_type_combo_box_item_blob_url"),"blob_url");
+				combo_box_video_element_src_type.onchange = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.video_element.src_type = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
 				new UI_Break(form_parent);
 
 				// タイトル
@@ -36550,6 +36727,8 @@
 					script_obj_editer_inline_script_insert.setScriptObject(c.inline.script_insert);
 					// HTMLVideoElement を表示する条件
 					script_obj_editer_video_element_script_allow.setScriptObject(c.video_element.script_allow);
+					// ソースタイプ
+					combo_box_video_element_src_type.setValue(c.video_element.src_type);
 					// youtube ビデオ表示
 					check_box_youtube_visible_video.setValue(c.youtube.visible_video);
 					// nicovideo ビデオ表示
@@ -36751,6 +36930,17 @@
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
+
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_text_element_inline_unsafe"));
+				var text_input_expand_text_inline_unsafe = new UI_TextInput(parent);
+				text_input_expand_text_inline_unsafe.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.expand_text.inline_unsafe = v;
+					});
+					_setting_define.update();
+					projectModify();
+				};
 				new UI_Break(form_parent);
 
 				// タイトル
@@ -36775,11 +36965,33 @@
 				};
 				new UI_BreakItem(parent);
 
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element_inline_unsafe"));
+				var text_input_expand_image_thumbnail_unsafe = new UI_TextInput(parent);
+				text_input_expand_image_thumbnail_unsafe.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.expand_image.thumbnail_unsafe = v;
+					});
+					_setting_define.update();
+					projectModify();
+				};
+				new UI_BreakItem(parent);
+
 				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element_popup"));
 				var text_input_expand_image_popup = new UI_TextInput(parent);
 				text_input_expand_image_popup.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_image.popup = v;
+					});
+					_setting_define.update();
+					projectModify();
+				};
+				new UI_BreakItem(parent);
+
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_image_element_popup_unsafe"));
+				var text_input_expand_image_popup_unsafe = new UI_TextInput(parent);
+				text_input_expand_image_popup_unsafe.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.expand_image.popup_unsafe = v;
 					});
 					_setting_define.update();
 					projectModify();
@@ -36802,6 +37014,17 @@
 				text_input_expand_sound_inline_audio_element.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_sound.inline.audio_element.audio = v;
+					});
+					_setting_define.update();
+					projectModify();
+				};
+				new UI_BreakItem(parent);
+
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_sound_element_inline_audio_unsafe"));
+				var text_input_expand_sound_inline_audio_element_unsafe = new UI_TextInput(parent);
+				text_input_expand_sound_inline_audio_element_unsafe.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.expand_sound.inline.audio_element.audio_unsafe = v;
 					});
 					_setting_define.update();
 					projectModify();
@@ -36852,6 +37075,17 @@
 				text_input_expand_video_inline_video_element.oninput = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.expand_video.inline.video_element.video = v;
+					});
+					_setting_define.update();
+					projectModify();
+				};
+				new UI_BreakItem(parent);
+
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_element_inline_video_unsafe"));
+				var text_input_expand_video_inline_video_element_unsafe = new UI_TextInput(parent);
+				text_input_expand_video_inline_video_element_unsafe.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.expand_video.inline.video_element.video_unsafe = v;
 					});
 					_setting_define.update();
 					projectModify();
@@ -36935,6 +37169,17 @@
 					_setting_define.update();
 					projectModify();
 				};
+				new UI_BreakItem(parent);
+
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_iframe_element_inline_unsafe"));
+				var text_input_expand_iframe_inline_unsafe = new UI_TextInput(parent);
+				text_input_expand_iframe_inline_unsafe.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.expand_iframe.inline_unsafe = v;
+					});
+					_setting_define.update();
+					projectModify();
+				};
 				new UI_Break(form_parent);
 
 				// データの関連付け
@@ -36948,17 +37193,23 @@
 					if(!c)	return;
 
 					text_input_expand_text_inline.setValue(c.expand_text.inline);
+					text_input_expand_text_inline_unsafe.setValue(c.expand_text.inline_unsafe);
 					text_input_expand_image_thumbnail.setValue(c.expand_image.thumbnail);
+					text_input_expand_image_thumbnail_unsafe.setValue(c.expand_image.thumbnail_unsafe);
 					text_input_expand_image_popup.setValue(c.expand_image.popup);
+					text_input_expand_image_popup_unsafe.setValue(c.expand_image.popup_unsafe);
 					text_input_expand_sound_inline_audio_element.setValue(c.expand_sound.inline.audio_element.audio);
+					text_input_expand_sound_inline_audio_element_unsafe.setValue(c.expand_sound.inline.audio_element.audio_unsafe);
 					text_input_expand_sound_soundcloud_inline_player_html5.setValue(c.expand_sound.inline.soundcloud.player_html5);
 					text_input_expand_sound_mixcloud_inline_player.setValue(c.expand_sound.inline.mixcloud.player);
 					text_input_expand_video_inline_video_element.setValue(c.expand_video.inline.video_element.video);
+					text_input_expand_video_inline_video_element_unsafe.setValue(c.expand_video.inline.video_element.video_unsafe);
 					text_input_expand_video_youtube_inline_video.setValue(c.expand_video.inline.youtube.video);
 					text_input_expand_video_nicovideo_inline_video.setValue(c.expand_video.inline.nicovideo.video);
 					text_input_expand_video_dailymotion_inline_video.setValue(c.expand_video.inline.dailymotion.video);
 					text_input_expand_video_vimeo_inline_video.setValue(c.expand_video.inline.vimeo.video);
 					text_input_expand_iframe_inline.setValue(c.expand_iframe.inline);
+					text_input_expand_iframe_inline_unsafe.setValue(c.expand_iframe.inline_unsafe);
 				};
 
 				// リロード
@@ -37094,7 +37345,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.28");
+				new UI_Text(parent,"PageExpand ver.1.5.29");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -42664,8 +42915,8 @@
 							filter:[]
 						}
 					},
-					enable_unsecure:false,
-					enable_mixed_content:false,
+					mixed_passive_content:"unsafe",
+					mixed_active_content:"safe",
 					access_block:{enable:false,id:[]},
 					replacement_to_element:{enable:false,id:[]},
 					replacement_to_text:{enable:false,id:[]},
@@ -43018,7 +43269,8 @@
 						script_insert:PageExpandProjectScriptObject_Create("ExpandSound_InlineScriptInsert_Default")
 					},
 					audio_element:{
-						script_allow:PageExpandProjectScriptObject_Create("ExpandSound_AudioElementScriptAllow_Default")
+						script_allow:PageExpandProjectScriptObject_Create("ExpandSound_AudioElementScriptAllow_Default"),
+						src_type:"url"
 					},
 					soundcloud:{
 						visible_player_html5:false
@@ -43050,7 +43302,8 @@
 						script_insert:PageExpandProjectScriptObject_Create("ExpandVideo_InlineScriptInsert_Default")
 					},
 					video_element:{
-						script_allow:PageExpandProjectScriptObject_Create("ExpandVideo_VideoElementScriptAllow_Default")
+						script_allow:PageExpandProjectScriptObject_Create("ExpandVideo_VideoElementScriptAllow_Default"),
+						src_type:"url"
 					},
 					youtube:{
 						visible_video:false
@@ -43100,16 +43353,20 @@
 						locales:{}
 					},
 					expand_text:{
-						inline:""
+						inline:"",
+						inline_unsafe:""
 					},
 					expand_image:{
 						thumbnail:"",
-						popup:""
+						thumbnail_unsafe:"",
+						popup:"",
+						popup_unsafe:""
 					},
 					expand_sound:{
 						inline:{
 							audio_element:{
-								audio:""
+								audio:"",
+								audio_unsafe:""
 							},
 							soundcloud:{
 								player_html5:""
@@ -43122,7 +43379,8 @@
 					expand_video:{
 						inline:{
 							video_element:{
-								video:""
+								video:"",
+								video_unsafe:""
 							},
 							youtube:{
 								video:""
@@ -43139,7 +43397,8 @@
 						}
 					},
 					expand_iframe:{
-						inline:""
+						inline:"",
+						inline_unsafe:"",
 					}
 				}
 			};
@@ -49824,6 +50083,7 @@
 		var modify = param.modify;
 		var element = AnalyzeWorkGetDomNode(work);
 		var url = AnalyzeWorkGetExpandUrl(work);
+		url = project.fixURL_PassiveContent(url);
 		var content_type = AnalyzeWorkGetContentType(work);
 
 		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
@@ -49918,7 +50178,7 @@
 				text_area.value = str;
 
 				// スタイルをセット
-				ElementSetStyle(text_area,project.getStyleSheetExpandTextInline());
+				ElementSetStyle(text_area,project.getStyleSheetExpandTextInline(text_url));
 
 				// 解析ワーク作成
 				text_area_analyze_work = AnalyzeWorkCreate(text_area);
@@ -49961,6 +50221,7 @@
 		var modify = param.modify;
 		var element = AnalyzeWorkGetDomNode(work);
 		var url = AnalyzeWorkGetExpandUrl(work);
+		url = project.fixURL_PassiveContent(url);
 		var content_type = AnalyzeWorkGetContentType(work);
 
 		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
@@ -50131,7 +50392,7 @@
 					if(!thumbnail_image)	return;
 
 					// スタイルをセット
-					ElementSetStyle(thumbnail_image,project.getStyleSheetExpandImageThumbnail());
+					ElementSetStyle(thumbnail_image,project.getStyleSheetExpandImageThumbnail(thumbnail_url));
 
 					function responseInsert(){
 						if(!thumbnail_image)	return;
@@ -50147,7 +50408,7 @@
 
 								// イメージを複製
 								var loader = new Loader();
-								loader.setURL(thumbnail_image.src);
+								loader.setURL(thumbnail_url);
 								loader.onload = function(image_clone){
 									if(!thumbnail_image)	return;
 
@@ -50249,6 +50510,7 @@
 		var modify = param.modify;
 		var element = AnalyzeWorkGetDomNode(work);
 		var url = AnalyzeWorkGetExpandUrl(work);
+		url = project.fixURL_PassiveContent(url);
 		var content_type = AnalyzeWorkGetContentType(work);
 
 		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
@@ -50522,6 +50784,7 @@
 		var modify = param.modify;
 		var element = AnalyzeWorkGetDomNode(work);
 		var url = AnalyzeWorkGetExpandUrl(work);
+		url = project.fixURL_PassiveContent(url);
 		var content_type = AnalyzeWorkGetContentType(work);
 
 		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
@@ -50532,12 +50795,6 @@
 		function response_allow(param){
 			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
 			if(!(param.result)){
-				complete();
-				return;
-			}
-
-			// アンセキュアチェック
-			if(!project.checkAllowUnsecure(url)){
 				complete();
 				return;
 			}
@@ -50643,7 +50900,7 @@
 				complete();
 
 				// スタイルをセット
-				ElementSetStyle(audio,project.getStyleSheetExpandSoundInlineAudioElement());
+				ElementSetStyle(audio,project.getStyleSheetExpandSoundInlineAudioElement(audio_url));
 
 				// オーディオエレメントのリムーブ監視
 				observer_remove = new DomNodeObserverRemoveFromDocument(audio);
@@ -51131,6 +51388,7 @@
 		var modify = param.modify;
 		var element = AnalyzeWorkGetDomNode(work);
 		var url = AnalyzeWorkGetExpandUrl(work);
+		url = project.fixURL_PassiveContent(url);
 		var content_type = AnalyzeWorkGetContentType(work);
 
 		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
@@ -51142,12 +51400,6 @@
 			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
 
 			if(!(param.result)){
-				complete();
-				return;
-			}
-
-			// アンセキュアチェック
-			if(!project.checkAllowUnsecure(url)){
 				complete();
 				return;
 			}
@@ -51253,7 +51505,7 @@
 				complete();
 
 				// スタイルをセット
-				ElementSetStyle(video,project.getStyleSheetExpandVideoInlineVideoElement());
+				ElementSetStyle(video,project.getStyleSheetExpandVideoInlineVideoElement(video_url));
 
 				// ビデオエレメントのリムーブ監視
 				observer_remove = new DomNodeObserverRemoveFromDocument(video);
@@ -51562,12 +51814,6 @@
 		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
 
 		function complete(){
-		}
-
-		// アンセキュアチェック
-		if(!project.checkAllowUnsecure(url)){
-			complete();
-			return;
 		}
 
 		// .nicovideo.jp 内では動作禁止
@@ -52175,6 +52421,7 @@
 		var modify = param.modify;
 		var element = AnalyzeWorkGetDomNode(work);
 		var url = AnalyzeWorkGetExpandUrl(work);
+		url = project.fixURL_ActiveContent(url);
 		var content_type = AnalyzeWorkGetContentType(work);
 
 		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
@@ -52186,12 +52433,6 @@
 			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
 
 			if(!(param.result)){
-				complete();
-				return;
-			}
-
-			// アンセキュアチェック
-			if(!project.checkAllowUnsecure(url)){
 				complete();
 				return;
 			}
@@ -52274,7 +52515,7 @@
 
 			// テキストの読み込み
 			loader = new Loader();
-			loader.onload = function(str){
+			loader.onload = function(headers){
 				complete();
 
 				// インラインフレームを生成
@@ -52283,7 +52524,7 @@
 				iframe.src = iframe_url;
 
 				// スタイルをセット
-				ElementSetStyle(iframe,project.getStyleSheetExpandIframeInline());
+				ElementSetStyle(iframe,project.getStyleSheetExpandIframeInline(iframe_url));
 
 				// 解析ワーク作成
 				iframe_analyze_work = AnalyzeWorkCreate(iframe);
@@ -52312,7 +52553,7 @@
 			};
 			loader.setMethod("GET");
 			loader.setURL(iframe_url);
-			loader.loadText();
+			loader.loadResponseHeader();
 		}
 
 		// コールバック関数を実行
@@ -52556,9 +52797,11 @@
 			}
 
 			if(allow){
+				var thumbnail_url = project.fixURL_PassiveContent(element.src);
+
 				// ポップアップイメージ
 				var loader = new Loader();
-				loader.setURL(element.src);
+				loader.setURL(thumbnail_url);
 				loader.onload = function(image){
 					if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
 					if(released) return;
@@ -52568,7 +52811,7 @@
 					popup_image.setElementAnchor(element);
 					popup_image.setElementHitArea(element);
 					popup_image.setElementBeginArea(element);
-					popup_image.setOriginalURL(element.src);
+					popup_image.setOriginalURL(thumbnail_url);
 					popup_image.ontrim = function (){
 						if(!popup_image) return;
 
@@ -53133,7 +53376,7 @@
 					"overflow:hidden;"
 				);
 				// スタイルを追加
-				ElementAddStyle(_element_current,project.getStyleSheetExpandImagePopup());
+				ElementAddStyle(_element_current,project.getStyleSheetExpandImagePopup(_original_url));
 				div.appendChild(_image);
 				_element_current = div;
 
@@ -53705,7 +53948,7 @@
 			ElementSetStyle(_image,CSSTextGetInitialImageElement());
 
 			// スタイルを追加
-			ElementAddStyle(_element_current,project.getStyleSheetExpandImagePopup());
+			ElementAddStyle(_element_current,project.getStyleSheetExpandImagePopup(_original_url));
 			_element_current.style.willChange = "left,top,width,height,opacity";
 
 			// 最前面
@@ -57915,20 +58158,29 @@
 			menu_setting_urlmap_filter_url: {
 				message: "動作URLの設定"
 			},
-			menu_setting_urlmap_unsecure_check_box_container: {
-				message: "セキュリティ"
+			menu_setting_urlmap_mixed_passive_content_container: {
+				message: "Mixed Passive Content のセキュリティ"
 			},
-			menu_setting_urlmap_enable_unsecure: {
-				message: "セキュアなページ内で「http://～ にあるリソース」を展開する"
+			menu_setting_urlmap_mixed_passive_content_unsafe: {
+				message: "http:// のままリクエスト"
 			},
-			menu_setting_urlmap_enable_unsecure_hint: {
-				message: "無効の場合、https://～ にあるリソースだけ展開します。有効の場合、http://～ にあるリソースも展開しますが、常に暗号化の警告が表示されます。"
+			menu_setting_urlmap_mixed_passive_content_safe: {
+				message: "https:// に変換してリクエスト（失敗なら表示しない）"
 			},
-			menu_setting_urlmap_enable_mixed_content: {
-				message: "セキュアなページ内で「デフォルトでブロックされる混在コンテンツ」の展開を試みる"
+			menu_setting_urlmap_mixed_passive_content_hint: {
+				message: "画像や動画などのコンテンツが赤枠付きで表示されている場合、暗号化されておらず、信頼性が低く、中間者攻撃で改ざん可能であることを意味します。"
 			},
-			menu_setting_urlmap_enable_mixed_content_hint: {
-				message: "ブラウザは、一部の要素の展開をブロックします。無効の場合、ブロックされる要素を展開しません。有効の場合、すべての要素の展開を試みます。（ブラウザの設定を変更しない限り失敗します。変更は非推奨。）"
+			menu_setting_urlmap_mixed_active_content_container: {
+				message: "Mixed Active Content のセキュリティ"
+			},
+			menu_setting_urlmap_mixed_active_content_unsafe: {
+				message: "http:// のままリクエスト"
+			},
+			menu_setting_urlmap_mixed_active_content_safe: {
+				message: "https:// に変換してリクエスト（失敗なら表示しない）"
+			},
+			menu_setting_urlmap_mixed_active_content_hint: {
+				message: "ブラウザはデフォルトで混在アクティブコンテンツをブロックします。実際に表示するには、サイトの権限の設定から「安全ではないコンテンツ」のブロックを解除する必要があります（危険）"
 			},
 			menu_setting_urlmap_define_button_edit: {
 				message: "編集"
@@ -58242,6 +58494,24 @@
 			menu_setting_expand_image_load_start_type_scroll: {
 				message: "スクロールと連動して読み込む"
 			},
+			menu_setting_expand_image_load_src_type: {
+				message: "イメージのソースタイプ"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_url: {
+				message: "URL 形式 (混在コンテンツを除く)"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_blob_url: {
+				message: "Blob URL に変換（すべて）"
+			},
+			menu_setting_expand_image_load_decode: {
+				message: "イメージのデコード設定"
+			},
+			menu_setting_expand_image_load_decode_combo_box_item_auto: {
+				message: "表示される瞬間から開始"
+			},
+			menu_setting_expand_image_load_decode_combo_box_item_pre_decode: {
+				message: "すべて事前にデコードする"
+			},
 			menu_setting_expand_image_load_unload_check_box_container: {
 				message: "イメージのアンロード設定"
 			},
@@ -58280,6 +58550,15 @@
 			},
 			menu_setting_expand_sound_inline_element_script_allow: {
 				message: "HTMLAudioElement を表示する条件"
+			},
+			menu_setting_expand_sound_inline_element_src_type: {
+				message: "ソースタイプ"
+			},
+			menu_setting_expand_sound_inline_element_src_type_combo_box_item_url: {
+				message: "URL 形式 (ストリーミング再生)"
+			},
+			menu_setting_expand_sound_inline_element_src_type_combo_box_item_blob_url: {
+				message: "Blob URL に変換（すべて読み込む）"
 			},
 			menu_setting_expand_sound_inline_soundcloud: {
 				message: "soundcloud.com の設定"
@@ -58334,6 +58613,15 @@
 			},
 			menu_setting_expand_video_inline_element_script_allow: {
 				message: "HTMLVideoElement を表示する条件"
+			},
+			menu_setting_expand_video_inline_element_src_type: {
+				message: "ソースタイプ"
+			},
+			menu_setting_expand_video_inline_element_src_type_combo_box_item_url: {
+				message: "URL 形式 (ストリーミング再生)"
+			},
+			menu_setting_expand_video_inline_element_src_type_combo_box_item_blob_url: {
+				message: "Blob URL に変換（すべて読み込む）"
 			},
 			menu_setting_expand_video_inline_youtube: {
 				message: "www.youtube.com の設定"
@@ -58401,6 +58689,9 @@
 			menu_setting_style_sheet_expand_text_element_inline: {
 				message: "テキストのインライン表示"
 			},
+			menu_setting_style_sheet_expand_text_element_inline_unsafe: {
+				message: "テキストのインライン表示（混在コンテンツ）"
+			},
 			menu_setting_style_sheet_expand_image: {
 				message: "イメージ展開のスタイル"
 			},
@@ -58410,8 +58701,14 @@
 			menu_setting_style_sheet_expand_image_element_inline: {
 				message: "イメージのサムネイル表示"
 			},
+			menu_setting_style_sheet_expand_image_element_inline_unsafe: {
+				message: "イメージのサムネイル表示（混在コンテンツ）"
+			},
 			menu_setting_style_sheet_expand_image_element_popup: {
 				message: "イメージのポップアップ表示"
+			},
+			menu_setting_style_sheet_expand_image_element_popup_unsafe: {
+				message: "イメージのポップアップ表示（混在コンテンツ）"
 			},
 			menu_setting_style_sheet_expand_sound: {
 				message: "サウンド展開のスタイル"
@@ -58421,6 +58718,9 @@
 			},
 			menu_setting_style_sheet_expand_sound_element_inline_audio: {
 				message: "オーディオのインライン表示"
+			},
+			menu_setting_style_sheet_expand_sound_element_inline_audio_unsafe: {
+				message: "オーディオのインライン表示（混在コンテンツ）"
 			},
 			menu_setting_style_sheet_expand_sound_soundcloud: {
 				message: "soundcloud.com の設定"
@@ -58442,6 +58742,9 @@
 			},
 			menu_setting_style_sheet_expand_video_element_inline_video: {
 				message: "ビデオのインライン表示"
+			},
+			menu_setting_style_sheet_expand_video_element_inline_video_unsafe: {
+				message: "ビデオのインライン表示（混在コンテンツ）"
 			},
 			menu_setting_style_sheet_expand_video_youtube: {
 				message: "www.youtube.com の設定"
@@ -58475,6 +58778,9 @@
 			},
 			menu_setting_style_sheet_expand_iframe_element_inline: {
 				message: "インラインフレームのインライン表示"
+			},
+			menu_setting_style_sheet_expand_iframe_element_inline_unsafe: {
+				message: "インラインフレームのインライン表示（混在コンテンツ）"
 			},
 			menu_setting_experimental: {
 				message: "試験運用機能の定義"
@@ -59284,20 +59590,29 @@
 			menu_setting_urlmap_filter_url: {
 				message: "URL to allow the operation"
 			},
-			menu_setting_urlmap_unsecure_check_box_container: {
-				message: "Security"
+			menu_setting_urlmap_mixed_passive_content_container: {
+				message: "Mixed Passive Content Security"
 			},
-			menu_setting_urlmap_enable_unsecure: {
-				message: "Expand \"resources in the http://\" in a secure page."
+			menu_setting_urlmap_mixed_passive_content_unsafe: {
+				message: "\"http://\" as is"
 			},
-			menu_setting_urlmap_enable_unsecure_hint: {
-				message: "When disabled, Expand \"resources in the https://\". When enabled, expand \"resources in the http://\" further. However, the encryption warning is always displayed."
+			menu_setting_urlmap_mixed_passive_content_safe: {
+				message: "Convert to \"https://\" (Do not display if failed)"
 			},
-			menu_setting_urlmap_enable_mixed_content: {
-				message: "Will try to expand \"Mixed content that is blocked by default\" in a secure page."
+			menu_setting_urlmap_mixed_passive_content_hint: {
+				message: "If content such as images and videos is displayed with a red border, It means that it is unencrypted, untrustworthy, and can be tampered with by man-in-the-middle attacks."
 			},
-			menu_setting_urlmap_enable_mixed_content_hint: {
-				message: "The browser will block the deployment of \"some of the elements\". When disabled, \"Elements that are blocked\" will not expand. When enabled, Will try to expand all elements. (Will fail unless change the settings in browser.)"
+			menu_setting_urlmap_mixed_active_content_container: {
+				message: "Mixed Active Content Security"
+			},
+			menu_setting_urlmap_mixed_active_content_unsafe: {
+				message: "\"http://\" as is"
+			},
+			menu_setting_urlmap_mixed_active_content_safe: {
+				message: "Convert to \"https://\" (Do not display if failed)"
+			},
+			menu_setting_urlmap_mixed_active_content_hint: {
+				message: "Browser is block \"mixed active content\" by default. To actually display, you need to unblock \"Insecure content\" from the permission settings. (dangerous)"
 			},
 			menu_setting_urlmap_define_button_edit: {
 				message: "edit"
@@ -59611,6 +59926,24 @@
 			menu_setting_expand_image_load_start_type_scroll: {
 				message: "Conjunction with the scroll"
 			},
+			menu_setting_expand_image_load_src_type: {
+				message: "Image Source Format"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_url: {
+				message: "URL (except mixed content)"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_blob_url: {
+				message: "Blob URL (all)"
+			},
+			menu_setting_expand_image_load_decode: {
+				message: "Decode Image Setting"
+			},
+			menu_setting_expand_image_load_decode_combo_box_item_auto: {
+				message: "Browser default"
+			},
+			menu_setting_expand_image_load_decode_combo_box_item_pre_decode: {
+				message: "Pre-decode the all"
+			},
 			menu_setting_expand_image_load_unload_check_box_container: {
 				message: "Unload Image Setting"
 			},
@@ -59649,6 +59982,15 @@
 			},
 			menu_setting_expand_sound_inline_element_script_allow: {
 				message: "Condition to display HTMLAudioElement"
+			},
+			menu_setting_expand_sound_inline_element_src_type: {
+				message: "Audio Source Format"
+			},
+			menu_setting_expand_sound_inline_element_src_type_combo_box_item_url: {
+				message: "URL (streaming)"
+			},
+			menu_setting_expand_sound_inline_element_src_type_combo_box_item_blob_url: {
+				message: "Blob URL (full)"
 			},
 			menu_setting_expand_sound_inline_soundcloud: {
 				message: "soundcloud.com Setting"
@@ -59703,6 +60045,15 @@
 			},
 			menu_setting_expand_video_inline_element_script_allow: {
 				message: " Condition to display HTMLVideoElement"
+			},
+			menu_setting_expand_video_inline_element_src_type: {
+				message: "Video Source Format"
+			},
+			menu_setting_expand_video_inline_element_src_type_combo_box_item_url: {
+				message: "URL (streaming)"
+			},
+			menu_setting_expand_video_inline_element_src_type_combo_box_item_blob_url: {
+				message: "Blob URL (full)"
 			},
 			menu_setting_expand_video_inline_youtube: {
 				message: "www.youtube.com Setting"
@@ -59770,6 +60121,9 @@
 			menu_setting_style_sheet_expand_text_element_inline: {
 				message: "Text Inline Display"
 			},
+			menu_setting_style_sheet_expand_text_element_inline_unsafe: {
+				message: "Text Inline Display (unsafe)"
+			},
 			menu_setting_style_sheet_expand_image: {
 				message: "Stylesheet of Expanded Image"
 			},
@@ -59779,8 +60133,14 @@
 			menu_setting_style_sheet_expand_image_element_inline: {
 				message: "Image Thumbnail Display"
 			},
+			menu_setting_style_sheet_expand_image_element_inline_unsafe: {
+				message: "Image Thumbnail Display (unsafe)"
+			},
 			menu_setting_style_sheet_expand_image_element_popup: {
 				message: "Image Popup Display"
+			},
+			menu_setting_style_sheet_expand_image_element_popup_unsafe: {
+				message: "Image Popup Display (unsafe)"
 			},
 			menu_setting_style_sheet_expand_sound: {
 				message: "Stylesheet of Expanded Sound"
@@ -59790,6 +60150,9 @@
 			},
 			menu_setting_style_sheet_expand_sound_element_inline_audio: {
 				message: "Audo Inline Display"
+			},
+			menu_setting_style_sheet_expand_sound_element_inline_audio_unsafe: {
+				message: "Audo Inline Display (unsafe)"
 			},
 			menu_setting_style_sheet_expand_sound_soundcloud: {
 				message: "soundcloud.com Setting"
@@ -59811,6 +60174,9 @@
 			},
 			menu_setting_style_sheet_expand_video_element_inline_video: {
 				message: "Video Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_element_inline_video_unsafe: {
+				message: "Video Inline Display (unsafe)"
 			},
 			menu_setting_style_sheet_expand_video_youtube: {
 				message: "www.youtube.com Setting"
@@ -59844,6 +60210,9 @@
 			},
 			menu_setting_style_sheet_expand_iframe_element_inline: {
 				message: "Iframe Inline Display"
+			},
+			menu_setting_style_sheet_expand_iframe_element_inline_unsafe: {
+				message: "Iframe Inline Display (unsafe)"
 			},
 			menu_setting_experimental: {
 				message: "Experimental Define"
@@ -60652,20 +61021,29 @@
 			menu_setting_urlmap_filter_url: {
 				message: "URL 允许进行操作"
 			},
-			menu_setting_urlmap_unsecure_check_box_container: {
-				message: "安全"
+			menu_setting_urlmap_mixed_passive_content_container: {
+				message: "Mixed Passive Content Security"
 			},
-			menu_setting_urlmap_enable_unsecure: {
-				message: "扩展 \" 资源到 http://\" 安全页。"
+			menu_setting_urlmap_mixed_passive_content_unsafe: {
+				message: "\"http://\" as is"
 			},
-			menu_setting_urlmap_enable_unsecure_hint: {
-				message: "当禁用时，扩展 \" 资源到 https://\"。当启用时，进一步扩展 \" 资源到 http://\" 。但是，总是显示加密警告。"
+			menu_setting_urlmap_mixed_passive_content_safe: {
+				message: "Convert to \"https://\" (Do not display if failed)"
 			},
-			menu_setting_urlmap_enable_mixed_content: {
-				message: "尝试扩展 \"默认情况下阻止的混合内容\" 到安全页。"
+			menu_setting_urlmap_mixed_passive_content_hint: {
+				message: "If content such as images and videos is displayed with a red border, It means that it is unencrypted, untrustworthy, and can be tampered with by man-in-the-middle attacks."
 			},
-			menu_setting_urlmap_enable_mixed_content_hint: {
-				message: "浏览器将拦截 \"一些元素\" 的部署。当禁用时， \"被拦截的元素\" 将不会扩展。 当启用时，将尝试扩展所有元素。(除非在浏览器中更改设置否则会失败。)"
+			menu_setting_urlmap_mixed_active_content_container: {
+				message: "Mixed Active Content Security"
+			},
+			menu_setting_urlmap_mixed_active_content_unsafe: {
+				message: "\"http://\" as is"
+			},
+			menu_setting_urlmap_mixed_active_content_safe: {
+				message: "Convert to \"https://\" (Do not display if failed)"
+			},
+			menu_setting_urlmap_mixed_active_content_hint: {
+				message: "Browser is block \"mixed active content\" by default. To actually display, you need to unblock \"Insecure content\" from the permission settings. (dangerous)"
 			},
 			menu_setting_urlmap_define_button_edit: {
 				message: "编辑"
@@ -60979,6 +61357,24 @@
 			menu_setting_expand_image_load_start_type_scroll: {
 				message: "滚动结合"
 			},
+			menu_setting_expand_image_load_src_type: {
+				message: "Image Source Format"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_url: {
+				message: "URL (except mixed content)"
+			},
+			menu_setting_expand_image_load_src_type_combo_box_item_blob_url: {
+				message: "Blob URL (all)"
+			},
+			menu_setting_expand_image_load_decode: {
+				message: "Decode Image Setting"
+			},
+			menu_setting_expand_image_load_decode_combo_box_item_auto: {
+				message: "Browser default"
+			},
+			menu_setting_expand_image_load_decode_combo_box_item_pre_decode: {
+				message: "Pre-decode the all"
+			},
 			menu_setting_expand_image_load_unload_check_box_container: {
 				message: "卸载图片设置"
 			},
@@ -61017,6 +61413,15 @@
 			},
 			menu_setting_expand_sound_inline_element_script_allow: {
 				message: "HTML 音频元素显示的条件"
+			},
+			menu_setting_expand_sound_inline_element_src_type: {
+				message: "Audio Source Format"
+			},
+			menu_setting_expand_sound_inline_element_src_type_combo_box_item_url: {
+				message: "URL (streaming)"
+			},
+			menu_setting_expand_sound_inline_element_src_type_combo_box_item_blob_url: {
+				message: "Blob URL (full)"
 			},
 			menu_setting_expand_sound_inline_soundcloud: {
 				message: "soundcloud.com 设置"
@@ -61071,6 +61476,15 @@
 			},
 			menu_setting_expand_video_inline_element_script_allow: {
 				message: " HTML 视频元素显示的条件"
+			},
+			menu_setting_expand_video_inline_element_src_type: {
+				message: "Video Source Format"
+			},
+			menu_setting_expand_video_inline_element_src_type_combo_box_item_url: {
+				message: "URL (streaming)"
+			},
+			menu_setting_expand_video_inline_element_src_type_combo_box_item_blob_url: {
+				message: "Blob URL (full)"
 			},
 			menu_setting_expand_video_inline_youtube: {
 				message: "www.youtube.com 设置"
@@ -61138,6 +61552,9 @@
 			menu_setting_style_sheet_expand_text_element_inline: {
 				message: "文本内联显示"
 			},
+			menu_setting_style_sheet_expand_text_element_inline_unsafe: {
+				message: "文本内联显示 (unsafe)"
+			},
 			menu_setting_style_sheet_expand_image: {
 				message: "扩展图片样式表"
 			},
@@ -61147,8 +61564,14 @@
 			menu_setting_style_sheet_expand_image_element_inline: {
 				message: "图片缩略图显示"
 			},
+			menu_setting_style_sheet_expand_image_element_inline_unsafe: {
+				message: "图片缩略图显示 (unsafe)"
+			},
 			menu_setting_style_sheet_expand_image_element_popup: {
 				message: "图片弹窗显示"
+			},
+			menu_setting_style_sheet_expand_image_element_popup_unsafe: {
+				message: "图片弹窗显示 (unsafe)"
 			},
 			menu_setting_style_sheet_expand_sound: {
 				message: "扩展声音样式表"
@@ -61158,6 +61581,9 @@
 			},
 			menu_setting_style_sheet_expand_sound_element_inline_audio: {
 				message: "音频内联显示"
+			},
+			menu_setting_style_sheet_expand_sound_element_inline_audio_unsafe: {
+				message: "音频内联显示 (unsafe)"
 			},
 			menu_setting_style_sheet_expand_sound_soundcloud: {
 				message: "soundcloud.com 设置"
@@ -61179,6 +61605,9 @@
 			},
 			menu_setting_style_sheet_expand_video_element_inline_video: {
 				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_element_inline_video_unsafe: {
+				message: "视频内联显示 (unsafe)"
 			},
 			menu_setting_style_sheet_expand_video_youtube: {
 				message: "www.youtube.com 设置"
@@ -61212,6 +61641,9 @@
 			},
 			menu_setting_style_sheet_expand_iframe_element_inline: {
 				message: "内嵌框架样内联显示"
+			},
+			menu_setting_style_sheet_expand_iframe_element_inline_unsafe: {
+				message: "内嵌框架样内联显示 (unsafe)"
 			},
 			menu_setting_experimental: {
 				message: "实验定义"
@@ -61838,6 +62270,91 @@
 					delete this.blob_url;
 				}
 			},
+			getCached : function(callback){
+				var _this = this;
+				var event_handler_success = null;
+				var event_handler_failure = null;
+
+				function complete(){
+					if(event_handler_success){
+						event_handler_success.release();
+						event_handler_success = null;
+					}
+					if(event_handler_failure){
+						event_handler_failure.release();
+						event_handler_failure = null;
+					}
+					callback(_this.cached,null);
+				}
+
+				var analyze_element = _this.analyze_cached;
+				if((!analyze_element) && (_this.cached === undefined)){
+					_this.analyze_cached = (function(){
+						var analyze_element = new Object();
+
+						// --------------------------------------------------------------------------------
+						// 開放
+						// --------------------------------------------------------------------------------
+						analyze_element.release = function(){
+							if(analyze_element.released) return;
+							analyze_element.released = true;
+							analyze_element.event_dispatcher.release();
+							delete _this.analyze_cached;
+						};
+
+						// --------------------------------------------------------------------------------
+						// 調査成功
+						// --------------------------------------------------------------------------------
+						analyze_element.success = function(){
+							_this.cached = {ok:true};
+							analyze_element.event_dispatcher.dispatchEvent("success",null);
+							analyze_element.release();
+						};
+
+						// --------------------------------------------------------------------------------
+						// 調査失敗
+						// --------------------------------------------------------------------------------
+						analyze_element.failure = function(e){
+							_this.cached = {ok:false};
+							analyze_element.event_dispatcher.dispatchEvent("failure",e);
+							analyze_element.release();
+						};
+
+						// --------------------------------------------------------------------------------
+						// 初期化
+						// --------------------------------------------------------------------------------
+						(function(){
+							analyze_element.released = false;
+							analyze_element.event_dispatcher = new EventDispatcher();
+						})();
+
+						return analyze_element;
+					})();
+
+					callback(_this.cached,_this.analyze_cached);
+					return;
+				}
+
+				if((function (){
+					if(!analyze_element) return true;
+					if(_this.cached !== undefined) return true;
+					return false;
+				})()){
+					complete();
+					return;
+				}
+
+				var event_dispatcher = analyze_element.event_dispatcher;
+				event_handler_success = event_dispatcher.createEventHandler("success");
+				event_handler_success.setFunction(function(event){
+					complete();
+				});
+				event_handler_failure = event_dispatcher.createEventHandler("failure");
+				event_handler_failure.setFunction(function(event){
+					complete();
+				});
+
+			},
 			getMimeType : function(){
 				return this.mimetype;
 			},
@@ -61849,23 +62366,30 @@
 			},
 			setExt : function(v){
 				this.ext = v;
-			},		
-			getRefCount : function(){
-				return this.ref_count;
 			},
-			addRefCount : function(v){
-				this.ref_count += v;
+			attachDone : function(v){
+				if(!(this.done)) this.done = {};
+				this.done[v] = true;
+			},
+			removeDone : function(v){
+				if(!(this.done)) return;
+				delete this.done[v];
+			},
+			getDone : function(v){
+				if(!(this.done)) return false;
+				return Boolean(this.done[v]);
 			},
 			url : "",
 			id : 0,
 			analyze_redirect : null,
 			analyze_blob_url : null,
+			analyze_cached : null,
 			redirect : undefined,
 			blob_url : undefined,
+			cached : undefined,
 			category : "",
 			mimetype : "",
-			ext : "",
-			ref_count : 0
+			ext : ""
 		};
 
 		// --------------------------------------------------------------------------------
@@ -63715,6 +64239,7 @@
 			var released = false;
 			var event_handler_release;
 			var event_handler_abort;
+			var time_handle = null;
 			var queue_element = loader_queue.createElement();
 			var element;
 
@@ -63723,8 +64248,8 @@
 				released = true;
 
 				if(element){
-					element.removeEventListener("load",success);
-					element.removeEventListener("loadedmetadata",success);
+					element.removeEventListener("load",onload_handle);
+					element.removeEventListener("loadedmetadata",onload_handle);
 					element.removeEventListener("error",failure);
 				}
 				if(event_handler_abort){
@@ -63740,6 +64265,10 @@
 					queue_element.release();
 					queue_element = null;
 				}
+				if(time_handle !== null){
+					clearTimeout(time_handle);
+					time_handle = null;
+				}
 			};
 			function success(){
 				if(released) return;
@@ -63749,11 +64278,35 @@
 			function failure(){
 				if(released) return;
 				release();
-				dispatch_onerror.call(_this);
+				if(element) element.src = "";
+				element = null;
+				callback.call(_this,null);
+			}
+			function onload_handle(){
+				if(released) return;
+
+				if((function(){
+					if(element.tagName != "IMG") return false;
+					if(!element.decode) return false;
+					if(project.getDecodeLoadExpandImage() == "pre-decode") return true;
+					return false;
+				})()){
+					element.decoding = "async";
+					var promise = element.decode();
+					promise.then(success,failure);
+					return;
+				}
+
+				success();
 			}
 
 			init_progress.call(_this);
 			init_response.call(_this);
+
+			if(!param.url){
+				failure();
+				return;
+			}
 
 			event_handler_release = _this._event_dispatcher.createEventHandler("release");
 			event_handler_release.setFunction(function(){
@@ -63772,15 +64325,24 @@
 					element.autoplay = false;
 					element.preload = "metadata";
 				}
-				element.addEventListener("load",success);
-				element.addEventListener("loadedmetadata",success);
+				element.addEventListener("load",onload_handle);
+				element.addEventListener("loadedmetadata",onload_handle);
 				element.addEventListener("error",failure);
 				element.src = param.url;
+
+				if(_this.request.timeout){
+					setTimeout(failure,_this.request.timeout);
+				}
 			};
 
 			queue_element.onabort = function(){
 				_this.abort();
 			};
+
+			var url_parser = URL_Parser(param.url);
+			if(url_parser.protocol.match(/^(blob|data):/)){
+				_this._queue_attch_type = QUEUE_ATTACH_TYPE.FIRST;
+			}
 
 			switch(_this._queue_attch_type){
 			case QUEUE_ATTACH_TYPE.FIRST:
@@ -63794,52 +64356,70 @@
 		function load_element(param){
 			var _this = this;
 
-			function requestElement(url){
-				if(!url){
-					dispatch_onerror.call(_this);
-					return;
-				}
-
-				request_element.call(_this,{tagName:param.tagName,url:url},function(element){
+			function complete(element){
+				if(element){
 					dispatch_onload.call(_this,element);
-				});
+				}else{
+					dispatch_onerror.call(_this);
+				}
 			}
 
 			_this.request.cache = project.getLoadCacheModeForMedia();
 
-			var current_url_parser = URL_Parser(document.URL);
-			if((function(){
-				if(_this.url_parser.protocol.match(/^(blob):/)) return true;
-				if(_this.url_parser.protocol.match(/^(data):/)) return false;
-				if(param.useBlobCache) return false;
-				if(current_url_parser.protocol.match(/^(https):/) && _this.url_parser.protocol.match(/^(http):/)) return false;
-				return true;
+			switch((function(){
+				var current_url_parser = URL_Parser(document.URL);
+				if(_this.url_parser.protocol.match(/^(blob):/)) return "url";
+				if(_this.url_parser.protocol.match(/^(data):/)) return "blob_url";
+				if(current_url_parser.protocol.match(/^(https):/) && _this.url_parser.protocol.match(/^(http):/)) return "blob_url";
+				return param.src_type;
 			})()){
-				// 通常アドレスを使用する
-				requestElement(_this.request.url);
-				return;
+			default:
+			case "url":
+				(function(){
+					_this.url_info.getCached(function(result,analyze_element){
+						if(result){
+							if(!result.ok){
+								complete(null);
+								return;
+							}
+						}
+						request_element.call(_this,{tagName:param.tagName,url:_this.request.url},function(element){
+							complete(element);
+							if(analyze_element){
+								if(element){
+									analyze_element.success(true);
+								}else{
+									analyze_element.failure();
+								}
+							}
+						});
+					});
+				})();
+				break;
+
+			case "blob_url":
+				(function(){
+					var analyze_element = _this.url_info.analyzeBlobURL();
+					_this.url_info.getBlobURL(function(blob_url){
+						request_element.call(_this,{tagName:param.tagName,url:blob_url},complete);
+					});
+
+					if(!analyze_element) return;
+
+					_this.setResponseType("blob");
+
+					load.call(_this,function(){
+						var blob = _this.response.response;
+						if(blob){
+							var blob_url = BlobURLCreate(blob);
+							analyze_element.success(blob_url);
+						}else{
+							analyze_element.failure();
+						}
+					});
+				})();
+				break;
 			}
-
-			// Blob キャッシュを使用する
-			var analyze_element = _this.url_info.analyzeBlobURL();
-			_this.url_info.getBlobURL(function(blob_url){
-				_this._queue_attch_type = QUEUE_ATTACH_TYPE.FIRST;
-				requestElement(blob_url);
-			});
-
-			if(!analyze_element) return;
-
-			_this.setResponseType("blob");
-
-			load.call(_this,function(){
-				var blob = _this.response.response;
-				if(blob){
-					var blob_url = BlobURLCreate(blob);
-					analyze_element.success(blob_url);
-				}else{
-					analyze_element.failure();
-				}
-			});
 
 		}
 
@@ -64124,10 +64704,9 @@
 					return;
 				}
 
-				load_element.call(this,{
-					tagName:"IMG",
-					useBlobCache:true
-				});
+				var options = {tagName:"IMG"};
+				options.src_type = project.getSourceLoadExpandImage();
+				load_element.call(this,options);
 			},
 
 			// --------------------------------------------------------------------------------
@@ -64145,10 +64724,9 @@
 					return;
 				}
 
-				load_element.call(this,{
-					tagName:"AUDIO",
-					useBlobCache:false
-				});
+				var options = {tagName:"AUDIO"};
+				options.src_type = project.getSourceAudioElement();
+				load_element.call(this,options);
 			},
 			// --------------------------------------------------------------------------------
 			// 読み込みを開始（VIDEO要素を生成）
@@ -64165,10 +64743,9 @@
 					return;
 				}
 
-				load_element.call(this,{
-					tagName:"VIDEO",
-					useBlobCache:false
-				});
+				var options = {tagName:"VIDEO"};
+				options.src_type = project.getSourceVideoElement();
+				load_element.call(this,options);
 			},
 
 			// --------------------------------------------------------------------------------
