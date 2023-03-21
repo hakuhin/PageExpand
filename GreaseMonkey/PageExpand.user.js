@@ -12,14 +12,14 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.5.29
+// @version        1.5.30
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @description:ja 画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、2chなどの主要掲示板の拡張表示など...
 // @description:zh 下载所有图片、图片缩放、扩展缩略图以及音频和视频、展开短网址、从文本生成链接、扩展BBS，等等...
-// @include        http://*
-// @include        https://*
-// @include        ftp://*
+// @match          http://*/*
+// @match          https://*/*
+// @match          ftp://*/*
 // @connect        *
 // @icon           https://hakuhin.github.io/PageExpand/GreaseMonkey/icon32.png
 // @icon64         https://hakuhin.github.io/PageExpand/GreaseMonkey/icon64.png
@@ -36,6 +36,7 @@
 // @grant          GM_deleteValue
 // @grant          GM.openInTab
 // @grant          GM_openInTab
+// @grant          GM.registerMenuCommand
 // @grant          GM_registerMenuCommand
 // @grant          GM_unregisterMenuCommand
 // @grant          GM_download
@@ -344,7 +345,7 @@
 	// --------------------------------------------------------------------------------
 	function WindowIsExecutedByPageExpand(window_obj){
 		try{
-			var re = new RegExp("^(data|blob|about):","i");
+			var re = new RegExp("^(blob|about):","i");
 			if(window_obj.location.href){}
 			if(window_obj.document.URL.match(re)){
 				return true;
@@ -740,9 +741,12 @@
 		// --------------------------------------------------------------------------------
 		// ロード完了時に実行
 		function DocumentLoaded(){
+			// デバッグモード
 			if(project.getEnableDebugMode()){
-				// デバッグモード
-				page_expand_debug.setVisible(true);
+				// フレーム内では動作させない
+				if (!WindowIsChild(window)){
+					page_expand_debug.setVisible(true);
+				}
 			}
 
 			// 掲示板拡張初期化
@@ -32389,11 +32393,7 @@
 		_this.setVisible = function (type){
 			_visible = type;
 			if(_visible){
-				// フレーム内では動作させない
-				if (WindowIsChild(window)){
-				}else{
-					createElement();
-				}
+				createElement();
 			}else{
 				_this.release();
 			}
@@ -36336,7 +36336,7 @@
 					projectModify();
 				};
 
-				// イメージのソースタイプ
+				// ソースタイプ
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_element_src_type"));
 				var parent = container.getElement();
 				var combo_box_audio_element_src_type = new UI_ComboBox(parent);
@@ -36595,7 +36595,7 @@
 					projectModify();
 				};
 
-				// イメージのソースタイプ
+				// ソースタイプ
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_element_src_type"));
 				var parent = container.getElement();
 				var combo_box_video_element_src_type = new UI_ComboBox(parent);
@@ -37345,7 +37345,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.29");
+				new UI_Text(parent,"PageExpand ver.1.5.30");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -63350,7 +63350,7 @@
 			if(project.checkAccessBlock(this.request.url)){
 				this.response.errorText = "Access Block";
 				if(project.getEnableOutputLog()){
-					ConsoleLog({type:"AccessBlock",current_url:document.URL,url:this.request.url,call:"Loader"});
+					ConsoleLog({type:"AccessBlock",current_url:WindowGetOwnerURL(window),url:this.request.url,call:"Loader"});
 				}
 				return false;
 			}
@@ -63575,7 +63575,7 @@
 							(function (){
 								var charset = "utf-8";
 								var mime_type = request.overrideMimeType || "";
-								var m = mime_type.match(new RegExp("text/plain; charset=([a-zA-Z-_]+)"));
+								var m = mime_type.match(new RegExp("text/plain; charset=([0-9a-zA-Z-_]+)"));
 								if(m) charset = m[1];
 								var text_decoder = new TextDecoder(charset);
 								var decode_options = {stream:true};
@@ -64087,148 +64087,6 @@
 			}
 		}
 
-		// --------------------------------------------------------------------------------
-		// バックグラウンド通信
-		// --------------------------------------------------------------------------------
-		function request_background_fetch(callback){
-			request_background.call(this,"fetch",callback);
-		}
-		function request_background_xhr(callback){
-			request_background.call(this,"xhr",callback);
-		}
-		function request_background(command,callback){
-			_this = this;
-
-			var request = _this.request;
-			var response = _this.response;
-			var progress = _this.progress;
-
-			var complete_func;
-			var receive_body_init;
-			var receive_body_exec;
-
-			var commands = {
-				"unsupported":function(){
-					callback({state:"unsupported"});
-				},
-				"progress":function(r){
-					progress.bytesLoaded = r.bytesLoaded || 0;
-					progress.bytesTotal = r.bytesTotal || 0;
-					dispatch_onprogress.call(_this);
-				},
-				"head":function(r){
-					response.ok = r.ok;
-					response.readyState = r.readyState;
-					response.status = r.status;
-					response.headers = new ResponseHeadersParser(r.allresponseheaders);
-					response.responseURL = r.responseURL;
-					response.redirected = r.redirected;
-					response.errorText = r.errorText;
-				},
-				"body":function(r){
-					commands["body"] = receive_body_exec;
-					receive_body_init(r);
-					receive_body_exec(r);
-				}
-			};
-
-			function createUint8Array(r){
-				var n = r.data.length;
-				var a = new Uint8Array(n);
-				var i;
-				for(i=0;i<n;i++){
-					a[i] = r.data.charCodeAt(i) & 0xff;
-				}
-				return a;
-			}
-
-			switch(request.responseType){
-			case "blob":
-				(function(){
-					var ary = null;
-					receive_body_init = function (r){
-						ary = new Array();
-					};
-					receive_body_exec = function (r){
-						var a = createUint8Array(r);
-						ary.push(new Blob([a]));
-					};
-					complete_func = function (){
-						if(ary){
-							var options = {
-								type:response.headers.getResponseHeader("Content-Type")
-							};
-							response.response = new Blob(ary,options); 
-						}
-						callback({state:"complete"});
-					};
-				})();
-				break;
-			case "arraybuffer":
-				(function(){
-					var a = null;
-					receive_body_init = function (r){
-						a = new Uint8Array(r.total);
-					};
-					receive_body_exec = function (r){
-						var p = r.pos;
-						var i;
-						var n = r.data.length;
-						for(i=0;i<n;i++){
-							a[p] = r.data.charCodeAt(i) & 0xff;
-							p++;
-						}
-					};
-					complete_func = function (){
-						response.response = a;
-						callback({state:"complete"});
-					};
-				})();
-				break;
-			case "arraybufferlist":
-				(function(){
-					var ary = null;
-					receive_body_init = function (r){
-						ary = new Array();
-					};
-					receive_body_exec = function (r){
-						var a = createUint8Array(r);
-						ary.push(a);
-					};
-					complete_func = function (){
-						response.response = ary;
-						callback({state:"complete"});
-					};
-				})();
-				break;
-			case "dataurischeme":
-			case "binarystring":
-			default:
-				(function(){
-					var ary = null;
-					receive_body_init = function (r){
-						ary = new Array();
-					};
-					receive_body_exec = function (r){
-						ary.push(r.data);
-					};
-					complete_func = function (){
-						response.responseText = (ary || []).join("");
-						callback({state:"complete"});
-					};
-				})();
-				break;
-			}
-			commands["complete"] = complete_func;
-
-			var send_Request = ObjectCopy(_this.request);
-			send_Request.currentURL = document.URL;
-
-			extension_message.sendRequest({command:command,request:send_Request,single:false}, function(receive) {
-				var f = commands[receive.state];
-				if(f) f(receive.data);
-			});
-		}
 
 		// --------------------------------------------------------------------------------
 		// media
@@ -64367,7 +64225,7 @@
 			_this.request.cache = project.getLoadCacheModeForMedia();
 
 			switch((function(){
-				var current_url_parser = URL_Parser(document.URL);
+				var current_url_parser = URL_Parser(WindowGetOwnerURL(window));
 				if(_this.url_parser.protocol.match(/^(blob):/)) return "url";
 				if(_this.url_parser.protocol.match(/^(data):/)) return "blob_url";
 				if(current_url_parser.protocol.match(/^(https):/) && _this.url_parser.protocol.match(/^(http):/)) return "blob_url";
@@ -64512,7 +64370,7 @@
 				}
 			};
 
-			var current_url_parser = URL_Parser(document.URL);
+			var current_url_parser = URL_Parser(WindowGetOwnerURL(window));
 			if((function(){
 				if(_this.url_parser.protocol.match(/blob|data/)) return false;
 				if(this._xhr_type == XHR_TYPE.ONLY_BACKGROUND) return true;
@@ -75113,21 +74971,12 @@
 			var i;
 			var num = _item_list.length;
 			for(i=num-1;i>=0;i--){
+				var item = _item_list[i];
+				delete _item_list[i];
 				try{
-					var item = _item_list[i];
-					delete _item_list[i];
-					// Violentmonkey 用
-					GM_unregisterMenuCommand(item.caption);
-					// Tampermonkey 用
-					GM_unregisterMenuCommand(item.id);
+					//GM_unregisterMenuCommand(item.id);
 				}catch(e){
 				}
-			}
-
-			if(document.removeEventListener){
-				document.removeEventListener("keydown" , keyDown);
-			}else if(document.detachEvent){
-				document.detachEvent("onkeydown" , keyDown);
 			}
 		};
 
@@ -75146,33 +74995,17 @@
 			};
 			_item_list.push(item);
 			try{
-				item.id = GM_registerMenuCommand(caption, commandFunc, accessKey);
+				item.id = GM.registerMenuCommand(caption, commandFunc, accessKey);
+				return;
 			}catch(e){
 			}
-		};
-
-		// --------------------------------------------------------------------------------
-		// ショートカット
-		// --------------------------------------------------------------------------------
-		function keyDown(e){
-			if(!(e.shiftKey)) return;
-			if(!(e.ctrlKey)) return;
-			if(!(e.altKey)) return;
-			
-			var i;
-			var num = _item_list.length;
-			for(i=0;i<num;i++){
-				var item = _item_list[i];
-				if(item.key_code == e.keyCode){
-					setTimeout(function(){
-						if(confirm("execute the command?\n[" + item.caption + "]")){
-								item.callback();
-						}
-					},1);
-					break;
-				}
+			try{
+				item.id = GM_registerMenuCommand(caption, commandFunc, accessKey);
+				return;
+			}catch(e){
 			}
-		}
+			
+		};
 
 		// --------------------------------------------------------------------------------
 		// プライベート変数
@@ -75184,15 +75017,13 @@
 		// --------------------------------------------------------------------------------
 		(function(){
 			_item_list = new Array();
-
-			if(document.addEventListener){
-				document.addEventListener("keydown" , keyDown);
-			}else if(document.attachEvent){
-				document.attachEvent("onkeydown" , keyDown);
-			}
 		})();
 	}
 	GMW_MenuCommand.isSupported = function(){
+		try{
+			if(GM.registerMenuCommand)	return true;
+		}catch(e){
+		}
 		try{
 			if(GM_registerMenuCommand)	return true;
 		}catch(e){
@@ -77605,7 +77436,7 @@
 	// ウィンドウが子であるか取得
 	// --------------------------------------------------------------------------------
 	function WindowIsChild(window_obj){
-		return (window_obj != window_obj.parent);
+		return (window_obj.top != window_obj.self);
 	}
 
 	// --------------------------------------------------------------------------------
@@ -80747,6 +80578,24 @@
 					download_list_user.createArchive();
 				},"u");
 
+				if(!(project.getEnableStartup())){
+					menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_start"), function(){
+						PageExpandStart();
+					},"s");
+				}
+
+				menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_abort"), function(){
+					PageExpandRelease();
+				},"a");
+
+				menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_execute_fastest"), function(){
+					PageExpandExecuteFastest();
+				},"q");
+
+				menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_debug"), function(){
+					page_expand_debug.setVisible(true);
+				},"d");
+
 				(function(){
 
 					// BbsBoard の自動実行を許すアドレス
@@ -80826,31 +80675,6 @@
 
 				// PageExpand コンストラクタ
 				PageExpandConstructor();
-
-				// --------------------------------------------------------------------------------
-				// メニューコマンドの追加（全フレーム）
-				// --------------------------------------------------------------------------------
-				(function(){
-					if(!menu_command) return;
-
-					if(!(project.getEnableStartup())){
-						menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_start"), function(){
-							PageExpandStart();
-						},"s");
-					}
-
-					menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_abort"), function(){
-						PageExpandRelease();
-					},"a");
-
-					menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_execute_fastest"), function(){
-						PageExpandExecuteFastest();
-					},"q");
-
-					menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_debug"), function(){
-						page_expand_debug.setVisible(true);
-					},"d");
-			 	})();
 
 				if((page_expand_arguments.page_expand_parent) || project.getEnableStartup()){
 					// 実行開始

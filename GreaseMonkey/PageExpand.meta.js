@@ -12,14 +12,14 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.5.29
+// @version        1.5.30
 // @namespace      http://hakuhin.jp/page_expand
 // @description    All Image Download. Image Zoom. Expand Thumbnail and Audio and Video. Expand the short URL. Generate a link from text. Extend BBS. etc...
 // @description:ja 画像の一括ダウンロード、画像のポップアップ、サムネイルやビデオの展開、短縮URLの展開、URL文字列のリンク化、2chなどの主要掲示板の拡張表示など...
 // @description:zh 下载所有图片、图片缩放、扩展缩略图以及音频和视频、展开短网址、从文本生成链接、扩展BBS，等等...
-// @include        http://*
-// @include        https://*
-// @include        ftp://*
+// @match          http://*/*
+// @match          https://*/*
+// @match          ftp://*/*
 // @connect        *
 // @icon           https://hakuhin.github.io/PageExpand/GreaseMonkey/icon32.png
 // @icon64         https://hakuhin.github.io/PageExpand/GreaseMonkey/icon64.png
@@ -36,6 +36,7 @@
 // @grant          GM_deleteValue
 // @grant          GM.openInTab
 // @grant          GM_openInTab
+// @grant          GM.registerMenuCommand
 // @grant          GM_registerMenuCommand
 // @grant          GM_unregisterMenuCommand
 // @grant          GM_download

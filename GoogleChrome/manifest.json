@@ -1,7 +1,7 @@
 {
   "default_locale": "en",
   "name": "__MSG_extension_name__",
-  "version": "1.5.29",
+  "version": "1.5.30",
   "manifest_version": 2,
   "description": "__MSG_extension_description__",
   "author": "hakuhin",
@@ -21,7 +21,8 @@
   "content_scripts": [{
     "all_frames": true,
     "js": [ "PageExpand.js" , "content_scripts.js" ],
-    "matches": [ "http://*/*" , "https://*/*" , "ftp://*/*" ],
+    "matches": [ "http://*/*" , "https://*/*" ],
+    "match_about_blank": true,
     "run_at": "document_start"
   }],
   "browser_action": {
@@ -57,7 +58,8 @@
     "open_in_tab": true
   },
   "permissions": [
-    "tabs" , "webRequest" ,"webRequestBlocking" , "contextMenus" , "storage" , "clipboardWrite" , "downloads" , "downloads.shelf" , "http://*/" , "https://*/" , "ftp://*/"
+    "tabs" , "webRequest" , "webRequestBlocking" , "contextMenus" , "storage" , "clipboardWrite" , "downloads" , "downloads.shelf",
+    "http://*/" , "https://*/"
   ],
   "applications": {
     "gecko": {

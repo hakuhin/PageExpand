@@ -308,7 +308,7 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function WindowIsExecutedByPageExpand(window_obj){
 		try{
-			var re = new RegExp("^(data|blob|about):","i");
+			var re = new RegExp("^(blob|about):","i");
 			if(window_obj.location.href){}
 			if(window_obj.document.URL.match(re)){
 				return true;
@@ -695,9 +695,12 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// ロード完了時に実行
 		function DocumentLoaded(){
+			// デバッグモード
 			if(project.getEnableDebugMode()){
-				// デバッグモード
-				page_expand_debug.setVisible(true);
+				// フレーム内では動作させない
+				if (!WindowIsChild(window)){
+					page_expand_debug.setVisible(true);
+				}
 			}
 
 			// 掲示板拡張初期化
@@ -32350,11 +32353,7 @@ function PageExpand(page_expand_arguments){
 		_this.setVisible = function (type){
 			_visible = type;
 			if(_visible){
-				// フレーム内では動作させない
-				if (WindowIsChild(window)){
-				}else{
-					createElement();
-				}
+				createElement();
 			}else{
 				_this.release();
 			}
@@ -32669,32 +32668,34 @@ function PageExpand(page_expand_arguments){
 			var command_dictionary = new Object();
 
 			// PageExpandProject 取得
-			command_dictionary["getPageExpandProject"] = function(param,options,sendResponse){
+			command_dictionary["getPageExpandProject"] = function(port,data){
 				// JSON 文字列を返す
-				sendResponse(page_expand_project.exportJSON(),{complete:true});
+				port.postMessage(page_expand_project.exportJSON());
+				port.close();
 			};
 
 			// Project 取得
-			command_dictionary["getProject"] = function(param,options,sendResponse){
+			command_dictionary["getProject"] = function(port,data){
 				// JSON 文字列を返す
-				sendResponse(JsonStringify(page_expand_project.getProject(param.url)),{complete:true});
+				port.postMessage(JsonStringify(page_expand_project.getProject(data.url)));
+				port.close();
 			};
 
 			// プロジェクト設定をリロード
-			command_dictionary["reloadPageExpandProject"] = function(param,options,sendResponse){
+			command_dictionary["reloadPageExpandProject"] = function(port,data){
 				loadPageExpandProject(function(e){});
+				port.close();
 			};
 
 			// fetch
-			command_dictionary["fetch"] = function (param,options,sendResponse){
+			command_dictionary["fetch"] = function (port,data){
 				try{
 					var released = false;
-					var event_handler_disconnect;
 					var xhr_queue_element;
 					var timeout_handle = null;
 					var fetch_abort = null;
 
-					var request = param.request;
+					var request = data.request;
 					var response = {
 						ok:false,
 						readyState:0,
@@ -32733,21 +32734,18 @@ function PageExpand(page_expand_arguments){
 							xhr_queue_element.release();
 							xhr_queue_element = null;
 						}
-						if(event_handler_disconnect){
-							event_handler_disconnect.release();
-							event_handler_disconnect = null;
-						}
+						port.ondisconnect = null;
 					};
 
-					event_handler_disconnect = options.event_dispatcher.createEventHandler("disconnect");
-					event_handler_disconnect.setFunction(function(){
+					port.ondisconnect = function(){
 						release();
-					});
+					};
 
 					var complete = function(){
 						release();
-						sendResponse({state:"head",data:response},{complete:false});
-						sendResponse({state:"complete"},{complete:true});
+						port.postMessage({state:"head",data:response});
+						port.postMessage({state:"complete"});
+						port.close();
 					};
 
 					var success = function(){
@@ -32809,7 +32807,7 @@ function PageExpand(page_expand_arguments){
 							response.allresponseheaders = headers.join("\r\n");
 							response.responseURL = r.url;
 							response.redirected = r.redirected;
-							sendResponse({state:"head",data:response},{complete:false});
+							port.postMessage({state:"head",data:response});
 
 							if(!r.body){
 								success();
@@ -32841,16 +32839,14 @@ function PageExpand(page_expand_arguments){
 													return;
 												}
 
-												sendResponse(
-													{
-														state:"body",
-														data:{
-															pos:pos,
-															total:total,
-															data:file_reader.result
-														}
-													},{complete:false}
-												);
+												port.postMessage({
+													state:"body",
+													data:{
+														pos:pos,
+														total:total,
+														data:file_reader.result
+													}
+												});
 
 												pos += read_size;
 												if(pos < total){
@@ -32888,16 +32884,14 @@ function PageExpand(page_expand_arguments){
 											var f = function (){
 												if(released) return;
 
-												sendResponse(
-													{
-														state:"body",
-														data:{
-															pos:pos,
-															total:total,
-															data:file_reader.result.slice(pos,pos+read_size)
-														}
-													},{complete:false}
-												);
+												port.postMessage({
+													state:"body",
+													data:{
+														pos:pos,
+														total:total,
+														data:file_reader.result.slice(pos,pos+read_size)
+													}
+												});
 
 												pos += read_size;
 												if(pos < total){
@@ -32926,15 +32920,13 @@ function PageExpand(page_expand_arguments){
 									var decode_options = {stream:true};
 									var pos = 0;
 									reader_reading = function(ary_u8){
-										sendResponse(
-											{
-												state:"body",
-												data:{
-													pos:pos,
-													data:text_decoder.decode(ary_u8,decode_options)
-												}
-											},{complete:false}
-										);
+										port.postMessage({
+											state:"body",
+											data:{
+												pos:pos,
+												data:text_decoder.decode(ary_u8,decode_options)
+											}
+										});
 										pos += ary_u8.byteLength;
 									};
 									reader_success = function(){
@@ -32946,21 +32938,19 @@ function PageExpand(page_expand_arguments){
 								(function (){
 									var charset = "utf-8";
 									var mime_type = request.overrideMimeType || "";
-									var m = mime_type.match(new RegExp("text/plain; charset=([a-zA-Z-_]+)"));
+									var m = mime_type.match(new RegExp("text/plain; charset=([0-9a-zA-Z-_]+)"));
 									if(m) charset = m[1];
 									var text_decoder = new TextDecoder(charset);
 									var decode_options = {stream:true};
 									var pos = 0;
 									reader_reading = function(ary_u8){
-										sendResponse(
-											{
-												state:"body",
-												data:{
-													pos:pos,
-													data:text_decoder.decode(ary_u8,decode_options)
-												}
-											},{complete:false}
-										);
+										port.postMessage({
+											state:"body",
+											data:{
+												pos:pos,
+												data:text_decoder.decode(ary_u8,decode_options)
+											}
+										});
 										pos += ary_u8.byteLength;
 									};
 									reader_success = function(){
@@ -32986,14 +32976,10 @@ function PageExpand(page_expand_arguments){
 									progress.bytesLoaded = loaded || 0;
 									progress.bytesTotal = total || 0;
 
-									sendResponse(
-										{
-											state:"progress",
-											data:progress
-										},
-										{complete:false}
-									);
-
+									port.postMessage({
+										state:"progress",
+										data:progress
+									});
 
 									reader_reading(result.value);
 									pull();
@@ -33008,23 +32994,20 @@ function PageExpand(page_expand_arguments){
 				}catch(e){
 					response.errorText = e.message;
 					release();
-					sendResponse(
-						{state:"unsupported"},
-						{complete:true}
-					);
+					port.postMessage({state:"unsupported"});
+					port.close();
 				}
 
 			};
 
 			// XMLHttpRequest
-			command_dictionary["xhr"] = function (param,options,sendResponse){
+			command_dictionary["xhr"] = function (port,data){
 				try{
 					var released = false;
-					var event_handler_disconnect;
 					var xhr_queue_element;
 					var xhr;
 
-					var request = param.request;
+					var request = data.request;
 					var response = {
 						ok:false,
 						readyState:0,
@@ -33063,23 +33046,20 @@ function PageExpand(page_expand_arguments){
 							xhr_queue_element.release();
 							xhr_queue_element = null;
 						}
-						if(event_handler_disconnect){
-							event_handler_disconnect.release();
-							event_handler_disconnect = null;
-						}
+						port.ondisconnect = null;
 
 						xhr = null;
 					};
 
-					event_handler_disconnect = options.event_dispatcher.createEventHandler("disconnect");
-					event_handler_disconnect.setFunction(function(){
+					port.ondisconnect = function(){
 						release();
-					});
+					};
 
 					var complete = function(){
 						release();
-						sendResponse({state:"head",data:response},{complete:false});
-						sendResponse({state:"complete"},{complete:true});
+						port.postMessage({state:"head",data:response});
+						port.postMessage({state:"complete"});
+						port.close();
 					};
 
 					var success = function(){
@@ -33107,7 +33087,7 @@ function PageExpand(page_expand_arguments){
 						response.allresponseheaders = xhr.getAllResponseHeaders() || "";
 						response.responseURL = xhr.responseURL;
 						response.redirected = Boolean((xhr.responseURL) && (request.url != xhr.responseURL));
-						sendResponse({state:"head",data:response},{complete:false});
+						port.postMessage({state:"head",data:response});
 
 						switch(request.responseType){
 						case "blob":
@@ -33134,16 +33114,14 @@ function PageExpand(page_expand_arguments){
 											return;
 										}
 
-										sendResponse(
-											{
-												state:"body",
-												data:{
-													pos:pos,
-													total:total,
-													data:file_reader.result
-												}
-											},{complete:false}
-										);
+										port.postMessage({
+											state:"body",
+											data:{
+												pos:pos,
+												total:total,
+												data:file_reader.result
+											}
+										});
 
 										pos += read_size;
 										if(pos < total){
@@ -33183,16 +33161,14 @@ function PageExpand(page_expand_arguments){
 									var f = function (){
 										if(released) return;
 
-										sendResponse(
-											{
-												state:"body",
-												data:{
-													pos:pos,
-													total:total,
-													data:file_reader.result.slice(pos,pos+read_size)
-												}
-											},{complete:false}
-										);
+										port.postMessage({
+											state:"body",
+											data:{
+												pos:pos,
+												total:total,
+												data:file_reader.result.slice(pos,pos+read_size)
+											}
+										});
 
 										pos += read_size;
 										if(pos < total){
@@ -33216,16 +33192,14 @@ function PageExpand(page_expand_arguments){
 								var f = function (){
 									if(released) return;
 
-									sendResponse(
-										{
-											state:"body",
-											data:{
-												pos:pos,
-												total:total,
-												data:xhr.responseText.slice(pos,pos+read_size)
-											}
-										},{complete:false}
-									);
+									port.postMessage({
+										state:"body",
+										data:{
+											pos:pos,
+											total:total,
+											data:xhr.responseText.slice(pos,pos+read_size)
+										}
+									});
 
 									pos += read_size;
 									if(pos < total){
@@ -33244,13 +33218,10 @@ function PageExpand(page_expand_arguments){
 					xhr.onprogress = function(e){
 						progress.bytesLoaded = e.loaded || 0;
 						progress.bytesTotal = e.total || 0;
-						sendResponse(
-							{
-								state:"progress",
-								data:progress
-							},
-							{complete:false}
-						);
+						port.postMessage({
+							state:"progress",
+							data:progress
+						});
 					};
 
 					xhr.open(request.method,request.url,true);
@@ -33283,27 +33254,23 @@ function PageExpand(page_expand_arguments){
 				}catch(e){
 					response.errorText = e.message;
 					release();
-					sendResponse(
-						{state:"unsupported"},
-						{complete:true}
-					);
+					port.postMessage({state:"unsupported"});
+					port.close();
 				}
 
 			};
 
 			// ダウンロード
-			command_dictionary["download"] = function(param,options,sendResponse){
-				sendResponse(
-					{
-						state:"unsupported",
-						response:{}
-					},
-					{complete:true}
-				);
+			command_dictionary["download"] = function(port,data){
+				port.postMessage({
+					state:"unsupported",
+					response:{}
+				});
+				port.close();
 			};
 
 			// ポップアップアクションを追加
-			command_dictionary["attachPopupAction"] = function(param,options,sendResponse){
+			command_dictionary["attachPopupAction"] = function(port,data){
 				try{
 					var action = chrome.action || chrome.browserAction;
 					action.setIcon({
@@ -33317,22 +33284,24 @@ function PageExpand(page_expand_arguments){
 							"64": "icon64.png",
 							"128": "icon128.png"
 						},
-						tabId:options.sender.tab.id
+						tabId:port.getSender().tab.id
 					});
 				}catch(e){
 				}
+				port.close();
 			};
 
 			// バッジテキストを更新
-			command_dictionary["setBadgeText"] = function(param,options,sendResponse){
+			command_dictionary["setBadgeText"] = function(port,data){
 				try{
 					var action = chrome.action || chrome.browserAction;
 					action.setBadgeText({
-						text:param.text,
-						tabId:options.sender.tab.id
+						text:data.text,
+						tabId:port.getSender().tab.id
 					});
 				}catch(e){
 				}
+				port.close();
 			};
 
 			// --------------------------------------------------------------------------------
@@ -33409,16 +33378,17 @@ function PageExpand(page_expand_arguments){
 				// --------------------------------------------------------------------------------
 				// コンテンツスクリプトとの通信
 				// --------------------------------------------------------------------------------
-				extension_message.addListener(function(request, options, sendResponse) {
-					var param = request;
-
-					var callback = command_dictionary[param.command];
-					if(callback){
-						callback(param,options,sendResponse);
-					}else{
-						sendResponse("",{complete:true});
-					}
-				});
+				extension_message.onconnect = function(port){
+					port.onmessage = function(data){
+						var f = command_dictionary[data.command];
+						if(!f){
+							port.terminate();
+							return;
+						}
+						f(port,data);
+					};
+					port.start();
+				};
 				extension_message.start();
 
 				// --------------------------------------------------------------------------------
@@ -33545,40 +33515,51 @@ function PageExpand(page_expand_arguments){
 				(function(){
 					if(!(chrome.contextMenus)) return;
 
-					var menu_dictionary = Object();
+					var menu_commands = Object();
 
-					menu_dictionary["openBbsBoard"] = function(info, tab) {
+					menu_commands["openBbsBoard"] = function(info, tab) {
 						var query = new Object();
 						query.referer = encodeURIComponent(tab.url);
 						GoogleChromeExtensionOpenBbsBoard(query);
 					};
 
-					menu_dictionary["configCurrentPage"] = function(info, tab) {
+					menu_commands["configCurrentPage"] = function(info, tab) {
 						var query = new Object();
 						query.type = "urlmap";
 						query.url = encodeURIComponent(tab.url);
 						GoogleChromeExtensionOpenPageExpandConfig(query);
 					};
 
-					menu_dictionary["configCurrentBbs"] = function(info, tab) {
+					menu_commands["configCurrentBbs"] = function(info, tab) {
 						var query = new Object();
 						query.type = "expand_bbs";
 						query.url = encodeURIComponent(tab.url);
 						GoogleChromeExtensionOpenPageExpandConfig(query);
 					};
 
-					menu_dictionary["startPageExpand"] =
-					menu_dictionary["abortPageExpand"] =
-					menu_dictionary["executeFastest"] =
-					menu_dictionary["executeDebug"] =
-					menu_dictionary["batchDownloadImage"] =
-					menu_dictionary["batchDownloadUser"] = function(info, tab) {
-						extension_message.sendRequestToContent(tab, {command: info.menuItemId});
+					menu_commands["startPageExpand"] =
+					menu_commands["abortPageExpand"] =
+					menu_commands["executeFastest"] = function(info, tab) {
+						var port = extension_message.connectToContent(tab);
+						port.start(function (){
+							port.postMessage({command:info.menuItemId});
+							port.terminate();
+						});
+					};
+
+					menu_commands["executeDebug"] =
+					menu_commands["batchDownloadImage"] =
+					menu_commands["batchDownloadUser"] = function(info, tab) {
+						var port = extension_message.connectToContent(tab,info);
+						port.start(function (){
+							port.postMessage({command:info.menuItemId});
+							port.terminate();
+						});
 					};
 
 					chrome.contextMenus.onClicked.removeListener(context_menu_handler);
 					context_menu_handler = function(info, tab){
-						var f = menu_dictionary[info.menuItemId];
+						var f = menu_commands[info.menuItemId];
 						if(f) f(info, tab);
 					};
 					chrome.contextMenus.onClicked.addListener(context_menu_handler);
@@ -33686,8 +33667,8 @@ function PageExpand(page_expand_arguments){
 					// --------------------------------------------------------------------------------
 					// ダウンロード
 					// --------------------------------------------------------------------------------
-					command_dictionary["download"] = function(param,options,sendResponse){
-						var request = param;
+					command_dictionary["download"] = function(port,data){
+						var request = data;
 						request.silent = Boolean(request.silent);
 						if(request.save_as) request.silent = false;
 
@@ -33717,44 +33698,37 @@ function PageExpand(page_expand_arguments){
 							}
 							function success(){
 								complete();
-								sendResponse(
-									{
-										state:"complete",
-										response:{
-											result:true,
-											completed:true,
-											error:""
-										}
-									},
-									{complete:true}
-								);
+								port.postMessage({
+									state:"complete",
+									response:{
+										result:true,
+										completed:true,
+										error:""
+									}
+								});
+								port.close();
 							}
 							function failure(reason){
 								complete();
-								sendResponse(
-									{
-										state:"complete",
-										response:{
-											result:false,
-											completed:true,
-											error:reason
-										}
-									},
-									{complete:true}
-								);
+								port.postMessage({
+									state:"complete",
+									response:{
+										result:false,
+										completed:true,
+										error:reason
+									}
+								});
+								port.close();
 							}
 							function progress(downloadDelta){
 								downloadDelta = downloadDelta || {};
 								item.contentType = downloadDelta.mime || "";
 								item.bytesLoaded = downloadDelta.bytesReceived || 0;
 								item.bytesTotal  = downloadDelta.totalBytes || 0;
-								sendResponse(
-									{
-										state:"progress",
-										response:item
-									},
-									{complete:false}
-								);
+								port.postMessage({
+									state:"progress",
+									response:item
+								});
 							}
 
 							var data_parser = DataURL_Parser(request.url);
@@ -37990,7 +37964,7 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				// イメージのソースタイプ
+				// ソースタイプ
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_sound_inline_element_src_type"));
 				var parent = container.getElement();
 				var combo_box_audio_element_src_type = new UI_ComboBox(parent);
@@ -38249,7 +38223,7 @@ function PageExpand(page_expand_arguments){
 					projectModify();
 				};
 
-				// イメージのソースタイプ
+				// ソースタイプ
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_element_src_type"));
 				var parent = container.getElement();
 				var combo_box_video_element_src_type = new UI_ComboBox(parent);
@@ -38999,7 +38973,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.5.29");
+				new UI_Text(parent,"PageExpand ver.1.5.30");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -45088,7 +45062,10 @@ function PageExpand(page_expand_arguments){
 				func(e);
 
 				// バックグラウンドへプロジェクト更新を通知
-				extension_message.sendRequest({command:"reloadPageExpandProject"});
+				var port = extension_message.connectToBackground();
+				port.start(function(){
+					port.postMessage({command:"reloadPageExpandProject"});
+				});
 			});
 		}
 
@@ -45443,9 +45420,28 @@ function PageExpand(page_expand_arguments){
 					GoogleChromeExtensionOpenPageExpandConfig(query);
 				});
 				break;
-			default:
+
+			case "startPageExpand":
+			case "abortPageExpand":
+			case "executeFastest":
 				chrome.tabs.query({active:true,currentWindow:true},function(tabs) {
-					extension_message.sendRequestToContent(tabs[0], {command: command});
+					var port = extension_message.connectToContent(tabs[0]);
+					port.start(function (){
+						port.postMessage({command:command});
+						port.terminate();
+					});
+				});
+				break;
+
+			case "executeDebug":
+			case "batchDownloadImage":
+			case "batchDownloadUser":
+				chrome.tabs.query({active:true,currentWindow:true},function(tabs) {
+					var port = extension_message.connectToContent(tabs[0]);
+					port.start(function (){
+						port.postMessage({command:command,onlyTopWindow:true});
+						port.terminate();
+					});
 				});
 				break;
 			}
@@ -50815,11 +50811,6 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// インラインフレーム内コンテンツ
 		// --------------------------------------------------------------------------------
-		// 解析済みチェック
-		if(!AnalyzeWorkGetAnalyzedExpandIframeContent(work)){
-			AnalyzeWorkSetAnalyzedExpandIframeContent(work);
-			execute_queue.attachForExpandElement(ElementAnalyzePhaseExpandIframeContent,param);
-		}
 
 		// --------------------------------------------------------------------------------
 		// 掲示板解析
@@ -64960,7 +64951,7 @@ function PageExpand(page_expand_arguments){
 			if(project.checkAccessBlock(this.request.url)){
 				this.response.errorText = "Access Block";
 				if(project.getEnableOutputLog()){
-					ConsoleLog({type:"AccessBlock",current_url:document.URL,url:this.request.url,call:"Loader"});
+					ConsoleLog({type:"AccessBlock",current_url:WindowGetOwnerURL(window),url:this.request.url,call:"Loader"});
 				}
 				return false;
 			}
@@ -65185,7 +65176,7 @@ function PageExpand(page_expand_arguments){
 							(function (){
 								var charset = "utf-8";
 								var mime_type = request.overrideMimeType || "";
-								var m = mime_type.match(new RegExp("text/plain; charset=([a-zA-Z-_]+)"));
+								var m = mime_type.match(new RegExp("text/plain; charset=([0-9a-zA-Z-_]+)"));
 								if(m) charset = m[1];
 								var text_decoder = new TextDecoder(charset);
 								var decode_options = {stream:true};
@@ -65460,7 +65451,7 @@ function PageExpand(page_expand_arguments){
 			request_background.call(this,"xhr",callback);
 		}
 		function request_background(command,callback){
-			_this = this;
+			var _this = this;
 
 			var request = _this.request;
 			var response = _this.response;
@@ -65470,9 +65461,36 @@ function PageExpand(page_expand_arguments){
 			var receive_body_init;
 			var receive_body_exec;
 
+			var event_handler_abort;
+			var port;
+
+			var replied = false;
+			function reply(a){
+				if(replied) return;
+				replied = true;
+				release();
+				callback(a);
+			}
+
+			function release(){
+				if(event_handler_abort){
+					event_handler_abort.release();
+					event_handler_abort = null;
+				}
+				if(port){
+					port.terminate();
+					port = null;
+				}
+			}
+
+			event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
+			event_handler_abort.setFunction(function(){
+				reply({state:"complete"});
+			});
+
 			var commands = {
 				"unsupported":function(){
-					callback({state:"unsupported"});
+					reply({state:"unsupported"});
 				},
 				"progress":function(r){
 					progress.bytesLoaded = r.bytesLoaded || 0;
@@ -65523,7 +65541,7 @@ function PageExpand(page_expand_arguments){
 							};
 							response.response = new Blob(ary,options); 
 						}
-						callback({state:"complete"});
+						reply({state:"complete"});
 					};
 				})();
 				break;
@@ -65544,7 +65562,7 @@ function PageExpand(page_expand_arguments){
 					};
 					complete_func = function (){
 						response.response = a;
-						callback({state:"complete"});
+						reply({state:"complete"});
 					};
 				})();
 				break;
@@ -65560,7 +65578,7 @@ function PageExpand(page_expand_arguments){
 					};
 					complete_func = function (){
 						response.response = ary;
-						callback({state:"complete"});
+						reply({state:"complete"});
 					};
 				})();
 				break;
@@ -65577,19 +65595,25 @@ function PageExpand(page_expand_arguments){
 					};
 					complete_func = function (){
 						response.responseText = (ary || []).join("");
-						callback({state:"complete"});
+						reply({state:"complete"});
 					};
 				})();
 				break;
 			}
 			commands["complete"] = complete_func;
 
-			var send_Request = ObjectCopy(_this.request);
-			send_Request.currentURL = document.URL;
-
-			extension_message.sendRequest({command:command,request:send_Request,single:false}, function(receive) {
+			port = extension_message.connectToBackground();
+			port.onmessage = function (receive){
 				var f = commands[receive.state];
 				if(f) f(receive.data);
+			};
+			port.ondisconnect = function (){
+				reply({state:"complete"});
+			};
+			port.start(function(){
+				var r = ObjectCopy(request);
+				r.currentURL = WindowGetOwnerURL(window);
+				port.postMessage({command:command,request:r});
 			});
 		}
 
@@ -65730,7 +65754,7 @@ function PageExpand(page_expand_arguments){
 			_this.request.cache = project.getLoadCacheModeForMedia();
 
 			switch((function(){
-				var current_url_parser = URL_Parser(document.URL);
+				var current_url_parser = URL_Parser(WindowGetOwnerURL(window));
 				if(_this.url_parser.protocol.match(/^(blob):/)) return "url";
 				if(_this.url_parser.protocol.match(/^(data):/)) return "blob_url";
 				if(current_url_parser.protocol.match(/^(https):/) && _this.url_parser.protocol.match(/^(http):/)) return "blob_url";
@@ -65875,7 +65899,7 @@ function PageExpand(page_expand_arguments){
 				}
 			};
 
-			var current_url_parser = URL_Parser(document.URL);
+			var current_url_parser = URL_Parser(WindowGetOwnerURL(window));
 			if((function(){
 				if(_this.url_parser.protocol.match(/blob|data/)) return false;
 				if(this._xhr_type == XHR_TYPE.ONLY_BACKGROUND) return true;
@@ -66414,8 +66438,12 @@ function PageExpand(page_expand_arguments){
 					save_as:_this._save_as,
 					silent:_this._silent
 				};
-				extension_message.sendRequest(request , function(response) {
-					callback(response);
+				var port = extension_message.connectToBackground();
+				port.onmessage = function(data){
+					callback(data);
+				};
+				port.start(function(){
+					port.postMessage(request);
 				});
 			});
 
@@ -69788,6 +69816,143 @@ function PageExpand(page_expand_arguments){
 
 
 	// --------------------------------------------------------------------------------
+	// ポート
+	// --------------------------------------------------------------------------------
+	var Port = (function(){
+
+		function dispatch_onstart(){
+			var _this = this;
+
+			if(!this._readied_send) return;
+			if(!this._readied_recv) return;
+
+			this._port.onMessage.removeListener(this._message_handler);
+			this._message_handler = function(p){
+				switch(p.state){
+				case 2:
+					_this.terminate();
+					break;
+				default:
+					dispatch_onmessage.call(_this,p);
+					break;
+				}
+			};
+			this._port.onMessage.addListener(this._message_handler);
+
+			var i;
+			var num = this._recv_queue.length;
+			for(i=0;i<num;i++){
+				this._message_handler(this._recv_queue[i]);
+			}
+
+			if(this._onstart){
+				this._onstart();
+				this._onstart = null;
+			}
+		}
+		function dispatch_onmessage(p){
+			if(this.onmessage) this.onmessage(p.data);
+		}
+		function dispatch_ondisconnect(){
+			if(this.ondisconnect) this.ondisconnect();
+			this.ondisconnect = null;
+		}
+		function remove_onmessage(){
+			if(this._message_handler){
+				this._port.onMessage.removeListener(this._message_handler);
+				this._message_handler = null;
+			}
+		}
+		function remove_ondisconnect(){
+			if(this._disconnect_handler){
+				this._port.onDisconnect.removeListener(this._disconnect_handler);
+				this._disconnect_handler = null;
+			}
+		}
+
+		var Port = function(port){
+			var _this = this;
+			this._port = port;
+			if(!port) return;
+
+			this._recv_queue = new Array();
+			this._message_handler = function (p){
+				switch(p.state){
+				case 1:
+					_this._readied_recv = true;
+					dispatch_onstart.call(_this);
+					break;
+				default:
+					_this._recv_queue.push(p);
+					break;
+				}
+			};
+			this._port.onMessage.addListener(this._message_handler);
+
+			this._disconnect_handler = function(){
+				dispatch_ondisconnect.call(_this);
+				_this.terminate();
+			};
+			this._port.onDisconnect.addListener(this._disconnect_handler);
+		};
+		Port.prototype = {
+			release : function(){
+				this.terminate();
+			},
+			start : function(callback){
+				if(!this._port){
+					dispatch_ondisconnect.call(this);
+					return;
+				}
+
+				this._readied_send = true;
+				this._onstart = callback;
+				try{
+					this._port.postMessage({state:1});
+				}catch(e){
+					this.release();
+					return;
+				}				
+				dispatch_onstart.call(this);
+			},
+			close : function(){
+				if(!this._port) return;
+				remove_onmessage.call(this);
+				remove_ondisconnect.call(this);
+				try{
+					this._port.postMessage({state:2});
+				}catch(e){
+				}
+				this._port = null;
+			},
+			terminate : function(){
+				if(!this._port) return;
+				remove_onmessage.call(this);
+				remove_ondisconnect.call(this);
+				try{
+					this._port.disconnect();
+				}catch(e){
+				}
+				this._port = null;
+			},
+			postMessage : function(data){
+				try{
+					this._port.postMessage({data:data});
+				}catch(e){
+					this.release();
+				}
+			},
+			onmessage : function(data){},
+			ondisconnect : function(){},
+			getSender : function(){
+				return this._port.sender;
+			}
+		};
+
+		return Port;
+	})();
+
+	// --------------------------------------------------------------------------------
 	// GoogleChrome拡張機能通信 コンテンツ用
 	// --------------------------------------------------------------------------------
 	function GoogleChromeExtensionMessageForContent(){
@@ -69797,139 +69962,60 @@ function PageExpand(page_expand_arguments){
 		// 開放
 		// --------------------------------------------------------------------------------
 		_this.release = function(){
-			_event_dispatcher.release();
-			chrome.runtime.onMessage.removeListener(message_handler_runtime);
-			port_disconnect();
+			chrome.runtime.onConnect.removeListener(_connect_handler);
 		};
 
 		// --------------------------------------------------------------------------------
-		// リスナーをセット
+		// スタート
 		// --------------------------------------------------------------------------------
-		_this.addListener = function(f){
+		_this.start = function(){
 
-			// イベントハンドラを作成
-			var event_handler = _event_dispatcher.createEventHandler("message");
-			event_handler.setFunction(function(event){
-				var request = event.request;
-				var options = {sender:event.sender};
-				f(request.data,options,function(data,option){
-					var receive = new Object();
-					receive.phase = 1;
-					receive.id = request.id;
-					receive.data = data;
-					receive.option = option;
+			chrome.runtime.onConnect.removeListener(_connect_handler);
+			_connect_handler = function (port){
+				if(_this.onconnect) _this.onconnect(new Port(port));
+			};
+			chrome.runtime.onConnect.addListener(_connect_handler);
 
-					// 返信
-					port_postMessage(receive);
-				});
-			});
+			var i;
+			var num = _connect_queue.length;
+			for(i=0;i<num;i++){
+				_connect_handler(_connect_queue[i]);
+			}
+			_connect_queue = null;
 		};
 
 		// --------------------------------------------------------------------------------
-		// リクエストを送信
+		// バックグラウンドに接続
 		// --------------------------------------------------------------------------------
-		_this.sendRequest = function(data,callback){
-
-			var request = new Object();
-			request.phase = 0;
-			request.id = _unique;
-			request.data = data;
-
-			// コールバック関数を辞書に登録
-			if(callback){
-				_callback_dictionary[_unique] = callback;
-			}
-			_unique ++;
-
-			// メッセージを送信
-			port_postMessage(request);
-		};
-
-		// --------------------------------------------------------------------------------
-		// イベント（内部用）
-		// --------------------------------------------------------------------------------
-		function message_handler_runtime (request, sender, sendResponse) {
-			switch(request.phase){
-			// リクエストを受信
-			case 0:
-				// イベントを発火
-				_event_dispatcher.dispatchEvent("message",{request:request,sender:sender,sendResponse:sendResponse});
-				break;
-			}
-
-		}
-		function message_handler_port (request) {
-			switch(request.phase){
-			// 返信を受信
-			case 1:
-				var callback = _callback_dictionary[request.id];
-
-				// コールバック関数を実行
-				if(callback){
-					callback(request.data);
-
-					// 辞書から外す
-					if(request.option.complete){
-						delete _callback_dictionary[request.id];
-					}
-				}
-
-				port_postMessage({phase:2,id:request.id});
-				break;
-			}
-
-		}
-		function disconnect_handler_port () {
-			_event_dispatcher.dispatchEvent("disconnect",null);
-			port_disconnect();
-		}
-
-		// --------------------------------------------------------------------------------
-		// ポート（内部用）
-		// --------------------------------------------------------------------------------
-		function port_connect () {
-			if(_port) return;
-
-			// バックグラウンドに接続
-			_port = chrome.runtime.connect(chrome.runtime.id);
-
-			_port.onMessage.addListener(message_handler_port);
-			_port.onDisconnect.addListener(disconnect_handler_port);
-		}
-		function port_disconnect () {
-			if(!_port) return;
-
+		_this.connectToBackground = function(){
+			var port = null;
 			try{
-				_port.onMessage.removeListener(message_handler_port);
-				_port.onDisconnect.removeListener(disconnect_handler_port);
-				_port.disconnect();
+				port = chrome.runtime.connect(chrome.runtime.id);
 			}catch(e){
 			}
-			_port = null;
-		}
-		function port_postMessage (obj) {
-			port_connect();
-			_port.postMessage(obj);
-		}
+			return new Port(port);
+		};
+
+		// --------------------------------------------------------------------------------
+		// 受信イベント
+		// --------------------------------------------------------------------------------
+		_this.onconnect = function(port){};
 
 		// --------------------------------------------------------------------------------
 		// プライベート変数
 		// --------------------------------------------------------------------------------
-		var _unique;
-		var _callback_dictionary;
-		var _event_dispatcher;
-		var _port;
+		var _connect_queue;
+		var _connect_handler;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------------------
 		(function(){
-			_unique = 0;
-			_callback_dictionary = new Array();
-			_event_dispatcher = new EventDispatcher();
-
-			// メッセージを受信する
-			chrome.runtime.onMessage.addListener(message_handler_runtime);
+			_connect_queue = new Array();
+			_connect_handler = function (port){
+				_connect_queue.push(port);
+			};
+			chrome.runtime.onConnect.addListener(_connect_handler);
 		})();
 	}
 
@@ -69943,302 +70029,73 @@ function PageExpand(page_expand_arguments){
 		// 開放
 		// --------------------------------------------------------------------------------
 		_this.release = function(){
+			chrome.runtime.onConnect.removeListener(_connect_handler);
 		};
 
 		// --------------------------------------------------------------------------------
-		// スタート（ServiceWorker が再起動した際にコンテンツからのメッセージが貯まるので addListener() 後に１度だけ実行する）
+		// スタート
 		// --------------------------------------------------------------------------------
 		_this.start = function(){
 
-			var connect_func = function (port , requests){
-				var receive_queue = createReceiveQueue(port);
-				receive_queue.event_handler_message = function (request){
-					switch(request.phase){
-					// リクエストを受信
-					case 0:
-						// イベントを発火
-						_event_dispatcher.dispatchEvent("message",{request:request,receive_queue:receive_queue});
-						break;
-
-					// 返信を受信
-					case 1:
-						var callback = _callback_dictionary[request.id];
-
-						// コールバック関数を実行
-						if(callback){
-							callback(request.data);
-
-							// 辞書から外す
-							if(request.option.complete){
-								delete _callback_dictionary[request.id];
-							}
-						}
-						break;
-
-					// 返信受取成功を受信
-					case 2:
-						receive_queue.pop();
-						break;
-					}
-				};
-
-				// ポートが切断された
-				receive_queue.event_handler_disconnect = function (){
-					receive_queue.event_dispatcher.dispatchEvent("disconnect",null);
-					receive_queue.release();
-				};
-
-				port.onMessage.addListener(receive_queue.event_handler_message);
-				port.onDisconnect.addListener(receive_queue.event_handler_disconnect);
-
-				// リクエストを消化
-				var i;
-				var num = requests.length;
-				for(i=0;i<num;i++){
-					receive_queue.event_handler_message(requests[i]);
-				}
-			};
-
-			// ハンドラを変更
 			chrome.runtime.onConnect.removeListener(_connect_handler);
 			_connect_handler = function (port){
-				connect_func(port,[]);
+				if(_this.onconnect) _this.onconnect(new Port(port));
 			};
-
-			// キューをすべて消化
-			var i;
-			var num = _port_requests_list.length;
-			for(i=0;i<num;i++){
-				var queue = _port_requests_list[i];
-				connect_func(queue.getPort(),queue.getRequests());
-				queue.release();
-			}
-			_port_requests_list.length = 0;
-
-			// コンテンツから接続
 			chrome.runtime.onConnect.addListener(_connect_handler);
 
-			// メッセージを受信する
-			//chrome.runtime.onMessage.addListener(function (request,sender,sendResponse){
-			//});
-
-
+			var i;
+			var num = _connect_queue.length;
+			for(i=0;i<num;i++){
+				_connect_handler(_connect_queue[i]);
+			}
+			_connect_queue = null;
 		};
 
 		// --------------------------------------------------------------------------------
-		// リスナーをセット
+		// コンテントに接続
 		// --------------------------------------------------------------------------------
-		_this.addListener = function(f){
-
-			// イベントハンドラを作成
-			var event_handler = _event_dispatcher.createEventHandler("message");
-			event_handler.setFunction(function(event){
-				var request = event.request;
-				var receive_queue = event.receive_queue;
-				var options = {
-					event_dispatcher:receive_queue.event_dispatcher,
-					sender:receive_queue.port.sender
-				};
-				f(request.data,options,function(data,option){
-					var receive = new Object();
-					receive.phase = 1;
-					receive.id = request.id;
-					receive.data = data;
-					receive.option = option;
-
-					// 返信
-					receive_queue.push(receive);
-				});
-			});
+		_this.connectToContent = function(tab,info){
+			var port = null;
+			var connectInfo = {};
+			info = info || {};
+			if(info.frameId !== undefined) connectInfo.frameId = info.frameId;
+			try{
+				port = chrome.tabs.connect(tab.id,connectInfo);
+			}catch(e){
+			}
+			return new Port(port);
 		};
 
 		// --------------------------------------------------------------------------------
-		// リクエストを送信
+		// バックグラウンドに接続
 		// --------------------------------------------------------------------------------
-		_this.sendRequestToContent = function(tab,data,callback){
-
-			var request = new Object();
-			request.phase = 0;
-			request.id = _unique;
-			request.data = data;
-
-			// コールバック関数を辞書に登録
-			if(callback){
-				_callback_dictionary[_unique] = callback;
+		_this.connectToBackground = function(){
+			var port = null;
+			try{
+				port = chrome.runtime.connect(chrome.runtime.id);
+			}catch(e){
 			}
-			_unique ++;
-
-			// メッセージを送信
-			chrome.tabs.sendMessage(tab.id,request);
+			return new Port(port);
 		};
 
 		// --------------------------------------------------------------------------------
-		// リクエストを送信
+		// 受信イベント
 		// --------------------------------------------------------------------------------
-		_this.sendRequestToBackground = function(data,callback){
-
-			var request = new Object();
-			request.phase = 0;
-			request.id = _unique;
-			request.data = data;
-
-			// コールバック関数を辞書に登録
-			if(callback){
-				_callback_dictionary[_unique] = callback;
-			}
-			_unique ++;
-
-			// メッセージを送信
-			chrome.runtime.sendMessage(request);
-		};
-
-		// --------------------------------------------------------------------------------
-		// ポートメッセージキュー作成
-		// --------------------------------------------------------------------------------
-		function createPortRequestQueue (port){
-			var _queue = new Object();
-
-			// --------------------------------------------------------------------------------
-			// ポートを取得
-			// --------------------------------------------------------------------------------
-			_queue.getPort = function (){
-				return port;
-			};
-
-			// --------------------------------------------------------------------------------
-			// メッセージを取得
-			// --------------------------------------------------------------------------------
-			_queue.getRequests = function (callback){
-				return _requests;
-			};
-
-			// --------------------------------------------------------------------------------
-			// 解放
-			// --------------------------------------------------------------------------------
-			_queue.release = function (){
-				port.onMessage.removeListener(event_handler_message);
-				port.onDisconnect.removeListener(event_handler_disconnect);
-				_requests = null;
-				port = null;
-			};
-
-			// --------------------------------------------------------------------------------
-			// 内部用
-			// --------------------------------------------------------------------------------
-			function event_handler_message(request){
-				_requests.push(request);
-			}
-			function event_handler_disconnect(){
-				_queue.release();
-			}
-
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _requests;
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_requests = new Array();
-				port.onMessage.addListener(event_handler_message);
-				port.onDisconnect.addListener(event_handler_disconnect);
-			})();
-
-			return _queue;
-		}
-
-		// --------------------------------------------------------------------------------
-		// 返信キュー作成
-		// --------------------------------------------------------------------------------
-		function createReceiveQueue (port){
-			var _receive_queue = new Object();
-
-			// --------------------------------------------------------------------------------
-			// キューに登録
-			// --------------------------------------------------------------------------------
-			_receive_queue.push = function (request){
-				if(!port) return;
-				var empty = (_receive_queue == _receive_queue.next);
-				var list = {request:request};
-				var next = _receive_queue;
-				var prev = next.prev;
-				list.prev = prev;
-				list.next = next;
-				prev.next = list;
-				next.prev = list;
-
-				if(empty){
-					_receive_queue.pop();
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// キューを消化
-			// --------------------------------------------------------------------------------
-			_receive_queue.pop = function (){
-				if(!port) return;
-				execute_queue.attachLastForInterrupt(function(){
-					if(_receive_queue == _receive_queue.next) return;
-
-					var list = _receive_queue.next;
-					var prev = list.prev;
-					var next = list.next;
-					prev.next = next;
-					next.prev = prev;
-
-					port.postMessage(list.request);
-				},null);
-			};
-
-			// --------------------------------------------------------------------------------
-			// ポートを解放
-			// --------------------------------------------------------------------------------
-			_receive_queue.release = function (){
-				if(!port) return;
-				_receive_queue.prev = _receive_queue;
-				_receive_queue.next = _receive_queue;
-				_receive_queue.event_dispatcher.release();
-				port.onMessage.removeListener(_receive_queue.event_handler_message);
-				port.onDisconnect.removeListener(_receive_queue.event_handler_disconnect);
-				port.disconnect();
-				_receive_queue.port = port = null;
-			};
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			_receive_queue.prev = _receive_queue;
-			_receive_queue.next = _receive_queue;
-			_receive_queue.port = port;
-			_receive_queue.event_dispatcher = new EventDispatcher();
-
-			return _receive_queue;
-		}
+		_this.onconnect = function(port){};
 
 		// --------------------------------------------------------------------------------
 		// プライベート変数
 		// --------------------------------------------------------------------------------
-		var _unique;
-		var _callback_dictionary;
-		var _event_dispatcher;
-		var _port_requests_list;
+		var _connect_queue;
 		var _connect_handler;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------------------
 		(function(){
-			_unique = 0;
-			_callback_dictionary = new Array();
-			_event_dispatcher = new EventDispatcher();
-			_port_requests_list = new Array();
-
-			// コンテンツから接続
+			_connect_queue = new Array();
 			_connect_handler = function (port){
-				var queue = createPortRequestQueue(port);
-				_port_requests_list.push(queue);
+				_connect_queue.push(port);
 			};
 			chrome.runtime.onConnect.addListener(_connect_handler);
 		})();
@@ -78948,7 +78805,7 @@ function PageExpand(page_expand_arguments){
 	// ウィンドウが子であるか取得
 	// --------------------------------------------------------------------------------
 	function WindowIsChild(window_obj){
-		return (window_obj != window_obj.parent);
+		return (window_obj.top != window_obj.self);
 	}
 
 	// --------------------------------------------------------------------------------
@@ -82014,45 +81871,17 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	case "ChromeExtensionContentScript":
 
-		// 実行除外
-		if(page_expand_arguments.page_expand_parent){
-		}else{
-			if(WindowIsExecutedByPageExpand(window)) return;
-		}
-
 		// PageExpand 初期化
 		PageExpandInitialize();
 
 		// GoogleChrome拡張機能通信
 		extension_message = new GoogleChromeExtensionMessageForContent();
 
-		// コマンドキュー
-		var command_queue = new Array();
-
-		// 受信コールバック
-		var response_listener = null;
-		response_listener = function(request, options, sendResponse){
-			command_queue.push({
-				request:request,
-				options:options,
-				sendResponse:sendResponse
-			});
-		};
-
-		// --------------------------------------------------------------------------------
-		// バックグラウンドとの通信
-		// --------------------------------------------------------------------------------
-		extension_message.addListener(function(request, options, sendResponse) {
-			if(response_listener){
-				response_listener(request, options, sendResponse);
-			}
-		});
-
 		// --------------------------------------------------------------------------------
 		// バックグラウンドへプロジェクト取得の要求
 		// --------------------------------------------------------------------------------
-		extension_message.sendRequest({command:"getProject",url:WindowGetOwnerURL(window)}, function(response) {
-
+		var port = extension_message.connectToBackground();
+		port.onmessage = function(response){
 			if(!response)	return;
 
 			// JSON 文字列からプロジェクトを作成
@@ -82065,47 +81894,50 @@ function PageExpand(page_expand_arguments){
 				// PageExpand コンストラクタ
 				PageExpandConstructor();
 
-				// 受信コールバック
-				response_listener = function(request, options, sendResponse){
-					var param = request;
-
-					switch(param.command){
-					case "startPageExpand":
-						PageExpandStart();
-						break;
-
-					case "abortPageExpand":
-						PageExpandRelease();
-						break;
-
-					case "executeFastest":
-						PageExpandExecuteFastest();
-						break;
-
-					case "executeDebug":
-						// デバッグモード
-						page_expand_debug.setVisible(true);
-						break;
-
-					case "batchDownloadImage":
-						if (WindowIsChild(window)){
-						}else{
+				// バックグラウンドとの通信
+				extension_message.onconnect = (function(){
+					var commands = {
+						"startPageExpand":function(port,data){
+							PageExpandStart();
+						},
+						"abortPageExpand":function(port,data){
+							PageExpandRelease();
+						},
+						"executeFastest":function(port,data){
+							PageExpandExecuteFastest();
+						},
+						"executeDebug":function(port,data){
+							page_expand_debug.setVisible(true);
+						},
+						"batchDownloadImage":function(port,data){
 							download_list_image.createArchive();
-						}
-						break;
-
-					case "batchDownloadUser":
-						if (WindowIsChild(window)){
-						}else{
+						},
+						"batchDownloadUser":function(port,data){
 							download_list_user.createArchive();
 						}
-						break;
-
-					// 未知の要求
-					default:
-						break;
 					};
-				};
+
+					return function(port){
+						port.onmessage = function(data){
+							var f = commands[data.command];
+							if((function(){
+								if(!f) return false;
+								if(data.onlyTopWindow){
+									if (WindowIsChild(window)){
+										return false;
+									}
+								}
+								return true;
+							})()){
+								f(port,data);
+							}else{
+								port.terminate();
+							}
+						};
+						port.start();
+					};
+				})();
+				extension_message.start();
 
 				// フレーム内では動作させない
 				if (WindowIsChild(window)){
@@ -82113,7 +81945,10 @@ function PageExpand(page_expand_arguments){
 					// アドレスバーアイコンが有効であるか
 					if(project.getEnableIconAddressBar()){
 						// バックグラウンドへポップアップアクション有効を通知
-						extension_message.sendRequest({command:"attachPopupAction"});
+						var port = extension_message.connectToBackground();
+						port.start(function(){
+							port.postMessage({command:"attachPopupAction"});
+						});
 					}
 				}
 
@@ -82122,22 +81957,15 @@ function PageExpand(page_expand_arguments){
 					PageExpandStart();
 				}
 
-				// コマンドキューを実行
-				(function(){
-					var i;
-					var num = command_queue.length;
-					for(i=0;i<num;i++){
-						var queue = command_queue[i];
-						response_listener(queue.request,queue.options,queue.sendResponse);
-					}
-					command_queue = null;
-				})();
-
 			}else{
 				response_listener = null;
 				PageExpandRelease();
 			}
+		};
+		port.start(function(){
+			port.postMessage({command:"getProject",url:WindowGetOwnerURL(window)});
 		});
+
 		break;
 
 	// --------------------------------------------------------------------------------
