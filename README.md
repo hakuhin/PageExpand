@@ -11,12 +11,14 @@
 ## Screenshot
 [<img src="https://hakuhin.github.io/PageExpand/etc/screenshot/en/twitter.png" width="256" height="160">](https://hakuhin.github.io/PageExpand/etc/screenshot/en/twitter.png)
 [<img src="https://hakuhin.github.io/PageExpand/etc/screenshot/en/image_search.png" width="256" height="160">](https://hakuhin.github.io/PageExpand/etc/screenshot/en/image_search.png)
+[<img src="https://hakuhin.github.io/PageExpand/etc/screenshot/en/download_board.png" width="256" height="160">](https://hakuhin.github.io/PageExpand/etc/screenshot/en/download_board.png)
 [<img src="https://hakuhin.github.io/PageExpand/etc/screenshot/en/bbs.png" width="256" height="160">](https://hakuhin.github.io/PageExpand/etc/screenshot/en/bbs.png)
 [<img src="https://hakuhin.github.io/PageExpand/etc/screenshot/en/image_viewer.png" width="256" height="160">](https://hakuhin.github.io/PageExpand/etc/screenshot/en/image_viewer.png)
 [<img src="https://hakuhin.github.io/PageExpand/etc/screenshot/en/options.png" width="256" height="160">](https://hakuhin.github.io/PageExpand/etc/screenshot/en/options.png)
 
-## Image All Download
- - Generate a zip file after downloading all images.
+## Batch Downloader
+ - Generate a zip file after loading all media files.
+ - Sequence download the media files.
 
 ## Image Zoom
  - Hovering the mouse cursor in URL of the image, Display popup image.
