@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.6.0
+// @version        1.6.1
 // @namespace      http://hakuhin.jp/page_expand
 // @description    Popup image. Batch download. Extend BBS. etc...
 // @description:ja 画像のポップアップ、一括ダウンロードツール、匿名掲示板の専ブラ機能など
@@ -29829,7 +29829,7 @@
 
 					return 0;
 				})();
-				if(version >= 8){
+				if(version >= 7){
 					return "5ch_v8";
 				}
 				return "";
@@ -39560,7 +39560,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.6.0");
+				new UI_Text(parent,"PageExpand ver.1.6.1");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -46121,6 +46121,14 @@
 			ElementSetStyle(_menu_window,"display:table-cell; vertical-align:top; user-select:none; -webkit-user-select:none; -moz-user-select:none; -khtml-user-select:none; margin:0px;");
 			out_table.appendChild(_menu_window);
 
+			// イメージビューワを開く
+			var button_open_image_viewer = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_open_image_viewer"));
+			button_open_image_viewer.onclick = function(){
+				click("openImageViewer");
+			};
+
+			new UI_Separator(_menu_window);
+
 			// ダウンロードボードを開く
 			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_open_download_board_inline"));
 			button_config.onclick = function(){
@@ -52387,6 +52395,25 @@
 			var element_item = this.root = DocumentCreateElement("div");
 			element_item.className = "item";
 			element_item.addEventListener("dblclick",function(e){
+
+				// ダウンロード完了なら開く
+				if(url_info.getValue("state") == DownloaderState.DOWNLOAD.COMPLETED.EXISTS){
+					var downloader = new Downloader();
+					downloader.setURL(url_info.getURL());
+					downloader.setAllowSameRequest(true);
+					downloader.onstatechange = function(response){
+						url_info.setValue("state",response.state);
+					};
+					downloader.oncomplete = function(response){
+						if(response.result){
+						}else{
+							url_info.setValue("reason",response.errorText);
+						}
+					};
+					downloader.start({order:"open"});
+					return;
+				}
+
 				// ダウンロード途中なら一時停止
 				if(sequential_downloader){
 					var downloader = sequential_downloader.getDownloader(_this.url_info);
@@ -52495,10 +52522,14 @@
 				}
 				var updateState = (function(){
 					var list = {};
+					var reason = {};
 					var h = DownloaderState.HEADER;
 					list[h.WAITING] = "wait...";
 					list[h.FAILED] = "failed";
 					list[h.LOADED] = "loaded";
+					reason[h.WAITING] = "header_waiting";
+					reason[h.FAILED] = "header_failed";
+					reason[h.LOADED] = "header_loaded";
 					var a = DownloaderState.ARCHIVE;
 					list[a.WAITING] = "wait...";
 					list[a.FAILED] = "failed";
@@ -52508,6 +52539,14 @@
 					list[a.CALCULATED] = "done";
 					list[a.WRITING] = "writing..";
 					list[a.COMPLETED] = "completed";
+					reason[a.WAITING] = "archive_waiting";
+					reason[a.FAILED] = "archive_failed";
+					reason[a.LOADING] = "archive_loading";
+					reason[a.LOADED] = "archive_loaded";
+					reason[a.CALCULATING] = "archive_calculating";
+					reason[a.CALCULATED] = "archive_calculated";
+					reason[a.WRITING] = "archive_writing";
+					reason[a.COMPLETED] = "archive_completed";
 					var d = DownloaderState.DOWNLOAD;
 					list[d.WAITING] = "wait...";
 					list[d.FAILED] = "failed";
@@ -52519,10 +52558,23 @@
 					list[d.COMPLETED.DELETED] = "deleted";
 					list[d.COMPLETED.UNKNOWN] = "completed";
 					list[d.COMPLETED.EXISTS] = "exists";
+					reason[d.WAITING] = "download_wait";
+					reason[d.FAILED] = "download_failed";
+					reason[d.ERASED] = "download_erased";
+					reason[d.CREATING] = "download_creating";
+					reason[d.LOADING] = "download_loading";
+					reason[d.PAUSING.CAN_RESUMED] = "download_pausing_can_resumed";
+					reason[d.PAUSING.CANNOT_RESUME] = "download_pausing_cannot_resume";
+					reason[d.COMPLETED.DELETED] = "download_completed_deleted";
+					reason[d.COMPLETED.UNKNOWN] = "download_completed_unknown";
+					reason[d.COMPLETED.EXISTS] = "download_completed_exists";
 					return function (k,v){
 						var n = this.textnodes[k];
 						if(!n) return;
 						n.nodeValue = list[v] || v;
+						if(!reason[v]) return;
+						var e = this.elements["state"];
+						e.title = _i18n.getMessage("downloader_state_" + reason[v]);
 					};
 				})();
 				var updateProgress = (function(){
@@ -52660,6 +52712,11 @@
 							}
 						}
 						updateCommon.call(this,k,s);
+					},
+					"reason":function(k,v){
+						if(!v) return;
+						var e = this.elements["state"];
+						e.title += "\nReason: " + v;
 					}
 				};
 				return function(k,v){
@@ -52711,12 +52768,12 @@
 				commands["text"] =
 				commands["application"] = function(){
 					var type = this.getValue("type") || "";
-					var v = Boolean(type.match(new RegExp("^" + filter_type + "/","i")));
+					var v = Boolean(type.match(new RegExp("^" + filter_type + "(/|$)","i")));
 					setVisible.call(this,v);
 				};
 				commands["media"] = function(){
 					var type = this.getValue("type") || "";
-					var v = Boolean(type.match(new RegExp("^(image|audio|video)/","i")));
+					var v = Boolean(type.match(new RegExp("^(image|audio|video)(/|$)","i")));
 					setVisible.call(this,v);
 				};
 				commands["archive"] = function(){
@@ -53524,7 +53581,18 @@
 
 			var event_handler_attach = url_info_dictionary.event_dispatcher.createEventHandler("attach");
 			event_handler_attach.setFunction(function(e){
-				createItem(e.urlInfo);
+				var url_info = e.urlInfo;
+				createItem(url_info);
+
+				if(!download_history_monitor) return;
+				var ditm = download_history_monitor.getIDs(url_info.url)[0];
+				if(!ditm) return;
+				var item = ditm.item;
+				url_info.setValue("state",ditm.state);
+				url_info.setValue("icon",ditm.fileIconURL);
+				url_info.setMimeTypeByFetch(item.mime);
+				url_info.setValue("loaded",item.bytesReceived);
+				url_info.setValue("total",item.totalBytes);
 			});
 
 			var event_handler_modify = url_info_dictionary.event_dispatcher.createEventHandler("modify");
@@ -53711,9 +53779,10 @@
 				url_info.setValue("state",h.LOADED);
 				complete();
 			}
-			function failure(){
+			function failure(reason){
 				result.error += 1;
 				url_info.setValue("state",h.FAILED);
+				url_info.setValue("reason",reason);
 				complete();
 			}
 
@@ -53839,12 +53908,11 @@
 			}
 			function success(){
 				result.success += 1;
-//				url_info.setValue("state",h.LOADED);
 				complete();
 			}
-			function failure(){
+			function failure(reason){
 				result.error += 1;
-//				url_info.setValue("state",h.FAILED);
+				url_info.setValue("reason",reason);
 				complete();
 			}
 
@@ -53871,6 +53939,9 @@
 				var total = response.bytesTotal;
 				url_info.setValue("loaded",loaded);
 				url_info.setValue("total",total);
+			};
+			downloader.onstatechange = function(response){
+				url_info.setValue("state",response.state);
 			};
 			downloader.oncomplete = function(response){
 				if(response.result){
@@ -53971,6 +54042,7 @@
 					_this.failed = true;
 					p.progress.error++;
 					_this.setState(a.FAILED);
+					_this.url_info.setValue("reason",reason);
 					complete();
 				}
 
@@ -54842,11 +54914,11 @@
 			}
 		}
 
-		// レジュームは state に依存しない
-		if(item.paused){
-			if(item.canResume){
-				return d.PAUSING.CAN_RESUMED;
-			}else{
+		// レジュームは state paused に依存しない
+		if(item.canResume){
+			return d.PAUSING.CAN_RESUMED;
+		}else{
+			if(item.paused){
 				return d.PAUSING.CANNOT_RESUME;
 			}
 		}
@@ -56336,6 +56408,10 @@
 				loader = new Loader();
 				loader.onload = function(image){
 					thumbnail_image = image;
+
+					// 解析済み
+					var node_info = node_info_dictionary.addNode(thumbnail_image);
+					node_info.setAnalyzed(true);
 
 					// 解析ワーク作成
 					thumbnail_analyze_work = AnalyzeWorkCreate(thumbnail_image);
@@ -60534,6 +60610,7 @@
 		// １つ前のポップアップイメージを取得
 		// --------------------------------------------------------------------------------
 		_this.getPrev = function(popup_image){
+			popup_image = popup_image || _this;
 			var list = popup_image._prev;
 			if(list == popup_image) return null;
 			if(list == _this) return null;
@@ -60544,6 +60621,7 @@
 		// １つ後のポップアップイメージを取得
 		// --------------------------------------------------------------------------------
 		_this.getNext = function(popup_image){
+			popup_image = popup_image || _this;
 			var list = popup_image._next;
 			if(list == popup_image) return null;
 			if(list == _this) return null;
@@ -61068,23 +61146,39 @@
 		}
 
 		// --------------------------------------------------------------------------------
+		// 画像サイズを取得
+		// --------------------------------------------------------------------------------
+		function getPopupImageSize(){
+			if(_popup_image){
+				var image = _popup_image.getImage();
+				return ImageGetNaturalSize(image);
+			}
+			return {width:128,height:128};
+		}
+
+		// --------------------------------------------------------------------------------
 		// 画像更新（内部用）
 		// --------------------------------------------------------------------------------
-		function updateImage(popup_image){
-			var image = popup_image.getImage();
-			var image_size = ImageGetNaturalSize(image);
-
+		function updateImage(){
 			removeImage();
 
 			_element_image = DocumentCreateElement("img");
 			ElementSetStyle(_element_image,CSSTextGetInitialImageElement());
 			ElementAddStyle(_element_image,"position:absolute; left:0px; top:0px; border:5px solid #666; cursor:inherit;");
 
+			var image_size = getPopupImageSize();
 			var style = _element_image.style;
 			style.width  = (image_size.width)  + "px";
 			style.height = (image_size.height) + "px";
 
-			_element_image.src = image.src;
+			if(_popup_image){
+				var image = _popup_image.getImage();
+				_element_image.src = image.src;
+			}
+
+			// 解析済み
+			var node_info = node_info_dictionary.addNode(_element_image);
+			node_info.setAnalyzed(true);
 
 			// 解析ワーク作成
 			_analyze_work_image = AnalyzeWorkCreate(_element_image);
@@ -61121,8 +61215,7 @@
 		// スケールモード更新（内部用）
 		// --------------------------------------------------------------------------------
 		function updateScaleMode(){
-			var image = _popup_image.getImage();
-			var image_size = ImageGetNaturalSize(image);
+			var image_size = getPopupImageSize();
 			var border_width = 5;
 
 			var actual_w = (image_size.width  + border_width * 2) / _pixel_ratio;
@@ -61520,10 +61613,14 @@
 			if(delta < 0) popup_image = popup_image_container.getPrev(_popup_image);
 			if(popup_image){
 				_popup_image = popup_image;
-				updateImage(_popup_image);
+				updateImage();
 			}
 
-			setMessage((popup_image_container.getIndex(_popup_image) + 1) + " / " + popup_image_container.getCount());
+			if(_popup_image){
+				setMessage((popup_image_container.getIndex(_popup_image) + 1) + " / " + popup_image_container.getCount());
+			}else{
+				setMessage("none");
+			}
 		}
 
 		// --------------------------------------------------------------------------------
@@ -61714,6 +61811,7 @@
 					ElementSetStyle(button_download,CSSTextGetInitialButtonElement());
 					ElementAddStyle(button_download,style_button);
 					button_download.onclick = function(){
+						if(!_popup_image) return;
 						setMessage("Wait...");
 						var image = _popup_image.getImage();
 						var downloader = new Downloader();
@@ -61749,6 +61847,7 @@
 					ElementAddStyle(button_scroll,style_button);
 					button_scroll.onclick = function(){
 						suicide();
+						if(!_popup_image) return;
 						var anchor = _popup_image.getElementAnchor();
 						anchor.scrollIntoView();
 					};
@@ -61846,7 +61945,7 @@
 			_element_transform.appendChild(_element_transform_vector_after);
 
 			// 画像更新
-			updateImage(_popup_image);
+			updateImage();
 
 			(function(){
 
@@ -64987,6 +65086,9 @@
 			context_menu_pageexpand_config: {
 				message: "PageExpand の設定"
 			},
+			context_menu_pageexpand_open_image_viewer: {
+				message: "イメージビューワを開く"
+			},
 			context_menu_pageexpand_open_download_board_application: {
 				message: "ダウンロードボードを開く（アプリ）"
 			},
@@ -65042,7 +65144,7 @@
 				message: "ウィンドウのサイズを最大化します"
 			},
 			download_board_button_close: {
-				message: "ダウンロードボードを非常時にします。\nダウンロード作業は続行されます。\n終了するにはこのページを閉じるか、右下の中止ボタンを押します。"
+				message: "ダウンロードボードを非表示にします。\nダウンロード作業は続行されます。\n終了するにはこのページを閉じるか、右下の中止ボタンを押します。"
 			},
 			download_board_button_header: {
 				message: "不足している情報をサーバーに問い合わせます。\n拡張子が無いアドレスのコンテンツタイプを知りたい場合に使用します。\n必ずしも正しい情報が得られるとは限りません。"
@@ -65100,6 +65202,69 @@
 			},
 			download_board_option_filter_select: {
 				message: "選択中のファイル"
+			},
+			downloader_state_header_waiting: {
+				message: "順番待ちです。\n他のロードが終わるのを待っています。"
+			},
+			downloader_state_header_failed: {
+				message: "HEAD method request は失敗しました。"
+			},
+			downloader_state_header_loaded: {
+				message: "HEAD method request は成功しました。"
+			},
+			downloader_state_archive_waiting: {
+				message: "順番待ちです。\n他のロードが終わるのを待っています。"
+			},
+			downloader_state_archive_failed: {
+				message: "失敗しました。このアイテムはアーカイブから除外されます。"
+			},
+			downloader_state_archive_loading: {
+				message: "ロード中です。"
+			},
+			downloader_state_archive_loaded: {
+				message: "ロードが完了しました。"
+			},
+			downloader_state_archive_calculating: {
+				message: "ハッシュの計算中です。"
+			},
+			downloader_state_archive_calculated: {
+				message: "ハッシュの計算が完了しました。"
+			},
+			downloader_state_archive_writing: {
+				message: "アーカイブを出力しています。"
+			},
+			downloader_state_archive_completed: {
+				message: "このアイテムの工程は終了しました。"
+			},
+			downloader_state_download_wait: {
+				message: "順番待ちです。\n他のダウンロードが終わるのを待っています。"
+			},
+			downloader_state_download_failed: {
+				message: "ダウンロードが失敗しました。"
+			},
+			downloader_state_download_erased: {
+				message: "履歴が消去されました。"
+			},
+			downloader_state_download_creating: {
+				message: "ダウンロードを発注しました。ブラウザが開始するのを待っています。\nこの状態のまま固まっている場合、ダウンロードのスタックが発生している可能性があります。\nスタックを解消するには、ブラウザのダウンロードマネージャーを開いて直接編集します。\n手に負えなくなった場合はブラウザを再起動して下さい。"
+			},
+			downloader_state_download_loading: {
+				message: "ダウンロード中です。\nアイテムをダブルクリックすると一時停止します。（APIが未対応なら中止）"
+			},
+			downloader_state_download_pausing_can_resumed: {
+				message: "ダウンロードが一時停止されています。ダウンロードを開始すると途中から再開されます。\nこのアイテムをダブルクリックすると、ダウンロードが再開されます。"
+			},
+			downloader_state_download_pausing_cannot_resume: {
+				message: "ダウンロードが一時停止されていますが、再開することは不可能です。"
+			},
+			downloader_state_download_completed_deleted: {
+				message: "ダウンロードしたファイルは、移動もしくは削除されました。"
+			},
+			downloader_state_download_completed_unknown: {
+				message: "HTML5ベースのダウンロード処理を行いました。\n進捗を取得する方法が無いため成功したかは不明です。\n連続してダウンロードを行うには、「サイトの権限」から「自動ダウンロード」の許可が必要です。"
+			},
+			downloader_state_download_completed_exists: {
+				message: "ダウンロードが完了し、ファイルが現存しています。\nこのアイテムをダブルクリックすると、フォルダを開きます。"
 			}
 		},
 		en: {
@@ -66497,6 +66662,9 @@
 			context_menu_pageexpand_config: {
 				message: "PageExpand Setting"
 			},
+			context_menu_pageexpand_open_image_viewer: {
+				message: "Open Image Viewer"
+			},
 			context_menu_pageexpand_open_download_board_application: {
 				message: "Open Download Board (App)"
 			},
@@ -66610,6 +66778,69 @@
 			},
 			download_board_option_filter_select: {
 				message: "Selected item"
+			},
+			downloader_state_header_waiting: {
+				message: "Waiting my turn.\nWaiting for another load to finish."
+			},
+			downloader_state_header_failed: {
+				message: "HEAD method request was failed."
+			},
+			downloader_state_header_loaded: {
+				message: "HEAD method request was successful."
+			},
+			downloader_state_archive_waiting: {
+				message: "Waiting my turn.\nWaiting for another load to finish."
+			},
+			downloader_state_archive_failed: {
+				message: "I failed. This item will be excluded from the archive."
+			},
+			downloader_state_archive_loading: {
+				message: "Loading now."
+			},
+			downloader_state_archive_loaded: {
+				message: "Loading completed."
+			},
+			downloader_state_archive_calculating: {
+				message: "Calculating hash."
+			},
+			downloader_state_archive_calculated: {
+				message: "Hash calculation completed."
+			},
+			downloader_state_archive_writing: {
+				message: "Writing binary."
+			},
+			downloader_state_archive_completed: {
+				message: "Process completed."
+			},
+			downloader_state_download_wait: {
+				message: "Waiting my turn.\nWaiting for another download to finish."
+			},
+			downloader_state_download_failed: {
+				message: "Download failed."
+			},
+			downloader_state_download_erased: {
+				message: "History has been erased."
+			},
+			downloader_state_download_creating: {
+				message: "Ordered a download. Waiting for the browser to start the download.\nIf this state does not change, the download may be stuck.\nTo clear download stack, Open your browser's download manager and edit directly.\nIf runaway, please restart your browser."
+			},
+			downloader_state_download_loading: {
+				message: "Downloading now.\nDouble-click this item to pause. (Cancel if API is not supported)"
+			},
+			downloader_state_download_pausing_can_resumed: {
+				message: "Download is paused. Once you start the download, it will resume from where it left off.\nDouble-click this item to resume."
+			},
+			downloader_state_download_pausing_cannot_resume: {
+				message: "Download is paused, but it is impossible to resume."
+			},
+			downloader_state_download_completed_deleted: {
+				message: "The downloaded file has been moved or deleted."
+			},
+			downloader_state_download_completed_unknown: {
+				message: "Ordered a HTML5 download.\nIt is unknown whether it was successful.\nTo download continuously, you need permission for \"Automatic downloads\"."
+			},
+			downloader_state_download_completed_exists: {
+				message: "Download completed, file exists.\nDouble-click this item to open the folder."
 			}
 		},
 		zh: {
@@ -68006,6 +68237,9 @@
 			context_menu_pageexpand_config: {
 				message: "PageExpand 设置"
 			},
+			context_menu_pageexpand_open_image_viewer: {
+				message: "Open Image Viewer"
+			},
 			context_menu_pageexpand_open_download_board_application: {
 				message: "Open Download Board (App)"
 			},
@@ -68119,6 +68353,69 @@
 			},
 			download_board_option_filter_select: {
 				message: "Selected item"
+			},
+			downloader_state_header_waiting: {
+				message: "Waiting my turn.\nWaiting for another load to finish."
+			},
+			downloader_state_header_failed: {
+				message: "HEAD method request was failed."
+			},
+			downloader_state_header_loaded: {
+				message: "HEAD method request was successful."
+			},
+			downloader_state_archive_waiting: {
+				message: "Waiting my turn.\nWaiting for another load to finish."
+			},
+			downloader_state_archive_failed: {
+				message: "I failed. This item will be excluded from the archive."
+			},
+			downloader_state_archive_loading: {
+				message: "Loading now."
+			},
+			downloader_state_archive_loaded: {
+				message: "Loading completed."
+			},
+			downloader_state_archive_calculating: {
+				message: "Calculating hash."
+			},
+			downloader_state_archive_calculated: {
+				message: "Hash calculation completed."
+			},
+			downloader_state_archive_writing: {
+				message: "Writing binary."
+			},
+			downloader_state_archive_completed: {
+				message: "Process completed."
+			},
+			downloader_state_download_wait: {
+				message: "Waiting my turn.\nWaiting for another download to finish."
+			},
+			downloader_state_download_failed: {
+				message: "Download failed."
+			},
+			downloader_state_download_erased: {
+				message: "History has been erased."
+			},
+			downloader_state_download_creating: {
+				message: "Ordered a download. Waiting for the browser to start the download.\nIf this state does not change, the download may be stuck.\nTo clear download stack, Open your browser's download manager and edit directly.\nIf runaway, please restart your browser."
+			},
+			downloader_state_download_loading: {
+				message: "Downloading now.\nDouble-click this item to pause. (Cancel if API is not supported)"
+			},
+			downloader_state_download_pausing_can_resumed: {
+				message: "Download is paused. Once you start the download, it will resume from where it left off.\nDouble-click this item to resume."
+			},
+			downloader_state_download_pausing_cannot_resume: {
+				message: "Download is paused, but it is impossible to resume."
+			},
+			downloader_state_download_completed_deleted: {
+				message: "The downloaded file has been moved or deleted."
+			},
+			downloader_state_download_completed_unknown: {
+				message: "Ordered a HTML5 download.\nIt is unknown whether it was successful.\nTo download continuously, you need permission for \"Automatic downloads\"."
+			},
+			downloader_state_download_completed_exists: {
+				message: "Download completed, file exists.\nDouble-click this item to open the folder."
 			}
 		}
 	};
@@ -68290,16 +68587,6 @@
 		var _this = this;
 
 		// --------------------------------------------------------------------------------
-		// ハッシュ
-		// --------------------------------------------------------------------------------
-		function url_to_key(url){
-			try{
-				return (new URL(url)).href;
-			}catch(e){}
-			return url;
-		}
-
-		// --------------------------------------------------------------------------------
 		// UrlInfo
 		// --------------------------------------------------------------------------------
 		function UrlInfo(url){
@@ -68313,7 +68600,7 @@
 		UrlInfo.prototype = {
 			release : function(){
 				if(!this.url) return;
-				delete _dictionary[url_to_key(this.url)];
+				delete _dictionary[UrlInfo_url_to_key(this.url)];
 				delete this.url;
 				this.releaseBlobURL();
 				_url_count -= 1;
@@ -68659,7 +68946,7 @@
 		// --------------------------------------------------------------------------------
 		_this.addURL = function(url,optional){
 			optional = optional || {};
-			var key = url_to_key(url);
+			var key = UrlInfo_url_to_key(url);
 			var url_info = _dictionary[key];
 			if(!url_info){
 				_dictionary[key] = url_info = new UrlInfo(url);
@@ -68702,7 +68989,7 @@
 		// UrlInfo を取得
 		// --------------------------------------------------------------------------------
 		_this.getUrlInfo = function(url){
-			return _dictionary[url_to_key(url)] || null;
+			return _dictionary[UrlInfo_url_to_key(url)] || null;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -68778,6 +69065,16 @@
 		_url_count = 0;
 		_repeat_max = 16;
 		_this.event_dispatcher = new EventDispatcher();
+	}
+
+	// --------------------------------------------------------------------------------
+	// ハッシュ
+	// --------------------------------------------------------------------------------
+	function UrlInfo_url_to_key(url){
+		try{
+			return (new URL(url)).href;
+		}catch(e){}
+		return url;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -70423,7 +70720,7 @@
 				})()){
 					element.decoding = "async";
 					var promise = element.decode();
-					promise.then(success,failure);
+					promise.then(success,success); // デコードに失敗しても画像は表示される
 					return;
 				}
 
@@ -71169,7 +71466,6 @@
 			if(f) f(this.progress);
 		}
 		function dispatch_onstatechange(){
-			this.url_info.setValue("state",this.response.state);
 			var f = this.onstatechange;
 			if(f) f(this.response);
 		}
@@ -71719,6 +72015,7 @@
 			switch(_this.request.order){
 			case "pause":
 			case "cancel":
+			case "open":
 				load_exec();
 				break;
 			default:
@@ -86223,6 +86520,11 @@
 				if(!menu_command) return;
 				if(WindowIsChild(window)) return;
 				if(page_expand_arguments.admin != page_expand_arguments.window) return;
+
+				menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_open_image_viewer"), function(){
+					var popup_image = popup_image_container.getNext();
+					var image_viewer = new ImageViewer(popup_image);
+				},"i");
 
 				menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_open_download_board_inline"), function(){
 					download_board.setVisible(true);

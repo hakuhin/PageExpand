@@ -29789,7 +29789,7 @@ function PageExpand(page_expand_arguments){
 
 					return 0;
 				})();
-				if(version >= 8){
+				if(version >= 7){
 					return "5ch_v8";
 				}
 				return "";
@@ -34710,6 +34710,19 @@ function PageExpand(page_expand_arguments){
 				if(!(project.getEnable())) return;
 				if(!(project.getEnableContextMenu())) return;
 
+				// イメージビューワを開く
+				items.push({
+					title:_i18n.getMessage("context_menu_pageexpand_open_image_viewer"),
+					contexts:["all"],
+					id:"openImageViewer"
+				});
+
+				items.push({
+					type:"separator",
+					contexts:["all"],
+					id:"separator0"
+				});
+
 				// ダウンロードボードを開く
 				items.push({
 					title:_i18n.getMessage("context_menu_pageexpand_open_download_board_inline"),
@@ -34727,7 +34740,7 @@ function PageExpand(page_expand_arguments){
 				items.push({
 					type:"separator",
 					contexts:["all"],
-					id:"separator0"
+					id:"separator1"
 				});
 
 				// 掲示板ボードを開く
@@ -34740,7 +34753,7 @@ function PageExpand(page_expand_arguments){
 				items.push({
 					type:"separator",
 					contexts:["all"],
-					id:"separator1"
+					id:"separator2"
 				});
 
 				// 現在のページの設定を編集
@@ -34762,7 +34775,7 @@ function PageExpand(page_expand_arguments){
 				items.push({
 					type:"separator",
 					contexts:["all"],
-					id:"separator2"
+					id:"separator3"
 				});
 
 				// PageExpand の開始
@@ -35777,6 +35790,7 @@ function PageExpand(page_expand_arguments){
 					};
 
 					menu_commands["executeDebug"] =
+					menu_commands["openImageViewer"] =
 					menu_commands["openDownloadBoardInline"] =
 					menu_commands["batchDownloadMedia"] = function(info, tab) {
 						var port = extension_message.connectToContent(tab,info);
@@ -36136,6 +36150,71 @@ function PageExpand(page_expand_arguments){
 					}
 
 					// --------------------------------------------------------------------------------
+					// ファイルアイコン辞書（Firefox で進行不能になる事があるので呼び出し回数を減らす）
+					// --------------------------------------------------------------------------------
+					function FileIconDictionary(){
+						var _this = this;
+						var FileIcon = function(item){
+							var _this = this;
+							this.event_dispatcher = new EventDispatcher();
+
+							// Edge は Promise 未対応
+							chrome.downloads.getFileIcon(item.id,{},function(url){
+								if(_this.released) return;
+								_this.url = url || "";
+								_this.loaded = true;
+								if((function(){
+									if(chrome.runtime.lastError) return false;
+									if(!(_this.url)) return false;
+									return true;
+								})()){
+									_this.event_dispatcher.dispatchEvent("loaded",_this.url);
+								}
+								_this.event_dispatcher.release();
+								delete _this.event_dispatcher;
+							});
+							//var promise =  chrome.downloads.getFileIcon(id);
+							//promise.then(function(url){
+							//},function(reason){});
+						};
+						FileIcon.prototype = {
+							release:function(){
+								if(this.released) return;
+								this.released = true;
+								if(this.event_dispatcher){
+									this.event_dispatcher.release();
+									this.event_dispatcher = null;
+								}
+							},
+							url:"",
+							loaded:false,
+							released:false
+						};
+						_this.release = function(){
+							var k;
+							for(k in file_icons){
+								file_icons[k].release();
+							}
+						};
+						_this.getFileIcon = function(item,callback){
+							var file_icon = file_icons[item.mime];
+							if(!file_icon){
+								file_icons[item.mime] = file_icon = new FileIcon(item);
+							}
+
+							if(file_icon.loaded){
+								callback(file_icon.url);
+								return;
+							}
+
+							var event_handler = file_icon.event_dispatcher.createEventHandler("loaded");
+							event_handler.setFunction(callback);
+						};
+
+						var file_icons = new Object();
+					}
+
+					// --------------------------------------------------------------------------------
 					// ダウンロード
 					// --------------------------------------------------------------------------------
 					command_dictionary["download"] = function(port,data){
@@ -36165,16 +36244,10 @@ function PageExpand(page_expand_arguments){
 						var determining_item = null;
 						var blob_url = null;
 						var file_name = "";
+						var item_latest = null;
 						var creating = false;
 						var released = false;
 
-						var abort = function(){
-							try{
-								release_observer();
-								//fetch_abort.abort();
-							}catch(e){
-							}
-						};
 						var release_observer = function(){
 							if(observer){
 								observer.release();
@@ -36232,10 +36305,16 @@ function PageExpand(page_expand_arguments){
 							response.result = true;
 							complete();
 						};
+						var suspend = function(){
+							if(released) return;
+							response.result = false;
+							complete();
+						};
 						var failure = function(msg){
 							if(released) return;
 							response.result = false;
 							response.errorText = msg;
+							dispatch_state_failed();
 							complete();
 						};
 
@@ -36246,7 +36325,6 @@ function PageExpand(page_expand_arguments){
 						port.onmessage = (function(){
 							function isStacking(){
 								if(creating){
-									dispatch_state_failed();
 									failure("item is stacked.");
 									return true;
 								}
@@ -36311,10 +36389,14 @@ function PageExpand(page_expand_arguments){
 											break;
 										case "pause":
 											exec_methods.push(download_pause);
-											exec_methods.push(success);
+											exec_methods.push(download_observer);
 											break;
 										case "cancel":
 											exec_methods.push(download_cancel);
+											exec_methods.push(download_observer);
+											break;
+										case "open":
+											exec_methods.push(download_open);
 											exec_methods.push(success);
 											break;
 										}
@@ -36331,6 +36413,7 @@ function PageExpand(page_expand_arguments){
 
 						function dispatch_progress(item){
 							if(released) return;
+							item_latest = item;
 							progress.bytesLoaded = item.bytesReceived || 0;
 							progress.bytesTotal = item.totalBytes || 0;
 							port.postMessage({
@@ -36414,29 +36497,23 @@ function PageExpand(page_expand_arguments){
 						})();
 						function event_statechange(item){
 							if(released) return;
+							item_latest = item;
 
 							dispatch_state(item);
 
 							if(item.state == "complete"){
-								response.ok = true;
-								response.status = 200;
 								success();
 								return;
-							}else if(item.state == "interrupted"){
+							}
+
+							if(item.paused){
+								suspend();
+								return;
+							}
+
+							if(item.state == "interrupted"){
 								failure(item.error || "");
 								return;
-							}else{
-								var result = Boolean(item.paused);
-								switch(request.order){
-								case "pause":
-								case "cancel":
-									result = !(result);
-									break;
-								}
-								if(result){
-									failure(item.error || "");
-									return;
-								}
 							}
 						}
 
@@ -36458,6 +36535,7 @@ function PageExpand(page_expand_arguments){
 								}
 
 								if(item){
+									item_latest = item;
 									response.id = item.id;
 									dispatch_progress(item);
 									dispatch_mimetype(item);
@@ -36474,11 +36552,11 @@ function PageExpand(page_expand_arguments){
 								if(_this.released) return;
 								var item = items[0];
 								if(!item){
-									dispatch_state_failed();
 									failure("Download item is losted.");
 									return;
 								}
 								DownloadItem_consolidate(item);
+								item_latest = item;
 								response.id = item.id;
 								dispatch_progress(item);
 								dispatch_mimetype(item);
@@ -36492,7 +36570,6 @@ function PageExpand(page_expand_arguments){
 
 							var file_name_obj = ProjectDownloadSaveFile_Determining(request,{ext:request.ext,type:"download"});
 							if(file_name_obj.error){
-								dispatch_state_failed();
 								failure(file_name_obj.error);
 								return;
 							}
@@ -36543,7 +36620,6 @@ function PageExpand(page_expand_arguments){
 										return;
 									}
 									if(id === undefined){
-										dispatch_state_failed();
 										failure(chrome.runtime.lastError.message);
 										return;
 									}
@@ -36559,7 +36635,6 @@ function PageExpand(page_expand_arguments){
 								});
 							}catch(e){
 								creating = false;
-								dispatch_state_failed();
 								failure(e.message || "");
 							}
 						}
@@ -36568,14 +36643,12 @@ function PageExpand(page_expand_arguments){
 							try{
 								chrome.downloads[order](response.id,function(){
 									if(chrome.runtime.lastError){
-										dispatch_state_failed();
 										failure(chrome.runtime.lastError.message);
 										return;
 									}
 									callback();
 								});
 							}catch(e){
-								dispatch_state_failed();
 								failure(e.message || "");
 							}
 						}
@@ -36596,7 +36669,6 @@ function PageExpand(page_expand_arguments){
 							function rejected(reason){
 								if(replied) return;
 								release();
-								dispatch_state_failed();
 								failure(reason);
 							}
 							var replied = false;
@@ -36626,6 +36698,49 @@ function PageExpand(page_expand_arguments){
 							download_order("cancel",callback);
 						}
 
+						function download_open(callback){
+							if(!(function(){
+								if(!item_latest) return false;
+								if(!item_latest.exists) return false;
+								if(item_latest.state != "complete") return false;
+								return true
+							})()){
+								failure("not exist");
+								return;
+							}
+
+							if(!(function(){
+								var t = chrome.downloads.DangerType;
+								if(item_latest.danger != t.SAFE) return false;
+								return true
+							})()){
+								failure("danger (" + item_latest.danger + ")");
+								return;
+							}
+
+							try{
+								function fulfill() {
+									callback();
+								}
+								function reject(reason){
+									failure(reason);
+								}
+
+								var promise = chrome.downloads.show(response.id);
+								if(promise){
+									promise.then(fulfill,reject);
+								}else{
+									if(chrome.runtime.lastError){
+										failure(chrome.runtime.lastError.message);
+										return;
+									}
+									fulfill();
+								}
+							}catch(e){
+								failure(e.message || "");
+							}
+						}
+
 						function download_addlistener(callback){
 							release_changed();
 							handle_changed = function(delta){
@@ -36653,10 +36768,7 @@ function PageExpand(page_expand_arguments){
 							observer.onmimechange = dispatch_mimetype;
 							observer.onstatuschange = dispatch_status;
 							observer.onstatechange = event_statechange;
-							observer.onerror = function(msg){
-								dispatch_state_failed();
-								failure(msg);
-							};
+							observer.onerror = failure;
 							callback();
 						}
 
@@ -36667,6 +36779,7 @@ function PageExpand(page_expand_arguments){
 					// --------------------------------------------------------------------------------
 					command_dictionary["downloadHistoryMonitor"] = function(port,data){
 						var observers = new Object();
+						var file_icon_dictionary = new FileIconDictionary();
 						var icons = new Object();
 						var handle_created = null;
 						var handle_changed = null;
@@ -36694,6 +36807,10 @@ function PageExpand(page_expand_arguments){
 							for(k in observers){
 								observer_release(k);
 							}
+							if(file_icon_dictionary){
+								file_icon_dictionary.release();
+								file_icon_dictionary = null;
+							}
 						}
 
 						port.ondisconnect = function(){
@@ -36704,6 +36821,7 @@ function PageExpand(page_expand_arguments){
 							if(observers[id]) return;
 							var observer = observers[id] = download_item_observer.createObserver(id);
 							observer.onprogress = dispatch_progress;
+							observer.onmimechange = dispatch_mimechange;
 							observer.onstatechange = dispatch_statechange;
 							observer.onerror = function(){
 								if(released) return;
@@ -36720,6 +36838,13 @@ function PageExpand(page_expand_arguments){
 							if(released) return;
 							port.postMessage({
 								state:"progress",
+								data:item
+							});
+						}
+						function dispatch_mimechange(item){
+							if(released) return;
+							port.postMessage({
+								state:"mime",
 								data:item
 							});
 						}
@@ -36765,10 +36890,9 @@ function PageExpand(page_expand_arguments){
 						function download_get_icon(item){
 							if(!(function(){
 								if(icons[item.id]) return false;
+								if(!item.mime) return false;
 								// Chrome では、Filename 確定前だとエラー
 								if(!item.filename) return false;
-								// Firefox で進行不能になる事がある
-								if(UserAgentGetFirefox()) return false;
 								return true;
 							})()){
 								return;
@@ -36776,18 +36900,12 @@ function PageExpand(page_expand_arguments){
 
 							icons[item.id] = true;
 
-							// Edge は Promise 未対応
-							chrome.downloads.getFileIcon(item.id,{},function(url){
-								if(released) return;
-								if(chrome.runtime.lastError) return;
+							file_icon_dictionary.getFileIcon(item,function(url){
 								port.postMessage({
 									state:"icon",
 									data:{id:item.id,fileIconURL:url}
 								});
 							});
-							//var promise =  chrome.downloads.getFileIcon(id);
-							//promise.then(function(url){
-							//},function(reason){});
 						}
 
 						chrome.downloads.search({},function(items){
@@ -41925,7 +42043,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.6.0");
+				new UI_Text(parent,"PageExpand ver.1.6.1");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -48387,6 +48505,7 @@ function PageExpand(page_expand_arguments){
 				break;
 
 			case "executeDebug":
+			case "openImageViewer":
 			case "openDownloadBoardInline":
 			case "batchDownloadMedia":
 				chrome.tabs.query({active:true,currentWindow:true},function(tabs) {
@@ -48545,6 +48664,14 @@ function PageExpand(page_expand_arguments){
 			var _menu_window = DocumentCreateElement("div");
 			ElementSetStyle(_menu_window,"display:table-cell; vertical-align:top; user-select:none; -webkit-user-select:none; -moz-user-select:none; -khtml-user-select:none; margin:0px;");
 			out_table.appendChild(_menu_window);
+
+			// イメージビューワを開く
+			var button_open_image_viewer = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_open_image_viewer"));
+			button_open_image_viewer.onclick = function(){
+				click("openImageViewer");
+			};
+
+			new UI_Separator(_menu_window);
 
 			// ダウンロードボードを開く
 			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_open_download_board_inline"));
@@ -54808,6 +54935,25 @@ function PageExpand(page_expand_arguments){
 			var element_item = this.root = DocumentCreateElement("div");
 			element_item.className = "item";
 			element_item.addEventListener("dblclick",function(e){
+
+				// ダウンロード完了なら開く
+				if(url_info.getValue("state") == DownloaderState.DOWNLOAD.COMPLETED.EXISTS){
+					var downloader = new Downloader();
+					downloader.setURL(url_info.getURL());
+					downloader.setAllowSameRequest(true);
+					downloader.onstatechange = function(response){
+						url_info.setValue("state",response.state);
+					};
+					downloader.oncomplete = function(response){
+						if(response.result){
+						}else{
+							url_info.setValue("reason",response.errorText);
+						}
+					};
+					downloader.start({order:"open"});
+					return;
+				}
+
 				// ダウンロード途中なら一時停止
 				if(sequential_downloader){
 					var downloader = sequential_downloader.getDownloader(_this.url_info);
@@ -54916,10 +55062,14 @@ function PageExpand(page_expand_arguments){
 				}
 				var updateState = (function(){
 					var list = {};
+					var reason = {};
 					var h = DownloaderState.HEADER;
 					list[h.WAITING] = "wait...";
 					list[h.FAILED] = "failed";
 					list[h.LOADED] = "loaded";
+					reason[h.WAITING] = "header_waiting";
+					reason[h.FAILED] = "header_failed";
+					reason[h.LOADED] = "header_loaded";
 					var a = DownloaderState.ARCHIVE;
 					list[a.WAITING] = "wait...";
 					list[a.FAILED] = "failed";
@@ -54929,6 +55079,14 @@ function PageExpand(page_expand_arguments){
 					list[a.CALCULATED] = "done";
 					list[a.WRITING] = "writing..";
 					list[a.COMPLETED] = "completed";
+					reason[a.WAITING] = "archive_waiting";
+					reason[a.FAILED] = "archive_failed";
+					reason[a.LOADING] = "archive_loading";
+					reason[a.LOADED] = "archive_loaded";
+					reason[a.CALCULATING] = "archive_calculating";
+					reason[a.CALCULATED] = "archive_calculated";
+					reason[a.WRITING] = "archive_writing";
+					reason[a.COMPLETED] = "archive_completed";
 					var d = DownloaderState.DOWNLOAD;
 					list[d.WAITING] = "wait...";
 					list[d.FAILED] = "failed";
@@ -54940,10 +55098,23 @@ function PageExpand(page_expand_arguments){
 					list[d.COMPLETED.DELETED] = "deleted";
 					list[d.COMPLETED.UNKNOWN] = "completed";
 					list[d.COMPLETED.EXISTS] = "exists";
+					reason[d.WAITING] = "download_wait";
+					reason[d.FAILED] = "download_failed";
+					reason[d.ERASED] = "download_erased";
+					reason[d.CREATING] = "download_creating";
+					reason[d.LOADING] = "download_loading";
+					reason[d.PAUSING.CAN_RESUMED] = "download_pausing_can_resumed";
+					reason[d.PAUSING.CANNOT_RESUME] = "download_pausing_cannot_resume";
+					reason[d.COMPLETED.DELETED] = "download_completed_deleted";
+					reason[d.COMPLETED.UNKNOWN] = "download_completed_unknown";
+					reason[d.COMPLETED.EXISTS] = "download_completed_exists";
 					return function (k,v){
 						var n = this.textnodes[k];
 						if(!n) return;
 						n.nodeValue = list[v] || v;
+						if(!reason[v]) return;
+						var e = this.elements["state"];
+						e.title = _i18n.getMessage("downloader_state_" + reason[v]);
 					};
 				})();
 				var updateProgress = (function(){
@@ -55081,6 +55252,11 @@ function PageExpand(page_expand_arguments){
 							}
 						}
 						updateCommon.call(this,k,s);
+					},
+					"reason":function(k,v){
+						if(!v) return;
+						var e = this.elements["state"];
+						e.title += "\nReason: " + v;
 					}
 				};
 				return function(k,v){
@@ -55132,12 +55308,12 @@ function PageExpand(page_expand_arguments){
 				commands["text"] =
 				commands["application"] = function(){
 					var type = this.getValue("type") || "";
-					var v = Boolean(type.match(new RegExp("^" + filter_type + "/","i")));
+					var v = Boolean(type.match(new RegExp("^" + filter_type + "(/|$)","i")));
 					setVisible.call(this,v);
 				};
 				commands["media"] = function(){
 					var type = this.getValue("type") || "";
-					var v = Boolean(type.match(new RegExp("^(image|audio|video)/","i")));
+					var v = Boolean(type.match(new RegExp("^(image|audio|video)(/|$)","i")));
 					setVisible.call(this,v);
 				};
 				commands["archive"] = function(){
@@ -55945,7 +56121,18 @@ function PageExpand(page_expand_arguments){
 
 			var event_handler_attach = url_info_dictionary.event_dispatcher.createEventHandler("attach");
 			event_handler_attach.setFunction(function(e){
-				createItem(e.urlInfo);
+				var url_info = e.urlInfo;
+				createItem(url_info);
+
+				if(!download_history_monitor) return;
+				var ditm = download_history_monitor.getIDs(url_info.url)[0];
+				if(!ditm) return;
+				var item = ditm.item;
+				url_info.setValue("state",ditm.state);
+				url_info.setValue("icon",ditm.fileIconURL);
+				url_info.setMimeTypeByFetch(item.mime);
+				url_info.setValue("loaded",item.bytesReceived);
+				url_info.setValue("total",item.totalBytes);
 			});
 
 			var event_handler_modify = url_info_dictionary.event_dispatcher.createEventHandler("modify");
@@ -56133,9 +56320,10 @@ function PageExpand(page_expand_arguments){
 				url_info.setValue("state",h.LOADED);
 				complete();
 			}
-			function failure(){
+			function failure(reason){
 				result.error += 1;
 				url_info.setValue("state",h.FAILED);
+				url_info.setValue("reason",reason);
 				complete();
 			}
 
@@ -56261,12 +56449,11 @@ function PageExpand(page_expand_arguments){
 			}
 			function success(){
 				result.success += 1;
-//				url_info.setValue("state",h.LOADED);
 				complete();
 			}
-			function failure(){
+			function failure(reason){
 				result.error += 1;
-//				url_info.setValue("state",h.FAILED);
+				url_info.setValue("reason",reason);
 				complete();
 			}
 
@@ -56293,6 +56480,9 @@ function PageExpand(page_expand_arguments){
 				var total = response.bytesTotal;
 				url_info.setValue("loaded",loaded);
 				url_info.setValue("total",total);
+			};
+			downloader.onstatechange = function(response){
+				url_info.setValue("state",response.state);
 			};
 			downloader.oncomplete = function(response){
 				if(response.result){
@@ -56393,6 +56583,7 @@ function PageExpand(page_expand_arguments){
 					_this.failed = true;
 					p.progress.error++;
 					_this.setState(a.FAILED);
+					_this.url_info.setValue("reason",reason);
 					complete();
 				}
 
@@ -57279,9 +57470,10 @@ function PageExpand(page_expand_arguments){
 					if(old) old.release();
 					IDs[this.id] = this;
 
-					var c = URLs[this.url];
+					var key = UrlInfo_url_to_key(this.url);
+					var c = URLs[key];
 					if(!c){
-						c = URLs[this.url] = new ItemContainer();
+						c = URLs[key] = new ItemContainer();
 					}
 					this.parent = c;
 					c.attachLast(this);
@@ -57295,7 +57487,7 @@ function PageExpand(page_expand_arguments){
 						remove.call(this);
 						c.count -= 1;
 						if(c.count < 0){
-							delete URLs[this.url];
+							delete URLs[UrlInfo_url_to_key(this.url)];
 						}
 						delete IDs[this.id];
 					}
@@ -57417,6 +57609,13 @@ function PageExpand(page_expand_arguments){
 					if(!o) return;
 					o.url_info.setValue("icon",o.item.fileIconURL);
 				},
+				dispatch_mimetype : function(){
+					var o = get_highest.call(this);
+					if(!o) return;
+					var r = o.item.item;
+					if(!(r.mime)) return;
+					o.url_info.setMimeTypeByFetch(r.mime);
+				},
 				count : 0
 			};
 			return f;
@@ -57437,7 +57636,7 @@ function PageExpand(page_expand_arguments){
 			return IDs[id];
 		};
 		_this.getIDs = function(url){
-			var container = URLs[url];
+			var container = URLs[UrlInfo_url_to_key(url)];
 			if(container){
 				return container.getAll();
 			}
@@ -57473,6 +57672,7 @@ function PageExpand(page_expand_arguments){
 					for(k in URLs){
 						var c = URLs[k];
 						c.dispatch_state();
+						c.dispatch_mimetype();
 						c.dispatch_progress();
 					}
 				},
@@ -57488,6 +57688,7 @@ function PageExpand(page_expand_arguments){
 					if(!ditm.attach()) return;
 					var c = ditm.parent;
 					c.dispatch_state();
+					c.dispatch_mimetype();
 					c.dispatch_progress();
 				},
 				"progress":function(item){
@@ -57500,6 +57701,17 @@ function PageExpand(page_expand_arguments){
 					if(!ditm.updatePriority()) return;
 					var c = ditm.parent;
 					c.dispatch_progress();
+				},
+				"mime":function(item){
+					var ditm = IDs[item.id];
+					var o = ditm.item;
+					var k;
+					for(k in item){
+						if(!ignore[k]) o[k] = item[k];
+					}
+					if(!ditm.updatePriority()) return;
+					var c = ditm.parent;
+					c.dispatch_mimetype();
 				},
 				"icon":function(item){
 					var ditm = IDs[item.id];
@@ -57519,6 +57731,9 @@ function PageExpand(page_expand_arguments){
 					var c = ditm.parent;
 					if(delta.totalBytes){
 						c.dispatch_total();
+					}
+					if(delta.mime){
+						c.dispatch_mimetype();
 					}
 					for(k in state){
 						if(delta[k]){
@@ -57593,11 +57808,11 @@ function PageExpand(page_expand_arguments){
 			}
 		}
 
-		// レジュームは state に依存しない
-		if(item.paused){
-			if(item.canResume){
-				return d.PAUSING.CAN_RESUMED;
-			}else{
+		// レジュームは state paused に依存しない
+		if(item.canResume){
+			return d.PAUSING.CAN_RESUMED;
+		}else{
+			if(item.paused){
 				return d.PAUSING.CANNOT_RESUME;
 			}
 		}
@@ -59079,6 +59294,10 @@ function PageExpand(page_expand_arguments){
 				loader = new Loader();
 				loader.onload = function(image){
 					thumbnail_image = image;
+
+					// 解析済み
+					var node_info = node_info_dictionary.addNode(thumbnail_image);
+					node_info.setAnalyzed(true);
 
 					// 解析ワーク作成
 					thumbnail_analyze_work = AnalyzeWorkCreate(thumbnail_image);
@@ -63259,6 +63478,7 @@ function PageExpand(page_expand_arguments){
 		// １つ前のポップアップイメージを取得
 		// --------------------------------------------------------------------------------
 		_this.getPrev = function(popup_image){
+			popup_image = popup_image || _this;
 			var list = popup_image._prev;
 			if(list == popup_image) return null;
 			if(list == _this) return null;
@@ -63269,6 +63489,7 @@ function PageExpand(page_expand_arguments){
 		// １つ後のポップアップイメージを取得
 		// --------------------------------------------------------------------------------
 		_this.getNext = function(popup_image){
+			popup_image = popup_image || _this;
 			var list = popup_image._next;
 			if(list == popup_image) return null;
 			if(list == _this) return null;
@@ -63775,23 +63996,39 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
+		// 画像サイズを取得
+		// --------------------------------------------------------------------------------
+		function getPopupImageSize(){
+			if(_popup_image){
+				var image = _popup_image.getImage();
+				return ImageGetNaturalSize(image);
+			}
+			return {width:128,height:128};
+		}
+
+		// --------------------------------------------------------------------------------
 		// 画像更新（内部用）
 		// --------------------------------------------------------------------------------
-		function updateImage(popup_image){
-			var image = popup_image.getImage();
-			var image_size = ImageGetNaturalSize(image);
-
+		function updateImage(){
 			removeImage();
 
 			_element_image = DocumentCreateElement("img");
 			ElementSetStyle(_element_image,CSSTextGetInitialImageElement());
 			ElementAddStyle(_element_image,"position:absolute; left:0px; top:0px; border:5px solid #666; cursor:inherit;");
 
+			var image_size = getPopupImageSize();
 			var style = _element_image.style;
 			style.width  = (image_size.width)  + "px";
 			style.height = (image_size.height) + "px";
 
-			_element_image.src = image.src;
+			if(_popup_image){
+				var image = _popup_image.getImage();
+				_element_image.src = image.src;
+			}
+
+			// 解析済み
+			var node_info = node_info_dictionary.addNode(_element_image);
+			node_info.setAnalyzed(true);
 
 			// 解析ワーク作成
 			_analyze_work_image = AnalyzeWorkCreate(_element_image);
@@ -63828,8 +64065,7 @@ function PageExpand(page_expand_arguments){
 		// スケールモード更新（内部用）
 		// --------------------------------------------------------------------------------
 		function updateScaleMode(){
-			var image = _popup_image.getImage();
-			var image_size = ImageGetNaturalSize(image);
+			var image_size = getPopupImageSize();
 			var border_width = 5;
 
 			var actual_w = (image_size.width  + border_width * 2) / _pixel_ratio;
@@ -64227,10 +64463,14 @@ function PageExpand(page_expand_arguments){
 			if(delta < 0) popup_image = popup_image_container.getPrev(_popup_image);
 			if(popup_image){
 				_popup_image = popup_image;
-				updateImage(_popup_image);
+				updateImage();
 			}
 
-			setMessage((popup_image_container.getIndex(_popup_image) + 1) + " / " + popup_image_container.getCount());
+			if(_popup_image){
+				setMessage((popup_image_container.getIndex(_popup_image) + 1) + " / " + popup_image_container.getCount());
+			}else{
+				setMessage("none");
+			}
 		}
 
 		// --------------------------------------------------------------------------------
@@ -64421,6 +64661,7 @@ function PageExpand(page_expand_arguments){
 					ElementSetStyle(button_download,CSSTextGetInitialButtonElement());
 					ElementAddStyle(button_download,style_button);
 					button_download.onclick = function(){
+						if(!_popup_image) return;
 						setMessage("Wait...");
 						var image = _popup_image.getImage();
 						var downloader = new Downloader();
@@ -64456,6 +64697,7 @@ function PageExpand(page_expand_arguments){
 					ElementAddStyle(button_scroll,style_button);
 					button_scroll.onclick = function(){
 						suicide();
+						if(!_popup_image) return;
 						var anchor = _popup_image.getElementAnchor();
 						anchor.scrollIntoView();
 					};
@@ -64553,7 +64795,7 @@ function PageExpand(page_expand_arguments){
 			_element_transform.appendChild(_element_transform_vector_after);
 
 			// 画像更新
-			updateImage(_popup_image);
+			updateImage();
 
 			(function(){
 
@@ -67652,6 +67894,9 @@ function PageExpand(page_expand_arguments){
 			context_menu_pageexpand_config: {
 				message: "PageExpand の設定"
 			},
+			context_menu_pageexpand_open_image_viewer: {
+				message: "イメージビューワを開く"
+			},
 			context_menu_pageexpand_open_download_board_application: {
 				message: "ダウンロードボードを開く（アプリ）"
 			},
@@ -67707,7 +67952,7 @@ function PageExpand(page_expand_arguments){
 				message: "ウィンドウのサイズを最大化します"
 			},
 			download_board_button_close: {
-				message: "ダウンロードボードを非常時にします。\nダウンロード作業は続行されます。\n終了するにはこのページを閉じるか、右下の中止ボタンを押します。"
+				message: "ダウンロードボードを非表示にします。\nダウンロード作業は続行されます。\n終了するにはこのページを閉じるか、右下の中止ボタンを押します。"
 			},
 			download_board_button_header: {
 				message: "不足している情報をサーバーに問い合わせます。\n拡張子が無いアドレスのコンテンツタイプを知りたい場合に使用します。\n必ずしも正しい情報が得られるとは限りません。"
@@ -67765,6 +68010,69 @@ function PageExpand(page_expand_arguments){
 			},
 			download_board_option_filter_select: {
 				message: "選択中のファイル"
+			},
+			downloader_state_header_waiting: {
+				message: "順番待ちです。\n他のロードが終わるのを待っています。"
+			},
+			downloader_state_header_failed: {
+				message: "HEAD method request は失敗しました。"
+			},
+			downloader_state_header_loaded: {
+				message: "HEAD method request は成功しました。"
+			},
+			downloader_state_archive_waiting: {
+				message: "順番待ちです。\n他のロードが終わるのを待っています。"
+			},
+			downloader_state_archive_failed: {
+				message: "失敗しました。このアイテムはアーカイブから除外されます。"
+			},
+			downloader_state_archive_loading: {
+				message: "ロード中です。"
+			},
+			downloader_state_archive_loaded: {
+				message: "ロードが完了しました。"
+			},
+			downloader_state_archive_calculating: {
+				message: "ハッシュの計算中です。"
+			},
+			downloader_state_archive_calculated: {
+				message: "ハッシュの計算が完了しました。"
+			},
+			downloader_state_archive_writing: {
+				message: "アーカイブを出力しています。"
+			},
+			downloader_state_archive_completed: {
+				message: "このアイテムの工程は終了しました。"
+			},
+			downloader_state_download_wait: {
+				message: "順番待ちです。\n他のダウンロードが終わるのを待っています。"
+			},
+			downloader_state_download_failed: {
+				message: "ダウンロードが失敗しました。"
+			},
+			downloader_state_download_erased: {
+				message: "履歴が消去されました。"
+			},
+			downloader_state_download_creating: {
+				message: "ダウンロードを発注しました。ブラウザが開始するのを待っています。\nこの状態のまま固まっている場合、ダウンロードのスタックが発生している可能性があります。\nスタックを解消するには、ブラウザのダウンロードマネージャーを開いて直接編集します。\n手に負えなくなった場合はブラウザを再起動して下さい。"
+			},
+			downloader_state_download_loading: {
+				message: "ダウンロード中です。\nアイテムをダブルクリックすると一時停止します。（APIが未対応なら中止）"
+			},
+			downloader_state_download_pausing_can_resumed: {
+				message: "ダウンロードが一時停止されています。ダウンロードを開始すると途中から再開されます。\nこのアイテムをダブルクリックすると、ダウンロードが再開されます。"
+			},
+			downloader_state_download_pausing_cannot_resume: {
+				message: "ダウンロードが一時停止されていますが、再開することは不可能です。"
+			},
+			downloader_state_download_completed_deleted: {
+				message: "ダウンロードしたファイルは、移動もしくは削除されました。"
+			},
+			downloader_state_download_completed_unknown: {
+				message: "HTML5ベースのダウンロード処理を行いました。\n進捗を取得する方法が無いため成功したかは不明です。\n連続してダウンロードを行うには、「サイトの権限」から「自動ダウンロード」の許可が必要です。"
+			},
+			downloader_state_download_completed_exists: {
+				message: "ダウンロードが完了し、ファイルが現存しています。\nこのアイテムをダブルクリックすると、フォルダを開きます。"
 			}
 		},
 		en: {
@@ -69165,6 +69473,9 @@ function PageExpand(page_expand_arguments){
 			context_menu_pageexpand_config: {
 				message: "PageExpand Setting"
 			},
+			context_menu_pageexpand_open_image_viewer: {
+				message: "Open Image Viewer"
+			},
 			context_menu_pageexpand_open_download_board_application: {
 				message: "Open Download Board (App)"
 			},
@@ -69278,6 +69589,69 @@ function PageExpand(page_expand_arguments){
 			},
 			download_board_option_filter_select: {
 				message: "Selected item"
+			},
+			downloader_state_header_waiting: {
+				message: "Waiting my turn.\nWaiting for another load to finish."
+			},
+			downloader_state_header_failed: {
+				message: "HEAD method request was failed."
+			},
+			downloader_state_header_loaded: {
+				message: "HEAD method request was successful."
+			},
+			downloader_state_archive_waiting: {
+				message: "Waiting my turn.\nWaiting for another load to finish."
+			},
+			downloader_state_archive_failed: {
+				message: "I failed. This item will be excluded from the archive."
+			},
+			downloader_state_archive_loading: {
+				message: "Loading now."
+			},
+			downloader_state_archive_loaded: {
+				message: "Loading completed."
+			},
+			downloader_state_archive_calculating: {
+				message: "Calculating hash."
+			},
+			downloader_state_archive_calculated: {
+				message: "Hash calculation completed."
+			},
+			downloader_state_archive_writing: {
+				message: "Writing binary."
+			},
+			downloader_state_archive_completed: {
+				message: "Process completed."
+			},
+			downloader_state_download_wait: {
+				message: "Waiting my turn.\nWaiting for another download to finish."
+			},
+			downloader_state_download_failed: {
+				message: "Download failed."
+			},
+			downloader_state_download_erased: {
+				message: "History has been erased."
+			},
+			downloader_state_download_creating: {
+				message: "Ordered a download. Waiting for the browser to start the download.\nIf this state does not change, the download may be stuck.\nTo clear download stack, Open your browser's download manager and edit directly.\nIf runaway, please restart your browser."
+			},
+			downloader_state_download_loading: {
+				message: "Downloading now.\nDouble-click this item to pause. (Cancel if API is not supported)"
+			},
+			downloader_state_download_pausing_can_resumed: {
+				message: "Download is paused. Once you start the download, it will resume from where it left off.\nDouble-click this item to resume."
+			},
+			downloader_state_download_pausing_cannot_resume: {
+				message: "Download is paused, but it is impossible to resume."
+			},
+			downloader_state_download_completed_deleted: {
+				message: "The downloaded file has been moved or deleted."
+			},
+			downloader_state_download_completed_unknown: {
+				message: "Ordered a HTML5 download.\nIt is unknown whether it was successful.\nTo download continuously, you need permission for \"Automatic downloads\"."
+			},
+			downloader_state_download_completed_exists: {
+				message: "Download completed, file exists.\nDouble-click this item to open the folder."
 			}
 		},
 		zh: {
@@ -70677,6 +71051,9 @@ function PageExpand(page_expand_arguments){
 			context_menu_pageexpand_config: {
 				message: "PageExpand 设置"
 			},
+			context_menu_pageexpand_open_image_viewer: {
+				message: "Open Image Viewer"
+			},
 			context_menu_pageexpand_open_download_board_application: {
 				message: "Open Download Board (App)"
 			},
@@ -70790,6 +71167,69 @@ function PageExpand(page_expand_arguments){
 			},
 			download_board_option_filter_select: {
 				message: "Selected item"
+			},
+			downloader_state_header_waiting: {
+				message: "Waiting my turn.\nWaiting for another load to finish."
+			},
+			downloader_state_header_failed: {
+				message: "HEAD method request was failed."
+			},
+			downloader_state_header_loaded: {
+				message: "HEAD method request was successful."
+			},
+			downloader_state_archive_waiting: {
+				message: "Waiting my turn.\nWaiting for another load to finish."
+			},
+			downloader_state_archive_failed: {
+				message: "I failed. This item will be excluded from the archive."
+			},
+			downloader_state_archive_loading: {
+				message: "Loading now."
+			},
+			downloader_state_archive_loaded: {
+				message: "Loading completed."
+			},
+			downloader_state_archive_calculating: {
+				message: "Calculating hash."
+			},
+			downloader_state_archive_calculated: {
+				message: "Hash calculation completed."
+			},
+			downloader_state_archive_writing: {
+				message: "Writing binary."
+			},
+			downloader_state_archive_completed: {
+				message: "Process completed."
+			},
+			downloader_state_download_wait: {
+				message: "Waiting my turn.\nWaiting for another download to finish."
+			},
+			downloader_state_download_failed: {
+				message: "Download failed."
+			},
+			downloader_state_download_erased: {
+				message: "History has been erased."
+			},
+			downloader_state_download_creating: {
+				message: "Ordered a download. Waiting for the browser to start the download.\nIf this state does not change, the download may be stuck.\nTo clear download stack, Open your browser's download manager and edit directly.\nIf runaway, please restart your browser."
+			},
+			downloader_state_download_loading: {
+				message: "Downloading now.\nDouble-click this item to pause. (Cancel if API is not supported)"
+			},
+			downloader_state_download_pausing_can_resumed: {
+				message: "Download is paused. Once you start the download, it will resume from where it left off.\nDouble-click this item to resume."
+			},
+			downloader_state_download_pausing_cannot_resume: {
+				message: "Download is paused, but it is impossible to resume."
+			},
+			downloader_state_download_completed_deleted: {
+				message: "The downloaded file has been moved or deleted."
+			},
+			downloader_state_download_completed_unknown: {
+				message: "Ordered a HTML5 download.\nIt is unknown whether it was successful.\nTo download continuously, you need permission for \"Automatic downloads\"."
+			},
+			downloader_state_download_completed_exists: {
+				message: "Download completed, file exists.\nDouble-click this item to open the folder."
 			}
 		}
 	};
@@ -70961,16 +71401,6 @@ function PageExpand(page_expand_arguments){
 		var _this = this;
 
 		// --------------------------------------------------------------------------------
-		// ハッシュ
-		// --------------------------------------------------------------------------------
-		function url_to_key(url){
-			try{
-				return (new URL(url)).href;
-			}catch(e){}
-			return url;
-		}
-
-		// --------------------------------------------------------------------------------
 		// UrlInfo
 		// --------------------------------------------------------------------------------
 		function UrlInfo(url){
@@ -70984,7 +71414,7 @@ function PageExpand(page_expand_arguments){
 		UrlInfo.prototype = {
 			release : function(){
 				if(!this.url) return;
-				delete _dictionary[url_to_key(this.url)];
+				delete _dictionary[UrlInfo_url_to_key(this.url)];
 				delete this.url;
 				this.releaseBlobURL();
 				_url_count -= 1;
@@ -71330,7 +71760,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		_this.addURL = function(url,optional){
 			optional = optional || {};
-			var key = url_to_key(url);
+			var key = UrlInfo_url_to_key(url);
 			var url_info = _dictionary[key];
 			if(!url_info){
 				_dictionary[key] = url_info = new UrlInfo(url);
@@ -71373,7 +71803,7 @@ function PageExpand(page_expand_arguments){
 		// UrlInfo を取得
 		// --------------------------------------------------------------------------------
 		_this.getUrlInfo = function(url){
-			return _dictionary[url_to_key(url)] || null;
+			return _dictionary[UrlInfo_url_to_key(url)] || null;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -71449,6 +71879,16 @@ function PageExpand(page_expand_arguments){
 		_url_count = 0;
 		_repeat_max = 16;
 		_this.event_dispatcher = new EventDispatcher();
+	}
+
+	// --------------------------------------------------------------------------------
+	// ハッシュ
+	// --------------------------------------------------------------------------------
+	function UrlInfo_url_to_key(url){
+		try{
+			return (new URL(url)).href;
+		}catch(e){}
+		return url;
 	}
 
 	// --------------------------------------------------------------------------------
@@ -73024,7 +73464,7 @@ function PageExpand(page_expand_arguments){
 				})()){
 					element.decoding = "async";
 					var promise = element.decode();
-					promise.then(success,failure);
+					promise.then(success,success); // デコードに失敗しても画像は表示される
 					return;
 				}
 
@@ -73771,7 +74211,6 @@ function PageExpand(page_expand_arguments){
 			if(f) f(this.progress);
 		}
 		function dispatch_onstatechange(){
-			this.url_info.setValue("state",this.response.state);
 			var f = this.onstatechange;
 			if(f) f(this.response);
 		}
@@ -74355,6 +74794,7 @@ function PageExpand(page_expand_arguments){
 			switch(_this.request.order){
 			case "pause":
 			case "cancel":
+			case "open":
 				load_exec();
 				break;
 			default:
@@ -88762,6 +89202,10 @@ function PageExpand(page_expand_arguments){
 						},
 						"executeDebug":function(port,data){
 							page_expand_debug.setVisible(true);
+						},
+						"openImageViewer":function(port,data){
+							var popup_image = popup_image_container.getNext();
+							var image_viewer = new ImageViewer(popup_image);
 						},
 						"openDownloadBoardInline":function(port,data){
 							download_board.setVisible(true);
