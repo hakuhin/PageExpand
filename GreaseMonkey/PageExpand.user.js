@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.6.1
+// @version        1.6.2
 // @namespace      http://hakuhin.jp/page_expand
 // @description    Popup image. Batch download. Extend BBS. etc...
 // @description:ja 画像のポップアップ、一括ダウンロードツール、匿名掲示板の専ブラ機能など
@@ -11789,6 +11789,47 @@
 		}
 		if(exit())	return proj;
 
+		// --------------------------------------------------------------------------------
+		// プロジェクト ver.50
+		// --------------------------------------------------------------------------------
+		if(proj.version < 50){
+			proj.version = 50;
+
+			var google_domain = (function(){
+				var cc = "ac|ad|ae|al|am|as|at|az|ba|be|bf|bg|bi|bj|bs|bt|by|ca|cat|cd|cf|cg|ch|ci|cl|cm|com|cv|cz|de|dj|dk|dm|dz|ee|es|fi|fm|fr|ga|ge|gg|gl|gm|gp|gr|gy|hn|hr|ht|hu|ie|im|iq|is|it|je|jo|kg|ki|kz|la|li|lk|lt|lu|lv|md|me|mg|mk|ml|mn|ms|mu|mv|mw|ne|ng|nl|no|nr|nu|pl|pn|ps|pt|ro|rs|ru|rw|sc|se|sh|si|sk|sm|sn|so|sr|st|td|tg|tk|tl|tm|tn|to|tt|vg|vu|ws";
+				var co = "ao|bw|ck|cr|id|il|in|jp|ke|kr|ls|ma|mz|nz|th|tz|ug|uk|uz|ve|vi|za|zm|zw";
+				var com = "af|ag|ai|ar|au|bd|bh|bn|bo|br|bz|co|cu|cy|do|ec|eg|et|fj|gh|gi|gt|hk|hk|iq|jm|kh|kw|lb|ly|mm|mt|mx|my|na|nf|ng|ni|np|om|pa|pe|pg|ph|pk|pr|py|qa|sa|sb|sg|sl|sv|tj|tn|tr|tw|ua|uy|vc|vn";
+				return "^[^:]+://[^.]+[.]google[.](" + cc + "|co[.](" + co + ")|com[.](" + com + "))";
+			})();
+
+			var preset = getPreset(proj.replacement_to_link,"direct_link_image_search");
+			preset.filter[0].filter = {
+				type:"regexp",
+				asterisk:{
+					filter:[]
+				},
+				regexp:{
+					filter:[
+						{
+							pattern:google_domain + "/imgres[?].+",
+							flags:{i:true,g:false}
+						}
+					]
+				}
+			};
+
+			var preset = getPreset(proj.urlmap,"image_search");
+			preset.filter.regexp.filter[0] = {
+				pattern:google_domain + "/search[?](.+&|)(tbm=isch|udm=2)(&.+|$)",
+				flags:{i:true,g:false}
+			};
+			var preset = getPreset(proj.urlmap,"image_search");
+			preset.filter.regexp.filter[4] = {
+				pattern:"^[^:]+://www[.]bing[.]com/images/(search|feed)[?].*",
+				flags:{i:true,g:false}
+			};
+		}
+		if(exit())	return proj;
 
 		return proj;
 	}
@@ -11972,7 +12013,20 @@
 
 		if(element.tagName == "DIV"){
 
-			// Google Image Search
+			// Google Image Search (2024/03/23以降)
+			try{
+				if("docid" in element.dataset){
+					var image = element.getElementsByTagName("IMG")[0];
+					if(image){
+						var mouse_event = document.createEvent("MouseEvent");
+						mouse_event.initMouseEvent("mouseover",true,false,document.defaultView,0,0,0,0,0,false,false,false,false,0,null);
+						image.dispatchEvent(mouse_event);
+						return true;
+					}
+				}
+			}catch(e){}
+
+			// Google Image Search (2024/03/23以前)
 			try{
 				var data_ri = element.getAttribute("data-ri");
 				if(data_ri){
@@ -13885,19 +13939,13 @@
 
 	function(info,response){
 		var anchor_element = info.anchor_element;
-
-		var url = anchor_element.href;
-		var r = new RegExp("^(http|https)://.*?\\.google\\.(at|be|ca|ch|de|es|fr|it|nl|no|pl|ru|se|co\\.(id|in|jp|th|uk|za)|com|com\\.(ar|au|br|mx|sa|tr|tw))/imgres[?].*","i");
-		if(url.match(r)){
-			// クエリを取得
-			var query = StringGetQuery(url);
-			if(query.imgurl){
-				try{
-					var image_url = decodeURIComponent(decodeURIComponent(query.imgurl));
-					response({result:true,url:image_url,content_type:["image"]});
-					return true;
-				}catch(e){}
-			}
+		var query = StringGetQuery(anchor_element.href);
+		if(query.imgurl){
+			try{
+				var image_url = decodeURIComponent(decodeURIComponent(query.imgurl));
+				response({result:true,url:image_url,content_type:["image"]});
+				return true;
+			}catch(e){}
 		}
 
 		return false;
@@ -39560,7 +39608,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.6.1");
+				new UI_Text(parent,"PageExpand ver.1.6.2");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
