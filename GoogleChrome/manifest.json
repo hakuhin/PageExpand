@@ -1,8 +1,8 @@
 {
   "default_locale": "en",
   "name": "__MSG_extension_name__",
-  "version": "1.6.2",
-  "manifest_version": 2,
+  "version": "1.7.0",
+  "manifest_version": 3,
   "description": "__MSG_extension_description__",
   "author": "hakuhin",
   "icons": {
@@ -15,17 +15,17 @@
     "128": "icon128.png"
   },
   "background": {
-    "scripts": ["PageExpand.js","background.js"],
-    "persistent": true
+    "service_worker": "service_worker.js"
   },
   "content_scripts": [{
     "all_frames": true,
     "js": [ "PageExpand.js" , "content_scripts.js" ],
     "matches": [ "http://*/*" , "https://*/*" ],
     "match_about_blank": true,
+    "match_origin_as_fallback": true,
     "run_at": "document_start"
   }],
-  "browser_action": {
+  "action": {
     "default_icon" : {
       "16": "icon16.png",
       "18": "icon18.png",
@@ -38,6 +38,9 @@
     },
     "default_title": "__MSG_extension_name__",
     "default_popup": "popup.html"
+  },
+  "side_panel": {
+    "default_path": "sidebar.html"
   },
   "sidebar_action": {
     "default_icon":  {
@@ -59,13 +62,14 @@
   },
   "permissions": [
     "tabs",
-    "webRequest",
-    "webRequestBlocking",
     "contextMenus",
     "storage",
     "clipboardWrite",
     "downloads",
     "downloads.shelf",
+    "sidePanel"
+  ],
+  "host_permissions": [
     "http://*/" , "https://*/"
   ],
   "applications": {

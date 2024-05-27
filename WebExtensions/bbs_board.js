@@ -1,0 +1,1 @@
+PageExpand({execute_type:"ChromeExtensionBbsBoard",admin:this,window:window});

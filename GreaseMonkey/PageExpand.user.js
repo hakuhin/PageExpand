@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2023  https://hakuhin.jp
+// Hakuhin 2010-2024  https://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.6.2
+// @version        1.7.0
 // @namespace      http://hakuhin.jp/page_expand
 // @description    Popup image. Batch download. Extend BBS. etc...
 // @description:ja 画像のポップアップ、一括ダウンロードツール、匿名掲示板の専ブラ機能など
@@ -11782,10 +11782,6 @@
 		if(proj.version < 49){
 			// バージョン値
 			proj.version = 49;
-
-			removePreset(proj.replacement_to_anchor,"add_download_list_all");
-			removePreset(proj.replacement_to_anchor,"add_download_list_image");
-
 		}
 		if(exit())	return proj;
 
@@ -11828,6 +11824,19 @@
 				pattern:"^[^:]+://www[.]bing[.]com/images/(search|feed)[?].*",
 				flags:{i:true,g:false}
 			};
+		}
+		if(exit())	return proj;
+
+		if(proj.version < 51){
+			proj.version = 51;
+
+			removePreset("replacement_to_anchor","add_download_list_all");
+			removePreset("replacement_to_anchor","add_download_list_image");
+
+			var preset = getPreset(proj.urlmap,"twitter");
+			preset.filter.asterisk.filter.splice(0,0,
+				"*://x.com/*"
+			);
 		}
 		if(exit())	return proj;
 
@@ -39608,7 +39617,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.6.2");
+				new UI_Text(parent,"PageExpand ver.1.7.0");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -39618,7 +39627,7 @@
 				var tr = table.insertRow(-1);
 				new UI_Text(tr.insertCell(-1),'by');
 				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","https://hakuhin.jp/");
-				new UI_Text(tr.insertCell(-1),'2010-2023');
+				new UI_Text(tr.insertCell(-1),'2010-2024');
 				new UI_AnchorText(parent,"https://github.com/hakuhin/PageExpand","https://github.com/hakuhin/PageExpand");
 
 				// 翻訳者
@@ -52604,7 +52613,8 @@
 					list[d.PAUSING.CAN_RESUMED] = "pause";
 					list[d.PAUSING.CANNOT_RESUME] = "cancel";
 					list[d.COMPLETED.DELETED] = "deleted";
-					list[d.COMPLETED.UNKNOWN] = "completed";
+					list[d.COMPLETED.UNKNOWN] = "complete?";
+					list[d.COMPLETED.SUCCEEDED] = "completed";
 					list[d.COMPLETED.EXISTS] = "exists";
 					reason[d.WAITING] = "download_wait";
 					reason[d.FAILED] = "download_failed";
@@ -52615,6 +52625,7 @@
 					reason[d.PAUSING.CANNOT_RESUME] = "download_pausing_cannot_resume";
 					reason[d.COMPLETED.DELETED] = "download_completed_deleted";
 					reason[d.COMPLETED.UNKNOWN] = "download_completed_unknown";
+					reason[d.COMPLETED.SUCCEEDED] = "download_completed_succeeded";
 					reason[d.COMPLETED.EXISTS] = "download_completed_exists";
 					return function (k,v){
 						var n = this.textnodes[k];
@@ -65311,6 +65322,9 @@
 			downloader_state_download_completed_unknown: {
 				message: "HTML5ベースのダウンロード処理を行いました。\n進捗を取得する方法が無いため成功したかは不明です。\n連続してダウンロードを行うには、「サイトの権限」から「自動ダウンロード」の許可が必要です。"
 			},
+			downloader_state_download_completed_succeeded: {
+				message: "ダウンロードが成功しました。"
+			},
 			downloader_state_download_completed_exists: {
 				message: "ダウンロードが完了し、ファイルが現存しています。\nこのアイテムをダブルクリックすると、フォルダを開きます。"
 			}
@@ -66887,6 +66901,9 @@
 			downloader_state_download_completed_unknown: {
 				message: "Ordered a HTML5 download.\nIt is unknown whether it was successful.\nTo download continuously, you need permission for \"Automatic downloads\"."
 			},
+			downloader_state_download_completed_succeeded: {
+				message: "Download succeeded."
+			},
 			downloader_state_download_completed_exists: {
 				message: "Download completed, file exists.\nDouble-click this item to open the folder."
 			}
@@ -68461,6 +68478,9 @@
 			},
 			downloader_state_download_completed_unknown: {
 				message: "Ordered a HTML5 download.\nIt is unknown whether it was successful.\nTo download continuously, you need permission for \"Automatic downloads\"."
+			},
+			downloader_state_download_completed_succeeded: {
+				message: "Download succeeded."
 			},
 			downloader_state_download_completed_exists: {
 				message: "Download completed, file exists.\nDouble-click this item to open the folder."
@@ -70467,7 +70487,7 @@
 				var event_handler_abort;
 				var onreadystatechange_func;
 				var onloadheader_func;
-				var onload_func;
+				var onloadend_func;
 				var gmxhr;
 
 				var request = _this.request;
@@ -70489,7 +70509,7 @@
 
 					onreadystatechange_func = null;
 					onloadheader_func = null;
-					onload_func = null;
+					onloadend_func = null;
 
 					if(event_handler_abort){
 						event_handler_abort.release();
@@ -70535,16 +70555,15 @@
 				var gmxhr_request = new Object();
 
 				gmxhr_request.onprogress = function(e){
+					var total = e.total || 0;
+					if(total < 0) total = 0;
 					progress.bytesLoaded = e.loaded || 0;
-					progress.bytesTotal = e.total || 0;
+					progress.bytesTotal = total;
 					dispatch_onprogress.call(_this);
 				};
 
-				gmxhr_request.onload = function(r){
-					if(onload_func) onload_func(r);
-				};
-				gmxhr_request.onerror = function(r){
-					failure(r);
+				gmxhr_request.onload = gmxhr_request.onerror = function(r){
+					if(onloadend_func) onloadend_func(r);
 				};
 				gmxhr_request.onreadystatechange = function(r){
 					if(onreadystatechange_func) onreadystatechange_func(r);
@@ -70555,7 +70574,7 @@
 						if(onloadheader_func) onloadheader_func(r);
 					}
 					if(r.readyState == 4){
-						if(onload_func) onload_func(r);
+						if(onloadend_func) onloadend_func(r);
 					}
 				};
 				onloadheader_func = function(r){
@@ -70566,9 +70585,37 @@
 					response.responseURL = r.finalUrl;
 					response.redirected = Boolean((r.finalUrl) && (request.url != r.finalUrl));
 				};
-				onload_func = function(r){
-					onload_func = null;
+				onloadend_func = function(r){
 					if(onloadheader_func) onloadheader_func(r);
+
+					onreadystatechange_func = null;
+					onloadheader_func = null;
+					onloadend_func = null;
+
+					// onprogress が不完全なのでサイズを補完
+					if(response.ok){
+						switch(request.responseType){
+						case "arraybuffer":
+							var ary_buffer = r.response || {};
+							progress.bytesTotal = progress.bytesLoaded = ary_buffer.byteLength || 0;
+							dispatch_onprogress.call(_this);
+							break;
+						case "blob":
+						case "arraybufferlist":
+						case "dataurischeme":
+						case "binarystring":
+							var blob = r.response || {};
+							progress.bytesTotal = progress.bytesLoaded = blob.size || 0;
+							dispatch_onprogress.call(_this);
+							break;	
+						default:
+							if(progress.bytesTotal <= 0){
+								progress.bytesTotal = progress.bytesLoaded;
+								dispatch_onprogress.call(_this);
+							}
+							break;
+						}
+					}
 
 					switch(request.responseType){
 					case "blob":
@@ -71425,7 +71472,8 @@
 			COMPLETED:{
 				DELETED:25,
 				UNKNOWN:29,
-				EXISTS:30
+				SUCCEEDED:30,
+				EXISTS:31
 			},
 			PAUSING:{
 				CANNOT_RESUME:26,
@@ -71734,10 +71782,16 @@
 				name:file_name,
 				headers:request.headers,
 				onload:function(e){
+					// onprogress が不完全なのでサイズを補完
+					if(progress.bytesTotal <= 0){
+						progress.bytesTotal = progress.bytesLoaded;
+						dispatch_onprogress.call(_this);
+					}
+
 					response.result = true;
 					response.ok = true;
 					response.status = 200;
-					response.state = DownloaderState.DOWNLOAD.COMPLETED.UNKNOWN;
+					response.state = DownloaderState.DOWNLOAD.COMPLETED.SUCCEEDED;
 					dispatch_onstatechange.call(_this);
 					reply({state:"complete"});
 				},

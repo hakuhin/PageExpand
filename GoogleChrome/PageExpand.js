@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2023  https://hakuhin.jp
+// Hakuhin 2010-2024  https://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -11742,10 +11742,6 @@ function PageExpand(page_expand_arguments){
 		if(proj.version < 49){
 			// バージョン値
 			proj.version = 49;
-
-			removePreset(proj.replacement_to_anchor,"add_download_list_all");
-			removePreset(proj.replacement_to_anchor,"add_download_list_image");
-
 		}
 		if(exit())	return proj;
 
@@ -11788,6 +11784,19 @@ function PageExpand(page_expand_arguments){
 				pattern:"^[^:]+://www[.]bing[.]com/images/(search|feed)[?].*",
 				flags:{i:true,g:false}
 			};
+		}
+		if(exit())	return proj;
+
+		if(proj.version < 51){
+			proj.version = 51;
+
+			removePreset("replacement_to_anchor","add_download_list_all");
+			removePreset("replacement_to_anchor","add_download_list_image");
+
+			var preset = getPreset(proj.urlmap,"twitter");
+			preset.filter.asterisk.filter.splice(0,0,
+				"*://x.com/*"
+			);
 		}
 		if(exit())	return proj;
 
@@ -34743,6 +34752,8 @@ function PageExpand(page_expand_arguments){
 		// コンテキストメニューを作成（内部用）
 		// --------------------------------------------------------------------------------
 		function createContextMenu(){
+			if(!(chrome.contextMenus)) return;
+
 			chrome.contextMenus.removeAll();
 			_context_menu_items = new Array();
 			updateContextMenu();
@@ -34752,6 +34763,8 @@ function PageExpand(page_expand_arguments){
 		// コンテキストメニューを更新（内部用）
 		// --------------------------------------------------------------------------------
 		function updateContextMenu(){
+			if(!(chrome.contextMenus)) return;
+
 			var items = new Array();
 
 			(function(){
@@ -36089,6 +36102,7 @@ function PageExpand(page_expand_arguments){
 									if(p.released) return;
 									chrome.downloads.search({id:p.id,limit:1},function(items){
 										if(p.released) return;
+										items = items || [];
 										var item = items[0];
 										if(!item){
 											p.getAll().forEach(function(observer){
@@ -36568,6 +36582,7 @@ function PageExpand(page_expand_arguments){
 						function download_get_id(callback){
 
 							chrome.downloads.search({url:request.url},function(items){
+								items = items || [];
 								var item = null;
 								var state_max = 0;
 								var i;
@@ -36598,6 +36613,7 @@ function PageExpand(page_expand_arguments){
 						function download_exists_id(callback){
 							chrome.downloads.search({id:request.id,limit:1},function(items){
 								if(_this.released) return;
+								items = items || [];
 								var item = items[0];
 								if(!item){
 									failure("Download item is losted.");
@@ -36655,35 +36671,49 @@ function PageExpand(page_expand_arguments){
 							xhr_queue_element = _xhr_queue_dictionary.createElement(request.url);
 							xhr_queue_element.setData({url:request.currentURL});
 
+							function fulfill(id){
+								creating = false;
+								if(released){
+									// 切断済みならキャンセル（一時停止が多いとスタックする問題に対応）
+									if(id !== undefined){
+										chrome.downloads.cancel(id);
+									}
+									return;
+								}
+								if((function(){
+									if(chrome.runtime.lastError) return true;
+									if(id === undefined) return true;
+									return false;
+								})()){
+									failure();
+									return;
+								}
+								response.id = id;
+								if(request.silent) silent_item = download_shelf.silent();
+								if(determining_item){
+									determining_item.setId(response.id);
+									determining_item.setFilename(file_name);
+									determining_item.onmimechange = dispatch_mimetype;
+								}
+								callback();
+								return;
+							}
+							function reject(msg){
+								creating = false;
+								var e = chrome.runtime.lastError || {};
+								failure(msg || e.message || "");
+							}
 							try{
 								creating = true;
 								dispatch_state_by_enum(DownloaderState.DOWNLOAD.CREATING);
-								chrome.downloads.download(options , function(id) {
-									creating = false;
-									if(released){
-										// 切断済みならキャンセル（一時停止が多いとスタックする問題に対応）
-										if(id !== undefined){
-											chrome.downloads.cancel(id);
-										}
-										return;
-									}
-									if(id === undefined){
-										failure(chrome.runtime.lastError.message);
-										return;
-									}
-									response.id = id;
-									if(request.silent) silent_item = download_shelf.silent();
-									if(determining_item){
-										determining_item.setId(response.id);
-										determining_item.setFilename(file_name);
-										determining_item.onmimechange = dispatch_mimetype;
-									}
-									callback();
+								chrome.downloads.download(options , fulfill);
+								if(chrome.runtime.lastError){
+									reject();
 									return;
-								});
+								}
 							}catch(e){
-								creating = false;
-								failure(e.message || "");
+								reject(e.message);
+								return;
 							}
 						}
 
@@ -36958,6 +36988,7 @@ function PageExpand(page_expand_arguments){
 
 						chrome.downloads.search({},function(items){
 							if(released) return;
+							items = items || [];
 							items.forEach(function(item){
 								DownloadItem_consolidate(item);
 							});
@@ -39054,7 +39085,7 @@ function PageExpand(page_expand_arguments){
 				_warning_container = new UI_FormContainer(_content_window);
 				var warning_parent = _warning_container.getElement();
 				_warning_container.setVisible(false);
-				new UI_Text(warning_parent,_i18n.getMessage("menu_warning_repeal_for_mv3"));
+				new UI_Text(warning_parent,_i18n.getMessage("menu_warning_repealed_for_mv3"));
 				new UI_BreakItem(warning_parent);
 
 				// グループ
@@ -42091,7 +42122,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.6.2");
+				new UI_Text(parent,"PageExpand ver.1.7.0");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -42101,7 +42132,7 @@ function PageExpand(page_expand_arguments){
 				var tr = table.insertRow(-1);
 				new UI_Text(tr.insertCell(-1),'by');
 				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","https://hakuhin.jp/");
-				new UI_Text(tr.insertCell(-1),'2010-2023');
+				new UI_Text(tr.insertCell(-1),'2010-2024');
 				new UI_AnchorText(parent,"https://github.com/hakuhin/PageExpand","https://github.com/hakuhin/PageExpand");
 
 				// 翻訳者
@@ -43319,9 +43350,9 @@ function PageExpand(page_expand_arguments){
 				ElementSetStyle(_body,"margin:0px 0px 5px 0px;");
 				parent.appendChild(_body);
 
-				new UI_BreakItem(_body);
-				new UI_Text(_body,_i18n.getMessage("menu_warning_repeal_for_mv3"));
 
+				new UI_BreakItem(_body);
+				new UI_Text(_body,_i18n.getMessage("menu_scriptarea_unsupport"));
 
 				_textarea = DocumentCreateElement("textarea");
 				ElementSetStyle(_textarea,"width:100%; height:300px; box-sizing:border-box; display:block; background-color:#fff; margin-bottom:5px;");
@@ -55144,7 +55175,8 @@ function PageExpand(page_expand_arguments){
 					list[d.PAUSING.CAN_RESUMED] = "pause";
 					list[d.PAUSING.CANNOT_RESUME] = "cancel";
 					list[d.COMPLETED.DELETED] = "deleted";
-					list[d.COMPLETED.UNKNOWN] = "completed";
+					list[d.COMPLETED.UNKNOWN] = "complete?";
+					list[d.COMPLETED.SUCCEEDED] = "completed";
 					list[d.COMPLETED.EXISTS] = "exists";
 					reason[d.WAITING] = "download_wait";
 					reason[d.FAILED] = "download_failed";
@@ -55155,6 +55187,7 @@ function PageExpand(page_expand_arguments){
 					reason[d.PAUSING.CANNOT_RESUME] = "download_pausing_cannot_resume";
 					reason[d.COMPLETED.DELETED] = "download_completed_deleted";
 					reason[d.COMPLETED.UNKNOWN] = "download_completed_unknown";
+					reason[d.COMPLETED.SUCCEEDED] = "download_completed_succeeded";
 					reason[d.COMPLETED.EXISTS] = "download_completed_exists";
 					return function (k,v){
 						var n = this.textnodes[k];
@@ -62172,9 +62205,6 @@ function PageExpand(page_expand_arguments){
 	// スクリプトオブジェクトから配列関数を作成
 	// --------------------------------------------------------------------------------
 	function PageExpandProjectScriptObject_EvalArrayFunction(obj){
-		if(obj.has_user){
-			return StringEvalArrayFunction(obj.user.script);
-		}
 		if(obj.has_preset){
 
 			// プリセットスクリプト辞書
@@ -67897,8 +67927,8 @@ function PageExpand(page_expand_arguments){
 			menu_button_no: {
 				message: "キャンセル"
 			},
-			menu_warning_repeal_for_mv3: {
-				message: "この機能はもうすぐ動作しなくなります😭（MV3 の対応で）"
+			menu_warning_repealed_for_mv3: {
+				message: "この機能は廃止されました🥲"
 			},
 			menu_script_obj_editer_edit_script: {
 				message: "スクリプトを編集する"
@@ -68118,6 +68148,9 @@ function PageExpand(page_expand_arguments){
 			},
 			downloader_state_download_completed_unknown: {
 				message: "HTML5ベースのダウンロード処理を行いました。\n進捗を取得する方法が無いため成功したかは不明です。\n連続してダウンロードを行うには、「サイトの権限」から「自動ダウンロード」の許可が必要です。"
+			},
+			downloader_state_download_completed_succeeded: {
+				message: "ダウンロードが成功しました。"
 			},
 			downloader_state_download_completed_exists: {
 				message: "ダウンロードが完了し、ファイルが現存しています。\nこのアイテムをダブルクリックすると、フォルダを開きます。"
@@ -69476,8 +69509,8 @@ function PageExpand(page_expand_arguments){
 			menu_button_no: {
 				message: "CANCEL"
 			},
-			menu_warning_repeal_for_mv3: {
-				message: "This feature will be deprecated soon. (for MV3 😭)"
+			menu_warning_repealed_for_mv3: {
+				message: "This feature was repealed. 🥲"
 			},
 			menu_script_obj_editer_edit_script: {
 				message: "Edit Script"
@@ -69697,6 +69730,9 @@ function PageExpand(page_expand_arguments){
 			},
 			downloader_state_download_completed_unknown: {
 				message: "Ordered a HTML5 download.\nIt is unknown whether it was successful.\nTo download continuously, you need permission for \"Automatic downloads\"."
+			},
+			downloader_state_download_completed_succeeded: {
+				message: "Download succeeded."
 			},
 			downloader_state_download_completed_exists: {
 				message: "Download completed, file exists.\nDouble-click this item to open the folder."
@@ -71054,8 +71090,8 @@ function PageExpand(page_expand_arguments){
 			menu_button_no: {
 				message: "取消"
 			},
-			menu_warning_repeal_for_mv3: {
-				message: "This feature will be deprecated soon. (for MV3 😭)"
+			menu_warning_repealed_for_mv3: {
+				message: "This feature was repealed. 🥲"
 			},
 			menu_script_obj_editer_edit_script: {
 				message: "Edit Script"
@@ -71275,6 +71311,9 @@ function PageExpand(page_expand_arguments){
 			},
 			downloader_state_download_completed_unknown: {
 				message: "Ordered a HTML5 download.\nIt is unknown whether it was successful.\nTo download continuously, you need permission for \"Automatic downloads\"."
+			},
+			downloader_state_download_completed_succeeded: {
+				message: "Download succeeded."
 			},
 			downloader_state_download_completed_exists: {
 				message: "Download completed, file exists.\nDouble-click this item to open the folder."
@@ -74170,7 +74209,8 @@ function PageExpand(page_expand_arguments){
 			COMPLETED:{
 				DELETED:25,
 				UNKNOWN:29,
-				EXISTS:30
+				SUCCEEDED:30,
+				EXISTS:31
 			},
 			PAUSING:{
 				CANNOT_RESUME:26,
@@ -84416,35 +84456,6 @@ function PageExpand(page_expand_arguments){
 		});
 	}
 
-	// --------------------------------------------------------------------------------
-	// 文字列を評価して配列関数を作成
-	// --------------------------------------------------------------------------------
-	function StringEvalArrayFunction(src){
-		try{
-			var a = eval(src);
-
-			if(typeof(a) == "function")	return [a];
-
-			var check = false;
-			if((a) && (typeof(a) == "object")){
-				if(a.constructor == Array){
-					var ary = new Array();
-					var i;
-					var num = a.length;
-					for(i=0;i<num;i++){
-						if(typeof(a[i]) == "function"){
-							ary.push(a[i]);
-						}
-					}
-
-					return ary;
-				}
-			}
-
-		}catch(e){}
-
-		return [];
-	}
 
 	// --------------------------------------------------------------------------------
 	// 文字列からクエリーを取得

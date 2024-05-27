@@ -48,15 +48,15 @@
  - (In the initial setting, Particular site only.)
  - If there is a URL string, URL string is changed into hyperlink.
 
-## Override Referer
+## Override Referer (obsoleted in MV3)
  - (In the initial setting, Particular site only.)
  - By combining the "current URL, link URL, custom string" and "Replace regular expression", Can change the referrer.
 
-## Override Useragent
+## Override Useragent (obsoleted in MV3)
  - (In the initial setting, disable.)
  - By setting the string, Can change the useragent.
 
-## Blocking Web Access
+## Blocking Web Access (obsoleted in MV3)
  - (In the initial setting, disable.)
  - By setting the URL, Can blocking web access.
 

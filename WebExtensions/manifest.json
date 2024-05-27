@@ -1,0 +1,76 @@
+{
+  "default_locale": "en",
+  "name": "__MSG_extension_name__",
+  "version": "1.7.0",
+  "manifest_version": 2,
+  "description": "__MSG_extension_description__",
+  "author": "hakuhin",
+  "icons": {
+    "16": "icon16.png",
+    "19": "icon19.png",
+    "32": "icon32.png",
+    "38": "icon38.png",
+    "48": "icon48.png",
+    "64": "icon64.png",
+    "128": "icon128.png"
+  },
+  "background": {
+    "scripts": ["PageExpand.js","background.js"],
+    "persistent": true
+  },
+  "content_scripts": [{
+    "all_frames": true,
+    "js": [ "PageExpand.js" , "content_scripts.js" ],
+    "matches": [ "http://*/*" , "https://*/*" ],
+    "match_about_blank": true,
+    "run_at": "document_start"
+  }],
+  "browser_action": {
+    "default_icon" : {
+      "16": "icon16.png",
+      "18": "icon18.png",
+      "19": "icon19.png",
+      "32": "icon32.png",
+      "38": "icon38.png",
+      "48": "icon48.png",
+      "64": "icon64.png",
+      "128": "icon128.png"
+    },
+    "default_title": "__MSG_extension_name__",
+    "default_popup": "popup.html"
+  },
+  "sidebar_action": {
+    "default_icon":  {
+      "16": "icon16.png",
+      "19": "icon19.png",
+      "32": "icon32.png",
+      "38": "icon38.png",
+      "48": "icon48.png",
+      "64": "icon64.png",
+      "128": "icon128.png"
+    },
+    "default_title": "__MSG_extension_name__",
+    "default_panel": "sidebar.html"
+  },
+  "options_page": "options.html",
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "permissions": [
+    "tabs",
+    "webRequest",
+    "webRequestBlocking",
+    "contextMenus",
+    "storage",
+    "clipboardWrite",
+    "downloads",
+    "downloads.shelf",
+    "http://*/" , "https://*/"
+  ],
+  "applications": {
+    "gecko": {
+      "id": "PageExpand@hakuhin.jp"
+    }
+  }
+}
