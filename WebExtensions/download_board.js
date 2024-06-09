@@ -1,0 +1,1 @@
+PageExpand({execute_type:"ChromeExtensionDownloadBoard",admin:this,window:window});

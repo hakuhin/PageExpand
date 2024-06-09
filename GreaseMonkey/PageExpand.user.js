@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.7.0
+// @version        1.7.1
 // @namespace      http://hakuhin.jp/page_expand
 // @description    Popup image. Batch download. Extend BBS. etc...
 // @description:ja 画像のポップアップ、一括ダウンロードツール、匿名掲示板の専ブラ機能など
@@ -888,12 +888,13 @@
 		// --------------------------------------------------------------------------------
 		// 開始
 		// --------------------------------------------------------------------------------
-		_this.start = function (){
+		_this.start = function (options){
+			options = options || {};
 			if(!_started_analyze){
-				_request = true;
+				_request = options;
 				return;
 			}
-			start();
+			start(options);
 		};
 
 		// --------------------------------------------------------------------------------
@@ -902,21 +903,27 @@
 		_this.startedAnalyze = function (){
 			_started_analyze = true;
 			if(_request){
-				_request = false;
-				start();
+				start(_request);
+				_request = null;
 			}
 		};
 
 		// --------------------------------------------------------------------------------
 		// 開始
 		// --------------------------------------------------------------------------------
-		function start(){
+		function start(options){
 			if(_executing) return;
 			_executing = true;
-			var scroll_pos = WindowGetScrollPosition(window);
-			var html = document.documentElement;
-			var style_display = html.style.display;
-			html.style.display = "none";
+			var scroll_pos;
+			var html;
+			var style_display;
+
+			if(options.displayNone){
+				scroll_pos = WindowGetScrollPosition(window);
+				html = document.documentElement;
+				style_display = html.style.display;
+				html.style.display = "none";
+			}
 
 			setTimeout(function(){
 				execute_queue.setOccupancyTime(1000);
@@ -929,12 +936,14 @@
 					}
 				});
 				_task.setDestructorFunc(function(task){
-					if(style_display === undefined){
-						StyleDeclarationRemoveProperty(html.style,"display");
-					}else{
-						StyleDeclarationSetProperty(html.style,"display",style_display);
+					if(options.displayNone){
+						if(style_display === undefined){
+							StyleDeclarationRemoveProperty(html.style,"display");
+						}else{
+							StyleDeclarationSetProperty(html.style,"display",style_display);
+						}
+						WindowSetScrollPosition(window,scroll_pos);
 					}
-					WindowSetScrollPosition(window,scroll_pos);
 					execute_queue.setOccupancyTime(project.getExecuteQueueOccupancyTime());
 					execute_queue.setSleepTime(project.getExecuteQueueSleepTime());
 					_executing = false;
@@ -944,13 +953,13 @@
 		};
 
 		var _started_analyze = false;
-		var _request = false;
+		var _request = null;
 		var _executing = false;
 		var _task = null;
 	}
-	function PageExpandExecuteFastest(){
+	function PageExpandExecuteFastest(options){
 		if(page_expand_execute_faster){
-			page_expand_execute_faster.start();
+			page_expand_execute_faster.start(options);
 		}
 	}
 
@@ -11837,6 +11846,24 @@
 			preset.filter.asterisk.filter.splice(0,0,
 				"*://x.com/*"
 			);
+		}
+		if(exit())	return proj;
+
+		if(proj.version < 52){
+			proj.version = 52;
+
+			var obj = getPreset(proj.expand_bbs,"2ch_v6");
+			var filter = obj.filter.regexp.filter;
+			filter[1] = {
+				pattern:"^(http|https)://[^.]+[.]bbspink[.]com/test/read[.]cgi/c/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			}
+			var obj = getPreset(proj.expand_bbs,"5ch_v8");
+			var filter = obj.filter.regexp.filter;
+			filter[1] = {
+				pattern:"^(http|https)://[^.]+[.]bbspink[.]com/test/read[.]cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			}
 		}
 		if(exit())	return proj;
 
@@ -27667,9 +27694,9 @@
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"((http|https)://[^.]+\\.(2ch|5ch)\\.net/test/read\\.cgi/c/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
-			{url:"((http|https)://[^.]+\\.(2ch|5ch)\\.net/[^/]+/kako/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
-			{url:"((http|https)://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"pink"}
+			{url:"((http|https)://[^.]+[.](2ch|5ch)[.]net/test/read[.]cgi/c/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
+			{url:"((http|https)://[^.]+[.](2ch|5ch)[.]net/[^/]+/kako/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
+			{url:"((http|https)://[^.]+[.]bbspink[.]com/test/read[.]cgi/c/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"pink"}
 		];
 
 		var i;
@@ -27908,10 +27935,8 @@
 				}
 				break;
 			case "2ch_v6":
-				re = new RegExp('<div[^>]+class="(| )thread( |)"[^>]*>.*?<div[^>]+class="(| )post( |)"[^>]*>.*?<div[^>]+class="(| )message( |)"[^>]*>',"i");
-				return Boolean(str.match(re));
 			case "pink":
-				re = new RegExp('<dl[^>]+class="(| )post( |)"[^>]*>.*?<dd[^>]+class="(| )thread_in( |)"[^>]*>',"i");
+				re = new RegExp('<div[^>]+class="(| )thread( |)"[^>]*>.*?<div[^>]+class="(| )post( |)"[^>]*>.*?<div[^>]+class="(| )message( |)"[^>]*>',"i");
 				return Boolean(str.match(re));
 			}
 			return false;
@@ -27934,14 +27959,10 @@
 				search_post_end = "<br><br>";
 				break;
 			case "2ch_v6":
+			case "pink":
 				search_post_start = '<div class="post"';
 				search_post_end = "</div></div>";
 				class_name_message = "message";
-				break;
-			case "pink":
-				search_post_start = '<dl class="post"';
-				search_post_end = "</dd></dl>";
-				class_name_message = "thread_in";
 				break;
 			}
 
@@ -28120,12 +28141,9 @@
 				search_post_end = "<br><br>";
 				break;
 			case "2ch_v6":
+			case "pink":
 				search_post_start = '<div class="post"';
 				search_post_end = "</div></div>";
-				break;
-			case "pink":
-				search_post_start = '<dl class="post"';
-				search_post_end = "</dd></dl>";
 				break;
 			}
 
@@ -29826,7 +29844,8 @@
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"((http|https)://[^.]+\\.(2ch|5ch)\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"5ch"}
+			{url:"((http|https)://[^.]+[.](2ch|5ch)[.]net/test/read[.]cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"5ch"},
+			{url:"((http|https)://[^.]+[.]bbspink[.]com/test/read[.]cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"5ch"}
 		];
 
 		var i;
@@ -30563,6 +30582,7 @@
 
 				var docking_form = work.docking_form = new BbsControlDockingForm(element_form,false);
 				docking_form.setStyle("background:#e8e8e8; background-image:linear-gradient(to bottom, #f8f8f8, #e8e8e8); padding:10px 20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px;");
+				docking_form.onreset = form_reset;
 			})();
 
 			if((function(){
@@ -39617,7 +39637,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.7.0");
+				new UI_Text(parent,"PageExpand ver.1.7.1");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -45994,174 +46014,163 @@
 	// --------------------------------------------------------------------------------
 	// ポップアップメニュー
 	// --------------------------------------------------------------------------------
-	function PageExpandPopupMenu(){
-		var _this = this;
+	var PageExpandPopupMenu = (function(){
 
 		// --------------------------------------------------------------------------------
-		// リロード
+		// アクティブな Tab を更新
 		// --------------------------------------------------------------------------------
-		_this.reload = function (){
-			// プロジェクト読み込み
-			projectLoad(function(e){
-
-				// エレメントを全てクリア
-				DomNodeRemoveChildren(document.body);
-
-				// ロケール
-				_i18n = new InternationalMessage(page_expand_project.getLanguage());
-				initialize();
+		function update_activeTab(callback){
+			var _this = this;
+			chrome.tabs.query({active:true,currentWindow:true},function(tabs) {
+				tabs = tabs || [];
+				_this.tab = tabs[0];
+				callback();
 			});
-		};
+		}
 
 		// --------------------------------------------------------------------------------
-		// ロード（内部用）
+		// プロジェクトを更新
 		// --------------------------------------------------------------------------------
-		function projectLoad(func){
+		function update_project(callback){
+			var _this = this;
 			var proj = new PageExpandProject();
-
-			// プロジェクトをロード
 			proj.loadLocalStorage(function(e){
-
-				// プロジェクトを更新
 				page_expand_project = proj;
 				project = new Project();
-				getActiveURL(function(url){
-					project.importObjectForBackground(page_expand_project.getProject(url));
-					func(e);
-				});
+				project.importObjectForBackground(page_expand_project.getProject(Tab_getURL(_this.tab)));
+				_this.i18n = new InternationalMessage(page_expand_project.getLanguage());
+				callback(e);
 			});
 		}
 
 		// --------------------------------------------------------------------------------
-		// クリック（内部用）
+		// コンテントステータスを更新
 		// --------------------------------------------------------------------------------
-		function click(command){
-		}
-
-		// --------------------------------------------------------------------------------
-		// アクティブページのURLを取得（内部用）
-		// --------------------------------------------------------------------------------
-		function getActiveURL(func){
-		}
-
-		// --------------------------------------------------------------------------------
-		// ラインボタン（内部用）
-		// --------------------------------------------------------------------------------
-		function UI_LineButton(parent,label){
+		function update_status(callback){
 			var _this = this;
 
-			// --------------------------------------------------------------------------------
-			// 通常状態（内部用）
-			// --------------------------------------------------------------------------------
-			function normal(){
-				_style.color = "#222";
-				_style.background = "none";
+			var release = function(){
+				released = true;
+				if(time_handle !== null){
+					clearTimeout(time_handle);
+					time_handle = null;
+				}
+				if(port){
+					port.release();
+					port = null;
+				}
+			};
+			var success = function(data){
+				if(released) return;
+				release();
+				_this.status = data;
+				callback();
+			};
+			var failure = function(){
+				if(released) return;
+				release();
+				delete _this.status;
+				callback();
+			};
+
+			var released = false;
+			var time_handle = null;
+			var port = extension_message.connectToContent(_this.tab,{frameId:0});
+			if(!port){
+				failure();
+				return;
 			}
 
-			// --------------------------------------------------------------------------------
-			// マウスオーバー状態（内部用）
-			// --------------------------------------------------------------------------------
+			// タイムアウト（スタック回避）
+			time_handle = setTimeout(failure,1000);
+
+			port.onmessage = success;
+			port.ondisconnect = failure;
+			port.start(function(){
+				port.postMessage({command:"getStatus"});
+			});
+		}
+
+		// --------------------------------------------------------------------------------
+		// UI
+		// --------------------------------------------------------------------------------
+		var UI_LineButton = (function(){
+			function mouse_normal(){
+				this.style.color = "#222";
+				this.style.background = "none";
+			}
 			function mouse_over(){
-				_style.color = "#fff";
-				_style.background = "#4281F4";
+				this.style.color = "#fff";
+				this.style.background = "#4281F4";
 			}
-
-			// --------------------------------------------------------------------------------
-			// マウスオーバー状態（内部用）
-			// --------------------------------------------------------------------------------
 			function mouse_down(){
-				_style.color = "#fff";
-				_style.background = "#4281F4";
+				this.style.color = "#fff";
+				this.style.background = "#404040";
 			}
 
-			// --------------------------------------------------------------------------------
-			// クリックイベント
-			// --------------------------------------------------------------------------------
-			_this.onclick = function(){};
+			var f = function(parent,label){
+				var _this = this;
 
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _item;
-			var _style;
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_item = DocumentCreateElement("a");
+				var _item = DocumentCreateElement("a");
 				_item.href = "";
-				_style = _item.style;
+				_this.style = _item.style;
 				ElementSetStyle(_item,"display:block; text-decoration: none; font-size:13px; color:#000; margin:0px 0px 2px; padding:5px 20px; border-radius:5px; line-height:1.0;");
 				ElementSetTextContent(_item,label);
 				parent.appendChild(_item);
 
-				if(_item.addEventListener){
-					_item.addEventListener("click",function(e){
-						_this.onclick();
-						e.preventDefault();
-					},false);
-					_item.addEventListener("mouseover",function(e){
-						mouse_over();
-					},false);
-					_item.addEventListener("mousedown",function(e){
-						mouse_down();
-					},false);
-					_item.addEventListener("mouseup",function(e){
-						mouse_over();
-					},false);
-					_item.addEventListener("mouseout",function(e){
-						normal();
-					},false);
-				}
+				_item.addEventListener("click",function(e){
+					var f = _this.onclick;
+					if(f) f(e);
+					e.preventDefault();
+				});
+				_item.addEventListener("mouseover",function(e){
+					mouse_over.call(_this);
+				});
+				_item.addEventListener("mousedown",function(e){
+					mouse_down.call(_this);
+				});
+				_item.addEventListener("mouseup",function(e){
+					mouse_over.call(_this);
+				});
+				_item.addEventListener("mouseout",function(e){
+					mouse_normal.call(_this);
+				});
+			};
+			f.prototype = {
+				onclick : function(){},
+				style : null
+			};
+			return f;
+		})();
 
-			})();
-		}
-
-		// --------------------------------------------------------------------------------
-		// セパレータ（内部用）
-		// --------------------------------------------------------------------------------
-		function UI_Separator(parent){
-			var _this = this;
-
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _item;
-			var _style;
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_item = DocumentCreateElement("div");
-				ElementSetStyle(_item,"height: 0px; border-top:1px solid #ddd; margin:2px 0px;");
+		var UI_Separator = (function(){
+			var f = function(parent){
+				var _item = DocumentCreateElement("div");
+				ElementSetStyle(_item,"height: 0px; border-top:1px solid #ddd; margin:5px 0px;");
 				parent.appendChild(_item);
-			})();
-		}
+			};
+			return f;
+		})();
 
-		// --------------------------------------------------------------------------------
-		// 初期化（内部用）
-		// --------------------------------------------------------------------------------
-		function initialize(){
+		function update_document(callback){
+			var _this = this;
+			var root = document.body;
 
-			// タイトル
-			document.title = _i18n.getMessage("page_expand_popup_menu");
+			DomNodeRemoveChildren(root);
 
-			// ボディ
-			var body = document.body;
-			ElementSetStyle(body,'background-color:#ccc; font-family:"Meiryo","sans-serif"; margin:0px; padding:0px; width:300px; border:0px solid #000; overflow-x:hidden; box-sizing:border-box;');
+			document.title = this.i18n.getMessage("page_expand_popup_menu");
+			ElementSetStyle(root,'background-color:#ccc; font-family:"Meiryo","sans-serif"; margin:0px; padding:0px; width:300px; border:0px solid #000; overflow-x:hidden; box-sizing:border-box;');
 
 			// ヘッダ
 			var head_window = DocumentCreateElement("div");
 			ElementSetStyle(head_window,"background-color:#000; color:#fff; font-size:12px; font-weight:bold; padding:2px 5px; margin:0px;");
-			ElementSetTextContent(head_window,_i18n.getMessage("page_expand_popup_menu"));
-			body.appendChild(head_window);
+			ElementSetTextContent(head_window,this.i18n.getMessage("page_expand_popup_menu"));
+			root.appendChild(head_window);
 
 			// ボディ
 			var body_window = DocumentCreateElement("div");
 			ElementSetStyle(body_window,"border:2px inset #f0f0f0; background-color:#fcfcfc;");
-			body.appendChild(body_window);
+			root.appendChild(body_window);
 
 			// 外周
 			var out_window = DocumentCreateElement("div");
@@ -46178,101 +46187,251 @@
 			ElementSetStyle(_menu_window,"display:table-cell; vertical-align:top; user-select:none; -webkit-user-select:none; -moz-user-select:none; -khtml-user-select:none; margin:0px;");
 			out_table.appendChild(_menu_window);
 
-			// イメージビューワを開く
-			var button_open_image_viewer = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_open_image_viewer"));
-			button_open_image_viewer.onclick = function(){
-				click("openImageViewer");
-			};
+			var items = new Array();
 
-			new UI_Separator(_menu_window);
+			if(_this.status.alive){
+				// イメージビューワを開く
+				items.push({
+					type:"button",
+					id:"openImageViewer",
+					i18n:"open_image_viewer"
+				});
+			}
 
-			// ダウンロードボードを開く
-			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_open_download_board_inline"));
-			button_config.onclick = function(){
-				click("openDownloadBoardInline");
-			};
+			items.push({ type:"separator" });
 
-			// 一括ダウンロード（メディア）
-			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_batch_download_media"));
-			button_config.onclick = function(){
-				click("batchDownloadMedia");
-			};
+			// ダウンロードボードを開く（アプリ）
+			items.push({
+				type:"button",
+				id:"openDownloadBoardApplication",
+				i18n:"open_download_board_application"
+			});
 
-			new UI_Separator(_menu_window);
+			if(_this.status.alive){
+				// ダウンロードボードを開く（ここで）
+				items.push({
+					type:"button",
+					id:"openDownloadBoardInline",
+					i18n:"open_download_board_inline"
+				});
 
-			// 掲示板ボードを開く
-			var button_open_bbs_board = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_open_bbs_board"));
-			button_open_bbs_board.onclick = function(){
-				click("openBbsBoard");
-			};
+				// 一括ダウンロード（メディア）
+				items.push({
+					type:"button",
+					id:"batchDownloadMedia",
+					i18n:"batch_download_media"
+				});
+			}
 
-			new UI_Separator(_menu_window);
+			items.push({ type:"separator" });
+
+			// 掲示板ボードを開く（アプリ）
+			items.push({
+				type:"button",
+				id:"openBbsBoard",
+				i18n:"open_bbs_board"
+			});
+
+			// 掲示板ボードを開く（サイド）
+			if(GoogleChromeExtensionSidebarSupported()){
+				items.push({
+					type:"button",
+					id:"openBbsBoardSidebar",
+					i18n:"open_bbs_board_sidebar"
+				});
+			}
+
+			items.push({ type:"separator" });
+
 
 			// 現在のページの設定を編集
-			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_page"));
-			button_config.onclick = function(){
-				click("configCurrentPage");
-			};
+			items.push({
+				type:"button",
+				id:"configCurrentPage",
+				i18n:"config_current_page"
+			});
 
 			// 掲示板拡張の設定
 			if(project.getEnableExpandBbs()){
-				var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_bbs"));
-				button_config.onclick = function(){
-					click("configCurrentBbs");
-				};
+				items.push({
+					type:"button",
+					id:"configCurrentBbs",
+					i18n:"config_current_bbs"
+				});
 			}
 
-			new UI_Separator(_menu_window);
+			items.push({ type:"separator" });
 
-			// PageExpand の開始
-			if(!(project.getEnableStartup())){
-				var button_start_pageexpand = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_start"));
-				button_start_pageexpand.onclick = function(){
-					click("startPageExpand");
-				};
+			if(_this.status.alive){
+
+				if(!(_this.status.started)){
+					// PageExpand の開始
+					if(!(project.getEnableStartup())){
+						items.push({
+							type:"button",
+							id:"startPageExpand",
+							i18n:"start"
+						});
+					}
+				}
+
+				// PageExpand の中止
+				items.push({
+					type:"button",
+					id:"abortPageExpand",
+					i18n:"abort"
+				});
+
+				if(_this.status.started){
+					// PageExpand の最速実行
+					items.push({
+						type:"button",
+						id:"executeFastest",
+						i18n:"execute_fastest"
+					});
+				}
+
+				// PageExpand デバッグ
+				items.push({
+					type:"button",
+					id:"executeDebug",
+					i18n:"debug"
+				});
 			}
 
-			// PageExpand の中止
-			var button_abort_pageexpand = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_abort"));
-			button_abort_pageexpand.onclick = function(){
-				click("abortPageExpand");
-			};
+			var i;
+			var num;
 
-			// PageExpand の最速実行
-			var button_execute_pageexpand_fastest = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_execute_fastest"));
-			button_execute_pageexpand_fastest.onclick = function(){
-				click("executeFastest");
-			};
+			// 最先頭のセパレータを削除
+			num = items.length;
+			for(i=0;i<num;i++){
+				if(items[i].type != "separator") break;
+			}
+			if(0 < i) items.splice(0,i);
 
-			// PageExpand デバッグ
-			var button_execute_debug = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_debug"));
-			button_execute_debug.onclick = function(){
-				click("executeDebug");
-			};
+			// 最後尾のセパレータを削除
+			num = items.length;
+			for(i=0;i<num;i++){
+				if(items[num-i-1].type != "separator") break;
+			}
+			if(0 < i) items.splice(num-i,i);
+
+			num = items.length;
+			for(i=0;i<num;i++){
+				(function(){
+					var item = items[i];
+					var ui;
+					switch(item.type){
+					case "button":
+						ui = new UI_LineButton(_menu_window , _this.i18n.getMessage("context_menu_pageexpand_"+item.i18n));
+						ui.onclick = function(){
+							click.call(_this,item.id);
+						};
+						break;
+					case "separator":
+						ui = new UI_Separator(_menu_window);
+						break;
+					}
+				})();
+			}
+
+			callback();
 		}
 
 		// --------------------------------------------------------------------------------
-		// プライベート変数
+		// クリック
 		// --------------------------------------------------------------------------------
-		var _i18n;
+		var click = (function(){
+			var menu_commands = Object();
+			menu_commands["openBbsBoard"] = function(info) {
+				var query = new Object();
+				query.referer = encodeURIComponent(Tab_getURL(this.tab));
+				GoogleChromeExtensionOpenBbsBoard(query);
+			};
+			menu_commands["openBbsBoardSidebar"] = function(info) {
+				if(!(this.tab)) return;
+				GoogleChromeExtensionOpenBbsBoardInSidebar({windowId: this.tab.windowId});
+			};
+			menu_commands["openDownloadBoardApplication"] = function() {
+				GoogleChromeExtensionOpenDownloadBoard();
+			};
+			menu_commands["configCurrentPage"] = function(info) {
+				var query = new Object();
+				query.type = "urlmap";
+				query.url = encodeURIComponent(Tab_getURL(this.tab));
+				GoogleChromeExtensionOpenPageExpandConfig(query);
+			};
+			menu_commands["configCurrentBbs"] = function(info) {
+				var query = new Object();
+				query.type = "expand_bbs";
+				query.url = encodeURIComponent(Tab_getURL(this.tab));
+				GoogleChromeExtensionOpenPageExpandConfig(query);
+			};
+			menu_commands["startPageExpand"] =
+			menu_commands["abortPageExpand"] =
+			menu_commands["executeFastest"] = function(info) {
+				var _this = this;
+				var port = extension_message.connectToContent(this.tab);
+				if(!port) return;
+				port.start(function (){
+					port.postMessage({command:info.menuItemId});
+					port.terminate();
+					reload.call(_this);
+				});
+			};
+			menu_commands["executeDebug"] =
+			menu_commands["openImageViewer"] =
+			menu_commands["openDownloadBoardInline"] =
+			menu_commands["batchDownloadMedia"] = function(info) {
+				var port = extension_message.connectToContent(this.tab);
+				if(!port) return;
+				port.start(function (){
+					port.postMessage({command:info.menuItemId,onlyTopWindow:true});
+					port.terminate();
+				});
+			};
 
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-
-			// プロジェクト読み込み
-			projectLoad(function(e){
-
-				// ロケール
-				_i18n = new InternationalMessage(page_expand_project.getLanguage());
-
-				initialize();
-
-			});
-
+			return function(command){
+				var f = menu_commands[command];
+				if(f) f.call(this,{menuItemId:command});
+			};
 		})();
-	}
+
+		// --------------------------------------------------------------------------------
+		// リロード
+		// --------------------------------------------------------------------------------
+		function reload(newTab){
+			if(this.exec_methods){
+				this.exec_methods.release();
+				this.exec_methods = null;
+			}
+			this.exec_methods = new ExecuteMethods(this);
+			if(newTab){
+				this.tab = newTab;
+			}else{
+				this.exec_methods.push(update_activeTab);
+			}
+			this.exec_methods.push(update_project);
+			this.exec_methods.push(update_status);
+			this.exec_methods.push(update_document);
+		}
+
+		var PageExpandPopupMenu = function(){
+			var _this = this;
+			chrome.tabs.onUpdated.addListener( function(tab_id , info , tab){
+				if(tab.status != chrome.tabs.TabStatus.COMPLETE) return;
+				reload.call(_this,tab);
+			});
+			reload.call(_this);
+		};
+		PageExpandPopupMenu.prototype = {
+			exec_methods : null,
+			i18n : null,
+			tab : null,
+			status : { alive:false }
+		};
+		return PageExpandPopupMenu;
+	})();
 
 
 	// --------------------------------------------------------------------------------
@@ -46556,22 +46715,6 @@
 						};
 						break;
 					}
-
-					return;
-					var element;
-					switch(info.layout_mode){
-					case "small_icon":
-						element = DocumentCreateElement("span");
-						break;
-					default:
-						element = DocumentCreateElement("div");
-						ElementSetStyle(element,"margin:2px; margin-left:4px; margin-right:4px;");
-						break;
-					}
-					info.parent.appendChild(element);
-
-					var data = info.data;
-					ElementSetTextContent(element,data.number + ":" + data.title + "(" + data.res + ")");
 				};
 
 				_ui_catalog.onUpdateCell = function (info){
@@ -51404,6 +51547,225 @@
 		})();
 
 		// --------------------------------------------------------------------------------
+		// アプリモード
+		// --------------------------------------------------------------------------------
+		_dlbd.applicationMode = function(){
+
+			_dlbd.setVisible(true);
+			_dlbd.maximizeWindow();
+			document.title = "Download Board";
+
+			_button_close.setVisible(false);
+			_button_resize.setVisible(false);
+			_dlbd.collectUrlInfoAll(true);
+		};
+
+		// --------------------------------------------------------------------------------
+		// URL収集モード
+		// --------------------------------------------------------------------------------
+		var UrlInfoCollector = (function(){
+
+			function dispatch_statechange(){
+				var f = this.onstatechange;
+				if(f) f(this);
+			}
+
+			function connectToContent(tab,frameId){
+				var _this = this;
+				var port;
+				var event_handler_release;
+
+				var release = function(){
+					_this.countLive -= 1;
+					_this.countDied += 1;
+					dispatch_statechange.call(_this);
+					if(port){
+						port.release();
+						port = null;
+					}
+					if(event_handler_release){
+						event_handler_release.release();
+						event_handler_release = null;
+					}
+				};
+
+				event_handler_release = this.event_dispatcher.createEventHandler("release");
+				event_handler_release.setFunction(function(){
+					port.close();
+					release();
+				});
+
+				_this.countLive += 1;
+				port = extension_message.connectToContent(tab,{frameId:frameId});
+				port.ondisconnect = release;
+				port.onmessage = (function(){
+					var ignore = {"select":true,"state":true,"icon":true,"loaded":true,"id":true};
+					var mime = {"type":true,"ext":true,"level":true};
+					return function(data){
+						if(_this.released) return;
+
+						switch(data.type){
+						case "attach":
+							data.data.forEach(function (u){
+								var url_info = url_info_dictionary.addURL(u.url);
+								var values = u.values;
+								var key;
+								for(key in values){
+									if(ignore[key]) continue;
+									if(mime[key]) continue;
+									url_info.setValue(key,values[key]);
+								}
+								switch(u.level){
+								case 1:
+									url_info.setMimeTypeByElement(values["type"]);
+									break;
+								case 2:
+									url_info.setMimeTypeByExt(values["ext"]);
+									break;
+								case 3:
+									url_info.setMimeTypeByFetch(values["type"]);
+									break;
+								}
+							});
+							break;
+						case "modify":
+							var o = data.data;
+							var url_info = url_info_dictionary.getUrlInfo(o.urlInfo.url);
+							if(!url_info) return;
+							if(ignore[o.key]) return;
+							if(mime[o.key]){
+								switch(o.urlInfo.level){
+								case 1:
+									if(o.key != "type") return;
+									url_info.setMimeTypeByElement(o.value);
+									break;
+								case 2:
+									if(o.key != "ext") return;
+									url_info.setMimeTypeByExt(o.value);
+									break;
+								case 3:
+									if(o.key != "type") return;
+									url_info.setMimeTypeByFetch(o.value);
+									break;
+								}
+							}else{
+								url_info.setValue(o.key,o.value);
+							}
+							break;
+						}
+					};
+				})();
+				port.start(function(){
+					if(_this.released) return;
+					dispatch_statechange.call(_this);
+					port.postMessage({command:"getUrlInfoAll"});
+				});
+			}
+
+			function UrlInfoCollector(){
+				var _this = this;
+				this.event_dispatcher = new EventDispatcher();
+				this.exec_methods = new ExecuteMethods(this);
+
+				// 新しく開かれるフレーム
+				this.message_handler = (function(){
+					var commands = {
+						"ready": function(data,sender){
+							connectToContent.call(_this,sender.tab,sender.frameId);
+						}
+					};
+					return function(data,sender){
+						var f = commands[data.command];
+						if(f) f(data,sender);
+					};
+
+				})();
+				chrome.runtime.onMessage.addListener(this.message_handler);
+
+				// 既存のすべてのタブから収集
+				var _tabs;
+				var _frames;
+				var f0 = function(){
+					var tab = _tabs.shift();
+					if(!tab) return;
+					chrome.webNavigation.getAllFrames({tabId:tab.id},function(frames){
+						if(_this.released) return;
+						_frames = frames || [];
+						f1(tab);
+					});
+				};
+				var f1 = function(tab){
+					if(_this.released) return;
+					var frame = _frames.shift();
+					if(!frame){
+						f0();
+						return;
+					}
+					connectToContent.call(_this,tab,frame.frameId);
+					execute_queue.attachLast(f1,tab);
+				};
+				chrome.tabs.query({},function(tabs){
+					if(_this.released) return;
+					_tabs = tabs || [];
+					f0();
+				});
+
+			}
+			UrlInfoCollector.prototype = {
+				release : function(){
+					if(this.released) return;
+					this.released = true;
+
+					if(this.message_handler){
+						chrome.runtime.onMessage.removeListener(this.message_handler);
+						this.message_handler = null;
+					}
+
+					this.event_dispatcher.dispatchEvent("release",null);
+					this.event_dispatcher.release();
+
+					this.exec_methods.release();
+				},
+				onstatechange : function(){},
+				released : false,
+				countLive : 0,
+				countDied : 0
+			};
+			return UrlInfoCollector;
+		})();
+
+
+		_dlbd.collectUrlInfoAll = function (v){
+
+				if(!v){
+					if(url_info_collector){
+						url_info_collector.release();
+						url_info_collector = null;
+					}
+					updateDownloadButton();
+					_info_collector.setText(0,"Collected URLs.");
+					_info_collector.setProgress(1,1.0);
+					return;
+				}
+
+				var updateInfo = function(){
+					var node = _info_collector.root;
+					if(DomNodeGetFirstElementChild(_element_info) == node) return;
+					DomNodeRemoveChildren(_element_info);
+					_element_info.appendChild(node);
+				};
+
+				url_info_collector = new UrlInfoCollector();
+				url_info_collector.onstatechange = function(r){
+					_info_collector.setText(0,"Collecting URLs form ALL Tabs...");
+					_info_collector.setText(1,"live:" + r.countLive + " disconnected:" + r.countDied);
+					_info_collector.setProgress(1,-1.0);
+					updateInfo();
+				};
+				updateDownloadButton();
+		};
+
+		// --------------------------------------------------------------------------------
 		// アイテム編集
 		// --------------------------------------------------------------------------------
 		function eraseItemsSelected(){
@@ -51867,6 +52229,10 @@
 				_element_download.appendChild(_button_download_pause.root);
 				return;
 			}
+			if(url_info_collector){
+				_element_download.appendChild(_button_collector_stop.root);
+				return;
+			}
 			if(wait_analyze){
 				return;
 			}
@@ -51980,11 +52346,16 @@
 					if(v >= 1.0){
 						s.backgroundColor = "rgba(0,0,255,0.1)";
 						e.classList.remove("meter_play");
-					}else{
+						s.width = "100%";
+					}else if(v >= 0.0){
 						s.backgroundColor = "rgba(255,0,0,0.1)";
 						e.classList.add("meter_play");
+						s.width = (v * 100).toFixed(8) + "%";
+					}else{
+						s.backgroundColor = "rgba(0,0,0,0.1)";
+						e.classList.add("meter_play");
+						s.width = "100%";
 					}
-					s.width = (v * 100).toFixed(8) + "%";;
 				},
 				pause : function(id){
 					var e = this["progress"+id];
@@ -53008,10 +53379,10 @@
 			};
 			_dlbd.restoreWindow();
 
-			var button_close = new UI_ToolButton(_element_toolbar_right);
-			button_close.setTooltip(_i18n.getMessage("download_board_button_close"));
-			button_close.setImageURL(svg_close);
-			button_close.onclick = function(e){
+			_button_close = new UI_ToolButton(_element_toolbar_right);
+			_button_close.setTooltip(_i18n.getMessage("download_board_button_close"));
+			_button_close.setImageURL(svg_close);
+			_button_close.onclick = function(e){
 				_dlbd.setVisible(false);
 			};
 
@@ -53432,6 +53803,10 @@
 			_info_sequential.attach(0,"text");
 			_info_sequential.attach(1,"progress");
 
+			_info_collector = new UI_Info();
+			_info_collector.attach(0,"text");
+			_info_collector.attach(1,"progress");
+
 			_button_archive = new UI_DownloadButton();
 			_button_archive.setTooltip(_i18n.getMessage("download_board_button_archive"));
 			_button_archive.setImageURL("data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iNTEuOTk5OTk2IgpoZWlnaHQ9IjQzIgp2aWV3Qm94PSIwIDAgMTMuNzU4MzMyIDExLjM3NzA4NCIKdmVyc2lvbj0iMS4xIgppZD0iIgp4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCnhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZGVmcwppZD0iIiAvPgo8ZwppZD0iIgp0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNi4zNDk5OTc2LC0xLjA1ODMzMzQpIj4KPGNpcmNsZQpzdHlsZT0iZmlsbDojMDAwMDAwO2ZpbGwtb3BhY2l0eToxO3N0cm9rZS13aWR0aDowLjc2NzU0NTtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTkuMztwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgppZD0iIgpjeD0iOC40NjY2NjQzIgpjeT0iMy4xNzUwMDAyIgpyPSIyLjExNjY2NjgiIC8+CjxjaXJjbGUKc3R5bGU9ImZpbGw6IzAwMDAwMDtmaWxsLW9wYWNpdHk6MTtzdHJva2Utd2lkdGg6MC43Njc1NDU7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjE5LjM7cGFpbnQtb3JkZXI6bWFya2VycyBmaWxsIHN0cm9rZSIKaWQ9IiIKY3g9IjE3Ljk5MTY2MyIKY3k9IjMuMTc1MDAwMiIKcj0iMi4xMTY2NjY4IiAvPgo8Y2lyY2xlCnN0eWxlPSJmaWxsOiMwMDAwMDA7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlLXdpZHRoOjAuNzY3NTQ1O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxOS4zO3BhaW50LW9yZGVyOm1hcmtlcnMgZmlsbCBzdHJva2UiCmlkPSIiCmN4PSIxMy4yMjkxNjciCmN5PSIzLjE3NTAwMDIiCnI9IjIuMTE2NjY2OCIgLz4KPHBhdGgKc3R5bGU9ImZpbGw6IzAwMDAwMDtmaWxsLW9wYWNpdHk6MTtzdHJva2Utd2lkdGg6MC41MjkxNjc7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjE5LjM7cGFpbnQtb3JkZXI6bWFya2VycyBmaWxsIHN0cm9rZSIKZD0ibSAxMC44NDc5MTYsNS44MjA4MzM0IGggNC43NjI1MDEgViA5Ljc4OTU4NCBoIDIuOTEwNDE2IEwgMTMuMjI5MTY3LDEyLjQzNTQxNyA3LjkzNzQ5OTYsOS43ODk1ODQgaCAyLjkxMDQxNjQgeiIKaWQ9IiIgLz4KPC9nPgo8L3N2Zz4K");
@@ -53488,6 +53863,14 @@
 			_button_download_pause.setText("PAUSE");
 			_button_download_pause.onclick = function(){
 				sequential_downloader.pause();
+			};
+
+			_button_collector_stop = new UI_DownloadButton();
+			_button_collector_stop.setTooltip(_i18n.getMessage("download_board_button_collector_stop"));
+			_button_collector_stop.setImageURL(svg_cancel);
+			_button_collector_stop.setText("STOP");
+			_button_collector_stop.onclick = function(){
+				_dlbd.collectUrlInfoAll(false);
 			};
 
 			updateDownloadButton();
@@ -53723,6 +54106,7 @@
 		var _element_info;
 		var _element_download;
 		var _select_filter;
+		var _button_close;
 		var _button_resize;
 		var _button_archive;
 		var _button_download;
@@ -53731,10 +54115,12 @@
 		var _button_download_pause;
 		var _button_archive_cancel;
 		var _button_archive_abort;
+		var _button_collector_stop;
 		var _info_wait;
 		var _info_header;
 		var _info_archive;
 		var _info_sequential;
+		var _info_collector;
 
 		var filter_type = "all";
 		var sort_type = "id";
@@ -53747,6 +54133,7 @@
 		var wait_analyze;
 		var header_downloader;
 		var sequential_downloader;
+		var url_info_collector;
 		var archive_creator;
 		var download_history_monitor;
 
@@ -65148,17 +65535,14 @@
 			context_menu_pageexpand_open_image_viewer: {
 				message: "イメージビューワを開く"
 			},
-			context_menu_pageexpand_open_download_board_application: {
-				message: "ダウンロードボードを開く（アプリ）"
-			},
 			context_menu_pageexpand_open_download_board_inline: {
-				message: "ダウンロードボードを開く"
+				message: "ダウンロードボードを開く（ここで）"
 			},
-			context_menu_batch_download_media: {
+			context_menu_pageexpand_batch_download_media: {
 				message: "一括ダウンロード（メディア）"
 			},
-			context_menu_pageexpand_open_bbs_board: {
-				message: "掲示板ボードを開く"
+			context_menu_pageexpand_open_bbs_board_inline: {
+				message: "掲示板ボードを開く（ここで）"
 			},
 			context_menu_pageexpand_open_bbs_board_run_confirm: {
 				message: "このページ内で掲示板ボードを実行しますか？"
@@ -65228,6 +65612,9 @@
 			},
 			download_board_button_sequential_pause: {
 				message: "すべてのダウンロードを一時停止します。（APIが対応していない場合は中止）\n一時停止のアイテムが多すぎると、ダウンロードのスタックが発生することに注意して下さい。\nスタックを解決するには一時停止中のダウンロードアイテムを手動で編集して数を減らします。\nスタックが貯まりすぎて手に負えなくなった場合は、ブラウザを再起動して下さい。"
+			},
+			download_board_button_collector_stop: {
+				message: "URL収集モードを停止して、ダウンロードに進みます。"
 			},
 			download_board_select_filter: {
 				message: "ファイルの種類を選択..."
@@ -66727,17 +67114,14 @@
 			context_menu_pageexpand_open_image_viewer: {
 				message: "Open Image Viewer"
 			},
-			context_menu_pageexpand_open_download_board_application: {
-				message: "Open Download Board (App)"
-			},
 			context_menu_pageexpand_open_download_board_inline: {
-				message: "Open Download Board"
+				message: "Open Download Board (this)"
 			},
-			context_menu_batch_download_media: {
+			context_menu_pageexpand_batch_download_media: {
 				message: "Batch Download (Media)"
 			},
-			context_menu_pageexpand_open_bbs_board: {
-				message: "Open BBS Board"
+			context_menu_pageexpand_open_bbs_board_inline: {
+				message: "Open BBS Board (this)"
 			},
 			context_menu_pageexpand_open_bbs_board_run_confirm: {
 				message: "Do you want to run the BBS Board in this page?"
@@ -66807,6 +67191,9 @@
 			},
 			download_board_button_sequential_pause: {
 				message: "Pause all downloads. (Abort if API does not support)\nNote that too many items in pause will cause download stacks.\nTo resolve stucks, manually edit the paused download items to reduce the number.\nIf the stack builds up too much, restart your browser."
+			},
+			download_board_button_collector_stop: {
+				message: "Stop URL collection mode, Proceed to download."
 			},
 			download_board_select_filter: {
 				message: "Select file type..."
@@ -68305,17 +68692,14 @@
 			context_menu_pageexpand_open_image_viewer: {
 				message: "Open Image Viewer"
 			},
-			context_menu_pageexpand_open_download_board_application: {
-				message: "Open Download Board (App)"
-			},
 			context_menu_pageexpand_open_download_board_inline: {
-				message: "Open Download Board"
+				message: "Open Download Board (this)"
 			},
-			context_menu_batch_download_media: {
+			context_menu_pageexpand_batch_download_media: {
 				message: "Batch Download (Media)"
 			},
-			context_menu_pageexpand_open_bbs_board: {
-				message: "Open BBS Board"
+			context_menu_pageexpand_open_bbs_board_inline: {
+				message: "Open BBS Board (this)"
 			},
 			context_menu_pageexpand_open_bbs_board_run_confirm: {
 				message: "Do you want to run the BBS Board in this page?"
@@ -68385,6 +68769,9 @@
 			},
 			download_board_button_sequential_pause: {
 				message: "Pause all downloads. (Abort if API does not support)\nNote that too many items in pause will cause download stacks.\nTo resolve stucks, manually edit the paused download items to reduce the number.\nIf the stack builds up too much, restart your browser."
+			},
+			download_board_button_collector_stop: {
+				message: "Stop URL collection mode, Proceed to download."
 			},
 			download_board_select_filter: {
 				message: "Select file type..."
@@ -70853,7 +71240,7 @@
 				element.src = param.url;
 
 				if(_this.request.timeout){
-					setTimeout(failure,_this.request.timeout);
+					time_handle = setTimeout(failure,_this.request.timeout);
 				}
 			};
 
@@ -74647,6 +75034,9 @@
 			_queue_max = 16;
 		})();
 	}
+
+
+
 
 
 
@@ -81075,6 +81465,7 @@
 		}
 	}
 
+
 	// --------------------------------------------------------------------------------
 	// GM_download が利用可能か
 	// --------------------------------------------------------------------------------
@@ -83939,19 +84330,15 @@
 	// クライアント領域のサイズを取得
 	// --------------------------------------------------------------------------------
 	function DocumentGetClientSize(document_obj){
-		var b = document_obj.body;
 		var r = document_obj.documentElement;
+		var b = document_obj.body || r;
 		var w = b.clientWidth;
 		var h;
-		if(w < r.clientWidth)	w = r.clientWidth;
+		if(w < r.clientWidth) w = r.clientWidth;
 		if(document_obj.compatMode == "BackCompat"){
 			h = b.clientHeight;
 		}else{
-			if(r.clientHeight){
-				h = r.clientHeight;
-			}else{
-				h = b.clientHeight;
-			}
+			h = r.clientHeight || b.clientHeight;
 		}
 		return {
 			width :w,
@@ -86632,7 +87019,7 @@
 					download_board.setVisible(true);
 				},"d");
 
-				menu_command.addItem(_i18n.getMessage("context_menu_batch_download_media"), function(){
+				menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_batch_download_media"), function(){
 					download_board.setVisible(true);
 					download_board.waitAnalyze({oncomplete:function(){
 						download_board.setFilter("media");
@@ -86654,7 +87041,7 @@
 				},"a");
 
 				menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_execute_fastest"), function(){
-					PageExpandExecuteFastest();
+					PageExpandExecuteFastest({displayNone:true});
 				},"q");
 
 				menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_debug"), function(){
@@ -86686,7 +87073,7 @@
 						});
 					};
 
-					menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_open_bbs_board"), function(){
+					menu_command.addItem(_i18n.getMessage("context_menu_pageexpand_open_bbs_board_inline"), function(){
 						bbs_board_exec();
 					},"b");
 

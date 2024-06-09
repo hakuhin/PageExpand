@@ -842,12 +842,13 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 開始
 		// --------------------------------------------------------------------------------
-		_this.start = function (){
+		_this.start = function (options){
+			options = options || {};
 			if(!_started_analyze){
-				_request = true;
+				_request = options;
 				return;
 			}
-			start();
+			start(options);
 		};
 
 		// --------------------------------------------------------------------------------
@@ -856,21 +857,27 @@ function PageExpand(page_expand_arguments){
 		_this.startedAnalyze = function (){
 			_started_analyze = true;
 			if(_request){
-				_request = false;
-				start();
+				start(_request);
+				_request = null;
 			}
 		};
 
 		// --------------------------------------------------------------------------------
 		// 開始
 		// --------------------------------------------------------------------------------
-		function start(){
+		function start(options){
 			if(_executing) return;
 			_executing = true;
-			var scroll_pos = WindowGetScrollPosition(window);
-			var html = document.documentElement;
-			var style_display = html.style.display;
-			html.style.display = "none";
+			var scroll_pos;
+			var html;
+			var style_display;
+
+			if(options.displayNone){
+				scroll_pos = WindowGetScrollPosition(window);
+				html = document.documentElement;
+				style_display = html.style.display;
+				html.style.display = "none";
+			}
 
 			setTimeout(function(){
 				execute_queue.setOccupancyTime(1000);
@@ -883,12 +890,14 @@ function PageExpand(page_expand_arguments){
 					}
 				});
 				_task.setDestructorFunc(function(task){
-					if(style_display === undefined){
-						StyleDeclarationRemoveProperty(html.style,"display");
-					}else{
-						StyleDeclarationSetProperty(html.style,"display",style_display);
+					if(options.displayNone){
+						if(style_display === undefined){
+							StyleDeclarationRemoveProperty(html.style,"display");
+						}else{
+							StyleDeclarationSetProperty(html.style,"display",style_display);
+						}
+						WindowSetScrollPosition(window,scroll_pos);
 					}
-					WindowSetScrollPosition(window,scroll_pos);
 					execute_queue.setOccupancyTime(project.getExecuteQueueOccupancyTime());
 					execute_queue.setSleepTime(project.getExecuteQueueSleepTime());
 					_executing = false;
@@ -898,13 +907,13 @@ function PageExpand(page_expand_arguments){
 		};
 
 		var _started_analyze = false;
-		var _request = false;
+		var _request = null;
 		var _executing = false;
 		var _task = null;
 	}
-	function PageExpandExecuteFastest(){
+	function PageExpandExecuteFastest(options){
 		if(page_expand_execute_faster){
-			page_expand_execute_faster.start();
+			page_expand_execute_faster.start(options);
 		}
 	}
 
@@ -11797,6 +11806,24 @@ function PageExpand(page_expand_arguments){
 			preset.filter.asterisk.filter.splice(0,0,
 				"*://x.com/*"
 			);
+		}
+		if(exit())	return proj;
+
+		if(proj.version < 52){
+			proj.version = 52;
+
+			var obj = getPreset(proj.expand_bbs,"2ch_v6");
+			var filter = obj.filter.regexp.filter;
+			filter[1] = {
+				pattern:"^(http|https)://[^.]+[.]bbspink[.]com/test/read[.]cgi/c/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			}
+			var obj = getPreset(proj.expand_bbs,"5ch_v8");
+			var filter = obj.filter.regexp.filter;
+			filter[1] = {
+				pattern:"^(http|https)://[^.]+[.]bbspink[.]com/test/read[.]cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			}
 		}
 		if(exit())	return proj;
 
@@ -27627,9 +27654,9 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"((http|https)://[^.]+\\.(2ch|5ch)\\.net/test/read\\.cgi/c/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
-			{url:"((http|https)://[^.]+\\.(2ch|5ch)\\.net/[^/]+/kako/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
-			{url:"((http|https)://[^.]+\\.bbspink\\.com/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"pink"}
+			{url:"((http|https)://[^.]+[.](2ch|5ch)[.]net/test/read[.]cgi/c/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
+			{url:"((http|https)://[^.]+[.](2ch|5ch)[.]net/[^/]+/kako/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
+			{url:"((http|https)://[^.]+[.]bbspink[.]com/test/read[.]cgi/c/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"pink"}
 		];
 
 		var i;
@@ -27868,10 +27895,8 @@ function PageExpand(page_expand_arguments){
 				}
 				break;
 			case "2ch_v6":
-				re = new RegExp('<div[^>]+class="(| )thread( |)"[^>]*>.*?<div[^>]+class="(| )post( |)"[^>]*>.*?<div[^>]+class="(| )message( |)"[^>]*>',"i");
-				return Boolean(str.match(re));
 			case "pink":
-				re = new RegExp('<dl[^>]+class="(| )post( |)"[^>]*>.*?<dd[^>]+class="(| )thread_in( |)"[^>]*>',"i");
+				re = new RegExp('<div[^>]+class="(| )thread( |)"[^>]*>.*?<div[^>]+class="(| )post( |)"[^>]*>.*?<div[^>]+class="(| )message( |)"[^>]*>',"i");
 				return Boolean(str.match(re));
 			}
 			return false;
@@ -27894,14 +27919,10 @@ function PageExpand(page_expand_arguments){
 				search_post_end = "<br><br>";
 				break;
 			case "2ch_v6":
+			case "pink":
 				search_post_start = '<div class="post"';
 				search_post_end = "</div></div>";
 				class_name_message = "message";
-				break;
-			case "pink":
-				search_post_start = '<dl class="post"';
-				search_post_end = "</dd></dl>";
-				class_name_message = "thread_in";
 				break;
 			}
 
@@ -28080,12 +28101,9 @@ function PageExpand(page_expand_arguments){
 				search_post_end = "<br><br>";
 				break;
 			case "2ch_v6":
+			case "pink":
 				search_post_start = '<div class="post"';
 				search_post_end = "</div></div>";
-				break;
-			case "pink":
-				search_post_start = '<dl class="post"';
-				search_post_end = "</dd></dl>";
 				break;
 			}
 
@@ -29786,7 +29804,8 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"((http|https)://[^.]+\\.(2ch|5ch)\\.net/test/read\\.cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"5ch"}
+			{url:"((http|https)://[^.]+[.](2ch|5ch)[.]net/test/read[.]cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"5ch"},
+			{url:"((http|https)://[^.]+[.]bbspink[.]com/test/read[.]cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"5ch"}
 		];
 
 		var i;
@@ -30523,6 +30542,7 @@ function PageExpand(page_expand_arguments){
 
 				var docking_form = work.docking_form = new BbsControlDockingForm(element_form,false);
 				docking_form.setStyle("background:#e8e8e8; background-image:linear-gradient(to bottom, #f8f8f8, #e8e8e8); padding:10px 20px; border:1px solid #888; border-radius:4px; box-shadow:2px 2px 5px #aaa; margin:0px;");
+				docking_form.onreset = form_reset;
 			})();
 
 			if((function(){
@@ -34749,42 +34769,188 @@ function PageExpand(page_expand_arguments){
 		var _this = this;
 
 		// --------------------------------------------------------------------------------
-		// コンテキストメニューを作成（内部用）
+		// ContextMenu用ディスパッチャー
 		// --------------------------------------------------------------------------------
-		function createContextMenu(){
-			if(!(chrome.contextMenus)) return;
+		var ContextMenuDispatcher = (function(){
+			function dispatch_click(info, tab){
+				var f = this.onClicked;
+				if(f) f.call(this,info, tab);
+			}
+			var f = function(){
+				var _this = this;
 
-			chrome.contextMenus.removeAll();
-			_context_menu_items = new Array();
-			updateContextMenu();
+				if(!(chrome.contextMenus)){
+					_this.release();
+					return;
+				}
+
+				_this._queue = new Array();
+				_this._pass = new Object();
+
+				// イベントをキューに貯める
+				_this._click_handler = function(info, tab){
+					if(_this._pass[info.menuItemId]){
+						dispatch_click.call(_this,info,tab);
+					}else{
+						_this._queue.push({info:info,tab:tab});
+					}
+				};
+				chrome.contextMenus.onClicked.addListener(_this._click_handler);
+			};
+			f.prototype = {
+				start : function(){
+					if(this.released) return;
+					var _this = this;
+					chrome.contextMenus.onClicked.removeListener(_this._click_handler);
+					_this._click_handler = function(info, tab){
+						dispatch_click.call(_this,info,tab);
+					};
+					chrome.contextMenus.onClicked.addListener(_this._click_handler);
+
+					// キューをすべて消化
+					_this._queue.forEach(function(q){
+						_this._click_handler(q.info,q.tab);
+					});
+					delete _this._queue;
+					delete _this._pass;
+				},
+				pass : function(id){
+					if(this.released) return;
+					this._pass[id] = true;
+				},
+				release : function(){
+					if(this.released) return;
+					this.released = true;
+					if(this._click_handler){
+						chrome.contextMenus.onClicked.removeListener(this._click_handler);
+						this._click_handler = null;
+					}
+				},
+				released : false,
+				onClicked : function(info, tab){}
+			};
+			return f;
+		})();
+
+		// --------------------------------------------------------------------------------
+		// 更新
+		// --------------------------------------------------------------------------------
+		function exec_update_pageexpand_project(callback){
+			var proj = new PageExpandProject();
+
+			// プロジェクトをロード
+			proj.loadLocalStorage(function(e){
+
+				// プロジェクトを更新
+				page_expand_project = proj;
+				project = new Project();
+				project.importObjectForBackground(page_expand_project.getProject(""));
+
+				// 設定更新
+				loader_queue.setMaxThread(project.getLoadThreadMax());
+				downloader_queue.setMaxThread(project.getDownloadThreadMax());
+				execute_queue.setOccupancyTime(project.getExecuteQueueOccupancyTime());
+				execute_queue.setSleepTime(project.getExecuteQueueSleepTime());
+
+				// ロケール
+				_i18n = new InternationalMessage(page_expand_project.getLanguage());
+
+				callback(e);
+			});
 		}
+		function exec_update_project(callback){
+			project = new Project();
+			project.importObjectForBackground(page_expand_project.getProject(Tab_getURL(_active_tab)));
+			callback();
+		}
+		function exec_update_activeTab(callback){
+			var _this = this;
+			chrome.tabs.query({active:true,currentWindow:true},function(tabs) {
+				tabs = tabs || [];
+				_active_tab = tabs[0];
+				callback();
+			});
+		}
+		function exec_update_content_status(callback){
+			var release = function(){
+				released = true;
+				if(time_handle !== null){
+					clearTimeout(time_handle);
+					time_handle = null;
+				}
+				if(port){
+					port.release();
+					port = null;
+				}
+			};
+			var success = function(data){
+				if(released) return;
+				release();
+				_active_status = data;
+				callback();
+			};
+			var failure = function(){
+				if(released) return;
+				release();
+				_active_status = { alive:false };
+				callback();
+			};
 
-		// --------------------------------------------------------------------------------
-		// コンテキストメニューを更新（内部用）
-		// --------------------------------------------------------------------------------
-		function updateContextMenu(){
-			if(!(chrome.contextMenus)) return;
+			var released = false;
+			var time_handle = null;
+			var port = extension_message.connectToContent(_active_tab,{frameId:0});
+			if(!port){
+				failure();
+				return;
+			}
+
+			// タイムアウト（スタック回避）
+			time_handle = setTimeout(failure,1000);
+
+			port.onmessage = success;
+			port.ondisconnect = failure;
+			port.start(function(){
+				port.postMessage({command:"getStatus"});
+			});
+		}
+		function exec_update_contextmenu(callback){
+			if(!(chrome.contextMenus)){
+				callback();
+				return;
+			}
+			if(!(project.getEnableContextMenu())){
+				chrome.contextMenus.removeAll();
+				_context_menu_items = [];
+				callback();
+				return;
+			}
 
 			var items = new Array();
 
-			(function(){
-				if(!(project.getEnable())) return;
-				if(!(project.getEnableContextMenu())) return;
-
-				// イメージビューワを開く
+			// イメージビューワを開く
+			if(_active_status.alive){
 				items.push({
 					title:_i18n.getMessage("context_menu_pageexpand_open_image_viewer"),
 					contexts:["all"],
 					id:"openImageViewer"
 				});
+			}
 
-				items.push({
-					type:"separator",
-					contexts:["all"],
-					id:"separator0"
-				});
+			items.push({
+				type:"separator",
+				contexts:["all"],
+				id:"separator0"
+			});
 
-				// ダウンロードボードを開く
+			// ダウンロードボードを開く（アプリ）
+			items.push({
+				title:_i18n.getMessage("context_menu_pageexpand_open_download_board_application"),
+				contexts:["all"],
+				id:"openDownloadBoardApplication"
+			});
+
+			// ダウンロードボードを開く（ここで）
+			if(_active_status.alive){
 				items.push({
 					title:_i18n.getMessage("context_menu_pageexpand_open_download_board_inline"),
 					contexts:["all"],
@@ -34793,59 +34959,73 @@ function PageExpand(page_expand_arguments){
 
 				// 一括ダウンロード（メディア）
 				items.push({
-					title:_i18n.getMessage("context_menu_batch_download_media"),
+					title:_i18n.getMessage("context_menu_pageexpand_batch_download_media"),
 					contexts:["all"],
 					id:"batchDownloadMedia"
 				});
+			}
 
+			items.push({
+				type:"separator",
+				contexts:["all"],
+				id:"separator1"
+			});
+
+			// 掲示板ボードを開く（アプリ）
+			items.push({
+				title:_i18n.getMessage("context_menu_pageexpand_open_bbs_board"),
+				contexts:["all"],
+				id:"openBbsBoard"
+			});
+
+			// 掲示板ボードを開く（サイドバー）
+			if(GoogleChromeExtensionSidebarSupported()){
 				items.push({
-					type:"separator",
+					title:_i18n.getMessage("context_menu_pageexpand_open_bbs_board_sidebar"),
 					contexts:["all"],
-					id:"separator1"
+					id:"openBbsBoardSidebar"
 				});
+			}
 
-				// 掲示板ボードを開く
+			items.push({
+				type:"separator",
+				contexts:["all"],
+				id:"separator2"
+			});
+
+			// 現在のページの設定を編集
+			items.push({
+				title:_i18n.getMessage("context_menu_pageexpand_config_current_page"),
+				contexts:["all"],
+				id:"configCurrentPage"
+			});
+
+			// 現在の掲示板の設定を編集
+			if(project.getEnableExpandBbs()){
 				items.push({
-					title:_i18n.getMessage("context_menu_pageexpand_open_bbs_board"),
+					title:_i18n.getMessage("context_menu_pageexpand_config_current_bbs"),
 					contexts:["all"],
-					id:"openBbsBoard"
+					id:"configCurrentBbs"
 				});
+			}
 
-				items.push({
-					type:"separator",
-					contexts:["all"],
-					id:"separator2"
-				});
+			items.push({
+				type:"separator",
+				contexts:["all"],
+				id:"separator3"
+			});
 
-				// 現在のページの設定を編集
-				items.push({
-					title:_i18n.getMessage("context_menu_pageexpand_config_current_page"),
-					contexts:["all"],
-					id:"configCurrentPage"
-				});
+			if(_active_status.alive){
 
-				// 現在の掲示板の設定を編集
-				if(project.getEnableExpandBbs()){
-					items.push({
-						title:_i18n.getMessage("context_menu_pageexpand_config_current_bbs"),
-						contexts:["all"],
-						id:"configCurrentBbs"
-					});
-				}
-
-				items.push({
-					type:"separator",
-					contexts:["all"],
-					id:"separator3"
-				});
-
-				// PageExpand の開始
-				if(!(project.getEnableStartup())){
-					items.push({
-						title:_i18n.getMessage("context_menu_pageexpand_start"),
-						contexts:["all"],
-						id:"startPageExpand"
-					});
+				if(!(_active_status.started)){
+					// PageExpand の開始
+					if(!(project.getEnableStartup())){
+						items.push({
+							title:_i18n.getMessage("context_menu_pageexpand_start"),
+							contexts:["all"],
+							id:"startPageExpand"
+						});
+					}
 				}
 
 				// PageExpand の中止
@@ -34868,68 +35048,63 @@ function PageExpand(page_expand_arguments){
 					contexts:["all"],
 					id:"executeDebug"
 				});
-			})();
-
-			if(JsonStringify(_context_menu_items) == JsonStringify(items)) return;
-
-			chrome.contextMenus.removeAll();
-			var i;
-			var num = items.length;
-			for(i=0;i<num;i++){
-				chrome.contextMenus.create(items[i]);
 			}
 
-			_context_menu_items = items;
-		}
+			var i;
+			var num;
 
-		// --------------------------------------------------------------------------------
-		// ルールーを更新（内部用）
-		// --------------------------------------------------------------------------------
-		function update_declarativeNetRequestRules(func){
+			// 最先頭のセパレータを削除
+			num = items.length;
+			for(i=0;i<num;i++){
+				if(items[i].type != "separator") break;
+			}
+			if(0 < i) items.splice(0,i);
 
-			if(!(chrome.declarativeNetRequest)){
-				if(func) func();
+			// 最後尾のセパレータを削除
+			num = items.length;
+			for(i=0;i<num;i++){
+				if(items[num-i-1].type != "separator") break;
+			}
+			if(0 < i) items.splice(num-i,i);
+
+			if(JsonStringify(_context_menu_items) == JsonStringify(items)){
+				callback();
 				return;
 			}
-			if(func) func();
+
+			chrome.contextMenus.removeAll();
+			items.forEach(function(item){
+				chrome.contextMenus.create(item);
+			});
+
+			_context_menu_items = items;
+
+			callback();
 		}
 
 		// --------------------------------------------------------------------------------
 		// プロジェクトをロード（内部用）
 		// --------------------------------------------------------------------------------
 		function loadPageExpandProject(func){
-			var proj = new PageExpandProject();
-
-			// プロジェクトをロード
-			proj.loadLocalStorage(function(e){
-
-				// プロジェクトを更新
-				page_expand_project = proj;
-				updateProject("");
-
-				// 設定更新
-				loader_queue.setMaxThread(project.getLoadThreadMax());
-				downloader_queue.setMaxThread(project.getDownloadThreadMax());
-				execute_queue.setOccupancyTime(project.getExecuteQueueOccupancyTime());
-				execute_queue.setSleepTime(project.getExecuteQueueSleepTime());
-
-				// ロケール
-				_i18n = new InternationalMessage(page_expand_project.getLanguage());
-
-				// コンテキストメニューを再構築
-				createContextMenu();
-				update_declarativeNetRequestRules();
-
-				func(e);
-			});
+			_exec_methods.push(exec_update_pageexpand_project);
+			updateActiveTab();
 		}
 
 		// --------------------------------------------------------------------------------
-		// プロジェクト更新（内部用）
+		// アクティブタブを更新（内部用）
 		// --------------------------------------------------------------------------------
-		function updateProject(url){
-			project = new Project();
-			project.importObjectForBackground(page_expand_project.getProject(url));
+		function updateActiveTab(tab){
+			if(tab){
+				_exec_methods.push(function(callback){
+					_active_tab = tab;
+					callback();
+				});
+			}else{
+				_exec_methods.push(exec_update_activeTab);
+			}
+			_exec_methods.push(exec_update_project);
+			_exec_methods.push(exec_update_content_status);
+			_exec_methods.push(exec_update_contextmenu);
 		}
 
 		// --------------------------------------------------------------------------------
@@ -34938,24 +35113,42 @@ function PageExpand(page_expand_arguments){
 		var _i18n;
 		var _xhr_queue_dictionary;
 		var _tabs;
+		var _active_tab;
+		var _active_status;
 		var _context_menu_items;
+		var _exec_methods;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
 		// --------------------------------------------------------------------------------
 		(function(){
-			_tabs = new Array();
-			_context_menu_items = new Array();
 			_xhr_queue_dictionary = new QueueDictionary();
+			_tabs = new Array();
+			_active_tab = {};
+			_active_status = {};
+			_context_menu_items = new Array();
+			_exec_methods = new ExecuteMethods(_this);
+			var command_dictionary = new Object();
 
+			// --------------------------------------------------------------------------------
 			// GoogleChrome拡張機能通信
+			// --------------------------------------------------------------------------------
 			extension_message = new GoogleChromeExtensionMessageForBackground({useConnect:true});
+			extension_message.onconnect = function(port){
+				port.onmessage = function(data){
+					var f = command_dictionary[data.command];
+					if(!f){
+						port.terminate();
+						return;
+					}
+					f(port,data);
+				};
+				port.start();
+			};
 
 			// --------------------------------------------------------------------------------
 			// コマンド辞書
 			// --------------------------------------------------------------------------------
-			var command_dictionary = new Object();
-
 			// PageExpandProject 取得
 			command_dictionary["getPageExpandProject"] = function(port,data){
 				// JSON 文字列を返す
@@ -34972,11 +35165,48 @@ function PageExpand(page_expand_arguments){
 
 			// プロジェクト設定をリロード
 			command_dictionary["reloadPageExpandProject"] = function(port,data){
-				loadPageExpandProject(function(e){});
+				loadPageExpandProject();
 				port.close();
 			};
 
+			// ポップアップアクションを追加
+			command_dictionary["attachPopupAction"] = function(port,data){
+				try{
+					var action = chrome.action || chrome.browserAction;
+					action.setIcon({
+						path:{
+							"16": "icon16.png",
+							"18": "icon18.png",
+							"19": "icon19.png",
+							"32": "icon32.png",
+							"38": "icon38.png",
+							"48": "icon48.png",
+							"64": "icon64.png",
+							"128": "icon128.png"
+						},
+						tabId:port.getSender().tab.id
+					});
+				}catch(e){
+				}
+				port.close();
+			};
+
+			// バッジテキストを更新
+			command_dictionary["setBadgeText"] = function(port,data){
+				try{
+					var action = chrome.action || chrome.browserAction;
+					action.setBadgeText({
+						text:data.text,
+						tabId:port.getSender().tab.id
+					});
+				}catch(e){
+				}
+				port.close();
+			};
+
+			// --------------------------------------------------------------------------------
 			// fetch
+			// --------------------------------------------------------------------------------
 			command_dictionary["fetch"] = function (port,data){
 				try{
 					var released = false;
@@ -35302,7 +35532,9 @@ function PageExpand(page_expand_arguments){
 
 			};
 
+			// --------------------------------------------------------------------------------
 			// XMLHttpRequest
+			// --------------------------------------------------------------------------------
 			command_dictionary["xhr"] = function (port,data){
 				try{
 					var released = false;
@@ -35562,7 +35794,9 @@ function PageExpand(page_expand_arguments){
 
 			};
 
+			// --------------------------------------------------------------------------------
 			// ダウンロード
+			// --------------------------------------------------------------------------------
 			command_dictionary["download"] = function(port,data){
 				port.postMessage({
 					state:"unsupported",
@@ -35571,72 +35805,1156 @@ function PageExpand(page_expand_arguments){
 				port.close();
 			};
 
-			// ポップアップアクションを追加
-			command_dictionary["attachPopupAction"] = function(port,data){
-				try{
-					var action = chrome.action || chrome.browserAction;
-					action.setIcon({
-						path:{
-							"16": "icon16.png",
-							"18": "icon18.png",
-							"19": "icon19.png",
-							"32": "icon32.png",
-							"38": "icon38.png",
-							"48": "icon48.png",
-							"64": "icon64.png",
-							"128": "icon128.png"
-						},
-						tabId:port.getSender().tab.id
-					});
-				}catch(e){
-				}
-				port.close();
-			};
-
-			// バッジテキストを更新
-			command_dictionary["setBadgeText"] = function(port,data){
-				try{
-					var action = chrome.action || chrome.browserAction;
-					action.setBadgeText({
-						text:data.text,
-						tabId:port.getSender().tab.id
-					});
-				}catch(e){
-				}
-				port.close();
-			};
-
-			// --------------------------------------------------------------------------------
-			// コンテキストメニューからの通信を貯める
-			// --------------------------------------------------------------------------------
-			var context_menu_queue;
-			var context_menu_handler;
-
 			(function(){
-				if(!(chrome.contextMenus)) return;
+				if(!(chrome.downloads)) return;
 
-				context_menu_queue = new Array();
-				context_menu_handler = function(info, tab){
-					context_menu_queue.push({info:info,tab:tab});
+				var download_shelf = new DownloadShelf();
+				var determining_filename = new DeterminingFilename();
+				var download_item_observer = new DownloadItemObserver();
+
+				// --------------------------------------------------------------------------------
+				// ダウンロードシェルフ
+				// --------------------------------------------------------------------------------
+				function DownloadShelf(){
+					var _this = this;
+					var enableShelf = chrome.downloads.setShelfEnabled || function(){};
+					var Item = function(){
+					};
+					Item.prototype = {
+						release:function(){
+							if(this.released) return;
+							this.released = true;
+							ref_count --;
+							if(ref_count <= 0){
+								enableShelf(true);
+							}
+						},
+						released:false
+					};
+
+					_this.silent = function(){
+						ref_count ++;
+						enableShelf(false);
+						return new Item();
+					};
+
+					var ref_count = 0;
+					enableShelf(true);
+				}
+
+				// --------------------------------------------------------------------------------
+				// 保存ファイル名決定
+				// --------------------------------------------------------------------------------
+				function DeterminingFilename(){
+					var _this = this;
+					var Item = function(){
+					};
+					Item.prototype = {
+						release:function(){
+							if(this.released) return;
+							this.released = true;
+							count --;
+							if(count <= 0){
+								event_release();
+							}
+						},
+						setId:function(id){
+							this.id = id;
+							IDs[id] = this;
+						},
+						setFilename:function(filename){
+							this.filename = filename;
+						},
+						onmimechange:function(){},
+						released:false
+					};
+					_this.release = function(){
+						var k;
+						for(k in IDs){
+							IDs[k].release();
+						}
+					};
+					_this.attach = function(){
+						if(count <= 0){
+							event_attach();
+						}
+						count ++;
+						return new Item();
+					};
+
+					var IDs = new Object();
+					var count = 0;
+					var api = chrome.downloads.onDeterminingFilename;
+
+					function event_attach(){
+						if(!api) return;
+						api.addListener(handle_determining);
+					};
+					function event_release(){
+						if(!api) return;
+						api.removeListener(handle_determining);
+					};
+
+					var handle_determining = function(item,callback){
+						var request = IDs[item.id];
+						if(!request) return;
+
+						if(request.onmimechange){
+							request.onmimechange(item);
+						}
+
+						var filename = request.filename;
+					//	var ext_old = "";
+						var ext_new = MIMEType_To_Ext(item.mime);
+					//	var m = filename.match(new RegExp("[.]([a-zA-Z0-9]*)$","i"));
+					//	if(m){
+					//		ext_old = m[1];
+					//		filename = filename.slice(0,m.index);
+					//	}
+
+					//	if((function(){
+					//		if(!ext_new) return false;
+					//		if(MIMEType_is_Same(ext_old,ext_new)) return false;
+					//		return true;
+					//	})()){
+						if(ext_new){
+							filename += "." + ext_new;
+							callback({filename:filename});
+						}
+
+						request.release();
+					};
+
+				}
+
+				// --------------------------------------------------------------------------------
+				// 進捗を監視
+				// --------------------------------------------------------------------------------
+				function DownloadItemObserver(){
+					var container_list = new Array();
+
+					var Container = (function(){
+						var f = function(id){
+							this.prev = this.next = this;
+							this.id = id;
+						};
+						f.prototype = {
+							release : function(){
+								if(this.released) return;
+								this.released = true;
+								if(this._handle !== null){
+									clearTimeout(this._handle);
+									this._handle = null;
+								}
+								delete container_list[this.id];
+							},
+							getAll : function(){
+								var a = new Array();
+								var next = this.next;
+								while(this != next){
+									a.push(next);
+									next = next.next;
+								}
+								return a;
+							},
+							released : false,
+							interval : 1000*0.1,
+							_handle : null
+						};
+						return f;
+					})();
+
+					var Observer = (function(){
+						var f = function(parent){
+							this.prev = this.next = this;
+							this.progress = {
+								bytesReceived:null,
+								totalBytes:null
+							};
+							this.mime = {
+								mime:null
+							};
+							this.status = {
+								state:null,
+								error:null,
+								bytesReceived:null
+							};
+							this.state = {
+								state:null,
+								paused:null,
+								canResume:null,
+								exists:null
+							};
+							this._parent = parent;
+						};
+						f.prototype = {
+							release : function(){
+								var prev = this.prev;
+								var next = this.next;
+								prev.next = next;
+								next.prev = prev;
+								this.prev = this.next = this;
+
+								var p = this._parent;
+								if(p == p.next){
+									p.release();
+								}
+							},
+							onprogress : function(){},
+							onmimechange : function(){},
+							onstatuschange : function(){},
+							onstatechange : function(){},
+							onerror : function(){}
+						};
+						return f;
+					})();
+
+					this.createObserver = function(id){
+						if(!container_list[id]){
+							container_list[id] = new Container(id);
+						}
+
+						var p = container_list[id];
+						if(p.next == p){
+
+							var f = function (){
+								p._handle = null;
+								if(p.released) return;
+								chrome.downloads.search({id:p.id,limit:1},function(items){
+									if(p.released) return;
+									items = items || [];
+									var item = items[0];
+									if(!item){
+										p.getAll().forEach(function(observer){
+											dispatch_error.call(observer,"Download item is losted.");
+										});
+										return;
+									}
+
+									DownloadItem_consolidate(item);
+									p.getAll().forEach(function(observer){
+										dispatch_progress.call(observer,item);
+										dispatch_mimechange.call(observer,item);
+										dispatch_statuschange.call(observer,item);
+										dispatch_statechange.call(observer,item);
+									});
+
+									if(p.released) return;
+									p._handle = setTimeout(f,p.interval);
+								});
+							}
+							f();
+						}
+
+						var observer = new Observer(p);
+						var next = p;
+						var prev = next.prev;
+						next.prev = observer;
+						prev.next = observer;
+						observer.next = next;
+						observer.prev = prev;
+						return observer;
+					};
+
+					function dispatch_error(reason){
+						var f = this.onerror;
+						if(f) f(reason);
+					}
+					function dispatch_progress(item){
+						var changed = false;
+						var k;
+						var o = this.progress;
+						for(k in o){
+							if(o[k] !== item[k]){
+								o[k] = item[k];
+								changed = true;
+							}
+						}
+						if(changed){
+							var f = this.onprogress;
+							if(f) f(item);
+						}
+					}
+					function dispatch_mimechange(item){
+						var changed = false;
+						var k;
+						var o = this.mime;
+						for(k in o){
+							if(o[k] !== item[k]){
+								o[k] = item[k];
+								changed = true;
+							}
+						}
+						if(changed){
+							var f = this.onmimechange;
+							if(f) f(item);
+						}
+					}
+					function dispatch_statuschange(item){
+						var changed = false;
+						var k;
+						var o = this.status;
+						for(k in o){
+							var v = item[k];
+							if(typeof(v) == "string"){
+								if(o[k] !== v){
+									o[k] = v;
+									changed = true;
+								}
+							}else{
+								v = Boolean(v);
+								if(o[k] !== v){
+									o[k] = v;
+									changed = true;
+								}
+							}
+						}
+						if(changed){
+							var f = this.onstatuschange;
+							if(f) f(item);
+						}
+					}
+					function dispatch_statechange(item){
+						var changed = false;
+						var k;
+						var o = this.state;
+						for(k in o){
+							if(o[k] !== item[k]){
+								o[k] = item[k];
+								changed = true;
+							}
+						}
+						if(changed){
+							var f = this.onstatechange;
+							if(f) f(item);
+						}
+					}
+				}
+
+				// --------------------------------------------------------------------------------
+				// ファイルアイコン辞書（Firefox で進行不能になる事があるので呼び出し回数を減らす）
+				// --------------------------------------------------------------------------------
+				function FileIconDictionary(){
+					var _this = this;
+					var FileIcon = function(item){
+						var _this = this;
+						this.event_dispatcher = new EventDispatcher();
+
+						// Edge は Promise 未対応
+						chrome.downloads.getFileIcon(item.id,{},function(url){
+							if(_this.released) return;
+							_this.url = url || "";
+							_this.loaded = true;
+							if((function(){
+								if(chrome.runtime.lastError) return false;
+								if(!(_this.url)) return false;
+								return true;
+							})()){
+								_this.event_dispatcher.dispatchEvent("loaded",_this.url);
+							}
+							_this.event_dispatcher.release();
+							delete _this.event_dispatcher;
+						});
+						//var promise =  chrome.downloads.getFileIcon(id);
+						//promise.then(function(url){
+						//},function(reason){});
+					};
+					FileIcon.prototype = {
+						release:function(){
+							if(this.released) return;
+							this.released = true;
+							if(this.event_dispatcher){
+								this.event_dispatcher.release();
+								this.event_dispatcher = null;
+							}
+						},
+						url:"",
+						loaded:false,
+						released:false
+					};
+					_this.release = function(){
+						var k;
+						for(k in file_icons){
+							file_icons[k].release();
+						}
+					};
+					_this.getFileIcon = function(item,callback){
+						var file_icon = file_icons[item.mime];
+						if(!file_icon){
+							file_icons[item.mime] = file_icon = new FileIcon(item);
+						}
+
+						if(file_icon.loaded){
+							callback(file_icon.url);
+							return;
+						}
+
+						var event_handler = file_icon.event_dispatcher.createEventHandler("loaded");
+						event_handler.setFunction(callback);
+					};
+
+					var file_icons = new Object();
+				}
+
+				// --------------------------------------------------------------------------------
+				// ダウンロード
+				// --------------------------------------------------------------------------------
+				command_dictionary["download"] = function(port,data){
+					var request = data.request;
+					request.silent = Boolean(request.silent);
+					if(request.saveAs) request.silent = false;
+
+					var response = {
+						ok:false,
+						status:0,
+						state:null,
+						mimetype:"",
+						errorText:"",
+						result:false,
+						id:null
+					};
+					var progress = {
+						bytesLoaded:0,
+						bytesTotal:0
+					};
+
+					var xhr_queue_element = null;
+					var exec_methods = new ExecuteMethods(this);
+					var observer = null;
+					var silent_item = null;
+					var handle_changed = null;
+					var determining_item = null;
+					var blob_url = null;
+					var file_name = "";
+					var item_latest = null;
+					var creating = false;
+					var released = false;
+
+					var release_observer = function(){
+						if(observer){
+							observer.release();
+							observer = null;
+						}
+					};
+					var release_silent = function(){
+						if(silent_item){
+							silent_item.release();
+							silent_item = null;
+						}
+					};
+					var release_changed = function(){
+						if(handle_changed){
+							chrome.downloads.onChanged.removeListener(handle_changed);
+							handle_changed = null;
+						}
+					};
+					var release_determining = function(){
+						if(determining_item){
+							determining_item.release();
+							determining_item = null;
+						}
+					};
+					var release = function(){
+						if(released) return;
+						released = true;
+
+						if(exec_methods){
+							exec_methods.release();
+							exec_methods = null;
+						}
+						release_observer();
+						release_silent();
+						release_changed();
+						release_determining();
+						if(xhr_queue_element){
+							xhr_queue_element.release();
+							xhr_queue_element = null;
+						}
+						if(blob_url){
+							BlobURLRevoke(blob_url);
+							blob_url = null;
+						}
+						port.ondisconnect = null;
+					};
+					var complete = function(){
+						release();
+						port.postMessage({state:"head",data:response});
+						port.postMessage({state:"complete"});
+						port.close();
+					};
+					var success = function(){
+						if(released) return;
+						response.result = true;
+						complete();
+					};
+					var suspend = function(){
+						if(released) return;
+						response.result = false;
+						complete();
+					};
+					var failure = function(msg){
+						if(released) return;
+						response.result = false;
+						response.errorText = msg;
+						dispatch_state_failed();
+						complete();
+					};
+
+					port.ondisconnect = function(){
+						release();
+					};
+
+					port.onmessage = (function(){
+						function isStacking(){
+							if(creating){
+								failure("item is stacked.");
+								return true;
+							}
+							return false;
+						}
+						var commands = {
+							"body":function(r){
+								var blob = r.blob || {};
+								if(blob.size === r.size){
+									blob_url = BlobURLCreate(blob);
+									if(blob_url){
+										request.url = blob_url;
+									}
+								}
+							},
+							"resume":function(){
+								if(isStacking()) return;
+								exec_methods.push(download_resume);
+								exec_methods.push(download_observer);
+
+							},
+							"pause":function(){
+								if(isStacking()) return;
+								exec_methods.push(download_pause);
+							},
+							"cancel":function(){
+								if(isStacking()) return;
+								exec_methods.push(download_cancel);
+							},
+							"start":function(){
+								if(request.id === null){
+									exec_methods.push(download_get_id);
+								}else{
+									exec_methods.push(download_exists_id);
+								}
+								exec_methods.push(function(callback){
+
+									switch(request.order){
+									default:
+										switch(response.state){
+										case DownloaderState.DOWNLOAD.LOADING:
+											exec_methods.push(download_observer);
+											break;
+										case DownloaderState.DOWNLOAD.PAUSING.CAN_RESUMED:
+											exec_methods.push(download_resume);
+											exec_methods.push(download_observer);
+											break;
+										case DownloaderState.DOWNLOAD.COMPLETED.EXISTS:
+											success();
+											return;
+										default:
+											exec_methods.push(download_addlistener);
+											exec_methods.push(download_start);
+											exec_methods.push(download_observer);
+											break;
+										}
+										break;
+									case "new":
+										exec_methods.push(download_addlistener);
+										exec_methods.push(download_start);
+										exec_methods.push(download_observer);
+										break;
+									case "pause":
+										exec_methods.push(download_pause);
+										exec_methods.push(download_observer);
+										break;
+									case "cancel":
+										exec_methods.push(download_cancel);
+										exec_methods.push(download_observer);
+										break;
+									case "open":
+										exec_methods.push(download_open);
+										exec_methods.push(success);
+										break;
+									}
+
+									callback();
+								});
+							}
+						};
+						return function(receive){
+							var f = commands[receive.state];
+							if(f) f(receive.data);
+						};
+					})();
+
+					function dispatch_progress(item){
+						if(released) return;
+						item_latest = item;
+						progress.bytesLoaded = item.bytesReceived || 0;
+						progress.bytesTotal = item.totalBytes || 0;
+						port.postMessage({
+							state:"progress",
+							data:progress
+						});
+					}
+					var dispatch_mimetype = (function(){
+						var o = {
+							mimetype:null
+						};
+						return function (item){
+							if(released) return;
+							var changed = false;
+							response.mimetype = item.mime;
+							if(o.mimetype !== response.mimetype){
+								o.mimetype = response.mimetype;
+								changed = true;
+							}
+							if(changed){
+								port.postMessage({
+									state:"mimetype",
+									data:o
+								});
+							}
+						};
+					})();
+					var dispatch_status = (function(){
+						var o = {
+							status:null,
+							ok:null
+						};
+						return function (item){
+							if(released) return;
+							var changed = false;
+							if(item.state == "in_progress" && (!item.bytesReceived)) return;
+
+							response.status = DownloadItem_get_status(item);
+							response.ok = Boolean((200 <= response.status && response.status < 300) || response.status == 304);
+							if(o.status !== response.status){
+								o.status = response.status;
+								o.ok = response.ok;
+								changed = true;
+							}
+							if(changed){
+								port.postMessage({
+									state:"status",
+									data:o
+								});
+							}
+						};
+					})();
+					var dispatch_state_by_enum;
+					var dispatch_state;
+					var dispatch_state_failed;
+					(function(){
+						var o = {
+							state:null
+						};
+						dispatch_state_by_enum = function (state){
+							if(released) return;
+							var changed = false;
+							response.state = state;
+							if(o.state !== response.state){
+								o.state = response.state;
+								changed = true;
+							}
+							if(changed){
+								port.postMessage({
+									state:"state",
+									data:o
+								});
+							}
+						};
+						dispatch_state = function (item){
+							dispatch_state_by_enum(DownloadItem_get_DownloaderState(item));
+						};
+						dispatch_state_failed = function (item){
+							dispatch_state_by_enum(DownloaderState.DOWNLOAD.FAILED);
+						};
+					})();
+					function event_statechange(item){
+						if(released) return;
+						item_latest = item;
+
+						dispatch_state(item);
+
+						if(item.state == "complete"){
+							success();
+							return;
+						}
+
+						if(item.paused){
+							suspend();
+							return;
+						}
+
+						if(item.state == "interrupted"){
+							failure(item.error || "");
+							return;
+						}
+					}
+
+					function download_get_id(callback){
+
+						chrome.downloads.search({url:request.url},function(items){
+							items = items || [];
+							var item = null;
+							var state_max = 0;
+							var i;
+							var num = items.length;
+							for(i=0;i<num;i++){
+								var o = items[i];
+								DownloadItem_consolidate(o);
+								var s = DownloadItem_get_DownloaderState(o);
+								if(state_max < s){
+									item = o;
+									state_max = s;
+								}
+							}
+
+							if(item){
+								item_latest = item;
+								response.id = item.id;
+								dispatch_progress(item);
+								dispatch_mimetype(item);
+								dispatch_status(item);
+								dispatch_state(item);
+							}
+
+							callback();
+						});
+					}
+
+					function download_exists_id(callback){
+						chrome.downloads.search({id:request.id,limit:1},function(items){
+							if(_this.released) return;
+							items = items || [];
+							var item = items[0];
+							if(!item){
+								failure("Download item is losted.");
+								return;
+							}
+							DownloadItem_consolidate(item);
+							item_latest = item;
+							response.id = item.id;
+							dispatch_progress(item);
+							dispatch_mimetype(item);
+							dispatch_status(item);
+							dispatch_state(item);
+							callback();
+						});
+					}
+
+					function download_start(callback){
+
+						var file_name_obj = ProjectDownloadSaveFile_Determining(request,{ext:request.ext,type:"download"});
+						if(file_name_obj.error){
+							failure(file_name_obj.error);
+							return;
+						}
+						file_name = file_name_obj.filename;
+
+						var headers = (function(){
+							var a = new Array();
+							var o = request.headers;
+							var name;
+							for(name in o){
+								a.push({name:name,value:o[name]});
+							}
+							return a;
+						})();
+
+						var options = {
+							method:request.method,
+							headers:headers,
+							body:request.data,
+							url:request.url,
+							filename:file_name,
+							saveAs:request.saveAs
+						};
+
+						switch(project.getDownloadConflict()){
+						case "rename":
+						default:
+							options.conflictAction = "uniquify";
+							break;
+						case "overwrite":
+							options.conflictAction = "overwrite";
+							break;
+						}
+
+						xhr_queue_element = _xhr_queue_dictionary.createElement(request.url);
+						xhr_queue_element.setData({url:request.currentURL});
+
+						function fulfill(id){
+							creating = false;
+							if(released){
+								// 切断済みならキャンセル（一時停止が多いとスタックする問題に対応）
+								if(id !== undefined){
+									chrome.downloads.cancel(id);
+								}
+								return;
+							}
+							if((function(){
+								if(chrome.runtime.lastError) return true;
+								if(id === undefined) return true;
+								return false;
+							})()){
+								failure();
+								return;
+							}
+							response.id = id;
+							if(request.silent) silent_item = download_shelf.silent();
+							if(determining_item){
+								determining_item.setId(response.id);
+								determining_item.setFilename(file_name);
+								determining_item.onmimechange = dispatch_mimetype;
+							}
+							callback();
+							return;
+						}
+						function reject(msg){
+							creating = false;
+							var e = chrome.runtime.lastError || {};
+							failure(msg || e.message || "");
+						}
+						try{
+							creating = true;
+							dispatch_state_by_enum(DownloaderState.DOWNLOAD.CREATING);
+							chrome.downloads.download(options , fulfill);
+							if(chrome.runtime.lastError){
+								reject();
+								return;
+							}
+						}catch(e){
+							reject(e.message);
+							return;
+						}
+					}
+
+					function download_order(order,callback){
+						try{
+							chrome.downloads[order](response.id,function(){
+								if(chrome.runtime.lastError){
+									failure(chrome.runtime.lastError.message);
+									return;
+								}
+								callback();
+							});
+						}catch(e){
+							failure(e.message || "");
+						}
+					}
+					// Firefox で成功結果を瞬時に返さないバグがあるので待たずに成功とみなす
+					function download_order_avoid_bug(order,callback){
+						function release(){
+							replied = true;
+							if(time_handle !== null){
+								clearTimeout(time_handle);
+								time_handle = null;
+							}
+						}
+						function fulfilled(){
+							if(replied) return;
+							release();
+							callback();
+						}
+						function rejected(reason){
+							if(replied) return;
+							release();
+							failure(reason);
+						}
+						var replied = false;
+						var timeout = 1000 * 0.1;
+						var time_handle = null;
+
+						try{
+							time_handle = setTimeout(fulfilled,timeout);
+							chrome.downloads[order](response.id,function(){
+								if(chrome.runtime.lastError){
+									rejected(chrome.runtime.lastError.message);
+									return;
+								}
+								fulfilled();
+							});
+						}catch(e){
+							rejected(e.message || "");
+						}
+					}
+					function download_resume(callback){
+						download_order_avoid_bug("resume",callback);
+					}
+					function download_pause(callback){
+						download_order("pause",callback);
+					}
+					function download_cancel(callback){
+						download_order("cancel",callback);
+					}
+
+					function download_open(callback){
+						if(!(function(){
+							if(!item_latest) return false;
+							if(!item_latest.exists) return false;
+							if(item_latest.state != "complete") return false;
+							return true
+						})()){
+							failure("not exist");
+							return;
+						}
+
+						if(!(function(){
+							var t = chrome.downloads.DangerType;
+							if(item_latest.danger != t.SAFE) return false;
+							return true
+						})()){
+							failure("danger (" + item_latest.danger + ")");
+							return;
+						}
+
+						try{
+							function fulfill() {
+								callback();
+							}
+							function reject(reason){
+								failure(reason);
+							}
+
+							var promise = chrome.downloads.show(response.id);
+							if(promise){
+								promise.then(fulfill,reject);
+							}else{
+								if(chrome.runtime.lastError){
+									failure(chrome.runtime.lastError.message);
+									return;
+								}
+								fulfill();
+							}
+						}catch(e){
+							failure(e.message || "");
+						}
+					}
+
+					function download_addlistener(callback){
+						release_changed();
+						handle_changed = function(delta){
+							if(response.id !== delta.id) return;
+
+							if(delta.filename){
+								release_silent();
+							}
+
+							release_changed();
+						};
+						chrome.downloads.onChanged.addListener(handle_changed);
+
+						if(!request.ext){
+							determining_item = determining_filename.attach();
+						}
+
+						callback();
+					}
+
+					// ダウンロード進捗監視
+					function download_observer(callback){
+						observer = download_item_observer.createObserver(response.id);
+						observer.onprogress = dispatch_progress;
+						observer.onmimechange = dispatch_mimetype;
+						observer.onstatuschange = dispatch_status;
+						observer.onstatechange = event_statechange;
+						observer.onerror = failure;
+						callback();
+					}
+
 				};
-				chrome.contextMenus.onClicked.addListener(context_menu_handler);
+
+				// --------------------------------------------------------------------------------
+				// ダウンロード履歴監視
+				// --------------------------------------------------------------------------------
+				command_dictionary["downloadHistoryMonitor"] = function(port,data){
+					var observers = new Object();
+					var file_icon_dictionary = new FileIconDictionary();
+					var icons = new Object();
+					var handle_created = null;
+					var handle_changed = null;
+					var handle_erased = null;
+					var released = false;
+
+					function release(){
+						if(released) return;
+						released = true;
+
+						port.ondisconnect = null;
+						if(handle_created){
+							chrome.downloads.onCreated.removeListener(handle_created);
+							handle_created = null;
+						}
+						if(handle_changed){
+							chrome.downloads.onChanged.removeListener(handle_changed);
+							handle_changed = null;
+						}
+						if(handle_erased){
+							chrome.downloads.onErased.removeListener(handle_erased);
+							handle_erased = null;
+						}
+						var k;
+						for(k in observers){
+							observer_release(k);
+						}
+						if(file_icon_dictionary){
+							file_icon_dictionary.release();
+							file_icon_dictionary = null;
+						}
+					}
+
+					port.ondisconnect = function(){
+						release();
+					};
+
+					function observer_create(id){
+						if(observers[id]) return;
+						var observer = observers[id] = download_item_observer.createObserver(id);
+						observer.onprogress = dispatch_progress;
+						observer.onmimechange = dispatch_mimechange;
+						observer.onstatechange = dispatch_statechange;
+						observer.onerror = function(){
+							if(released) return;
+							observer_release(id);
+						};
+					}
+					function observer_release(id){
+						var o = observers[id];
+						if(!o) return;
+						o.release();
+						delete observers[id];
+					}
+					function dispatch_progress(item){
+						if(released) return;
+						port.postMessage({
+							state:"progress",
+							data:item
+						});
+					}
+					function dispatch_mimechange(item){
+						if(released) return;
+						port.postMessage({
+							state:"mime",
+							data:item
+						});
+					}
+					function dispatch_statechange(item){
+						if(released) return;
+
+						// ロード中からロード停止
+						if((item.state != "in_progress") || (item.paused)){
+							observer_release(item.id);
+						}
+
+						download_get_icon(item);
+					}
+
+					function download_new(item){
+						// ロード中
+						if((item.state == "in_progress") && (!item.paused)){
+							observer_create(item.id);
+						}
+
+						download_get_icon(item);
+					}
+
+					function download_modify(delta){
+						if((function(){
+							// ロード停止からロード中
+							var paused = delta.paused;
+							if(paused){
+								if(!paused.current) return true;
+							}
+
+							// ポーズ中に完了することがあるので１度だけチェック
+							var state = delta.state;
+							if(state){
+								if(state.current != "in_progress") return true;
+							}
+
+							return false;
+						})()){
+							observer_create(delta.id);
+						}
+					}
+					function download_get_icon(item){
+						if(!(function(){
+							if(icons[item.id]) return false;
+							if(!item.mime) return false;
+							// Chrome では、Filename 確定前だとエラー
+							if(!item.filename) return false;
+							return true;
+						})()){
+							return;
+						}
+
+						icons[item.id] = true;
+
+						file_icon_dictionary.getFileIcon(item,function(url){
+							port.postMessage({
+								state:"icon",
+								data:{id:item.id,fileIconURL:url}
+							});
+						});
+					}
+
+					chrome.downloads.search({},function(items){
+						if(released) return;
+						items = items || [];
+						items.forEach(function(item){
+							DownloadItem_consolidate(item);
+						});
+						port.postMessage({state:"all",data:items});
+						items.forEach(function(item){
+							download_new(item);
+						});
+
+						handle_created = function(item){
+							if(released) return;
+							DownloadItem_consolidate(item);
+							port.postMessage({state:"created",data:item});
+							download_new(item);
+						};
+						handle_changed = function(delta){
+							if(released) return;
+							port.postMessage({state:"changed",data:delta});
+							download_modify(delta);
+						};
+						handle_erased = function(id){
+							if(released) return;
+							port.postMessage({state:"erased",data:id});
+							observer_release(id);
+						};
+
+						chrome.downloads.onCreated.addListener(handle_created);
+						chrome.downloads.onChanged.addListener(handle_changed);
+						chrome.downloads.onErased.addListener(handle_erased);
+					});
+
+				};
 			})();
 
 			// --------------------------------------------------------------------------------
-			// プロジェクトをロード
+			// タブ辞書
 			// --------------------------------------------------------------------------------
-			loadPageExpandProject(function(e){
-
-				// --------------------------------------------------------------------------------
-				// タブの状態
-				// --------------------------------------------------------------------------------
+			_exec_methods.push(function(callback){
 				chrome.tabs.query({},function(tabs){
+					tabs = tabs || [];
 					var i;
 					var num = tabs.length;
 					for(i=0;i<num;i++){
 						var tab = tabs[i];
 						_tabs[tab.id] = tab;
 					}
+					callback();
 				});
 				chrome.tabs.onCreated.addListener( function(tab){
 					_tabs[tab.id] = tab;
@@ -35646,52 +36964,116 @@ function PageExpand(page_expand_arguments){
 				});
 				chrome.tabs.onUpdated.addListener( function(tab_id , info , tab){
 					_tabs[tab_id] = tab;
-					updateProject(tab.url);
-					updateContextMenu();
 				});
-				chrome.tabs.onActivated.addListener( function(info){
-					var tab = _tabs[info.tabId];
-					if(tab){
-						updateProject(tab.url);
-						updateContextMenu();
+			});
+
+			// --------------------------------------------------------------------------------
+			// コンテキストメニュー
+			// --------------------------------------------------------------------------------
+			(function(){
+				var menu_commands = Object();
+
+				menu_commands["openDownloadBoardApplication"] = function(info, tab) {
+					GoogleChromeExtensionOpenDownloadBoard();
+				};
+
+				menu_commands["openBbsBoard"] = function(info, tab) {
+					var query = new Object();
+					query.referer = encodeURIComponent(Tab_getURL(tab));
+					GoogleChromeExtensionOpenBbsBoard(query);
+				};
+
+				menu_commands["openBbsBoardSidebar"] = function(info, tab) {
+					GoogleChromeExtensionOpenBbsBoardInSidebar({windowId: tab.windowId});
+				};
+
+				menu_commands["configCurrentPage"] = function(info, tab) {
+					var query = new Object();
+					query.type = "urlmap";
+					query.url = encodeURIComponent(Tab_getURL(tab));
+					GoogleChromeExtensionOpenPageExpandConfig(query);
+				};
+
+				menu_commands["configCurrentBbs"] = function(info, tab) {
+					var query = new Object();
+					query.type = "expand_bbs";
+					query.url = encodeURIComponent(Tab_getURL(tab));
+					GoogleChromeExtensionOpenPageExpandConfig(query);
+				};
+
+				menu_commands["startPageExpand"] =
+				menu_commands["abortPageExpand"] =
+				menu_commands["executeFastest"] = function(info, tab) {
+					var port = extension_message.connectToContent(tab);
+					if(!port) return;
+					port.start(function (){
+						port.postMessage({command:info.menuItemId});
+						port.terminate();
+						updateActiveTab(tab);
+					});
+				};
+
+				menu_commands["executeDebug"] =
+				menu_commands["openImageViewer"] =
+				menu_commands["openDownloadBoardInline"] =
+				menu_commands["batchDownloadMedia"] = function(info, tab) {
+					var port = extension_message.connectToContent(tab,info);
+					if(!port) return;
+					port.start(function (){
+						port.postMessage({command:info.menuItemId});
+						port.terminate();
+					});
+				};
+
+				_context_menu_dispatcher = new ContextMenuDispatcher();
+				_context_menu_dispatcher.pass("openBbsBoardSidebar");
+				_context_menu_dispatcher.onClicked = function(info , tab){
+					var f = menu_commands[info.menuItemId];
+					if(f) f(info, tab);
+				};
+			})();
+
+			// --------------------------------------------------------------------------------
+			// アクションの初期状態
+			// --------------------------------------------------------------------------------
+			try{
+				var action = chrome.action || chrome.browserAction;
+				action.setIcon({
+					path:{
+						"16": "icon16_off.png",
+						"18": "icon18_off.png",
+						"19": "icon19_off.png",
+						"32": "icon32_off.png",
+						"38": "icon38_off.png",
+						"48": "icon48_off.png",
+						"64": "icon64_off.png",
+						"128": "icon128_off.png"
 					}
 				});
+			}catch(e){
+			}
+
+			// --------------------------------------------------------------------------------
+			// プロジェクトをロード
+			// --------------------------------------------------------------------------------
+			loadPageExpandProject();
+			_exec_methods.push(function(callback){
 
 				// --------------------------------------------------------------------------------
-				// アクションの初期状態
+				// アクティブなタブを追跡
 				// --------------------------------------------------------------------------------
-				try{
-					var action = chrome.action || chrome.browserAction;
-					action.setIcon({
-						path:{
-							"16": "icon16_off.png",
-							"18": "icon18_off.png",
-							"19": "icon19_off.png",
-							"32": "icon32_off.png",
-							"38": "icon38_off.png",
-							"48": "icon48_off.png",
-							"64": "icon64_off.png",
-							"128": "icon128_off.png"
-						}
+				chrome.tabs.onUpdated.addListener( function(tab_id , info , tab){
+					if(!tab.active) return;
+					updateActiveTab();
+				});
+				chrome.tabs.onActivated.addListener( function(info){
+					updateActiveTab();
+				});
+				if(chrome.windows){
+					chrome.windows.onFocusChanged.addListener( function(info){
+						updateActiveTab();
 					});
-				}catch(e){
 				}
-
-				// --------------------------------------------------------------------------------
-				// コンテンツスクリプトとの通信
-				// --------------------------------------------------------------------------------
-				extension_message.onconnect = function(port){
-					port.onmessage = function(data){
-						var f = command_dictionary[data.command];
-						if(!f){
-							port.terminate();
-							return;
-						}
-						f(port,data);
-					};
-					port.start();
-				};
-				extension_message.start();
 
 				// --------------------------------------------------------------------------------
 				// リクエストヘッダに値をセット
@@ -35739,13 +37121,13 @@ function PageExpand(page_expand_arguments){
 						tab = tab || {url:""};
 
 						// ウェブリクエスト用オブジェクトを取得
-						var web_request = page_expand_project.getWebRequest(tab.url,details.url);
+						var web_request = page_expand_project.getWebRequest(Tab_getURL(tab),details.url);
 
 						// アクセスブロック
 						if(web_request.access_block !== undefined){
 							if(web_request.access_block){
 								if(project.getEnableOutputLog()){
-									ConsoleLog({type:"AccessBlock",current_url:tab.url,url:details.url,call:"chrome.webRequest.onBeforeSendHeaders"});
+									ConsoleLog({type:"AccessBlock",current_url:Tab_getURL(tab),url:details.url,call:"chrome.webRequest.onBeforeSendHeaders"});
 								}
 								// リクエストをキャンセル
 								return {cancel:true};
@@ -35765,7 +37147,7 @@ function PageExpand(page_expand_arguments){
 									}else{
 										header.value = obj.referer;
 									}
-									ConsoleLog({type:"ReplacementToReferer",send:header.value,base:base,current_url:tab.url,url:details.url,call:"chrome.webRequest.onBeforeSendHeaders"});
+									ConsoleLog({type:"ReplacementToReferer",send:header.value,base:base,current_url:Tab_getURL(tab),url:details.url,call:"chrome.webRequest.onBeforeSendHeaders"});
 								});
 							}else{
 								requestHeadersSetValue(request_headers,"Referer",function(header){
@@ -35786,7 +37168,7 @@ function PageExpand(page_expand_arguments){
 								requestHeadersSetValue(request_headers,"User-Agent",function(header){
 									var base = header.value;
 									header.value = web_request.replacement_to_useragent;
-									ConsoleLog({type:"ReplacementToUseragent",send:header.value,base:base,current_url:tab.url,url:details.url,call:"chrome.webRequest.onBeforeSendHeaders"});
+									ConsoleLog({type:"ReplacementToUseragent",send:header.value,base:base,current_url:Tab_getURL(tab),url:details.url,call:"chrome.webRequest.onBeforeSendHeaders"});
 								});
 							}else{
 								requestHeadersSetValue(request_headers,"User-Agent",function(header){
@@ -35812,1216 +37194,12 @@ function PageExpand(page_expand_arguments){
 				})();
 
 				// --------------------------------------------------------------------------------
-				// コンテキストメニューの監視
+				// 開始
 				// --------------------------------------------------------------------------------
-				(function(){
-					if(!(chrome.contextMenus)) return;
+				extension_message.start();
+				_context_menu_dispatcher.start();
 
-					var menu_commands = Object();
-
-					menu_commands["openBbsBoard"] = function(info, tab) {
-						var query = new Object();
-						query.referer = encodeURIComponent(tab.url);
-						GoogleChromeExtensionOpenBbsBoard(query);
-					};
-
-					menu_commands["configCurrentPage"] = function(info, tab) {
-						var query = new Object();
-						query.type = "urlmap";
-						query.url = encodeURIComponent(tab.url);
-						GoogleChromeExtensionOpenPageExpandConfig(query);
-					};
-
-					menu_commands["configCurrentBbs"] = function(info, tab) {
-						var query = new Object();
-						query.type = "expand_bbs";
-						query.url = encodeURIComponent(tab.url);
-						GoogleChromeExtensionOpenPageExpandConfig(query);
-					};
-
-					menu_commands["startPageExpand"] =
-					menu_commands["abortPageExpand"] =
-					menu_commands["executeFastest"] = function(info, tab) {
-						var port = extension_message.connectToContent(tab);
-						if(!port) return;
-						port.start(function (){
-							port.postMessage({command:info.menuItemId});
-							port.terminate();
-						});
-					};
-
-					menu_commands["executeDebug"] =
-					menu_commands["openImageViewer"] =
-					menu_commands["openDownloadBoardInline"] =
-					menu_commands["batchDownloadMedia"] = function(info, tab) {
-						var port = extension_message.connectToContent(tab,info);
-						if(!port) return;
-						port.start(function (){
-							port.postMessage({command:info.menuItemId});
-							port.terminate();
-						});
-					};
-
-					chrome.contextMenus.onClicked.removeListener(context_menu_handler);
-					context_menu_handler = function(info, tab){
-						var f = menu_commands[info.menuItemId];
-						if(f) f(info, tab);
-					};
-					chrome.contextMenus.onClicked.addListener(context_menu_handler);
-
-					// キューをすべて消化
-					var i;
-					var num = context_menu_queue.length;
-					for(i=0;i<num;i++){
-						try{
-							var queue = context_menu_queue[i];
-							context_menu_handler(queue.info,queue.tab);
-						}catch(e){
-						}
-					}
-					context_menu_queue = null;
-				})();
-
-				// --------------------------------------------------------------------------------
-				// ダウンロードの監視
-				// --------------------------------------------------------------------------------
-				(function(){
-					if(!(chrome.downloads)) return;
-
-					var download_shelf = new DownloadShelf();
-					var determining_filename = new DeterminingFilename();
-					var download_item_observer = new DownloadItemObserver();
-
-					// --------------------------------------------------------------------------------
-					// ダウンロードシェルフ
-					// --------------------------------------------------------------------------------
-					function DownloadShelf(){
-						var _this = this;
-						var enableShelf = chrome.downloads.setShelfEnabled || function(){};
-						var Item = function(){
-						};
-						Item.prototype = {
-							release:function(){
-								if(this.released) return;
-								this.released = true;
-								ref_count --;
-								if(ref_count <= 0){
-									enableShelf(true);
-								}
-							},
-							released:false
-						};
-
-						_this.silent = function(){
-							ref_count ++;
-							enableShelf(false);
-							return new Item();
-						};
-
-						var ref_count = 0;
-						enableShelf(true);
-					}
-
-					// --------------------------------------------------------------------------------
-					// 保存ファイル名決定
-					// --------------------------------------------------------------------------------
-					function DeterminingFilename(){
-						var _this = this;
-						var Item = function(){
-						};
-						Item.prototype = {
-							release:function(){
-								if(this.released) return;
-								this.released = true;
-								count --;
-								if(count <= 0){
-									event_release();
-								}
-							},
-							setId:function(id){
-								this.id = id;
-								IDs[id] = this;
-							},
-							setFilename:function(filename){
-								this.filename = filename;
-							},
-							onmimechange:function(){},
-							released:false
-						};
-						_this.release = function(){
-							var k;
-							for(k in IDs){
-								IDs[k].release();
-							}
-						};
-						_this.attach = function(){
-							if(count <= 0){
-								event_attach();
-							}
-							count ++;
-							return new Item();
-						};
-
-						var IDs = new Object();
-						var count = 0;
-						var api = chrome.downloads.onDeterminingFilename;
-
-						function event_attach(){
-							if(!api) return;
-							api.addListener(handle_determining);
-						};
-						function event_release(){
-							if(!api) return;
-							api.removeListener(handle_determining);
-						};
-
-						var handle_determining = function(item,callback){
-							var request = IDs[item.id];
-							if(!request) return;
-
-							if(request.onmimechange){
-								request.onmimechange(item);
-							}
-
-							var filename = request.filename;
-						//	var ext_old = "";
-							var ext_new = MIMEType_To_Ext(item.mime);
-						//	var m = filename.match(new RegExp("[.]([a-zA-Z0-9]*)$","i"));
-						//	if(m){
-						//		ext_old = m[1];
-						//		filename = filename.slice(0,m.index);
-						//	}
-
-						//	if((function(){
-						//		if(!ext_new) return false;
-						//		if(MIMEType_is_Same(ext_old,ext_new)) return false;
-						//		return true;
-						//	})()){
-							if(ext_new){
-								filename += "." + ext_new;
-								callback({filename:filename});
-							}
-
-							request.release();
-						};
-
-					}
-
-					// --------------------------------------------------------------------------------
-					// 進捗を監視
-					// --------------------------------------------------------------------------------
-					function DownloadItemObserver(){
-						var container_list = new Array();
-
-						var Container = (function(){
-							var f = function(id){
-								this.prev = this.next = this;
-								this.id = id;
-							};
-							f.prototype = {
-								release : function(){
-									if(this.released) return;
-									this.released = true;
-									if(this._handle !== null){
-										clearTimeout(this._handle);
-										this._handle = null;
-									}
-									delete container_list[this.id];
-								},
-								getAll : function(){
-									var a = new Array();
-									var next = this.next;
-									while(this != next){
-										a.push(next);
-										next = next.next;
-									}
-									return a;
-								},
-								released : false,
-								interval : 1000*0.1,
-								_handle : null
-							};
-							return f;
-						})();
-
-						var Observer = (function(){
-							var f = function(parent){
-								this.prev = this.next = this;
-								this.progress = {
-									bytesReceived:null,
-									totalBytes:null
-								};
-								this.mime = {
-									mime:null
-								};
-								this.status = {
-									state:null,
-									error:null,
-									bytesReceived:null
-								};
-								this.state = {
-									state:null,
-									paused:null,
-									canResume:null,
-									exists:null
-								};
-								this._parent = parent;
-							};
-							f.prototype = {
-								release : function(){
-									var prev = this.prev;
-									var next = this.next;
-									prev.next = next;
-									next.prev = prev;
-									this.prev = this.next = this;
-
-									var p = this._parent;
-									if(p == p.next){
-										p.release();
-									}
-								},
-								onprogress : function(){},
-								onmimechange : function(){},
-								onstatuschange : function(){},
-								onstatechange : function(){},
-								onerror : function(){}
-							};
-							return f;
-						})();
-
-						this.createObserver = function(id){
-							if(!container_list[id]){
-								container_list[id] = new Container(id);
-							}
-
-							var p = container_list[id];
-							if(p.next == p){
-
-								var f = function (){
-									p._handle = null;
-									if(p.released) return;
-									chrome.downloads.search({id:p.id,limit:1},function(items){
-										if(p.released) return;
-										items = items || [];
-										var item = items[0];
-										if(!item){
-											p.getAll().forEach(function(observer){
-												dispatch_error.call(observer,"Download item is losted.");
-											});
-											return;
-										}
-
-										DownloadItem_consolidate(item);
-										p.getAll().forEach(function(observer){
-											dispatch_progress.call(observer,item);
-											dispatch_mimechange.call(observer,item);
-											dispatch_statuschange.call(observer,item);
-											dispatch_statechange.call(observer,item);
-										});
-
-										if(p.released) return;
-										p._handle = setTimeout(f,p.interval);
-									});
-								}
-								f();
-							}
-
-							var observer = new Observer(p);
-							var next = p;
-							var prev = next.prev;
-							next.prev = observer;
-							prev.next = observer;
-							observer.next = next;
-							observer.prev = prev;
-							return observer;
-						};
-
-						function dispatch_error(reason){
-							var f = this.onerror;
-							if(f) f(reason);
-						}
-						function dispatch_progress(item){
-							var changed = false;
-							var k;
-							var o = this.progress;
-							for(k in o){
-								if(o[k] !== item[k]){
-									o[k] = item[k];
-									changed = true;
-								}
-							}
-							if(changed){
-								var f = this.onprogress;
-								if(f) f(item);
-							}
-						}
-						function dispatch_mimechange(item){
-							var changed = false;
-							var k;
-							var o = this.mime;
-							for(k in o){
-								if(o[k] !== item[k]){
-									o[k] = item[k];
-									changed = true;
-								}
-							}
-							if(changed){
-								var f = this.onmimechange;
-								if(f) f(item);
-							}
-						}
-						function dispatch_statuschange(item){
-							var changed = false;
-							var k;
-							var o = this.status;
-							for(k in o){
-								var v = item[k];
-								if(typeof(v) == "string"){
-									if(o[k] !== v){
-										o[k] = v;
-										changed = true;
-									}
-								}else{
-									v = Boolean(v);
-									if(o[k] !== v){
-										o[k] = v;
-										changed = true;
-									}
-								}
-							}
-							if(changed){
-								var f = this.onstatuschange;
-								if(f) f(item);
-							}
-						}
-						function dispatch_statechange(item){
-							var changed = false;
-							var k;
-							var o = this.state;
-							for(k in o){
-								if(o[k] !== item[k]){
-									o[k] = item[k];
-									changed = true;
-								}
-							}
-							if(changed){
-								var f = this.onstatechange;
-								if(f) f(item);
-							}
-						}
-					}
-
-					// --------------------------------------------------------------------------------
-					// ファイルアイコン辞書（Firefox で進行不能になる事があるので呼び出し回数を減らす）
-					// --------------------------------------------------------------------------------
-					function FileIconDictionary(){
-						var _this = this;
-						var FileIcon = function(item){
-							var _this = this;
-							this.event_dispatcher = new EventDispatcher();
-
-							// Edge は Promise 未対応
-							chrome.downloads.getFileIcon(item.id,{},function(url){
-								if(_this.released) return;
-								_this.url = url || "";
-								_this.loaded = true;
-								if((function(){
-									if(chrome.runtime.lastError) return false;
-									if(!(_this.url)) return false;
-									return true;
-								})()){
-									_this.event_dispatcher.dispatchEvent("loaded",_this.url);
-								}
-								_this.event_dispatcher.release();
-								delete _this.event_dispatcher;
-							});
-							//var promise =  chrome.downloads.getFileIcon(id);
-							//promise.then(function(url){
-							//},function(reason){});
-						};
-						FileIcon.prototype = {
-							release:function(){
-								if(this.released) return;
-								this.released = true;
-								if(this.event_dispatcher){
-									this.event_dispatcher.release();
-									this.event_dispatcher = null;
-								}
-							},
-							url:"",
-							loaded:false,
-							released:false
-						};
-						_this.release = function(){
-							var k;
-							for(k in file_icons){
-								file_icons[k].release();
-							}
-						};
-						_this.getFileIcon = function(item,callback){
-							var file_icon = file_icons[item.mime];
-							if(!file_icon){
-								file_icons[item.mime] = file_icon = new FileIcon(item);
-							}
-
-							if(file_icon.loaded){
-								callback(file_icon.url);
-								return;
-							}
-
-							var event_handler = file_icon.event_dispatcher.createEventHandler("loaded");
-							event_handler.setFunction(callback);
-						};
-
-						var file_icons = new Object();
-					}
-
-					// --------------------------------------------------------------------------------
-					// ダウンロード
-					// --------------------------------------------------------------------------------
-					command_dictionary["download"] = function(port,data){
-						var request = data.request;
-						request.silent = Boolean(request.silent);
-						if(request.saveAs) request.silent = false;
-
-						var response = {
-							ok:false,
-							status:0,
-							state:null,
-							mimetype:"",
-							errorText:"",
-							result:false,
-							id:null
-						};
-						var progress = {
-							bytesLoaded:0,
-							bytesTotal:0
-						};
-
-						var xhr_queue_element = null;
-						var exec_methods = new ExecuteMethods(this);
-						var observer = null;
-						var silent_item = null;
-						var handle_changed = null;
-						var determining_item = null;
-						var blob_url = null;
-						var file_name = "";
-						var item_latest = null;
-						var creating = false;
-						var released = false;
-
-						var release_observer = function(){
-							if(observer){
-								observer.release();
-								observer = null;
-							}
-						};
-						var release_silent = function(){
-							if(silent_item){
-								silent_item.release();
-								silent_item = null;
-							}
-						};
-						var release_changed = function(){
-							if(handle_changed){
-								chrome.downloads.onChanged.removeListener(handle_changed);
-								handle_changed = null;
-							}
-						};
-						var release_determining = function(){
-							if(determining_item){
-								determining_item.release();
-								determining_item = null;
-							}
-						};
-						var release = function(){
-							if(released) return;
-							released = true;
-
-							if(exec_methods){
-								exec_methods.release();
-								exec_methods = null;
-							}
-							release_observer();
-							release_silent();
-							release_changed();
-							release_determining();
-							if(xhr_queue_element){
-								xhr_queue_element.release();
-								xhr_queue_element = null;
-							}
-							if(blob_url){
-								BlobURLRevoke(blob_url);
-								blob_url = null;
-							}
-							port.ondisconnect = null;
-						};
-						var complete = function(){
-							release();
-							port.postMessage({state:"head",data:response});
-							port.postMessage({state:"complete"});
-							port.close();
-						};
-						var success = function(){
-							if(released) return;
-							response.result = true;
-							complete();
-						};
-						var suspend = function(){
-							if(released) return;
-							response.result = false;
-							complete();
-						};
-						var failure = function(msg){
-							if(released) return;
-							response.result = false;
-							response.errorText = msg;
-							dispatch_state_failed();
-							complete();
-						};
-
-						port.ondisconnect = function(){
-							release();
-						};
-
-						port.onmessage = (function(){
-							function isStacking(){
-								if(creating){
-									failure("item is stacked.");
-									return true;
-								}
-								return false;
-							}
-							var commands = {
-								"body":function(r){
-									var blob = r.blob || {};
-									if(blob.size === r.size){
-										blob_url = BlobURLCreate(blob);
-										if(blob_url){
-											request.url = blob_url;
-										}
-									}
-								},
-								"resume":function(){
-									if(isStacking()) return;
-									exec_methods.push(download_resume);
-									exec_methods.push(download_observer);
-
-								},
-								"pause":function(){
-									if(isStacking()) return;
-									exec_methods.push(download_pause);
-								},
-								"cancel":function(){
-									if(isStacking()) return;
-									exec_methods.push(download_cancel);
-								},
-								"start":function(){
-									if(request.id === null){
-										exec_methods.push(download_get_id);
-									}else{
-										exec_methods.push(download_exists_id);
-									}
-									exec_methods.push(function(callback){
-
-										switch(request.order){
-										default:
-											switch(response.state){
-											case DownloaderState.DOWNLOAD.LOADING:
-												exec_methods.push(download_observer);
-												break;
-											case DownloaderState.DOWNLOAD.PAUSING.CAN_RESUMED:
-												exec_methods.push(download_resume);
-												exec_methods.push(download_observer);
-												break;
-											case DownloaderState.DOWNLOAD.COMPLETED.EXISTS:
-												success();
-												return;
-											default:
-												exec_methods.push(download_addlistener);
-												exec_methods.push(download_start);
-												exec_methods.push(download_observer);
-												break;
-											}
-											break;
-										case "new":
-											exec_methods.push(download_addlistener);
-											exec_methods.push(download_start);
-											exec_methods.push(download_observer);
-											break;
-										case "pause":
-											exec_methods.push(download_pause);
-											exec_methods.push(download_observer);
-											break;
-										case "cancel":
-											exec_methods.push(download_cancel);
-											exec_methods.push(download_observer);
-											break;
-										case "open":
-											exec_methods.push(download_open);
-											exec_methods.push(success);
-											break;
-										}
-
-										callback();
-									});
-								}
-							};
-							return function(receive){
-								var f = commands[receive.state];
-								if(f) f(receive.data);
-							};
-						})();
-
-						function dispatch_progress(item){
-							if(released) return;
-							item_latest = item;
-							progress.bytesLoaded = item.bytesReceived || 0;
-							progress.bytesTotal = item.totalBytes || 0;
-							port.postMessage({
-								state:"progress",
-								data:progress
-							});
-						}
-						var dispatch_mimetype = (function(){
-							var o = {
-								mimetype:null
-							};
-							return function (item){
-								if(released) return;
-								var changed = false;
-								response.mimetype = item.mime;
-								if(o.mimetype !== response.mimetype){
-									o.mimetype = response.mimetype;
-									changed = true;
-								}
-								if(changed){
-									port.postMessage({
-										state:"mimetype",
-										data:o
-									});
-								}
-							};
-						})();
-						var dispatch_status = (function(){
-							var o = {
-								status:null,
-								ok:null
-							};
-							return function (item){
-								if(released) return;
-								var changed = false;
-								if(item.state == "in_progress" && (!item.bytesReceived)) return;
-
-								response.status = DownloadItem_get_status(item);
-								response.ok = Boolean((200 <= response.status && response.status < 300) || response.status == 304);
-								if(o.status !== response.status){
-									o.status = response.status;
-									o.ok = response.ok;
-									changed = true;
-								}
-								if(changed){
-									port.postMessage({
-										state:"status",
-										data:o
-									});
-								}
-							};
-						})();
-						var dispatch_state_by_enum;
-						var dispatch_state;
-						var dispatch_state_failed;
-						(function(){
-							var o = {
-								state:null
-							};
-							dispatch_state_by_enum = function (state){
-								if(released) return;
-								var changed = false;
-								response.state = state;
-								if(o.state !== response.state){
-									o.state = response.state;
-									changed = true;
-								}
-								if(changed){
-									port.postMessage({
-										state:"state",
-										data:o
-									});
-								}
-							};
-							dispatch_state = function (item){
-								dispatch_state_by_enum(DownloadItem_get_DownloaderState(item));
-							};
-							dispatch_state_failed = function (item){
-								dispatch_state_by_enum(DownloaderState.DOWNLOAD.FAILED);
-							};
-						})();
-						function event_statechange(item){
-							if(released) return;
-							item_latest = item;
-
-							dispatch_state(item);
-
-							if(item.state == "complete"){
-								success();
-								return;
-							}
-
-							if(item.paused){
-								suspend();
-								return;
-							}
-
-							if(item.state == "interrupted"){
-								failure(item.error || "");
-								return;
-							}
-						}
-
-						function download_get_id(callback){
-
-							chrome.downloads.search({url:request.url},function(items){
-								items = items || [];
-								var item = null;
-								var state_max = 0;
-								var i;
-								var num = items.length;
-								for(i=0;i<num;i++){
-									var o = items[i];
-									DownloadItem_consolidate(o);
-									var s = DownloadItem_get_DownloaderState(o);
-									if(state_max < s){
-										item = o;
-										state_max = s;
-									}
-								}
-
-								if(item){
-									item_latest = item;
-									response.id = item.id;
-									dispatch_progress(item);
-									dispatch_mimetype(item);
-									dispatch_status(item);
-									dispatch_state(item);
-								}
-
-								callback();
-							});
-						}
-
-						function download_exists_id(callback){
-							chrome.downloads.search({id:request.id,limit:1},function(items){
-								if(_this.released) return;
-								items = items || [];
-								var item = items[0];
-								if(!item){
-									failure("Download item is losted.");
-									return;
-								}
-								DownloadItem_consolidate(item);
-								item_latest = item;
-								response.id = item.id;
-								dispatch_progress(item);
-								dispatch_mimetype(item);
-								dispatch_status(item);
-								dispatch_state(item);
-								callback();
-							});
-						}
-
-						function download_start(callback){
-
-							var file_name_obj = ProjectDownloadSaveFile_Determining(request,{ext:request.ext,type:"download"});
-							if(file_name_obj.error){
-								failure(file_name_obj.error);
-								return;
-							}
-							file_name = file_name_obj.filename;
-
-							var headers = (function(){
-								var a = new Array();
-								var o = request.headers;
-								var name;
-								for(name in o){
-									a.push({name:name,value:o[name]});
-								}
-								return a;
-							})();
-
-							var options = {
-								method:request.method,
-								headers:headers,
-								body:request.data,
-								url:request.url,
-								filename:file_name,
-								saveAs:request.saveAs
-							};
-
-							switch(project.getDownloadConflict()){
-							case "rename":
-							default:
-								options.conflictAction = "uniquify";
-								break;
-							case "overwrite":
-								options.conflictAction = "overwrite";
-								break;
-							}
-
-							xhr_queue_element = _xhr_queue_dictionary.createElement(request.url);
-							xhr_queue_element.setData({url:request.currentURL});
-
-							function fulfill(id){
-								creating = false;
-								if(released){
-									// 切断済みならキャンセル（一時停止が多いとスタックする問題に対応）
-									if(id !== undefined){
-										chrome.downloads.cancel(id);
-									}
-									return;
-								}
-								if((function(){
-									if(chrome.runtime.lastError) return true;
-									if(id === undefined) return true;
-									return false;
-								})()){
-									failure();
-									return;
-								}
-								response.id = id;
-								if(request.silent) silent_item = download_shelf.silent();
-								if(determining_item){
-									determining_item.setId(response.id);
-									determining_item.setFilename(file_name);
-									determining_item.onmimechange = dispatch_mimetype;
-								}
-								callback();
-								return;
-							}
-							function reject(msg){
-								creating = false;
-								var e = chrome.runtime.lastError || {};
-								failure(msg || e.message || "");
-							}
-							try{
-								creating = true;
-								dispatch_state_by_enum(DownloaderState.DOWNLOAD.CREATING);
-								chrome.downloads.download(options , fulfill);
-								if(chrome.runtime.lastError){
-									reject();
-									return;
-								}
-							}catch(e){
-								reject(e.message);
-								return;
-							}
-						}
-
-						function download_order(order,callback){
-							try{
-								chrome.downloads[order](response.id,function(){
-									if(chrome.runtime.lastError){
-										failure(chrome.runtime.lastError.message);
-										return;
-									}
-									callback();
-								});
-							}catch(e){
-								failure(e.message || "");
-							}
-						}
-						// Firefox で成功結果を瞬時に返さないバグがあるので待たずに成功とみなす
-						function download_order_avoid_bug(order,callback){
-							function release(){
-								replied = true;
-								if(time_handle !== null){
-									clearTimeout(time_handle);
-									time_handle = null;
-								}
-							}
-							function fulfilled(){
-								if(replied) return;
-								release();
-								callback();
-							}
-							function rejected(reason){
-								if(replied) return;
-								release();
-								failure(reason);
-							}
-							var replied = false;
-							var timeout = 1000 * 0.1;
-							var time_handle = null;
-
-							try{
-								time_handle = setTimeout(fulfilled,timeout);
-								chrome.downloads[order](response.id,function(){
-									if(chrome.runtime.lastError){
-										rejected(chrome.runtime.lastError.message);
-										return;
-									}
-									fulfilled();
-								});
-							}catch(e){
-								rejected(e.message || "");
-							}
-						}
-						function download_resume(callback){
-							download_order_avoid_bug("resume",callback);
-						}
-						function download_pause(callback){
-							download_order("pause",callback);
-						}
-						function download_cancel(callback){
-							download_order("cancel",callback);
-						}
-
-						function download_open(callback){
-							if(!(function(){
-								if(!item_latest) return false;
-								if(!item_latest.exists) return false;
-								if(item_latest.state != "complete") return false;
-								return true
-							})()){
-								failure("not exist");
-								return;
-							}
-
-							if(!(function(){
-								var t = chrome.downloads.DangerType;
-								if(item_latest.danger != t.SAFE) return false;
-								return true
-							})()){
-								failure("danger (" + item_latest.danger + ")");
-								return;
-							}
-
-							try{
-								function fulfill() {
-									callback();
-								}
-								function reject(reason){
-									failure(reason);
-								}
-
-								var promise = chrome.downloads.show(response.id);
-								if(promise){
-									promise.then(fulfill,reject);
-								}else{
-									if(chrome.runtime.lastError){
-										failure(chrome.runtime.lastError.message);
-										return;
-									}
-									fulfill();
-								}
-							}catch(e){
-								failure(e.message || "");
-							}
-						}
-
-						function download_addlistener(callback){
-							release_changed();
-							handle_changed = function(delta){
-								if(response.id !== delta.id) return;
-
-								if(delta.filename){
-									release_silent();
-								}
-
-								release_changed();
-							};
-							chrome.downloads.onChanged.addListener(handle_changed);
-
-							if(!request.ext){
-								determining_item = determining_filename.attach();
-							}
-
-							callback();
-						}
-
-						// ダウンロード進捗監視
-						function download_observer(callback){
-							observer = download_item_observer.createObserver(response.id);
-							observer.onprogress = dispatch_progress;
-							observer.onmimechange = dispatch_mimetype;
-							observer.onstatuschange = dispatch_status;
-							observer.onstatechange = event_statechange;
-							observer.onerror = failure;
-							callback();
-						}
-
-					};
-
-					// --------------------------------------------------------------------------------
-					// ダウンロード履歴監視
-					// --------------------------------------------------------------------------------
-					command_dictionary["downloadHistoryMonitor"] = function(port,data){
-						var observers = new Object();
-						var file_icon_dictionary = new FileIconDictionary();
-						var icons = new Object();
-						var handle_created = null;
-						var handle_changed = null;
-						var handle_erased = null;
-						var released = false;
-
-						function release(){
-							if(released) return;
-							released = true;
-
-							port.ondisconnect = null;
-							if(handle_created){
-								chrome.downloads.onCreated.removeListener(handle_created);
-								handle_created = null;
-							}
-							if(handle_changed){
-								chrome.downloads.onChanged.removeListener(handle_changed);
-								handle_changed = null;
-							}
-							if(handle_erased){
-								chrome.downloads.onErased.removeListener(handle_erased);
-								handle_erased = null;
-							}
-							var k;
-							for(k in observers){
-								observer_release(k);
-							}
-							if(file_icon_dictionary){
-								file_icon_dictionary.release();
-								file_icon_dictionary = null;
-							}
-						}
-
-						port.ondisconnect = function(){
-							release();
-						};
-
-						function observer_create(id){
-							if(observers[id]) return;
-							var observer = observers[id] = download_item_observer.createObserver(id);
-							observer.onprogress = dispatch_progress;
-							observer.onmimechange = dispatch_mimechange;
-							observer.onstatechange = dispatch_statechange;
-							observer.onerror = function(){
-								if(released) return;
-								observer_release(id);
-							};
-						}
-						function observer_release(id){
-							var o = observers[id];
-							if(!o) return;
-							o.release();
-							delete observers[id];
-						}
-						function dispatch_progress(item){
-							if(released) return;
-							port.postMessage({
-								state:"progress",
-								data:item
-							});
-						}
-						function dispatch_mimechange(item){
-							if(released) return;
-							port.postMessage({
-								state:"mime",
-								data:item
-							});
-						}
-						function dispatch_statechange(item){
-							if(released) return;
-
-							// ロード中からロード停止
-							if((item.state != "in_progress") || (item.paused)){
-								observer_release(item.id);
-							}
-
-							download_get_icon(item);
-						}
-
-						function download_new(item){
-							// ロード中
-							if((item.state == "in_progress") && (!item.paused)){
-								observer_create(item.id);
-							}
-
-							download_get_icon(item);
-						}
-
-						function download_modify(delta){
-							if((function(){
-								// ロード停止からロード中
-								var paused = delta.paused;
-								if(paused){
-									if(!paused.current) return true;
-								}
-
-								// ポーズ中に完了することがあるので１度だけチェック
-								var state = delta.state;
-								if(state){
-									if(state.current != "in_progress") return true;
-								}
-
-								return false;
-							})()){
-								observer_create(delta.id);
-							}
-						}
-						function download_get_icon(item){
-							if(!(function(){
-								if(icons[item.id]) return false;
-								if(!item.mime) return false;
-								// Chrome では、Filename 確定前だとエラー
-								if(!item.filename) return false;
-								return true;
-							})()){
-								return;
-							}
-
-							icons[item.id] = true;
-
-							file_icon_dictionary.getFileIcon(item,function(url){
-								port.postMessage({
-									state:"icon",
-									data:{id:item.id,fileIconURL:url}
-								});
-							});
-						}
-
-						chrome.downloads.search({},function(items){
-							if(released) return;
-							items = items || [];
-							items.forEach(function(item){
-								DownloadItem_consolidate(item);
-							});
-							port.postMessage({state:"all",data:items});
-							items.forEach(function(item){
-								download_new(item);
-							});
-
-							handle_created = function(item){
-								if(released) return;
-								DownloadItem_consolidate(item);
-								port.postMessage({state:"created",data:item});
-								download_new(item);
-							};
-							handle_changed = function(delta){
-								if(released) return;
-								port.postMessage({state:"changed",data:delta});
-								download_modify(delta);
-							};
-							handle_erased = function(id){
-								if(released) return;
-								port.postMessage({state:"erased",data:id});
-								observer_release(id);
-							};
-
-							chrome.downloads.onCreated.addListener(handle_created);
-							chrome.downloads.onChanged.addListener(handle_changed);
-							chrome.downloads.onErased.addListener(handle_erased);
-						});
-
-					};
-				})();
-
+				callback();
 			});
 
 		})();
@@ -42122,7 +42300,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.7.0");
+				new UI_Text(parent,"PageExpand ver.1.7.1");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -48503,231 +48681,163 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// ポップアップメニュー
 	// --------------------------------------------------------------------------------
-	function PageExpandPopupMenu(){
-		var _this = this;
+	var PageExpandPopupMenu = (function(){
 
 		// --------------------------------------------------------------------------------
-		// リロード
+		// アクティブな Tab を更新
 		// --------------------------------------------------------------------------------
-		_this.reload = function (){
-			// プロジェクト読み込み
-			projectLoad(function(e){
-
-				// エレメントを全てクリア
-				DomNodeRemoveChildren(document.body);
-
-				// ロケール
-				_i18n = new InternationalMessage(page_expand_project.getLanguage());
-				initialize();
+		function update_activeTab(callback){
+			var _this = this;
+			chrome.tabs.query({active:true,currentWindow:true},function(tabs) {
+				tabs = tabs || [];
+				_this.tab = tabs[0];
+				callback();
 			});
-		};
+		}
 
 		// --------------------------------------------------------------------------------
-		// ロード（内部用）
+		// プロジェクトを更新
 		// --------------------------------------------------------------------------------
-		function projectLoad(func){
+		function update_project(callback){
+			var _this = this;
 			var proj = new PageExpandProject();
-
-			// プロジェクトをロード
 			proj.loadLocalStorage(function(e){
-
-				// プロジェクトを更新
 				page_expand_project = proj;
 				project = new Project();
-				getActiveURL(function(url){
-					project.importObjectForBackground(page_expand_project.getProject(url));
-					func(e);
-				});
+				project.importObjectForBackground(page_expand_project.getProject(Tab_getURL(_this.tab)));
+				_this.i18n = new InternationalMessage(page_expand_project.getLanguage());
+				callback(e);
 			});
 		}
 
 		// --------------------------------------------------------------------------------
-		// クリック（内部用）
+		// コンテントステータスを更新
 		// --------------------------------------------------------------------------------
-		function click(command){
-			switch(command){
-			case "openBbsBoard":
-				getActiveURL(function(url){
-					var query = new Object();
-					query.referer = encodeURIComponent(url);
-					GoogleChromeExtensionOpenBbsBoard(query);
-				});
-				break;
-			case "configCurrentPage":
-				getActiveURL(function(url){
-					var query = new Object();
-					query.type = "urlmap";
-					query.url = encodeURIComponent(url);
-					GoogleChromeExtensionOpenPageExpandConfig(query);
-				});
-				break;
-			case "configCurrentBbs":
-				getActiveURL(function(url){
-					var query = new Object();
-					query.type = "expand_bbs";
-					query.url = encodeURIComponent(url);
-					GoogleChromeExtensionOpenPageExpandConfig(query);
-				});
-				break;
-
-			case "startPageExpand":
-			case "abortPageExpand":
-			case "executeFastest":
-				chrome.tabs.query({active:true,currentWindow:true},function(tabs) {
-					var port = extension_message.connectToContent(tabs[0]);
-					if(!port) return;
-					port.start(function (){
-						port.postMessage({command:command});
-						port.terminate();
-					});
-				});
-				break;
-
-			case "executeDebug":
-			case "openImageViewer":
-			case "openDownloadBoardInline":
-			case "batchDownloadMedia":
-				chrome.tabs.query({active:true,currentWindow:true},function(tabs) {
-					var port = extension_message.connectToContent(tabs[0]);
-					if(!port) return;
-					port.start(function (){
-						port.postMessage({command:command,onlyTopWindow:true});
-						port.terminate();
-					});
-				});
-				break;
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// アクティブページのURLを取得（内部用）
-		// --------------------------------------------------------------------------------
-		function getActiveURL(func){
-			chrome.tabs.query({active:true,currentWindow:true},function(tabs) {
-				var url = "";
-				if(tabs[0])	url = tabs[0].url;
-				func(url);
-			});
-		}
-
-		// --------------------------------------------------------------------------------
-		// ラインボタン（内部用）
-		// --------------------------------------------------------------------------------
-		function UI_LineButton(parent,label){
+		function update_status(callback){
 			var _this = this;
 
-			// --------------------------------------------------------------------------------
-			// 通常状態（内部用）
-			// --------------------------------------------------------------------------------
-			function normal(){
-				_style.color = "#222";
-				_style.background = "none";
+			var release = function(){
+				released = true;
+				if(time_handle !== null){
+					clearTimeout(time_handle);
+					time_handle = null;
+				}
+				if(port){
+					port.release();
+					port = null;
+				}
+			};
+			var success = function(data){
+				if(released) return;
+				release();
+				_this.status = data;
+				callback();
+			};
+			var failure = function(){
+				if(released) return;
+				release();
+				delete _this.status;
+				callback();
+			};
+
+			var released = false;
+			var time_handle = null;
+			var port = extension_message.connectToContent(_this.tab,{frameId:0});
+			if(!port){
+				failure();
+				return;
 			}
 
-			// --------------------------------------------------------------------------------
-			// マウスオーバー状態（内部用）
-			// --------------------------------------------------------------------------------
+			// タイムアウト（スタック回避）
+			time_handle = setTimeout(failure,1000);
+
+			port.onmessage = success;
+			port.ondisconnect = failure;
+			port.start(function(){
+				port.postMessage({command:"getStatus"});
+			});
+		}
+
+		// --------------------------------------------------------------------------------
+		// UI
+		// --------------------------------------------------------------------------------
+		var UI_LineButton = (function(){
+			function mouse_normal(){
+				this.style.color = "#222";
+				this.style.background = "none";
+			}
 			function mouse_over(){
-				_style.color = "#fff";
-				_style.background = "#4281F4";
+				this.style.color = "#fff";
+				this.style.background = "#4281F4";
 			}
-
-			// --------------------------------------------------------------------------------
-			// マウスオーバー状態（内部用）
-			// --------------------------------------------------------------------------------
 			function mouse_down(){
-				_style.color = "#fff";
-				_style.background = "#4281F4";
+				this.style.color = "#fff";
+				this.style.background = "#404040";
 			}
 
-			// --------------------------------------------------------------------------------
-			// クリックイベント
-			// --------------------------------------------------------------------------------
-			_this.onclick = function(){};
+			var f = function(parent,label){
+				var _this = this;
 
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _item;
-			var _style;
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_item = DocumentCreateElement("a");
+				var _item = DocumentCreateElement("a");
 				_item.href = "";
-				_style = _item.style;
+				_this.style = _item.style;
 				ElementSetStyle(_item,"display:block; text-decoration: none; font-size:13px; color:#000; margin:0px 0px 2px; padding:5px 20px; border-radius:5px; line-height:1.0;");
 				ElementSetTextContent(_item,label);
 				parent.appendChild(_item);
 
-				if(_item.addEventListener){
-					_item.addEventListener("click",function(e){
-						_this.onclick();
-						e.preventDefault();
-					},false);
-					_item.addEventListener("mouseover",function(e){
-						mouse_over();
-					},false);
-					_item.addEventListener("mousedown",function(e){
-						mouse_down();
-					},false);
-					_item.addEventListener("mouseup",function(e){
-						mouse_over();
-					},false);
-					_item.addEventListener("mouseout",function(e){
-						normal();
-					},false);
-				}
+				_item.addEventListener("click",function(e){
+					var f = _this.onclick;
+					if(f) f(e);
+					e.preventDefault();
+				});
+				_item.addEventListener("mouseover",function(e){
+					mouse_over.call(_this);
+				});
+				_item.addEventListener("mousedown",function(e){
+					mouse_down.call(_this);
+				});
+				_item.addEventListener("mouseup",function(e){
+					mouse_over.call(_this);
+				});
+				_item.addEventListener("mouseout",function(e){
+					mouse_normal.call(_this);
+				});
+			};
+			f.prototype = {
+				onclick : function(){},
+				style : null
+			};
+			return f;
+		})();
 
-			})();
-		}
-
-		// --------------------------------------------------------------------------------
-		// セパレータ（内部用）
-		// --------------------------------------------------------------------------------
-		function UI_Separator(parent){
-			var _this = this;
-
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _item;
-			var _style;
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_item = DocumentCreateElement("div");
-				ElementSetStyle(_item,"height: 0px; border-top:1px solid #ddd; margin:2px 0px;");
+		var UI_Separator = (function(){
+			var f = function(parent){
+				var _item = DocumentCreateElement("div");
+				ElementSetStyle(_item,"height: 0px; border-top:1px solid #ddd; margin:5px 0px;");
 				parent.appendChild(_item);
-			})();
-		}
+			};
+			return f;
+		})();
 
-		// --------------------------------------------------------------------------------
-		// 初期化（内部用）
-		// --------------------------------------------------------------------------------
-		function initialize(){
+		function update_document(callback){
+			var _this = this;
+			var root = document.body;
 
-			// タイトル
-			document.title = _i18n.getMessage("page_expand_popup_menu");
+			DomNodeRemoveChildren(root);
 
-			// ボディ
-			var body = document.body;
-			ElementSetStyle(body,'background-color:#ccc; font-family:"Meiryo","sans-serif"; margin:0px; padding:0px; width:300px; border:0px solid #000; overflow-x:hidden; box-sizing:border-box;');
+			document.title = this.i18n.getMessage("page_expand_popup_menu");
+			ElementSetStyle(root,'background-color:#ccc; font-family:"Meiryo","sans-serif"; margin:0px; padding:0px; width:300px; border:0px solid #000; overflow-x:hidden; box-sizing:border-box;');
 
 			// ヘッダ
 			var head_window = DocumentCreateElement("div");
 			ElementSetStyle(head_window,"background-color:#000; color:#fff; font-size:12px; font-weight:bold; padding:2px 5px; margin:0px;");
-			ElementSetTextContent(head_window,_i18n.getMessage("page_expand_popup_menu"));
-			body.appendChild(head_window);
+			ElementSetTextContent(head_window,this.i18n.getMessage("page_expand_popup_menu"));
+			root.appendChild(head_window);
 
 			// ボディ
 			var body_window = DocumentCreateElement("div");
 			ElementSetStyle(body_window,"border:2px inset #f0f0f0; background-color:#fcfcfc;");
-			body.appendChild(body_window);
+			root.appendChild(body_window);
 
 			// 外周
 			var out_window = DocumentCreateElement("div");
@@ -48744,101 +48854,251 @@ function PageExpand(page_expand_arguments){
 			ElementSetStyle(_menu_window,"display:table-cell; vertical-align:top; user-select:none; -webkit-user-select:none; -moz-user-select:none; -khtml-user-select:none; margin:0px;");
 			out_table.appendChild(_menu_window);
 
-			// イメージビューワを開く
-			var button_open_image_viewer = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_open_image_viewer"));
-			button_open_image_viewer.onclick = function(){
-				click("openImageViewer");
-			};
+			var items = new Array();
 
-			new UI_Separator(_menu_window);
+			if(_this.status.alive){
+				// イメージビューワを開く
+				items.push({
+					type:"button",
+					id:"openImageViewer",
+					i18n:"open_image_viewer"
+				});
+			}
 
-			// ダウンロードボードを開く
-			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_open_download_board_inline"));
-			button_config.onclick = function(){
-				click("openDownloadBoardInline");
-			};
+			items.push({ type:"separator" });
 
-			// 一括ダウンロード（メディア）
-			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_batch_download_media"));
-			button_config.onclick = function(){
-				click("batchDownloadMedia");
-			};
+			// ダウンロードボードを開く（アプリ）
+			items.push({
+				type:"button",
+				id:"openDownloadBoardApplication",
+				i18n:"open_download_board_application"
+			});
 
-			new UI_Separator(_menu_window);
+			if(_this.status.alive){
+				// ダウンロードボードを開く（ここで）
+				items.push({
+					type:"button",
+					id:"openDownloadBoardInline",
+					i18n:"open_download_board_inline"
+				});
 
-			// 掲示板ボードを開く
-			var button_open_bbs_board = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_open_bbs_board"));
-			button_open_bbs_board.onclick = function(){
-				click("openBbsBoard");
-			};
+				// 一括ダウンロード（メディア）
+				items.push({
+					type:"button",
+					id:"batchDownloadMedia",
+					i18n:"batch_download_media"
+				});
+			}
 
-			new UI_Separator(_menu_window);
+			items.push({ type:"separator" });
+
+			// 掲示板ボードを開く（アプリ）
+			items.push({
+				type:"button",
+				id:"openBbsBoard",
+				i18n:"open_bbs_board"
+			});
+
+			// 掲示板ボードを開く（サイド）
+			if(GoogleChromeExtensionSidebarSupported()){
+				items.push({
+					type:"button",
+					id:"openBbsBoardSidebar",
+					i18n:"open_bbs_board_sidebar"
+				});
+			}
+
+			items.push({ type:"separator" });
+
 
 			// 現在のページの設定を編集
-			var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_page"));
-			button_config.onclick = function(){
-				click("configCurrentPage");
-			};
+			items.push({
+				type:"button",
+				id:"configCurrentPage",
+				i18n:"config_current_page"
+			});
 
 			// 掲示板拡張の設定
 			if(project.getEnableExpandBbs()){
-				var button_config = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_config_current_bbs"));
-				button_config.onclick = function(){
-					click("configCurrentBbs");
-				};
+				items.push({
+					type:"button",
+					id:"configCurrentBbs",
+					i18n:"config_current_bbs"
+				});
 			}
 
-			new UI_Separator(_menu_window);
+			items.push({ type:"separator" });
 
-			// PageExpand の開始
-			if(!(project.getEnableStartup())){
-				var button_start_pageexpand = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_start"));
-				button_start_pageexpand.onclick = function(){
-					click("startPageExpand");
-				};
+			if(_this.status.alive){
+
+				if(!(_this.status.started)){
+					// PageExpand の開始
+					if(!(project.getEnableStartup())){
+						items.push({
+							type:"button",
+							id:"startPageExpand",
+							i18n:"start"
+						});
+					}
+				}
+
+				// PageExpand の中止
+				items.push({
+					type:"button",
+					id:"abortPageExpand",
+					i18n:"abort"
+				});
+
+				if(_this.status.started){
+					// PageExpand の最速実行
+					items.push({
+						type:"button",
+						id:"executeFastest",
+						i18n:"execute_fastest"
+					});
+				}
+
+				// PageExpand デバッグ
+				items.push({
+					type:"button",
+					id:"executeDebug",
+					i18n:"debug"
+				});
 			}
 
-			// PageExpand の中止
-			var button_abort_pageexpand = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_abort"));
-			button_abort_pageexpand.onclick = function(){
-				click("abortPageExpand");
-			};
+			var i;
+			var num;
 
-			// PageExpand の最速実行
-			var button_execute_pageexpand_fastest = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_execute_fastest"));
-			button_execute_pageexpand_fastest.onclick = function(){
-				click("executeFastest");
-			};
+			// 最先頭のセパレータを削除
+			num = items.length;
+			for(i=0;i<num;i++){
+				if(items[i].type != "separator") break;
+			}
+			if(0 < i) items.splice(0,i);
 
-			// PageExpand デバッグ
-			var button_execute_debug = new UI_LineButton(_menu_window,_i18n.getMessage("context_menu_pageexpand_debug"));
-			button_execute_debug.onclick = function(){
-				click("executeDebug");
-			};
+			// 最後尾のセパレータを削除
+			num = items.length;
+			for(i=0;i<num;i++){
+				if(items[num-i-1].type != "separator") break;
+			}
+			if(0 < i) items.splice(num-i,i);
+
+			num = items.length;
+			for(i=0;i<num;i++){
+				(function(){
+					var item = items[i];
+					var ui;
+					switch(item.type){
+					case "button":
+						ui = new UI_LineButton(_menu_window , _this.i18n.getMessage("context_menu_pageexpand_"+item.i18n));
+						ui.onclick = function(){
+							click.call(_this,item.id);
+						};
+						break;
+					case "separator":
+						ui = new UI_Separator(_menu_window);
+						break;
+					}
+				})();
+			}
+
+			callback();
 		}
 
 		// --------------------------------------------------------------------------------
-		// プライベート変数
+		// クリック
 		// --------------------------------------------------------------------------------
-		var _i18n;
+		var click = (function(){
+			var menu_commands = Object();
+			menu_commands["openBbsBoard"] = function(info) {
+				var query = new Object();
+				query.referer = encodeURIComponent(Tab_getURL(this.tab));
+				GoogleChromeExtensionOpenBbsBoard(query);
+			};
+			menu_commands["openBbsBoardSidebar"] = function(info) {
+				if(!(this.tab)) return;
+				GoogleChromeExtensionOpenBbsBoardInSidebar({windowId: this.tab.windowId});
+			};
+			menu_commands["openDownloadBoardApplication"] = function() {
+				GoogleChromeExtensionOpenDownloadBoard();
+			};
+			menu_commands["configCurrentPage"] = function(info) {
+				var query = new Object();
+				query.type = "urlmap";
+				query.url = encodeURIComponent(Tab_getURL(this.tab));
+				GoogleChromeExtensionOpenPageExpandConfig(query);
+			};
+			menu_commands["configCurrentBbs"] = function(info) {
+				var query = new Object();
+				query.type = "expand_bbs";
+				query.url = encodeURIComponent(Tab_getURL(this.tab));
+				GoogleChromeExtensionOpenPageExpandConfig(query);
+			};
+			menu_commands["startPageExpand"] =
+			menu_commands["abortPageExpand"] =
+			menu_commands["executeFastest"] = function(info) {
+				var _this = this;
+				var port = extension_message.connectToContent(this.tab);
+				if(!port) return;
+				port.start(function (){
+					port.postMessage({command:info.menuItemId});
+					port.terminate();
+					reload.call(_this);
+				});
+			};
+			menu_commands["executeDebug"] =
+			menu_commands["openImageViewer"] =
+			menu_commands["openDownloadBoardInline"] =
+			menu_commands["batchDownloadMedia"] = function(info) {
+				var port = extension_message.connectToContent(this.tab);
+				if(!port) return;
+				port.start(function (){
+					port.postMessage({command:info.menuItemId,onlyTopWindow:true});
+					port.terminate();
+				});
+			};
 
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-
-			// プロジェクト読み込み
-			projectLoad(function(e){
-
-				// ロケール
-				_i18n = new InternationalMessage(page_expand_project.getLanguage());
-
-				initialize();
-
-			});
-
+			return function(command){
+				var f = menu_commands[command];
+				if(f) f.call(this,{menuItemId:command});
+			};
 		})();
-	}
+
+		// --------------------------------------------------------------------------------
+		// リロード
+		// --------------------------------------------------------------------------------
+		function reload(newTab){
+			if(this.exec_methods){
+				this.exec_methods.release();
+				this.exec_methods = null;
+			}
+			this.exec_methods = new ExecuteMethods(this);
+			if(newTab){
+				this.tab = newTab;
+			}else{
+				this.exec_methods.push(update_activeTab);
+			}
+			this.exec_methods.push(update_project);
+			this.exec_methods.push(update_status);
+			this.exec_methods.push(update_document);
+		}
+
+		var PageExpandPopupMenu = function(){
+			var _this = this;
+			chrome.tabs.onUpdated.addListener( function(tab_id , info , tab){
+				if(tab.status != chrome.tabs.TabStatus.COMPLETE) return;
+				reload.call(_this,tab);
+			});
+			reload.call(_this);
+		};
+		PageExpandPopupMenu.prototype = {
+			exec_methods : null,
+			i18n : null,
+			tab : null,
+			status : { alive:false }
+		};
+		return PageExpandPopupMenu;
+	})();
 
 
 	// --------------------------------------------------------------------------------
@@ -49122,22 +49382,6 @@ function PageExpand(page_expand_arguments){
 						};
 						break;
 					}
-
-					return;
-					var element;
-					switch(info.layout_mode){
-					case "small_icon":
-						element = DocumentCreateElement("span");
-						break;
-					default:
-						element = DocumentCreateElement("div");
-						ElementSetStyle(element,"margin:2px; margin-left:4px; margin-right:4px;");
-						break;
-					}
-					info.parent.appendChild(element);
-
-					var data = info.data;
-					ElementSetTextContent(element,data.number + ":" + data.title + "(" + data.res + ")");
 				};
 
 				_ui_catalog.onUpdateCell = function (info){
@@ -53966,6 +54210,225 @@ function PageExpand(page_expand_arguments){
 		})();
 
 		// --------------------------------------------------------------------------------
+		// アプリモード
+		// --------------------------------------------------------------------------------
+		_dlbd.applicationMode = function(){
+
+			_dlbd.setVisible(true);
+			_dlbd.maximizeWindow();
+			document.title = "Download Board";
+
+			_button_close.setVisible(false);
+			_button_resize.setVisible(false);
+			_dlbd.collectUrlInfoAll(true);
+		};
+
+		// --------------------------------------------------------------------------------
+		// URL収集モード
+		// --------------------------------------------------------------------------------
+		var UrlInfoCollector = (function(){
+
+			function dispatch_statechange(){
+				var f = this.onstatechange;
+				if(f) f(this);
+			}
+
+			function connectToContent(tab,frameId){
+				var _this = this;
+				var port;
+				var event_handler_release;
+
+				var release = function(){
+					_this.countLive -= 1;
+					_this.countDied += 1;
+					dispatch_statechange.call(_this);
+					if(port){
+						port.release();
+						port = null;
+					}
+					if(event_handler_release){
+						event_handler_release.release();
+						event_handler_release = null;
+					}
+				};
+
+				event_handler_release = this.event_dispatcher.createEventHandler("release");
+				event_handler_release.setFunction(function(){
+					port.close();
+					release();
+				});
+
+				_this.countLive += 1;
+				port = extension_message.connectToContent(tab,{frameId:frameId});
+				port.ondisconnect = release;
+				port.onmessage = (function(){
+					var ignore = {"select":true,"state":true,"icon":true,"loaded":true,"id":true};
+					var mime = {"type":true,"ext":true,"level":true};
+					return function(data){
+						if(_this.released) return;
+
+						switch(data.type){
+						case "attach":
+							data.data.forEach(function (u){
+								var url_info = url_info_dictionary.addURL(u.url);
+								var values = u.values;
+								var key;
+								for(key in values){
+									if(ignore[key]) continue;
+									if(mime[key]) continue;
+									url_info.setValue(key,values[key]);
+								}
+								switch(u.level){
+								case 1:
+									url_info.setMimeTypeByElement(values["type"]);
+									break;
+								case 2:
+									url_info.setMimeTypeByExt(values["ext"]);
+									break;
+								case 3:
+									url_info.setMimeTypeByFetch(values["type"]);
+									break;
+								}
+							});
+							break;
+						case "modify":
+							var o = data.data;
+							var url_info = url_info_dictionary.getUrlInfo(o.urlInfo.url);
+							if(!url_info) return;
+							if(ignore[o.key]) return;
+							if(mime[o.key]){
+								switch(o.urlInfo.level){
+								case 1:
+									if(o.key != "type") return;
+									url_info.setMimeTypeByElement(o.value);
+									break;
+								case 2:
+									if(o.key != "ext") return;
+									url_info.setMimeTypeByExt(o.value);
+									break;
+								case 3:
+									if(o.key != "type") return;
+									url_info.setMimeTypeByFetch(o.value);
+									break;
+								}
+							}else{
+								url_info.setValue(o.key,o.value);
+							}
+							break;
+						}
+					};
+				})();
+				port.start(function(){
+					if(_this.released) return;
+					dispatch_statechange.call(_this);
+					port.postMessage({command:"getUrlInfoAll"});
+				});
+			}
+
+			function UrlInfoCollector(){
+				var _this = this;
+				this.event_dispatcher = new EventDispatcher();
+				this.exec_methods = new ExecuteMethods(this);
+
+				// 新しく開かれるフレーム
+				this.message_handler = (function(){
+					var commands = {
+						"ready": function(data,sender){
+							connectToContent.call(_this,sender.tab,sender.frameId);
+						}
+					};
+					return function(data,sender){
+						var f = commands[data.command];
+						if(f) f(data,sender);
+					};
+
+				})();
+				chrome.runtime.onMessage.addListener(this.message_handler);
+
+				// 既存のすべてのタブから収集
+				var _tabs;
+				var _frames;
+				var f0 = function(){
+					var tab = _tabs.shift();
+					if(!tab) return;
+					chrome.webNavigation.getAllFrames({tabId:tab.id},function(frames){
+						if(_this.released) return;
+						_frames = frames || [];
+						f1(tab);
+					});
+				};
+				var f1 = function(tab){
+					if(_this.released) return;
+					var frame = _frames.shift();
+					if(!frame){
+						f0();
+						return;
+					}
+					connectToContent.call(_this,tab,frame.frameId);
+					execute_queue.attachLast(f1,tab);
+				};
+				chrome.tabs.query({},function(tabs){
+					if(_this.released) return;
+					_tabs = tabs || [];
+					f0();
+				});
+
+			}
+			UrlInfoCollector.prototype = {
+				release : function(){
+					if(this.released) return;
+					this.released = true;
+
+					if(this.message_handler){
+						chrome.runtime.onMessage.removeListener(this.message_handler);
+						this.message_handler = null;
+					}
+
+					this.event_dispatcher.dispatchEvent("release",null);
+					this.event_dispatcher.release();
+
+					this.exec_methods.release();
+				},
+				onstatechange : function(){},
+				released : false,
+				countLive : 0,
+				countDied : 0
+			};
+			return UrlInfoCollector;
+		})();
+
+
+		_dlbd.collectUrlInfoAll = function (v){
+
+				if(!v){
+					if(url_info_collector){
+						url_info_collector.release();
+						url_info_collector = null;
+					}
+					updateDownloadButton();
+					_info_collector.setText(0,"Collected URLs.");
+					_info_collector.setProgress(1,1.0);
+					return;
+				}
+
+				var updateInfo = function(){
+					var node = _info_collector.root;
+					if(DomNodeGetFirstElementChild(_element_info) == node) return;
+					DomNodeRemoveChildren(_element_info);
+					_element_info.appendChild(node);
+				};
+
+				url_info_collector = new UrlInfoCollector();
+				url_info_collector.onstatechange = function(r){
+					_info_collector.setText(0,"Collecting URLs form ALL Tabs...");
+					_info_collector.setText(1,"live:" + r.countLive + " disconnected:" + r.countDied);
+					_info_collector.setProgress(1,-1.0);
+					updateInfo();
+				};
+				updateDownloadButton();
+		};
+
+		// --------------------------------------------------------------------------------
 		// アイテム編集
 		// --------------------------------------------------------------------------------
 		function eraseItemsSelected(){
@@ -54429,6 +54892,10 @@ function PageExpand(page_expand_arguments){
 				_element_download.appendChild(_button_download_pause.root);
 				return;
 			}
+			if(url_info_collector){
+				_element_download.appendChild(_button_collector_stop.root);
+				return;
+			}
 			if(wait_analyze){
 				return;
 			}
@@ -54542,11 +55009,16 @@ function PageExpand(page_expand_arguments){
 					if(v >= 1.0){
 						s.backgroundColor = "rgba(0,0,255,0.1)";
 						e.classList.remove("meter_play");
-					}else{
+						s.width = "100%";
+					}else if(v >= 0.0){
 						s.backgroundColor = "rgba(255,0,0,0.1)";
 						e.classList.add("meter_play");
+						s.width = (v * 100).toFixed(8) + "%";
+					}else{
+						s.backgroundColor = "rgba(0,0,0,0.1)";
+						e.classList.add("meter_play");
+						s.width = "100%";
 					}
-					s.width = (v * 100).toFixed(8) + "%";;
 				},
 				pause : function(id){
 					var e = this["progress"+id];
@@ -55570,10 +56042,10 @@ function PageExpand(page_expand_arguments){
 			};
 			_dlbd.restoreWindow();
 
-			var button_close = new UI_ToolButton(_element_toolbar_right);
-			button_close.setTooltip(_i18n.getMessage("download_board_button_close"));
-			button_close.setImageURL(svg_close);
-			button_close.onclick = function(e){
+			_button_close = new UI_ToolButton(_element_toolbar_right);
+			_button_close.setTooltip(_i18n.getMessage("download_board_button_close"));
+			_button_close.setImageURL(svg_close);
+			_button_close.onclick = function(e){
 				_dlbd.setVisible(false);
 			};
 
@@ -55994,6 +56466,10 @@ function PageExpand(page_expand_arguments){
 			_info_sequential.attach(0,"text");
 			_info_sequential.attach(1,"progress");
 
+			_info_collector = new UI_Info();
+			_info_collector.attach(0,"text");
+			_info_collector.attach(1,"progress");
+
 			_button_archive = new UI_DownloadButton();
 			_button_archive.setTooltip(_i18n.getMessage("download_board_button_archive"));
 			_button_archive.setImageURL("data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iNTEuOTk5OTk2IgpoZWlnaHQ9IjQzIgp2aWV3Qm94PSIwIDAgMTMuNzU4MzMyIDExLjM3NzA4NCIKdmVyc2lvbj0iMS4xIgppZD0iIgp4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCnhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZGVmcwppZD0iIiAvPgo8ZwppZD0iIgp0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNi4zNDk5OTc2LC0xLjA1ODMzMzQpIj4KPGNpcmNsZQpzdHlsZT0iZmlsbDojMDAwMDAwO2ZpbGwtb3BhY2l0eToxO3N0cm9rZS13aWR0aDowLjc2NzU0NTtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTkuMztwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgppZD0iIgpjeD0iOC40NjY2NjQzIgpjeT0iMy4xNzUwMDAyIgpyPSIyLjExNjY2NjgiIC8+CjxjaXJjbGUKc3R5bGU9ImZpbGw6IzAwMDAwMDtmaWxsLW9wYWNpdHk6MTtzdHJva2Utd2lkdGg6MC43Njc1NDU7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjE5LjM7cGFpbnQtb3JkZXI6bWFya2VycyBmaWxsIHN0cm9rZSIKaWQ9IiIKY3g9IjE3Ljk5MTY2MyIKY3k9IjMuMTc1MDAwMiIKcj0iMi4xMTY2NjY4IiAvPgo8Y2lyY2xlCnN0eWxlPSJmaWxsOiMwMDAwMDA7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlLXdpZHRoOjAuNzY3NTQ1O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxOS4zO3BhaW50LW9yZGVyOm1hcmtlcnMgZmlsbCBzdHJva2UiCmlkPSIiCmN4PSIxMy4yMjkxNjciCmN5PSIzLjE3NTAwMDIiCnI9IjIuMTE2NjY2OCIgLz4KPHBhdGgKc3R5bGU9ImZpbGw6IzAwMDAwMDtmaWxsLW9wYWNpdHk6MTtzdHJva2Utd2lkdGg6MC41MjkxNjc7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjE5LjM7cGFpbnQtb3JkZXI6bWFya2VycyBmaWxsIHN0cm9rZSIKZD0ibSAxMC44NDc5MTYsNS44MjA4MzM0IGggNC43NjI1MDEgViA5Ljc4OTU4NCBoIDIuOTEwNDE2IEwgMTMuMjI5MTY3LDEyLjQzNTQxNyA3LjkzNzQ5OTYsOS43ODk1ODQgaCAyLjkxMDQxNjQgeiIKaWQ9IiIgLz4KPC9nPgo8L3N2Zz4K");
@@ -56050,6 +56526,14 @@ function PageExpand(page_expand_arguments){
 			_button_download_pause.setText("PAUSE");
 			_button_download_pause.onclick = function(){
 				sequential_downloader.pause();
+			};
+
+			_button_collector_stop = new UI_DownloadButton();
+			_button_collector_stop.setTooltip(_i18n.getMessage("download_board_button_collector_stop"));
+			_button_collector_stop.setImageURL(svg_cancel);
+			_button_collector_stop.setText("STOP");
+			_button_collector_stop.onclick = function(){
+				_dlbd.collectUrlInfoAll(false);
 			};
 
 			updateDownloadButton();
@@ -56286,6 +56770,7 @@ function PageExpand(page_expand_arguments){
 		var _element_info;
 		var _element_download;
 		var _select_filter;
+		var _button_close;
 		var _button_resize;
 		var _button_archive;
 		var _button_download;
@@ -56294,10 +56779,12 @@ function PageExpand(page_expand_arguments){
 		var _button_download_pause;
 		var _button_archive_cancel;
 		var _button_archive_abort;
+		var _button_collector_stop;
 		var _info_wait;
 		var _info_header;
 		var _info_archive;
 		var _info_sequential;
+		var _info_collector;
 
 		var filter_type = "all";
 		var sort_type = "id";
@@ -56310,6 +56797,7 @@ function PageExpand(page_expand_arguments){
 		var wait_analyze;
 		var header_downloader;
 		var sequential_downloader;
+		var url_info_collector;
 		var archive_creator;
 		var download_history_monitor;
 
@@ -67979,13 +68467,16 @@ function PageExpand(page_expand_arguments){
 				message: "ダウンロードボードを開く（アプリ）"
 			},
 			context_menu_pageexpand_open_download_board_inline: {
-				message: "ダウンロードボードを開く"
+				message: "ダウンロードボードを開く（ここで）"
 			},
-			context_menu_batch_download_media: {
+			context_menu_pageexpand_batch_download_media: {
 				message: "一括ダウンロード（メディア）"
 			},
 			context_menu_pageexpand_open_bbs_board: {
-				message: "掲示板ボードを開く"
+				message: "掲示板ボードを開く（アプリ）"
+			},
+			context_menu_pageexpand_open_bbs_board_sidebar: {
+				message: "掲示板ボードを開く（サイド）"
 			},
 			context_menu_pageexpand_open_bbs_board_run_confirm: {
 				message: "このページ内で掲示板ボードを実行しますか？"
@@ -68055,6 +68546,9 @@ function PageExpand(page_expand_arguments){
 			},
 			download_board_button_sequential_pause: {
 				message: "すべてのダウンロードを一時停止します。（APIが対応していない場合は中止）\n一時停止のアイテムが多すぎると、ダウンロードのスタックが発生することに注意して下さい。\nスタックを解決するには一時停止中のダウンロードアイテムを手動で編集して数を減らします。\nスタックが貯まりすぎて手に負えなくなった場合は、ブラウザを再起動して下さい。"
+			},
+			download_board_button_collector_stop: {
+				message: "URL収集モードを停止して、ダウンロードに進みます。"
 			},
 			download_board_select_filter: {
 				message: "ファイルの種類を選択..."
@@ -69561,13 +70055,16 @@ function PageExpand(page_expand_arguments){
 				message: "Open Download Board (App)"
 			},
 			context_menu_pageexpand_open_download_board_inline: {
-				message: "Open Download Board"
+				message: "Open Download Board (this)"
 			},
-			context_menu_batch_download_media: {
+			context_menu_pageexpand_batch_download_media: {
 				message: "Batch Download (Media)"
 			},
 			context_menu_pageexpand_open_bbs_board: {
-				message: "Open BBS Board"
+				message: "Open BBS Board (App)"
+			},
+			context_menu_pageexpand_open_bbs_board_sidebar: {
+				message: "Open BBS Board (Side)"
 			},
 			context_menu_pageexpand_open_bbs_board_run_confirm: {
 				message: "Do you want to run the BBS Board in this page?"
@@ -69637,6 +70134,9 @@ function PageExpand(page_expand_arguments){
 			},
 			download_board_button_sequential_pause: {
 				message: "Pause all downloads. (Abort if API does not support)\nNote that too many items in pause will cause download stacks.\nTo resolve stucks, manually edit the paused download items to reduce the number.\nIf the stack builds up too much, restart your browser."
+			},
+			download_board_button_collector_stop: {
+				message: "Stop URL collection mode, Proceed to download."
 			},
 			download_board_select_filter: {
 				message: "Select file type..."
@@ -71142,13 +71642,16 @@ function PageExpand(page_expand_arguments){
 				message: "Open Download Board (App)"
 			},
 			context_menu_pageexpand_open_download_board_inline: {
-				message: "Open Download Board"
+				message: "Open Download Board (this)"
 			},
-			context_menu_batch_download_media: {
+			context_menu_pageexpand_batch_download_media: {
 				message: "Batch Download (Media)"
 			},
 			context_menu_pageexpand_open_bbs_board: {
-				message: "Open BBS Board"
+				message: "Open BBS Board (App)"
+			},
+			context_menu_pageexpand_open_bbs_board_sidebar: {
+				message: "Open BBS Board (Side)"
 			},
 			context_menu_pageexpand_open_bbs_board_run_confirm: {
 				message: "Do you want to run the BBS Board in this page?"
@@ -71218,6 +71721,9 @@ function PageExpand(page_expand_arguments){
 			},
 			download_board_button_sequential_pause: {
 				message: "Pause all downloads. (Abort if API does not support)\nNote that too many items in pause will cause download stacks.\nTo resolve stucks, manually edit the paused download items to reduce the number.\nIf the stack builds up too much, restart your browser."
+			},
+			download_board_button_collector_stop: {
+				message: "Stop URL collection mode, Proceed to download."
 			},
 			download_board_select_filter: {
 				message: "Select file type..."
@@ -73589,7 +74095,7 @@ function PageExpand(page_expand_arguments){
 				element.src = param.url;
 
 				if(_this.request.timeout){
-					setTimeout(failure,_this.request.timeout);
+					time_handle = setTimeout(failure,_this.request.timeout);
 				}
 			};
 
@@ -77404,6 +77910,28 @@ function PageExpand(page_expand_arguments){
 
 
 	// --------------------------------------------------------------------------------
+	// GoogleChrome 拡張機能 から BBS Board をサードバーで開く
+	// --------------------------------------------------------------------------------
+	function GoogleChromeExtensionOpenBbsBoardInSidebar(options){
+		if(chrome.sidePanel){
+			chrome.sidePanel.open(options);
+			return;
+		}
+		if(chrome.sidebarAction){
+			chrome.sidebarAction.open();
+			return;
+		}
+	}
+
+	// --------------------------------------------------------------------------------
+	// GoogleChrome 拡張機能 から Download Board を開く
+	// --------------------------------------------------------------------------------
+	function GoogleChromeExtensionOpenDownloadBoard(){
+		var url = "/download_board.html";
+		chrome.tabs.create({url:url});
+	}
+
+	// --------------------------------------------------------------------------------
 	// GoogleChrome 拡張機能 から PageExpandConfig を開く
 	// --------------------------------------------------------------------------------
 	function GoogleChromeExtensionOpenPageExpandConfig(query){
@@ -77443,6 +77971,14 @@ function PageExpand(page_expand_arguments){
 
 
 
+
+	// --------------------------------------------------------------------------------
+	// tab から URL を取得
+	// --------------------------------------------------------------------------------
+	function Tab_getURL(tab){
+		if(!tab) return "";
+		return tab.url || tab.pendingUrl || "";
+	}
 
 	// --------------------------------------------------------------------------------
 	// ポート
@@ -84111,6 +84647,15 @@ function PageExpand(page_expand_arguments){
 		}
 	}
 
+	// --------------------------------------------------------------------------------
+	// サイドバーに対応しているか
+	// --------------------------------------------------------------------------------
+	function GoogleChromeExtensionSidebarSupported(){
+		if(chrome.sidePanel) return true;
+		if(chrome.sidebarAction) return true;
+		return false;
+	}
+
 
 	// --------------------------------------------------------------------------------
 	// ローカルストレージからロード
@@ -86608,19 +87153,15 @@ function PageExpand(page_expand_arguments){
 	// クライアント領域のサイズを取得
 	// --------------------------------------------------------------------------------
 	function DocumentGetClientSize(document_obj){
-		var b = document_obj.body;
 		var r = document_obj.documentElement;
+		var b = document_obj.body || r;
 		var w = b.clientWidth;
 		var h;
-		if(w < r.clientWidth)	w = r.clientWidth;
+		if(w < r.clientWidth) w = r.clientWidth;
 		if(document_obj.compatMode == "BackCompat"){
 			h = b.clientHeight;
 		}else{
-			if(r.clientHeight){
-				h = r.clientHeight;
-			}else{
-				h = b.clientHeight;
-			}
+			h = r.clientHeight || b.clientHeight;
 		}
 		return {
 			width :w,
@@ -89257,7 +89798,7 @@ function PageExpand(page_expand_arguments){
 							PageExpandRelease();
 						},
 						"executeFastest":function(port,data){
-							PageExpandExecuteFastest();
+							PageExpandExecuteFastest({displayNone:true});
 						},
 						"executeDebug":function(port,data){
 							page_expand_debug.setVisible(true);
@@ -89278,6 +89819,55 @@ function PageExpand(page_expand_arguments){
 									download_board.setVisible(false);
 								}});
 							}});
+						},
+						"getStatus":function(port,data){
+							port.postMessage({alive:true,started:started});
+						},
+						"getUrlInfoAll":function(port,data){
+							var event_handler_attach;
+							var event_handler_modify;
+							var event_handler_release;
+							var released = false;
+
+							var release = function(){
+								if(released) return;
+								released = true;
+
+								port.ondisconnect = null;
+								if(event_handler_attach){
+									event_handler_attach.release();
+									event_handler_attach = null;
+								}
+								if(event_handler_modify){
+									event_handler_modify.release();
+									event_handler_modify = null;
+								}
+								if(event_handler_release){
+									event_handler_release.release();
+									event_handler_release = null;
+								}
+							};
+
+							port.ondisconnect = release;
+
+							event_handler_attach = url_info_dictionary.event_dispatcher.createEventHandler("attach");
+							event_handler_attach.setFunction(function(e){
+								port.postMessage({type:"attach",data:[e.urlInfo]});
+
+							});
+
+							event_handler_modify = url_info_dictionary.event_dispatcher.createEventHandler("modify");
+							event_handler_modify.setFunction(function(e){
+								port.postMessage({type:"modify",data:e});
+							});
+
+							event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
+							event_handler_release.setFunction(release);
+
+							var list = url_info_dictionary.getUrlInfoAll();
+							port.postMessage({type:"attach",data:list});
+
+							PageExpandExecuteFastest();
 						}
 					};
 
@@ -89321,6 +89911,7 @@ function PageExpand(page_expand_arguments){
 					PageExpandStart();
 				}
 
+				chrome.runtime.sendMessage({command:"ready"});
 			}else{
 				response_listener = null;
 				PageExpandRelease();
@@ -89341,7 +89932,8 @@ function PageExpand(page_expand_arguments){
 		PageExpandInitialize();
 
 		// GoogleChrome拡張機能通信
-		extension_message = new GoogleChromeExtensionMessageForContent();
+		extension_message = new GoogleChromeExtensionMessageForBackground();
+		extension_message.start();
 
 		// PageExpand コンストラクタ
 		PageExpandConstructor();
@@ -89393,6 +89985,7 @@ function PageExpand(page_expand_arguments){
 
 		// GoogleChrome拡張機能通信
 		extension_message = new GoogleChromeExtensionMessageForBackground();
+		extension_message.start();
 
 		new PageExpandPopupMenu();
 		break;
@@ -89406,7 +89999,8 @@ function PageExpand(page_expand_arguments){
 		PageExpandInitialize();
 
 		// GoogleChrome拡張機能通信
-		extension_message = new GoogleChromeExtensionMessageForContent();
+		extension_message = new GoogleChromeExtensionMessageForBackground();
+		extension_message.start();
 
 		// PageExpand コンストラクタ
 		PageExpandConstructor();
@@ -89424,6 +90018,34 @@ function PageExpand(page_expand_arguments){
 		break;
 
 	// --------------------------------------------------------------------------------
+	// GoogleChrome のダウンロードボードとして動作
+	// --------------------------------------------------------------------------------
+	case "ChromeExtensionDownloadBoard":
+
+		// PageExpand 初期化
+		PageExpandInitialize();
+
+		// GoogleChrome拡張機能通信
+		extension_message = new GoogleChromeExtensionMessageForBackground();
+		extension_message.start();
+
+		// PageExpand コンストラクタ
+		PageExpandConstructor();
+
+		// プロジェクトをロード
+		var proj = new PageExpandProject();
+		proj.loadLocalStorage(function(e){
+
+			// プロジェクトを更新
+			page_expand_project = proj;
+			project = new Project();
+			project.importObjectForBackground(page_expand_project.getProject());
+
+			download_board.applicationMode();
+		});
+		break;
+
+	// --------------------------------------------------------------------------------
 	// GoogleChrome のサイドバーとして動作
 	// --------------------------------------------------------------------------------
 	case "ChromeExtensionSidebar":
@@ -89432,7 +90054,8 @@ function PageExpand(page_expand_arguments){
 		PageExpandInitialize();
 
 		// GoogleChrome拡張機能通信
-		extension_message = new GoogleChromeExtensionMessageForContent();
+		extension_message = new GoogleChromeExtensionMessageForBackground();
+		extension_message.start();
 
 		// PageExpand コンストラクタ
 		PageExpandConstructor();
@@ -89445,14 +90068,15 @@ function PageExpand(page_expand_arguments){
 			bbs_board.enableSidebarMode(true);
 			bbs_board.onreload = function(){
 				chrome.tabs.query({active:true,currentWindow:true},function(tabs) {
-					var url = "";
-					if(tabs[0])	url = tabs[0].url;
-					bbs_board.setURL(url);
+					var tab = (tabs || [])[0];
+					if(!tab) return;
+					bbs_board.setURL(Tab_getURL(tab));
 				});
 			};
 			bbs_board.onreload();
 		});
 		break;
 	};
+
 
 }

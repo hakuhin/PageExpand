@@ -1,7 +1,7 @@
 {
   "default_locale": "en",
   "name": "__MSG_extension_name__",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "manifest_version": 2,
   "description": "__MSG_extension_description__",
   "author": "hakuhin",
@@ -59,6 +59,7 @@
   },
   "permissions": [
     "tabs",
+    "webNavigation",
     "webRequest",
     "webRequestBlocking",
     "contextMenus",
