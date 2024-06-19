@@ -1801,6 +1801,67 @@ function PageExpand(page_expand_arguments){
 		};
 
 		// --------------------------------------------------------------------------------
+		// １つでもユーザースクリプトを所有しているか
+		// --------------------------------------------------------------------------------
+		_this.hasUserScripts = function(){
+			var count = 0;
+			var commands = {
+				name:function(o,p){
+					var n;
+					for(n in p){
+						f(o[n],p[n]);
+					}
+				},
+				array:function(o,p){
+					var i;
+					var n = o.length;
+					for(i=0;i<n;i++){
+						f(o[i],p);
+					}
+				},
+				user:function(o,p){
+					if(o.user){
+						f(o.user,p);
+					}
+				},
+				script:function(o,p){
+					var s;
+					var i;
+					var n = p.length;
+					for(i=0;i<n;i++){
+						s = o[p[i]];
+						if((s.has_user) && (s.user)){
+							count++;
+						}
+					}
+				}
+			};
+			var f = function(o,p){
+				commands[p.type](o,p.arg);
+			};
+			try{
+				f(_proj_src,{
+					type:"name",
+					arg:{
+						expand_bbs:{type:"array",arg:{type:"user",arg:{type:"script",arg:["script_initialize","script_callback"]}}},
+						expand_iframe:{type:"array",arg:{type:"user",arg:{type:"name",arg:{inline:{type:"script",arg:["script_allow","script_insert"]}}}}},
+						expand_image:{type:"array",arg:{type:"user",arg:{type:"name",arg:{thumbnail:{type:"script",arg:["script_allow","script_insert"]},popup:{type:"script",arg:["script_allow"]}}}}},
+						expand_sound:{type:"array",arg:{type:"user",arg:{type:"name",arg:{inline:{type:"script",arg:["script_allow","script_insert"]},audio_element:{type:"script",arg:["script_allow"]}}}}},
+						expand_video:{type:"array",arg:{type:"user",arg:{type:"name",arg:{inline:{type:"script",arg:["script_allow","script_insert"]},video_element:{type:"script",arg:["script_allow"]}}}}},
+						expand_text:{type:"array",arg:{type:"user",arg:{type:"name",arg:{inline:{type:"script",arg:["script_allow","script_insert"]}}}}},
+						make_link_to_text:{type:"array",arg:{type:"user",arg:{type:"script",arg:["script"]}}},
+						replacement_to_anchor:{type:"array",arg:{type:"user",arg:{type:"script",arg:["script"]}}},
+						replacement_to_element:{type:"array",arg:{type:"user",arg:{type:"script",arg:["script"]}}},
+						replacement_to_link:{type:"array",arg:{type:"user",arg:{type:"name",arg:{filter:{type:"array",arg:{type:"script",arg:["script"]}}}}}},
+						replacement_to_text:{type:"array",arg:{type:"user",arg:{type:"script",arg:["script"]}}}
+					}
+				});
+			}catch(e){}
+
+			return (count > 0);
+		};
+
+		// --------------------------------------------------------------------------------
 		// 有効であるかを取得（内部用）
 		// --------------------------------------------------------------------------------
 		function getEnable(url){
@@ -34858,13 +34919,87 @@ function PageExpand(page_expand_arguments){
 				callback(e);
 			});
 		}
+		var exec_update_script_register = (function(){
+			var F = function(){
+				this.id = "PageExpand";
+				this.allFrames = true;
+				this.matches = [ "http://*/*" , "https://*/*" ];
+				this.runAt = "document_start";
+			};
+			var user_script = new F();
+			user_script.js = [{file: "PageExpand.js"},{file: "content_scripts.js"}];
+
+			var content_script = new F();
+			content_script.js = [ "PageExpand.js" , "content_scripts.js" ];
+			content_script.matchOriginAsFallback = true;
+
+			return function (callback){
+				var released = false;
+				var release = function(){
+					if(released) return;
+					released = true;
+					callback();
+				};
+				var promise;
+
+				var register_userScripts = function(){
+					var success = release;
+					var failure = register_scripting;
+					chrome.scripting.unregisterContentScripts();
+					promise = chrome.userScripts.getScripts();
+					promise.then(function(o){
+						if(o[0]){
+							success();
+							return;
+						}
+						promise = chrome.userScripts.configureWorld({
+							messaging: true,
+							csp:"script-src 'unsafe-eval'"
+						});
+						promise.then(function(){
+							promise = chrome.userScripts.register([user_script]);
+							promise.then(success,failure);
+						},failure);
+					},failure);
+				};
+
+				var register_scripting = function(){
+					var success = release;
+					var failure = release;
+					try{
+						chrome.userScripts.unregister();
+					}catch(e){}
+					promise = chrome.scripting.getRegisteredContentScripts();
+					promise.then(function(o){
+						if(o[0]){
+							success();
+							return;
+						}
+						promise = chrome.scripting.registerContentScripts([content_script]);
+						promise.then(success,failure);
+					},failure);
+				};
+
+				if((function(){
+					// Opera では userScripts.configureWorld({messaging: true}) が動作しない
+					if(admin.opr) return false;
+					if(!GoogleChromeExtensionUserScriptsSupported()) return false;
+					if(page_expand_project.hasUserScripts()) return true;
+					return false;
+				})()){
+					register_userScripts();
+				}else{
+					register_scripting();
+				}
+				callback();
+			};
+		})();
 		function exec_update_project(callback){
 			project = new Project();
 			project.importObjectForBackground(page_expand_project.getProject(Tab_getURL(_active_tab)));
 			callback();
 		}
 		function exec_update_activeTab(callback){
-			var _this = this;
 			chrome.tabs.query({active:true,currentWindow:true},function(tabs) {
 				tabs = tabs || [];
 				_active_tab = tabs[0];
@@ -35087,6 +35222,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function loadPageExpandProject(func){
 			_exec_methods.push(exec_update_pageexpand_project);
+			_exec_methods.push(exec_update_script_register);
 			updateActiveTab();
 		}
 
@@ -42300,7 +42436,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.7.1");
+				new UI_Text(parent,"PageExpand ver.1.7.2");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -43417,6 +43553,7 @@ function PageExpand(page_expand_arguments){
 				}else{
 					_button.setLabel(_i18n.getMessage("menu_script_obj_editer_edit_script"));
 				}
+				if(_warning) _warning.setVisible(enable);
 				_script_area.setVisible(enable);
 			}
 
@@ -43426,6 +43563,7 @@ function PageExpand(page_expand_arguments){
 			var _body;
 			var _script_obj;
 			var _button;
+			var _warning;
 			var _script_area;
 
 			// --------------------------------------------------------------------------------
@@ -43449,6 +43587,23 @@ function PageExpand(page_expand_arguments){
 					update();
 					dispatchChange();
 				};
+
+				if((function(){
+					if(admin.opr) return true;
+					if(GoogleChromeExtensionUserScriptsSupported()) return false;
+					return true;
+				})()){
+					(function(){
+						_warning = new UI_WarningText(_body);
+						if(admin.opr){
+							_warning.insertText(_i18n.getMessage("menu_scriptarea_unsupport"));
+							return;
+						}
+						["","_step1","_step2","_step3","_note"].forEach(function(s){
+							_warning.insertText(_i18n.getMessage("menu_warning_how_to_enable_userscript"+s));
+						});
+					})();
+				}
 
 				_script_area = new UI_ScriptArea(_body);
 				_script_area.oninput = function(v){
@@ -43528,10 +43683,6 @@ function PageExpand(page_expand_arguments){
 				ElementSetStyle(_body,"margin:0px 0px 5px 0px;");
 				parent.appendChild(_body);
 
-
-				new UI_BreakItem(_body);
-				new UI_Text(_body,_i18n.getMessage("menu_scriptarea_unsupport"));
-
 				_textarea = DocumentCreateElement("textarea");
 				ElementSetStyle(_textarea,"width:100%; height:300px; box-sizing:border-box; display:block; background-color:#fff; margin-bottom:5px;");
 				_body.appendChild(_textarea);
@@ -43552,6 +43703,34 @@ function PageExpand(page_expand_arguments){
 				new UI_TextHint(_body,_i18n.getMessage("menu_scriptarea_hint"));
 			})();
 		}
+
+		// --------------------------------------------------------------------------------
+		// 警告
+		// --------------------------------------------------------------------------------
+		var UI_WarningText = (function(){
+			var f = function(parent){
+				this.body = DocumentCreateElement("div");
+				ElementSetStyle(this.body,"border:10px solid #f44;margin-bottom:10px;border-radius:5px;color:#c00;padding:5px 10px;");
+				parent.appendChild(this.body);
+			};
+			f.prototype = {
+				setVisible : function(v){
+					this.body.style.display = ((v) ? "" : "none");
+				},
+				insertText : function(str){
+					if(this.line >= 1){
+						var br = DocumentCreateElement("br");
+						this.body.appendChild(br);
+					}
+					var div = DocumentCreateElement("span");
+					ElementSetTextContent(div,str);
+					this.body.appendChild(div);
+					this.line += 1;
+				},
+				line : 0
+			};
+			return f;
+		})();
 
 		// --------------------------------------------------------------------------------
 		// ステッパー
@@ -54344,6 +54523,7 @@ function PageExpand(page_expand_arguments){
 
 				})();
 				chrome.runtime.onMessage.addListener(this.message_handler);
+				chrome.runtime.onUserScriptMessage.addListener(this.message_handler);
 
 				// 既存のすべてのタブから収集
 				var _tabs;
@@ -54381,6 +54561,7 @@ function PageExpand(page_expand_arguments){
 
 					if(this.message_handler){
 						chrome.runtime.onMessage.removeListener(this.message_handler);
+						chrome.runtime.onUserScriptMessage.removeListener(this.message_handler);
 						this.message_handler = null;
 					}
 
@@ -62693,6 +62874,13 @@ function PageExpand(page_expand_arguments){
 	// スクリプトオブジェクトから配列関数を作成
 	// --------------------------------------------------------------------------------
 	function PageExpandProjectScriptObject_EvalArrayFunction(obj){
+		if((function(){
+			// chrome.userScripts が有効か
+			try{ eval(""); }catch(e){ return false; }
+			return (obj.has_user);
+		})()){
+			return StringEvalArrayFunction(obj.user.script);
+		}
 		if(obj.has_preset){
 
 			// プリセットスクリプト辞書
@@ -68418,6 +68606,21 @@ function PageExpand(page_expand_arguments){
 			menu_warning_repealed_for_mv3: {
 				message: "この機能は廃止されました🥲"
 			},
+			menu_warning_how_to_enable_userscript: {
+				message: "ユーザースクリプトを動作させるには、以下のブラウザ設定が必要です。"
+			},
+			menu_warning_how_to_enable_userscript_step1: {
+				message: "１.ブラウザの「拡張機能の管理」ページを開きます。( chrome://extensions/ ）"
+			},
+			menu_warning_how_to_enable_userscript_step2: {
+				message: "２.トグルスイッチをクリックして「デベロッパー モード（開発者モード）」を有効にします。"
+			},
+			menu_warning_how_to_enable_userscript_step3: {
+				message: "３.ブラウザを再起動します。"
+			},
+			menu_warning_how_to_enable_userscript_note: {
+				message: "（この警告が表示されている場合、デフォルトのスクリプトが実行されます。）"
+			},
 			menu_script_obj_editer_edit_script: {
 				message: "スクリプトを編集する"
 			},
@@ -70006,6 +70209,21 @@ function PageExpand(page_expand_arguments){
 			menu_warning_repealed_for_mv3: {
 				message: "This feature was repealed. 🥲"
 			},
+			menu_warning_how_to_enable_userscript: {
+				message: "How to use User Scripts."
+			},
+			menu_warning_how_to_enable_userscript_step1: {
+				message: "1. Go to the Extensions page. ( chrome://extensions/ ）"
+			},
+			menu_warning_how_to_enable_userscript_step2: {
+				message: "2. Enable Developer Mode by clicking the toggle switch."
+			},
+			menu_warning_how_to_enable_userscript_step3: {
+				message: "3. Restart your browser."
+			},
+			menu_warning_how_to_enable_userscript_note: {
+				message: "(If this warning is displaying, the default script will be executed.)"
+			},
 			menu_script_obj_editer_edit_script: {
 				message: "Edit Script"
 			},
@@ -71592,6 +71810,21 @@ function PageExpand(page_expand_arguments){
 			},
 			menu_warning_repealed_for_mv3: {
 				message: "This feature was repealed. 🥲"
+			},
+			menu_warning_how_to_enable_userscript: {
+				message: "How to use User Scripts."
+			},
+			menu_warning_how_to_enable_userscript_step1: {
+				message: "1. Go to the Extensions page. ( chrome://extensions/ ）"
+			},
+			menu_warning_how_to_enable_userscript_step2: {
+				message: "2. Enable Developer Mode by clicking the toggle switch."
+			},
+			menu_warning_how_to_enable_userscript_step3: {
+				message: "3. Restart your browser."
+			},
+			menu_warning_how_to_enable_userscript_note: {
+				message: "(If this warning is displaying, the default script will be executed.)"
 			},
 			menu_script_obj_editer_edit_script: {
 				message: "Edit Script"
@@ -74305,6 +74538,7 @@ function PageExpand(page_expand_arguments){
 
 			var current_url_parser = URL_Parser(WindowGetOwnerURL(window));
 			if((function(){
+				if(GoogleChromeExtensionPrivileged()) return false;
 				if(_this.url_parser.protocol.match(/blob|data/)) return false;
 				if(this._xhr_type == XHR_TYPE.ONLY_BACKGROUND) return true;
 				return Boolean(current_url_parser.origin != _this.url_parser.origin);
@@ -78207,6 +78441,7 @@ function PageExpand(page_expand_arguments){
 		_this.release = function(){
 			if(_connect_handler){
 				chrome.runtime.onConnect.removeListener(_connect_handler);
+				chrome.runtime.onUserScriptConnect.removeListener(_connect_handler);
 				_connect_handler = null;
 			}
 		};
@@ -78218,10 +78453,12 @@ function PageExpand(page_expand_arguments){
 			if(!_connect_handler) return;
 
 			chrome.runtime.onConnect.removeListener(_connect_handler);
+			chrome.runtime.onUserScriptConnect.removeListener(_connect_handler);
 			_connect_handler = function (port){
 				dispatch_onconnect(new Port(port));
 			};
 			chrome.runtime.onConnect.addListener(_connect_handler);
+			chrome.runtime.onUserScriptConnect.addListener(_connect_handler);
 
 			var i;
 			var num = _connect_queue.length;
@@ -78289,6 +78526,7 @@ function PageExpand(page_expand_arguments){
 					_connect_queue.push(new Port(port));
 				};
 				chrome.runtime.onConnect.addListener(_connect_handler);
+				chrome.runtime.onUserScriptConnect.addListener(_connect_handler);
 			}
 		})();
 	}
@@ -84656,6 +84894,22 @@ function PageExpand(page_expand_arguments){
 		return false;
 	}
 
+	// --------------------------------------------------------------------------------
+	// userScripts API に対応しているか
+	// --------------------------------------------------------------------------------
+	function GoogleChromeExtensionUserScriptsSupported(){
+		try{
+			if(chrome.userScripts) return true;
+		}catch(e){}
+		return false;
+	}
+
+	// --------------------------------------------------------------------------------
+	// 特権 API に対応しているか
+	// --------------------------------------------------------------------------------
+	function GoogleChromeExtensionPrivileged(){
+		return Boolean(chrome.tabs);
+	}
 
 	// --------------------------------------------------------------------------------
 	// ローカルストレージからロード
@@ -85001,6 +85255,35 @@ function PageExpand(page_expand_arguments){
 		});
 	}
 
+	// --------------------------------------------------------------------------------
+	// 文字列を評価して配列関数を作成
+	// --------------------------------------------------------------------------------
+	function StringEvalArrayFunction(src){
+		try{
+			var a = eval(src);
+
+			if(typeof(a) == "function")	return [a];
+
+			var check = false;
+			if((a) && (typeof(a) == "object")){
+				if(a.constructor == Array){
+					var ary = new Array();
+					var i;
+					var num = a.length;
+					for(i=0;i<num;i++){
+						if(typeof(a[i]) == "function"){
+							ary.push(a[i]);
+						}
+					}
+
+					return ary;
+				}
+			}
+
+		}catch(e){}
+
+		return [];
+	}
 
 	// --------------------------------------------------------------------------------
 	// 文字列からクエリーを取得
