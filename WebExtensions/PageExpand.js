@@ -30440,14 +30440,14 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		load_shadow_list = [
 			{
-				url:base_url,
+				url:base_url + "?v=pc",
 				parse:loadShadowFromHTML,
 				validity:checkValidityFromHTML
 			}
 		];
 		load_more_list = [
 			{
-				url:base_url + last_id + "-",
+				url:base_url + last_id + "-?v=pc",
 				parse:loadMoreFromHTML,
 				validity:checkValidityFromHTML
 			}
@@ -42285,7 +42285,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.7.3");
+				new UI_Text(parent,"PageExpand ver.1.7.4");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -66526,23 +66526,31 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function addEvent(){
 			removeEvent();
-
-			if(window.addEventListener){
-				_element_target.addEventListener("mouseover",mouseOver,false);
-				_element_resize.addEventListener("mousedown",mouseDownResize,false);
-				_element_container.addEventListener("dragstart",dragStart,false);
-			}
+			_element_target.addEventListener("mouseover",mouseOver,false);
+			_element_resize.addEventListener("mousedown",mouseDownResize,false);
+			_element_container.addEventListener("dragstart",dragStart,false);
+			window.addEventListener("selectstart",selectStart,false);
 		}
 
 		// --------------------------------------------------------------------------------
 		// イベントを破棄（内部用）
 		// --------------------------------------------------------------------------------
 		function removeEvent(){
-			if(window.removeEventListener){
-				_element_target.removeEventListener("mouseover",mouseOver,false);
-				_element_resize.removeEventListener("mousedown",mouseDownResize,false);
-				_element_container.removeEventListener("dragstart",dragStart,false);
-			}
+			_element_target.removeEventListener("mouseover",mouseOver,false);
+			_element_resize.removeEventListener("mousedown",mouseDownResize,false);
+			_element_container.removeEventListener("dragstart",dragStart,false);
+			window.removeEventListener("selectstart",selectStart,false);
+		}
+
+		// --------------------------------------------------------------------------------
+		// イベントハンドラ
+		// --------------------------------------------------------------------------------
+		function dragStart(e){
+			e.preventDefault();
+		}
+		function selectStart(e){
+			if(!_resize_task) return;
+			e.preventDefault();
 		}
 
 		// --------------------------------------------------------------------------------
@@ -66691,14 +66699,14 @@ function PageExpand(page_expand_arguments){
 					var pos = input_mouse.getPositionClient();
 					var w = (pos.x - resize_offset.x) - rect.left - (size.offsetWidth  - size.width);
 					var h = (pos.y - resize_offset.y) - rect.top  - (size.offsetHeight - size.height);
-					if(w < 0) w = 0;
-					if(h < 0) h = 0;
+					if(w < 46) w = 46;
+					if(h < 30) h = 30;
 
 					var style = _element_target.style;
-					style.minWidth  = "0";
-					style.minHeight = "0";
-					style.maxWidth  = "none";
-					style.maxHeight = "none";
+					style.minWidth  = (w) + "px";
+					style.minHeight = (h) + "px";
+					style.maxWidth  = (w) + "px";
+					style.maxHeight = (h) + "px";
 					style.width  = (w) + "px";
 					style.height = (h) + "px";
 
@@ -66735,31 +66743,18 @@ function PageExpand(page_expand_arguments){
 		}
 
 		// --------------------------------------------------------------------------------
-		// ドラッグ開始イベント（内部用）
-		// --------------------------------------------------------------------------------
-		function dragStart(e){
-			// デフォルトの動作を無効化する
-			if(e.preventDefault){
-				e.preventDefault();
-			}else{
-				return false;
-			}
-		}
-
-		// --------------------------------------------------------------------------------
 		// 更新（内部用）
 		// --------------------------------------------------------------------------------
 		function update(){
 			// スクロール位置
 			var scroll_pos = WindowGetScrollPosition(window);
 			var target_rect = ElementGetBoundingClientRect(_element_target);
-			target_rect.left += scroll_pos.x;
-			target_rect.right += scroll_pos.x;
-			target_rect.top += scroll_pos.y;
-			target_rect.bottom += scroll_pos.y;
-
 			var target_w = target_rect.right - target_rect.left;
 			var target_h = target_rect.bottom - target_rect.top;
+
+			var parent_rect = ElementGetBoundingClientRect(_element_container);
+			var target_x = target_rect.left - parent_rect.left;
+			var target_y = target_rect.top - parent_rect.top;
 
 			var style = _element_header.style;
 			style.width = (target_w) + "px";
@@ -66767,22 +66762,22 @@ function PageExpand(page_expand_arguments){
 			var header_rect = ElementGetBoundingClientRect(_element_header);
 			var header_h = header_rect.bottom - header_rect.top;
 
-			var hreader_y = target_rect.top - header_h;
-			style.left = (target_rect.left) + "px";
+			var hreader_y = target_y - header_h;
+			style.left = (target_x) + "px";
 			style.top  = (hreader_y) + "px";
 
 			var style = _element_menu.style;
 			style.top = ((1.0 - _fade_alpha) * header_h) + "px";
 
 			var style = _element_hitarea.style;
-			style.left = (target_rect.left) + "px";
-			style.top  = (target_rect.top)  + "px";
+			style.left = (target_x) + "px";
+			style.top  = (target_y)  + "px";
 			style.width  = (target_w)  + "px";
 			style.height = (target_h) + "px";
 
 			var style = _element_resize.style;
-			style.left = (target_rect.right  - 4) + "px";
-			style.top  = (target_rect.bottom - 4) + "px";
+			style.left = (target_x + target_w - 4) + "px";
+			style.top  = (target_y + target_h - 4) + "px";
 			style.opacity = _fade_alpha;
 		}
 
@@ -66821,6 +66816,7 @@ function PageExpand(page_expand_arguments){
 			_element_container = DocumentCreateElement("div");
 			_element_container.draggable = true;
 			ElementSetStyle(_element_container,CSSTextGetInitialDivElement());
+			ElementAddStyle(_element_container,"position:absolute; left:0px; top:0px;");
 
 			_element_header = DocumentCreateElement("div");
 			ElementSetStyle(_element_header,CSSTextGetInitialDivElement());
@@ -76669,6 +76665,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		(function(){
 			_icon = DocumentCreateElement("img");
+			ElementSetStyle(_icon,CSSTextGetInitialImageElement());
 			_notify = NotifyProgress.NOTIFY_TYPE_UNKNOWN;
 		})();
 	}
@@ -87206,17 +87203,21 @@ function PageExpand(page_expand_arguments){
 
 							if(edit.element){
 								attr_name = attr_name.toLowerCase();
-								for(var id in attr_allow){
-									if(attr_allow[id][attr_name]){
-										if(attr_value === undefined)	attr_value = "";
+								if((function(){
+									// data-* 属性
+									var m = attr_name.match(/^data[-].+/);
+									if(m) return true;
 
-										// 属性生成
-										var attribute = document.createAttribute(attr_name);
-										attribute.value = attr_value;
-										edit.element.setAttributeNode(attribute);
-
-										break;
+									for(var id in attr_allow){
+										if(attr_allow[id][attr_name]) return true;
 									}
+
+									return false;
+								})()){
+									// 属性生成
+									var attribute = document.createAttribute(attr_name);
+									attribute.value = attr_value || "";
+									edit.element.setAttributeNode(attribute);
 								}
 							}
 						}

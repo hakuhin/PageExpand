@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.7.1
+// @version        1.7.4
 // @namespace      http://hakuhin.jp/page_expand
 // @description    Popup image. Batch download. Extend BBS. etc...
 // @description:ja 画像のポップアップ、一括ダウンロードツール、匿名掲示板の専ブラ機能など
@@ -1845,6 +1845,7 @@
 
 			return code;
 		};
+
 
 		// --------------------------------------------------------------------------------
 		// 有効であるかを取得（内部用）
@@ -30479,14 +30480,14 @@
 		// --------------------------------------------------------------------------------
 		load_shadow_list = [
 			{
-				url:base_url,
+				url:base_url + "?v=pc",
 				parse:loadShadowFromHTML,
 				validity:checkValidityFromHTML
 			}
 		];
 		load_more_list = [
 			{
-				url:base_url + last_id + "-",
+				url:base_url + last_id + "-?v=pc",
 				parse:loadMoreFromHTML,
 				validity:checkValidityFromHTML
 			}
@@ -39637,7 +39638,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.7.1");
+				new UI_Text(parent,"PageExpand ver.1.7.4");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -40766,6 +40767,7 @@
 				}else{
 					_button.setLabel(_i18n.getMessage("menu_script_obj_editer_edit_script"));
 				}
+				if(_warning) _warning.setVisible(enable);
 				_script_area.setVisible(enable);
 			}
 
@@ -40775,6 +40777,7 @@
 			var _body;
 			var _script_obj;
 			var _button;
+			var _warning;
 			var _script_area;
 
 			// --------------------------------------------------------------------------------
@@ -40798,6 +40801,14 @@
 					update();
 					dispatchChange();
 				};
+
+				if((function(){
+					return false;
+				})()){
+					(function(){
+						_warning = new UI_WarningText(_body);
+					})();
+				}
 
 				_script_area = new UI_ScriptArea(_body);
 				_script_area.oninput = function(v){
@@ -40877,8 +40888,6 @@
 				ElementSetStyle(_body,"margin:0px 0px 5px 0px;");
 				parent.appendChild(_body);
 
-
-
 				_textarea = DocumentCreateElement("textarea");
 				ElementSetStyle(_textarea,"width:100%; height:300px; box-sizing:border-box; display:block; background-color:#fff; margin-bottom:5px;");
 				_body.appendChild(_textarea);
@@ -40907,6 +40916,34 @@
 				new UI_TextHint(_body,_i18n.getMessage("menu_scriptarea_hint"));
 			})();
 		}
+
+		// --------------------------------------------------------------------------------
+		// 警告
+		// --------------------------------------------------------------------------------
+		var UI_WarningText = (function(){
+			var f = function(parent){
+				this.body = DocumentCreateElement("div");
+				ElementSetStyle(this.body,"border:10px solid #f44;margin-bottom:10px;border-radius:5px;color:#c00;padding:5px 10px;");
+				parent.appendChild(this.body);
+			};
+			f.prototype = {
+				setVisible : function(v){
+					this.body.style.display = ((v) ? "" : "none");
+				},
+				insertText : function(str){
+					if(this.line >= 1){
+						var br = DocumentCreateElement("br");
+						this.body.appendChild(br);
+					}
+					var div = DocumentCreateElement("span");
+					ElementSetTextContent(div,str);
+					this.body.appendChild(div);
+					this.line += 1;
+				},
+				line : 0
+			};
+			return f;
+		})();
 
 		// --------------------------------------------------------------------------------
 		// ステッパー
@@ -46586,9 +46623,8 @@
 			_active_panel = "category";
 
 			switch(_current_site){
-			case "2ch":
-			case "5ch":
 			case "5ch_pc":
+			case "5ch_classic":
 			case "open2ch":
 			case "shitaraba":
 				if(_current_site == "shitaraba"){
@@ -46766,6 +46802,167 @@
 				_ui_catalog.sort("number",false);
 				break;
 
+			case "itest5ch":
+				_category_title.nodeValue = _current_site;
+				disableCategoryContainer(false);
+				openSplitterLeft(true);
+
+				var convert_list = new Object();
+				convert_list["ppd"] = function(value){
+					value = Math.floor(value * 100) / 100;
+					return value.toFixed(2);
+				};
+				convert_list["date_new"] = UNIXTIME_ToString_JP;
+
+				_ui_catalog.onUpdateItem = function (info){
+					var parent = info.parent;
+					var data = info.data;
+
+					var get_title = function(size){
+						if(data.title.length > size){
+							return data.title.substr(0,size) + "...";
+						}
+						return data.title;
+					};
+					var get_date = function(){
+						return convert_list["date_new"](data.date_new);
+					};
+					var get_ppd = function(){
+						return convert_list["ppd"](data.ppd);
+					};
+
+					switch(info.layout_mode){
+					case "list":
+						var container = DocumentCreateElement("div");
+						ElementSetStyle(container,"display:flex;");
+						parent.appendChild(container);
+
+						var img_block = DocumentCreateElement("div");
+						ElementSetStyle(img_block,"width:60px;height:60px;");
+						container.appendChild(img_block);
+
+						var image = data.image;
+						if(image){
+							ElementSetStyle(image,"width:100%; height:100%;object-fit:cover;");
+							img_block.appendChild(image);
+						}
+
+						var text_container = DocumentCreateElement("div");
+						ElementSetStyle(text_container,"display:flex; flex-direction:column; justify-content:center; flex:1; row-gap:4px; padding:4px;");
+						container.appendChild(text_container);
+
+						var text_block0 = DocumentCreateElement("div");
+						ElementSetStyle(text_block0,"");
+						text_container.appendChild(text_block0);
+						var inline_text0 = DocumentCreateElement("span");
+						ElementSetStyle(inline_text0,"word-break: break-word;");
+						text_block0.appendChild(inline_text0);
+						var text_node0 = document.createTextNode("");
+						inline_text0.appendChild(text_node0);
+
+						var text_block1 = DocumentCreateElement("div");
+						ElementSetStyle(text_block1,"font-size:10px;");
+						text_container.appendChild(text_block1);
+						var inline_text1 = DocumentCreateElement("span");
+						ElementSetStyle(inline_text1,"color:#888;");
+						text_block1.appendChild(inline_text1);
+						var text_node1 = document.createTextNode("");
+						inline_text1.appendChild(text_node1);
+
+						info.onupdate = function(){
+							text_node0.nodeValue = data.number + ":" + data.title + " (" + data.res + ")";
+							text_node1.nodeValue = "[" + get_ppd() + "/d] [" + get_date() + "]";
+						};
+						break;
+
+					case "small_icon":
+						var inline_text = DocumentCreateElement("span");
+						ElementSetStyle(inline_text,"text-decoration:underline; word-break:break-all;");
+						parent.appendChild(inline_text);
+						var text_node = document.createTextNode("");
+						inline_text.appendChild(text_node);
+
+						info.onupdate = function(){
+							text_node.nodeValue = data.number + ":" + get_title(100) + " (" + data.res + ")";
+						};
+						break;
+
+					case "large_icon":
+						var img_block = DocumentCreateElement("div");
+						ElementSetStyle(img_block,"margin:2px; margin-bottom:0px; text-align:center;");
+						parent.appendChild(img_block);
+
+						var image = data.image;
+						if(image){
+							ElementSetStyle(image,"max-width:100%; max-height:140px;");
+							img_block.appendChild(image);
+						}
+
+						var text_block = DocumentCreateElement("div");
+						ElementSetStyle(text_block,"margin:4px; margin-top:2px;");
+						parent.appendChild(text_block);
+						var inline_text = DocumentCreateElement("span");
+						ElementSetStyle(inline_text,"word-break:break-all;");
+						text_block.appendChild(inline_text);
+						var text_node = document.createTextNode("");
+						inline_text.appendChild(text_node);
+
+						info.onupdate = function(){
+							text_node.nodeValue = data.number + ":" + get_title(50) + " (" + data.res + ")";
+						};
+						break;
+					}
+				};
+
+				_ui_catalog.onUpdateCell = function (info){
+					var callback = convert_list[info.key];
+					var parent = info.parent;
+					var data = info.data;
+					var text_node = document.createTextNode("");
+					parent.appendChild(text_node);
+
+					info.onupdate = function(){
+						if(callback){
+							text_node.nodeValue = callback(data[info.key]);
+						}else{
+							text_node.nodeValue = data[info.key];
+						}
+					}
+				};
+
+				var column;
+				column = _ui_catalog.createColumn("number");
+				column.setLabel("No");
+				column.setWidthMin(50);
+				column.setWidthMax(50);
+				column.setTextAlign("center");
+
+				column = _ui_catalog.createColumn("title");
+				column.setLabel("Title");
+				column.setWidthMin(300);
+
+				column = _ui_catalog.createColumn("res");
+				column.setLabel("Res");
+				column.setWidthMin(50);
+				column.setWidthMax(50);
+				column.setTextAlign("right");
+
+				column = _ui_catalog.createColumn("ppd");
+				column.setLabel("P/d");
+				column.setWidthMin(70);
+				column.setWidthMax(70);
+				column.setTextAlign("right");
+
+				column = _ui_catalog.createColumn("date_new");
+				column.setLabel("Since");
+				column.setWidthMin(150);
+				column.setWidthMax(150);
+				column.setTextAlign("center");
+
+				_ui_catalog.setBlockSize(180,180 * (1/2));
+				_ui_catalog.sort("number",false);
+				break;
+
 			case "2chan":
 				_category_title.nodeValue = _current_site;
 				disableCategoryContainer(false);
@@ -46798,34 +46995,34 @@
 					switch(info.layout_mode){
 					case "list":
 						var container = DocumentCreateElement("div");
-						ElementSetStyle(container,"position:relative; margin:2px; margin-left:4px; margin-right:4px; min-height:60px;");
+						ElementSetStyle(container,"display:flex;");
 						parent.appendChild(container);
 
 						var img_block = DocumentCreateElement("div");
-						ElementSetStyle(img_block,"position:absolute; width:60px; height:60px; text-align:right;");
+						ElementSetStyle(img_block,"width:60px;height:60px;");
 						container.appendChild(img_block);
 
 						var image = data.image;
 						if(image){
-							ElementSetStyle(image,"max-width:100%; max-height:60px;");
+							ElementSetStyle(image,"width:100%; height:100%;object-fit:cover;");
 							img_block.appendChild(image);
 						}
 
 						var text_container = DocumentCreateElement("div");
-						ElementSetStyle(text_container,"margin-left:65px;");
+						ElementSetStyle(text_container,"display:flex; flex-direction:column; justify-content:center; flex:1; row-gap:4px; padding:4px;");
 						container.appendChild(text_container);
 
 						var text_block0 = DocumentCreateElement("div");
 						ElementSetStyle(text_block0,"");
 						text_container.appendChild(text_block0);
 						var inline_text0 = DocumentCreateElement("span");
-						ElementSetStyle(inline_text0,"word-break: break-all;");
+						ElementSetStyle(inline_text0,"word-break: break-word;");
 						text_block0.appendChild(inline_text0);
 						var text_node0 = document.createTextNode("");
 						inline_text0.appendChild(text_node0);
 
 						var text_block1 = DocumentCreateElement("div");
-						ElementSetStyle(text_block1,"margin-top:2px;");
+						ElementSetStyle(text_block1,"font-size:10px;");
 						text_container.appendChild(text_block1);
 						var inline_text1 = DocumentCreateElement("span");
 						ElementSetStyle(inline_text1,"color:#888;");
@@ -46853,7 +47050,7 @@
 
 					case "large_icon":
 						var img_block = DocumentCreateElement("div");
-						ElementSetStyle(img_block,"margin:4px; margin-bottom:0px; text-align:center;");
+						ElementSetStyle(img_block,"margin:2px; margin-bottom:0px; text-align:center;");
 						parent.appendChild(img_block);
 
 						var image = data.image;
@@ -46929,7 +47126,7 @@
 				column.setWidthMax(150);
 				column.setTextAlign("center");
 
-				_ui_catalog.setBlockSize(140,140 * (4/3));
+				_ui_catalog.setBlockSize(130,130 * (4/3));
 				_ui_catalog.sort("number",false);
 				break;
 
@@ -46986,7 +47183,7 @@
 						ElementSetStyle(text_block0,"");
 						text_container.appendChild(text_block0);
 						var inline_text0 = DocumentCreateElement("span");
-						ElementSetStyle(inline_text0,"word-break: break-all;");
+						ElementSetStyle(inline_text0,"word-break: break-word;");
 						text_block0.appendChild(inline_text0);
 						var text_node0 = document.createTextNode("");
 						inline_text0.appendChild(text_node0);
@@ -47102,11 +47299,11 @@
 				column.setWidthMax(150);
 				column.setTextAlign("center");
 
-				_ui_catalog.setBlockSize(140,140 * (4/3));
+				_ui_catalog.setBlockSize(130,130 * (4/3));
 				_ui_catalog.sort("number",false);
 				break;
 
-			case "8chan":
+			case "8kun":
 				_category_title.nodeValue = _current_site;
 				disableCategoryContainer(false);
 				openSplitterLeft(true);
@@ -47159,7 +47356,7 @@
 						ElementSetStyle(text_block0,"");
 						text_container.appendChild(text_block0);
 						var inline_text0 = DocumentCreateElement("span");
-						ElementSetStyle(inline_text0,"word-break: break-all;");
+						ElementSetStyle(inline_text0,"word-break: break-word;");
 						text_block0.appendChild(inline_text0);
 						var text_node0 = document.createTextNode("");
 						inline_text0.appendChild(text_node0);
@@ -47332,7 +47529,7 @@
 						ElementSetStyle(text_block0,"");
 						text_container.appendChild(text_block0);
 						var inline_text0 = DocumentCreateElement("span");
-						ElementSetStyle(inline_text0,"word-break: break-all;");
+						ElementSetStyle(inline_text0,"word-break: break-word;");
 						text_block0.appendChild(inline_text0);
 						var text_node0 = document.createTextNode("");
 						inline_text0.appendChild(text_node0);
@@ -47505,7 +47702,7 @@
 						ElementSetStyle(text_block0,"");
 						text_container.appendChild(text_block0);
 						var inline_text0 = DocumentCreateElement("span");
-						ElementSetStyle(inline_text0,"word-break: break-all;");
+						ElementSetStyle(inline_text0,"word-break: break-word;");
 						text_block0.appendChild(inline_text0);
 						var text_node0 = document.createTextNode("");
 						inline_text0.appendChild(text_node0);
@@ -47932,11 +48129,11 @@
 			var loader = new Loader();
 
 			switch(_current_site){
-			case "2ch":
-			case "5ch":
 			case "5ch_pc":
+			case "5ch_classic":
+			case "itest5ch":
 			case "open2ch":
-				var domain = (_current_site == "5ch_pc") ? "5ch" : _current_site;
+				var domain = (_current_site == "open2ch") ? "open2ch" : "5ch";
 				var loader_url = "https://menu." + domain + ".net/bbsmenu.html";
 
 				// 成功
@@ -47978,6 +48175,19 @@
 									var url = p1;
 									url = StringLiteral_To_String(url) || url;
 									url = StringUrl_To_Absolute(url,loader_url);
+
+									switch(_current_site){
+									case "itest5ch":
+										var url_parser = URL_Parser(url);
+										var domain = (url_parser.hostname.search(/bbspink[.]com/) >= 0) ? "bbspink.com" : "5ch.net";
+										url = "https://itest." + domain + "/subback" + url_parser.pathname;
+										break;
+									case "5ch_pc":
+									case "5ch_classic":
+										url += "?v=pc";
+										break;
+									}
+
 									var item = folder.createItem(p1);
 									item.setLabel(p2);
 									item.setTooltip(url);
@@ -48153,6 +48363,7 @@
 							item.setURL(url);
 
 							execute_queue.attachFirst(f,null);
+							return;
 						}catch(e){
 						}
 
@@ -48174,7 +48385,7 @@
 				loader.loadText();
 				break;
 
-			case "8chan":
+			case "8kun":
 
 				// 成功
 				loader.onload = function(str){
@@ -48182,12 +48393,25 @@
 
 					var boards = JsonParse(str);
 
-					var folder = _ui_category.createFolder("8chan");
-					folder.setLabel("8chan");
+					// 勢い順ソート
+					(function(){
+						var a = new Array();
+						var n = boards.length;
+						if(n > 2000) n = 2000;
+						var i,j;
+						for(i=0;i<n;i++){
+							var b = boards[i];
+							for(j=0;j<i;j++){
+								if(b.ppd > a[j].ppd) break;
+							}
+							a.splice(j,0,b);
+						}
+						boards = a;
+					})();
 
+					var folders = new Object();
 					var p = 0;
 					var n = boards.length;
-					if(n > 2000) n = 2000;
 					function f(){
 						if(exit()) return;
 
@@ -48196,12 +48420,19 @@
 							var board = boards[p];
 							p += 1;
 
-							var item = folder.createItem(board.title);
+							var folder = folders[board.locale];
+							if(!folder){
+								folder = folders[board.locale] = _ui_category.createFolder(board.locale);
+								folder.setLabel(board.locale);
+							}
+
+							var item = folder.createItem(board.uri);
 							item.setLabel(board.uri);
 							item.setTooltip(board.title);
-							item.setURL("https://8ch.net/" + (board.uri) + "/");
+							item.setURL("https://8kun.top/" + (board.uri) + "/");
 
 							execute_queue.attachFirst(f,null);
+							return;
 						}catch(e){
 						}
 
@@ -48219,7 +48450,7 @@
 
 				// テキストの読み込み
 				loader.setMethod("GET");
-				loader.setURL("https://8ch.net/boards.json");
+				loader.setURL("https://8kun.top/boards.json");
 				loader.loadText();
 				break;
 
@@ -48274,6 +48505,7 @@
 							item.setURL(board.url);
 
 							execute_queue.attachFirst(f,null);
+							return;
 						}catch(e){
 						}
 
@@ -48291,7 +48523,7 @@
 
 				// テキストの読み込み
 				loader.setMethod("GET");
-				loader.setURL("https://2ch.hk/boards.json");
+				loader.setURL("https://2ch.hk/index.json");
 				loader.loadText();
 				break;
 
@@ -48364,9 +48596,8 @@
 			_button_catalog_reload.setDisabled(true);
 
 			switch(_current_site){
-			case "2ch":
-			case "5ch":
 			case "5ch_pc":
+			case "5ch_classic":
 			case "open2ch":
 			case "shitaraba":
 				var protocol;
@@ -48397,11 +48628,11 @@
 					}
 				}else{
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net|5ch[.]net))/test/read[.]cgi/([^/]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net|5ch[.]net))/test/read[.]cgi/(c/|)([^/]+)","i"));
 						if(m){
 							protocol = m[1];
 							domain = m[2];
-							directory = m[4];
+							directory = m[5];
 						}
 					}
 					if(!domain){
@@ -48464,9 +48695,9 @@
 									item.setURL(protocol + "://" + domain + "/bbs/read.cgi/" + directory + "/" + (m[1]));
 								}else{
 									var c = "";
-									if(_current_site == "5ch_pc") c = "c/";
+									if(_current_site == "5ch_classic") c = "c/";
 									if(domain.match(/bbspink[.]com$/)) c = "";
-									item.setURL(protocol + "://" + domain + "/test/read.cgi/" + c + directory + "/" + (m[1]));
+									item.setURL(protocol + "://" + domain + "/test/read.cgi/" + c + directory + "/" + (m[1]) + "?v=pc");
 								}
 								var data = item.getData();
 								data.number = index;
@@ -48514,6 +48745,109 @@
 				}else{
 					loader.overrideMimeType("text/plain; charset=Shift_JIS");
 				}
+				loader.loadText();
+				break;
+
+			case "itest5ch":
+				var domain;
+				var directory;
+				if(!domain){
+					var m = _catalog_url.match(new RegExp("(http|https)://(itest[.](5ch[.]net|bbspink[.]com))/[^/]+/test/read[.]cgi/([^/]+)","i"));
+					if(m){
+						domain = m[2];
+						directory = m[4];
+					}
+				}
+				if(!domain){
+					var m = _catalog_url.match(new RegExp("(http|https)://(itest[.](5ch[.]net|bbspink[.]com))/subback/([^/.?]+)","i"));
+					if(m){
+						domain = m[2];
+						directory = m[4];
+					}
+				}
+				if(domain){
+					_catalog_title.nodeValue = m[0];
+				}else{
+					complete({result:false});
+					return;
+				}
+
+				// ローダーオブジェクトを作成
+				var loader = new Loader();
+				var loader_url = "https://" + domain + "/subbacks/" + directory + ".json";
+
+				// 成功
+				loader.onload = function(str){
+					if(exit()) return;
+					var re_id = new RegExp("/([0-9]+)$","i");
+
+					var item_list = _ui_catalog.getItemList();
+					var i;
+					var num = item_list.length;
+					for(i=0;i<num;i++){
+						var data = item_list[i].getData();
+						data.number = "x";
+						data.ppd = (function(){
+							var now = new Date();
+							var old = new Date(data.date_new * 1000);
+							var sub = now.getTime() - old.getTime();
+							var ppd = 0;
+							if(sub > 0){
+								ppd = data.res / (sub / 1000 / 60 / 60 / 24);
+							}
+							return ppd;
+						})();
+					}
+
+					var o = JsonParse(str);
+					var threads = o.threads || [];
+
+					var index = 1;
+					threads.forEach(function(a){
+						var item = _ui_catalog.createItem(a[3]);
+						var data = item.getData();
+						data.number = index;
+
+						var id = 0;
+						m = a[3].match(re_id);
+						if(m) id = parseInt(m[1]);
+						data.id = id;
+						item.setURL("https://" + domain + "/" + a[2] + "/test/read.cgi/" + directory + "/" + id);
+						data.title = StringConvert_From_CharacterReferences_To_Text(a[5]);
+						data.res = parseInt(a[1]);
+						data.date_new = id;
+						if(a[6]){
+							data.image_url = "https://" + a[6];
+							var image = new Image();
+							image.src = data.image_url;
+							data.image = image;
+						}
+						data.ppd = (function(){
+							var now = new Date();
+							var old = new Date(data.date_new * 1000);
+							var sub = now.getTime() - old.getTime();
+							var ppd = 0;
+							if(sub > 0){
+								ppd = data.res / (sub / 1000 / 60 / 60 / 24);
+							}
+							return ppd;
+						})();
+						index += 1;
+					});
+
+					_ui_catalog.commit();
+					complete({result:true});
+				};
+
+				// 失敗
+				loader.onerror = function(){
+					if(exit()) return;
+					complete({result:false});
+				};
+
+				// テキストの読み込み
+				loader.setMethod("GET");
+				loader.setURL(loader_url);
 				loader.loadText();
 				break;
 
@@ -48751,11 +49085,11 @@
 				loader.loadText();
 				break;
 
-			case "8chan":
+			case "8kun":
 				var domain;
 				var directory;
 				if(!domain){
-					var m = _catalog_url.match(new RegExp("(http|https)://(8ch[.]net)/([^/]+)","i"));
+					var m = _catalog_url.match(new RegExp("(http|https)://(8kun[.]top)/([^/]+)","i"));
 					if(m){
 						domain = m[2];
 						directory = m[3];
@@ -48828,7 +49162,7 @@
 										return thread.tim + ext;
 									})();
 									if(thumb){
-										return "https://media.8ch.net/file_store/thumb/" + thumb;
+										return "https://media.128ducks.com/file_store/thumb/" + thumb;
 									}
 									if(thread.embed){
 										var m = thread.embed.match(new RegExp("//img[.]youtube[.]com/vi/[^/]+/[0-9]+[.]jpg","i"));
@@ -48871,7 +49205,7 @@
 
 				// テキストの読み込み
 				loader.setMethod("GET");
-				loader.setURL("https://8ch.net/" + directory + "/catalog.json");
+				loader.setURL("https://8kun.top/" + directory + "/catalog.json");
 				loader.loadText();
 				break;
 
@@ -49447,25 +49781,23 @@
 		_this.setURL = function(url){
 			if(!url) return;
 
-			var m = url.match(new RegExp("(http|https)://([^/]+)","i"));
-			if(!m) return;
-
-			var domain = m[2];
+			var url_parser = URL_Parser(url);
+			var domain = url_parser.hostname;
 			var site;
 			if(domain.match(new RegExp("open2ch[.]net$","i"))){
 				site = "open2ch";
 			}else if(domain.match(new RegExp("shitaraba[.]net$","i"))){
 				site = "shitaraba";
-			}else if(domain.match(new RegExp("(5ch[.]net)$","i"))){
-				site = "5ch";
-			}else if(domain.match(new RegExp("(bbspink[.]com|2ch[.]net)$","i"))){
-				site = "2ch";
+			}else if(domain.match(new RegExp("(itest[.](5ch[.]net|bbspink[.]com))$","i"))){
+				site = "itest5ch";
+			}else if(domain.match(new RegExp("(5ch[.]net|bbspink[.]com)$","i"))){
+				site = (url_parser.pathname.search(/[/]test[/]read[.]cgi[/]c[/]/) >= 0) ? "5ch_classic" : "5ch_pc";
 			}else if(domain.match(new RegExp("2chan[.]net$","i"))){
 				site = "2chan";
 			}else if(domain.match(new RegExp("4chan[.]org","i"))){
 				site = "4chan";
-			}else if(domain.match(new RegExp("8ch[.]net|8chan.co","i"))){
-				site = "8chan";
+			}else if(domain.match(new RegExp("8kun[.]top","i"))){
+				site = "8kun";
 			}else if(domain.match(new RegExp("2ch[.]hk","i"))){
 				site = "2ch.hk";
 			}else if(domain.match(new RegExp("reddit[.]com$","i"))){
@@ -49498,7 +49830,7 @@
 
 			// ボディ
 			var body = document.body;
-			ElementSetStyle(body,'font-family:"Meiryo","sans-serif"; margin:0px; padding:0px; background-color:#ccc; overflow:hidden; user-select:none; -moz-user-select:none; -webkit-user-select:none;');
+			ElementSetStyle(body,'font-family:"Segoe UI","Meiryo","sans-serif"; margin:0px; padding:0px; background-color:#ccc; overflow:hidden; user-select:none; -moz-user-select:none; -webkit-user-select:none;');
 
 			// タイトル
 			document.title = "BBS Board";
@@ -49548,18 +49880,18 @@
 					_select_site.appendChild(option);
 
 					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"2ch.net");
-					option.value = "2ch";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"5ch.net");
-					option.value = "5ch";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
 					ElementSetTextContent(option,"5ch.net (PC)");
 					option.value = "5ch_pc";
+					_select_site.appendChild(option);
+
+					var option = DocumentCreateElement("option");
+					ElementSetTextContent(option,"5ch.net (classic)");
+					option.value = "5ch_classic";
+					_select_site.appendChild(option);
+
+					var option = DocumentCreateElement("option");
+					ElementSetTextContent(option,"itest.5ch.net");
+					option.value = "itest5ch";
 					_select_site.appendChild(option);
 
 					var option = DocumentCreateElement("option");
@@ -49578,8 +49910,8 @@
 					_select_site.appendChild(option);
 
 					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"8ch.net");
-					option.value = "8chan";
+					ElementSetTextContent(option,"8kun.top");
+					option.value = "8kun";
 					_select_site.appendChild(option);
 
 					var option = DocumentCreateElement("option");
@@ -50792,6 +51124,7 @@
 				break;
 
 			case "large_icon":
+/*
 				var resize_rect = ElementGetBoundingClientRect(_table_body);
 				var width = resize_rect.right - resize_rect.left - 1.0;
 				width -= _table_body.offsetWidth - (_table_body.clientWidth + _table_body.clientLeft);
@@ -50802,7 +51135,7 @@
 
 				var style = _style_item_container.style;
 				style.width = (_block_size.width + add - style_w) + "px";
-
+*/
 			default:
 				var style = _style_item_container.style;
 				style.width = "audo";
@@ -50814,104 +51147,132 @@
 		// --------------------------------------------------------------------------------
 		// レイアウトモードを設定
 		// --------------------------------------------------------------------------------
-		_this.setLayoutMode = function (type){
-			_layout_mode = type;
-			var style;
-			switch(_layout_mode){
-			case "detail":
-				style = _style_item_container.style;
-				style.display = "block";
-				style.margin  = "0px";
-				style.width = "auto";
-				style.height = "auto";
-				style.minHeight = "0";
-				style.whiteSpace = "nowrap";
-				style.border = "hidden";
-
-				style = _table_body.style;
-				style.padding = "0px";
-				style.lineHeight = "1.0";
-				break;
-			case "list":
-				style = _style_item_container.style;
-				style.display = "block";
-				style.margin  = "0px";
-				style.marginBottom  = "2px";
-				style.width = "auto";
-				style.height = "auto";
-				style.minHeight = "0";
-				style.whiteSpace = "normal";
-				style.border = "1px solid #ddd";
-
-				style = _table_body.style;
-				style.padding = "4px";
-				style.lineHeight = "13px";
-				break;
-			case "large_icon":
-				style = _style_item_container.style;
-				style.display = "inline-block";
-				style.margin  = "0px";
-				style.marginRight = "2px";
-				style.marginBottom = "2px";
-				style.width = (_block_size.width) + "px";
-				style.height = "auto";
-				style.minHeight = (_block_size.height) + "px";
-				style.whiteSpace = "normal";
-				style.border = "1px solid #ddd";
-
-				style = _table_body.style;
-				style.padding = "0px";
-				style.paddingLeft = "4px";
-				style.paddingTop = "4px";
-				style.lineHeight = "13px";
-
-				break;
-			case "small_icon":
-				style = _style_item_container.style;
-				style.display = "inline";
-				style.margin  = "0px";
-				style.marginRight = "8px";
-				style.width = "auto";
-				style.height = "auto";
-				style.minHeight = "0";
-				style.whiteSpace = "normal";
-				style.border = "hidden";
-
-				style = _table_body.style;
-				style.padding = "4px";
-				style.lineHeight = "14px";
-				break;
+		_this.setLayoutMode = (function(){
+			function update(style,dic){
+				Object.entries(dic).forEach(function(a){
+					Object.entries(dic[a[0]]).forEach(function(a){
+						StyleDeclarationRemoveProperty(style,a[0]);
+					});
+				});
+				Object.entries(dic[_layout_mode]).forEach(function(a){
+					StyleDeclarationSetProperty(style,a[0],a[1]);
+				});
 			}
 
-			switch(type){
-			case "detail":
-				style = _table_column.style;
-				style.display = "block";
-				style = _table_body.style;
-				style.top = "24px";
-				break;
-			default:
-				style = _table_column.style;
-				style.display = "none";
-				style = _table_body.style;
-				style.top = "0px";
-				break;
-			}
+			return function (type){
+				_layout_mode = type;
 
-			switch(type){
-			case "small_icon":
-				StyleDeclarationRemoveProperty(_style_item_even.style,"background-color");
-				StyleDeclarationRemoveProperty(_style_item_odd.style,"background-color");
-				break;
-			default:
-				StyleDeclarationSetProperty(_style_item_even.style,"background-color","#fafafa");
-				StyleDeclarationSetProperty(_style_item_odd.style,"background-color","#ffffff");
-				break;
-			}
+				update(_table_body.style,{
+					"detail":{
+						"padding":"0px",
+						"line-height":"1.0"
+					},
+					"list":{
+						"display":"flex",
+						"flex-direction":"column",
+						"flex-wrap":"nowrap",
+						"justify-content":"flex-start",
+						"padding":"4px",
+						"line-height":"16px",
+						"row-gap":"2px"
+					},
+					"large_icon":{
+						"display":"flex",
+						"padding":"0px",
+//						"padding-left":"4px",
+//						"padding-top":"4px",
+						"line-height":"16px",
+						"flex-direction":"row",
+						"flex-wrap":"wrap",
+						"align-content":"flex-start",
+						"justify-content":"flex-start",
+						"align-items":"stretch",
+						"gap":"1px 1px"
+					},
+					"small_icon":{
+						"padding":"4px",
+						"line-height":"16px"
+					}
+				});
 
-			_this.resize();
-			_this.update();
-		};
+				update(_style_item_container.style,{
+					"detail":{
+						"display":"block",
+						"margin":"0px",
+						"width":"auto",
+						"height":"auto",
+						"min-height":"0",
+						"white-space":"nowrap",
+						"border":"hidden"
+					},
+					"list":{
+//						"display":"block",
+						"margin":"0px",
+//						"margin-bottom ":"2px",
+						"width":"auto",
+						"height":"auto",
+//						"min-height":"0",
+						"white-space":"normal",
+						"border":"1px solid #ddd",
+						"flex-shrink":"0",
+						"overflow":"hidden"
+					},
+					"large_icon":{
+						"display":"flex",
+						"flex-direction":"column",
+						"justify-content":"center",
+						"align-items":"center",
+						"margin":"0px",
+						"flex-grow":"1",
+						"flex-shrink":"1",
+						"flex-basis":(_block_size.width) + "px",
+						"max-width":(_block_size.width*2) + "px",
+						"border":"1px solid #ddd",
+						"overflow":"hidden"
+					},
+					"small_icon":{
+						"display":"inline",
+						"margin":"0px",
+						"margin-right":"8px",
+//						"width":"auto",
+						"height":"auto",
+						"min-height":"0",
+						"white-space":"normal",
+						"border":"hidden"
+					}
+				});
+
+				var style;
+				switch(type){
+				case "detail":
+					style = _table_column.style;
+					style.display = "block";
+					style = _table_body.style;
+					style.top = "24px";
+					break;
+				default:
+					style = _table_column.style;
+					style.display = "none";
+					style = _table_body.style;
+					style.top = "0px";
+					break;
+				}
+
+				switch(type){
+				case "small_icon":
+					StyleDeclarationRemoveProperty(_style_item_even.style,"background-color");
+					StyleDeclarationRemoveProperty(_style_item_odd.style,"background-color");
+					break;
+				default:
+					StyleDeclarationSetProperty(_style_item_even.style,"background-color","#fafafa");
+					StyleDeclarationSetProperty(_style_item_odd.style,"background-color","#ffffff");
+					break;
+				}
+
+				_this.resize();
+				_this.update();
+			};
+		})();
 
 		// --------------------------------------------------------------------------------
 		// ターゲットモードを設定
@@ -51302,7 +51663,7 @@
 				})();
 
 			_table_body = DocumentCreateElement("div");
-			ElementSetStyle(_table_body,"position:absolute; left:0px; top:32px; right:0px; bottom:0px; font-size:12px; line-height:1.0; overflow-x:auto; overflow-y:scroll; background:#fff;");
+			ElementSetStyle(_table_body,"position:absolute; left:0px; top:32px; right:0px; bottom:0px; font-size:14px; line-height:1.0; overflow-x:auto; overflow-y:scroll; background:#fff;");
 			parent.appendChild(_table_body);
 
 			var right = (function(){
@@ -63230,31 +63591,31 @@
 		// --------------------------------------------------------------------------------
 		function addEvent(){
 			removeEvent();
-
-			if(window.addEventListener){
-				_element_target.addEventListener("mouseover",mouseOver,false);
-				_element_resize.addEventListener("mousedown",mouseDownResize,false);
-				_element_container.addEventListener("dragstart",dragStart,false);
-			}else if(window.attachEvent){
-				_element_target.attachEvent("onmouseover",mouseOver);
-				_element_resize.attachEvent("onmousedown",mouseDownResize);
-				_element_container.attachEvent("ondragstart",dragStart);
-			}
+			_element_target.addEventListener("mouseover",mouseOver,false);
+			_element_resize.addEventListener("mousedown",mouseDownResize,false);
+			_element_container.addEventListener("dragstart",dragStart,false);
+			window.addEventListener("selectstart",selectStart,false);
 		}
 
 		// --------------------------------------------------------------------------------
 		// イベントを破棄（内部用）
 		// --------------------------------------------------------------------------------
 		function removeEvent(){
-			if(window.removeEventListener){
-				_element_target.removeEventListener("mouseover",mouseOver,false);
-				_element_resize.removeEventListener("mousedown",mouseDownResize,false);
-				_element_container.removeEventListener("dragstart",dragStart,false);
-			}else if(window.detachEvent){
-				_element_target.detachEvent("onmouseover",mouseOver);
-				_element_resize.detachEvent("onmousedown",mouseDownResize);
-				_element_container.detachEvent("ondragstart",dragStart);
-			}
+			_element_target.removeEventListener("mouseover",mouseOver,false);
+			_element_resize.removeEventListener("mousedown",mouseDownResize,false);
+			_element_container.removeEventListener("dragstart",dragStart,false);
+			window.removeEventListener("selectstart",selectStart,false);
+		}
+
+		// --------------------------------------------------------------------------------
+		// イベントハンドラ
+		// --------------------------------------------------------------------------------
+		function dragStart(e){
+			e.preventDefault();
+		}
+		function selectStart(e){
+			if(!_resize_task) return;
+			e.preventDefault();
 		}
 
 		// --------------------------------------------------------------------------------
@@ -63403,14 +63764,14 @@
 					var pos = input_mouse.getPositionClient();
 					var w = (pos.x - resize_offset.x) - rect.left - (size.offsetWidth  - size.width);
 					var h = (pos.y - resize_offset.y) - rect.top  - (size.offsetHeight - size.height);
-					if(w < 0) w = 0;
-					if(h < 0) h = 0;
+					if(w < 46) w = 46;
+					if(h < 30) h = 30;
 
 					var style = _element_target.style;
-					style.minWidth  = "0";
-					style.minHeight = "0";
-					style.maxWidth  = "none";
-					style.maxHeight = "none";
+					style.minWidth  = (w) + "px";
+					style.minHeight = (h) + "px";
+					style.maxWidth  = (w) + "px";
+					style.maxHeight = (h) + "px";
 					style.width  = (w) + "px";
 					style.height = (h) + "px";
 
@@ -63447,31 +63808,18 @@
 		}
 
 		// --------------------------------------------------------------------------------
-		// ドラッグ開始イベント（内部用）
-		// --------------------------------------------------------------------------------
-		function dragStart(e){
-			// デフォルトの動作を無効化する
-			if(e.preventDefault){
-				e.preventDefault();
-			}else{
-				return false;
-			}
-		}
-
-		// --------------------------------------------------------------------------------
 		// 更新（内部用）
 		// --------------------------------------------------------------------------------
 		function update(){
 			// スクロール位置
 			var scroll_pos = WindowGetScrollPosition(window);
 			var target_rect = ElementGetBoundingClientRect(_element_target);
-			target_rect.left += scroll_pos.x;
-			target_rect.right += scroll_pos.x;
-			target_rect.top += scroll_pos.y;
-			target_rect.bottom += scroll_pos.y;
-
 			var target_w = target_rect.right - target_rect.left;
 			var target_h = target_rect.bottom - target_rect.top;
+
+			var parent_rect = ElementGetBoundingClientRect(_element_container);
+			var target_x = target_rect.left - parent_rect.left;
+			var target_y = target_rect.top - parent_rect.top;
 
 			var style = _element_header.style;
 			style.width = (target_w) + "px";
@@ -63479,22 +63827,22 @@
 			var header_rect = ElementGetBoundingClientRect(_element_header);
 			var header_h = header_rect.bottom - header_rect.top;
 
-			var hreader_y = target_rect.top - header_h;
-			style.left = (target_rect.left) + "px";
+			var hreader_y = target_y - header_h;
+			style.left = (target_x) + "px";
 			style.top  = (hreader_y) + "px";
 
 			var style = _element_menu.style;
 			style.top = ((1.0 - _fade_alpha) * header_h) + "px";
 
 			var style = _element_hitarea.style;
-			style.left = (target_rect.left) + "px";
-			style.top  = (target_rect.top)  + "px";
+			style.left = (target_x) + "px";
+			style.top  = (target_y)  + "px";
 			style.width  = (target_w)  + "px";
 			style.height = (target_h) + "px";
 
 			var style = _element_resize.style;
-			style.left = (target_rect.right  - 4) + "px";
-			style.top  = (target_rect.bottom - 4) + "px";
+			style.left = (target_x + target_w - 4) + "px";
+			style.top  = (target_y + target_h - 4) + "px";
 			style.opacity = _fade_alpha;
 		}
 
@@ -63533,6 +63881,7 @@
 			_element_container = DocumentCreateElement("div");
 			_element_container.draggable = true;
 			ElementSetStyle(_element_container,CSSTextGetInitialDivElement());
+			ElementAddStyle(_element_container,"position:absolute; left:0px; top:0px;");
 
 			_element_header = DocumentCreateElement("div");
 			ElementSetStyle(_element_header,CSSTextGetInitialDivElement());
@@ -73451,6 +73800,7 @@
 		// --------------------------------------------------------------------------------
 		(function(){
 			_icon = DocumentCreateElement("img");
+			ElementSetStyle(_icon,CSSTextGetInitialImageElement());
 			_notify = NotifyProgress.NOTIFY_TYPE_UNKNOWN;
 		})();
 	}
@@ -81465,7 +81815,6 @@
 		}
 	}
 
-
 	// --------------------------------------------------------------------------------
 	// GM_download が利用可能か
 	// --------------------------------------------------------------------------------
@@ -84007,17 +84356,21 @@
 
 							if(edit.element){
 								attr_name = attr_name.toLowerCase();
-								for(var id in attr_allow){
-									if(attr_allow[id][attr_name]){
-										if(attr_value === undefined)	attr_value = "";
+								if((function(){
+									// data-* 属性
+									var m = attr_name.match(/^data[-].+/);
+									if(m) return true;
 
-										// 属性生成
-										var attribute = document.createAttribute(attr_name);
-										attribute.value = attr_value;
-										edit.element.setAttributeNode(attribute);
-
-										break;
+									for(var id in attr_allow){
+										if(attr_allow[id][attr_name]) return true;
 									}
+
+									return false;
+								})()){
+									// 属性生成
+									var attribute = document.createAttribute(attr_name);
+									attribute.value = attr_value || "";
+									edit.element.setAttributeNode(attribute);
 								}
 							}
 						}
