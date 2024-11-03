@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.7.4
+// @version        1.7.5
 // @namespace      http://hakuhin.jp/page_expand
 // @description    Popup image. Batch download. Extend BBS. etc...
 // @description:ja 画像のポップアップ、一括ダウンロードツール、匿名掲示板の専ブラ機能など

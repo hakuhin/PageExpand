@@ -11888,6 +11888,26 @@ function PageExpand(page_expand_arguments){
 		}
 		if(exit())	return proj;
 
+		if(proj.version < 53){
+			proj.version = 53;
+
+			var obj = addPreset(proj.make_link_to_text,"5ch",null);
+			obj.preset = {
+				name:{
+					standard:"For 5ch.net",
+					locales:{
+						ja:"スレッド掲示板用",
+						en:"For 5ch.net"
+					}
+				},
+				script:PageExpandProjectScriptObject_Create("MakeLinkToText_5ch")
+			};
+
+			var preset = getPreset(proj.urlmap,"bbs");
+			preset.make_link_to_text.id = "5ch";
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
@@ -14724,6 +14744,239 @@ function PageExpand(page_expand_arguments){
 				}
 			}
 		});
+
+		return false;
+	},
+	function(info,response){
+		response({});
+		return true;
+	}
+
+			]);
+
+			// --------------------------------------------------------------------------------
+			// ハイパーリンク化定義「スレッド掲示板用」
+			// --------------------------------------------------------------------------------
+			attachItem( "MakeLinkToText_5ch" , [
+
+	function(info,response){
+		var text_node = info.text_node;
+
+		// スキームリスト
+		var scheme_list = [
+			{search:"https://",protocol:"https"},
+			{search:"http://",protocol:"http"},
+			{search:"ttps://",protocol:"https"},
+			{search:"tps://",protocol:"https"},
+			{search:"ps://",protocol:"https"},
+			{search:"s://",protocol:"https"},
+			{search:"p://",protocol:"http"},
+			{search:"://",protocol:"https"},
+			{search:"https:/",protocol:"https"},
+			{search:"http:/",protocol:"http"}
+		];
+		// スキーム無し許可アドレス
+		var allow_url_list = [
+			{
+				search:"i.imgur.com",
+				match:/^i[.]imgur[.]com[/][a-z0-9_]+[.][a-z0-9]{3,4}/i,
+				protocol:"https"
+			},{
+				search:"pbs.twimg.com",
+				match:/^pbs[.]twimg[.]com[/][a-z0-9#%_.!~*';/?:@&=+$,-]+/i,
+				protocol:"https"
+			},{
+				search:"video.twimg.com",
+				match:/^video[.]twimg[.]com[/][^/]+[/][0-9]+[/][a-z0-9#%_!~*';/?:@&=+$,-]+[.][a-z0-9]{3,4}/i,
+				protocol:"https"
+			}
+		];
+
+		var scheme_dictionary = new Object();
+		var allow_site_dictionary = new Object();
+		var ignore_dictionary = {"WBR":1};
+		var inline_dictionary = {"SPAN":1,"FONT":1,"TT":1,"EM":1,"B":1,"S":1,"I":1,"BIG":1,"SMALL":1};
+
+		var char_regexp = new RegExp("^[a-zA-Z0-9#%_.!~*';/?:@&=+$,-]*","i");
+		var omit_regexp = new RegExp("[.][.][.]$","");
+		var search_regexp = (function(){
+			var a = new Array();
+			var esc_re = new RegExp("[-#%_.!~*';/?:@&=+$,]","g");
+			var esc_fc = function(m,p1){ return "["+m+"]"; };
+			scheme_list.forEach(function(o){
+				a.push(o.search.replace(esc_re,esc_fc));
+				scheme_dictionary[o.search] = o;
+			});
+			allow_url_list.forEach(function(o){
+				a.push(o.search.replace(esc_re,esc_fc));
+				allow_site_dictionary[o.search] = o;
+			});
+			return new RegExp(a.join("|"),"ig");
+		})();
+
+		var str_to_half = function(s){
+			s = StringConvertFromAlphabeticFullToAlphabeticHalf(s);
+			s = StringConvertFromNumericFullToNumericHalf(s);
+			return StringConvertFromSignFullToSignHalf(s);
+		}
+
+		var base = DomNodeGetNodeValue(text_node);
+		var half = str_to_half(base);
+		var size = base.length;
+
+		var p = 0;
+		var b = 0;
+		var n = 0;
+		var m;
+		var nodes;
+
+		while(true){
+			m = search_regexp.exec(half);
+			if(!m) break;
+
+			if(!nodes){
+				nodes = (function(){
+					var nodes = new Array();
+					var node = text_node.nextSibling;
+					while(node){
+						var o = (function(){
+							if(node.nodeType == 1){
+								if(ignore_dictionary[node.tagName]){
+									return {node:node,base:""};
+								}
+								if(inline_dictionary[node.tagName]){
+									if((function(){
+										var a = node.childNodes;
+										var i;
+										var num = a.length;
+										for(i=0;i<num;i++){
+											var n = node.childNodes[i];
+											if(n.nodeType == 1){
+												if(!ignore_dictionary[n.tagName]) return false;
+											}
+										}
+										return true;
+									})()){
+										return {
+											node:node,
+											base:ElementGetTextContent(node)
+										};
+									}
+								}
+							}else if(node.nodeType == 3){
+								return {
+									node:node,
+									base:DomNodeGetNodeValue(node)
+								};
+							}
+							return null;
+						})();
+						if(!o) break;
+
+						o.half = str_to_half(o.base);
+						var m1 = o.half.match(char_regexp);
+						if(!m1) break;
+						if(o.node.nodeType == 3){
+							nodes.push(o);
+						}
+						if(m1[0].length < o.half.length) break;
+						// 要素の分割は未対応
+						if(o.node.nodeType == 1){
+							nodes.push(o);
+						}
+						node = node.nextSibling;
+					}
+					return nodes;
+				})();
+
+				if(nodes.length){
+					var bases = [base];
+					var halfs = [half];
+					nodes.forEach(function(o){
+						bases.push(o.base);
+						halfs.push(o.half);
+					});
+					base = bases.join("");
+					half = halfs.join("");
+				}
+			}
+
+			p = m.index;
+			url = (function(){
+				var o;
+
+				o = scheme_dictionary[m[0]];
+				if(o){
+					var m2 = half.slice(m.index + o.search.length).match(char_regexp);
+					if(m2){
+						if(m2[0].length >= 5){
+							n = search_regexp.lastIndex + m2[0].length;
+							return (o.protocol + "://" + m2[0]);
+						}
+					}
+				}
+
+				o = allow_site_dictionary[m[0]];
+				if(o){
+					var m2 = half.slice(m.index).match(o.match);
+					if(m2){
+						n = m.index + m2[0].length;
+						return o.protocol + "://" + m2[0];
+					}
+				}
+
+				return "";
+			})();
+
+			if(!url) continue;
+			if(url.match(omit_regexp)) continue;
+			try{ new URL(url); }catch(e){ continue; }
+
+			if(n <= size){
+				// 元のテキストノード
+				text_node.nodeValue = base.slice(b,p);
+
+				// アンカーを作成
+				var anchor_element = DocumentCreateElement('a');
+				anchor_element.href = url;
+				ElementSetTextContent(anchor_element,base.slice(p,n));
+				DomNode_InsertAfter(text_node,anchor_element);
+
+				// 右側のテキストノードを作成
+				text_node = DocumentCreateText(base.slice(n,size));
+				DomNode_InsertAfter(anchor_element,text_node);
+			}else{
+				// 元のテキストノード
+				text_node.nodeValue = base.slice(b,p);
+
+				// アンカーを作成
+				var anchor_element = DocumentCreateElement('a');
+				anchor_element.href = url;
+				ElementSetTextContent(anchor_element,base.slice(p,size));
+				DomNode_InsertAfter(text_node,anchor_element);
+
+				p = size;
+				while(true){
+					var o = nodes.shift();
+					if(!o) break;
+					DomNode_InsertLastChild(anchor_element,o.node);
+					if(nodes.length){
+						p += o.base.length;
+					}else{
+						// 最後のノード
+						o.node.nodeValue = base.slice(p,n);
+					}
+				}
+
+				// 右側のテキストノードを作成
+				text_node = DocumentCreateText(base.slice(n));
+				DomNode_InsertAfter(anchor_element,text_node);
+				break;
+			}
+
+			search_regexp.lastIndex = b = p = n;
+			continue;
+		}
 
 		return false;
 	},
@@ -30098,7 +30351,7 @@ function PageExpand(page_expand_arguments){
 			var re;
 			switch(work.bbs_name){
 			case "5ch_v8":
-				re = new RegExp('<article[^>]+class="(|[^"]* )post(|[^"]* )"[^>]*>.*?<section[^>]+class="(|[^"]* )post-content(|[^"]* )"[^>]*>',"i");
+				re = new RegExp('<div[^>]+class="(|[^"]* )post(|[^"]* )"[^>]*>.*?<div[^>]+class="(|[^"]* )post-content(|[^"]* )"[^>]*>',"i");
 				return Boolean(str.match(re));
 			}
 			return false;
@@ -30108,7 +30361,7 @@ function PageExpand(page_expand_arguments){
 		// HTML 文書をシャドウ読み込み
 		// --------------------------------------------------------------------------------
 		function loadShadowFromHTML(str){
-			var re_number = new RegExp('id="([0-9]+)',"i");
+			var re_number = new RegExp('id="([0-9]+)"',"i");
 			var re_id = new RegExp("ID:([-a-zA-Z0-9+/.●!=]{8,})","i");
 			var re_name = new RegExp("(◆[a-zA-Z0-9+/.]{10,12})","i");
 			var search_post_start;
@@ -30116,8 +30369,8 @@ function PageExpand(page_expand_arguments){
 			var class_name_message;
 			switch(work.bbs_name){
 			case "5ch_v8":
-				search_post_start = '<article id="';
-				search_post_end = "</article>";
+				search_post_start = '<div id="';
+				search_post_end = "</div></div>";
 				class_name_message = "post-content";
 				break;
 			}
@@ -30281,13 +30534,13 @@ function PageExpand(page_expand_arguments){
 				dictionary_id[last_id] = true;
 			});
 
-			var re_number = new RegExp("([0-9]+)","i");
+			var re_number = new RegExp('id="([0-9]+)"',"i");
 			var search_post_start;
 			var search_post_end;
 			switch(work.bbs_name){
 			case "5ch_v8":
-				search_post_start = '<article id="';
-				search_post_end = "</article>";
+				search_post_start = '<div id="';
+				search_post_end = "</div></div>";
 				break;
 			}
 
@@ -30316,7 +30569,7 @@ function PageExpand(page_expand_arguments){
 							var node_num = nodes.length;
 							for(j=0;j<node_num;j++){
 								(function(){
-									var list = element_parent.getElementsByTagName("article");
+									var list = element_parent.getElementsByClassName("post");
 									var node = list[list.length-1];
 									if(node){
 										DomNode_InsertAfter(node,nodes[j]);
@@ -42436,7 +42689,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.7.4");
+				new UI_Text(parent,"PageExpand ver.1.7.5");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
