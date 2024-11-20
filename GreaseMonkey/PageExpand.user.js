@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.7.5
+// @version        1.7.6
 // @namespace      http://hakuhin.jp/page_expand
 // @description    Popup image. Batch download. Extend BBS. etc...
 // @description:ja 画像のポップアップ、一括ダウンロードツール、匿名掲示板の専ブラ機能など
@@ -30098,8 +30098,8 @@
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"((http|https)://[^.]+[.](2ch|5ch)[.]net/test/read[.]cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"5ch"},
-			{url:"((http|https)://[^.]+[.]bbspink[.]com/test/read[.]cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"5ch"}
+			{url:"((http|https)://[^.]+[.](2ch|5ch)[.]net/test/read[.]cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"5ch_v8"},
+			{url:"((http|https)://[^.]+[.]bbspink[.]com/test/read[.]cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"bbspink"}
 		];
 
 		var i;
@@ -30140,34 +30140,6 @@
 		var element_form = null;
 		var base_url = work.base_url;
 		var resource_url_more;
-
-		// --------------------------------------------------------------------------------
-		// read.cgi バージョンチェック
-		// --------------------------------------------------------------------------------
-		if(work.bbs_name == "5ch"){
-			work.bbs_name = (function(){
-				var version = (function(){
-					var re = new RegExp("read[.]cgi[ \t]+ver[ \t]*([0-9]+)[.][0-9]+","i");
-
-					// ver 08-
-					var nodes = ElementGetElementsByTagName(document.body,"footer");
-					var node = nodes[nodes.length - 1];
-					if(node){
-						var m = ElementGetTextContent(node).match(re);
-						if(m) return parseInt(m[1]);
-					}
-
-					return 0;
-				})();
-				if(version >= 7){
-					return "5ch_v8";
-				}
-				return "";
-			})();
-			if(!(work.bbs_name)){
-				return false;
-			}
-		}
 
 		// --------------------------------------------------------------------------------
 		// 文字列からレスポンス番号を取得
@@ -30333,6 +30305,9 @@
 			case "5ch_v8":
 				re = new RegExp('<div[^>]+class="(|[^"]* )post(|[^"]* )"[^>]*>.*?<div[^>]+class="(|[^"]* )post-content(|[^"]* )"[^>]*>',"i");
 				return Boolean(str.match(re));
+			case "bbspink":
+				re = new RegExp('<article[^>]+class="(|[^"]* )post(|[^"]* )"[^>]*>.*?<section[^>]+class="(|[^"]* )post-content(|[^"]* )"[^>]*>',"i");
+				return Boolean(str.match(re));
 			}
 			return false;
 		}
@@ -30351,6 +30326,11 @@
 			case "5ch_v8":
 				search_post_start = '<div id="';
 				search_post_end = "</div></div>";
+				class_name_message = "post-content";
+				break;
+			case "bbspink":
+				search_post_start = '<article id="';
+				search_post_end = "</article>";
 				class_name_message = "post-content";
 				break;
 			}
@@ -30381,6 +30361,7 @@
 						try{
 							switch(work.bbs_name){
 							case "5ch_v8":
+							case "bbspink":
 								info_post = clone_nodes[0];
 								if(!(info_post.classList.contains("post"))) return;
 								info_number = ElementGetElementsByClassName(info_post,"postid")[0];
@@ -30522,6 +30503,10 @@
 				search_post_start = '<div id="';
 				search_post_end = "</div></div>";
 				break;
+			case "bbspink":
+				search_post_start = '<article id="';
+				search_post_end = "</article>";
+				break;
 			}
 
 			var p = 0;
@@ -30549,7 +30534,14 @@
 							var node_num = nodes.length;
 							for(j=0;j<node_num;j++){
 								(function(){
-									var list = element_parent.getElementsByClassName("post");
+									var list = (function(){
+										switch(work.bbs_name){
+										case "5ch_v8":
+											return element_parent.getElementsByClassName("post");
+										case "bbspink":
+											return element_parent.getElementsByTagName("article");
+										}
+									})();
 									var node = list[list.length-1];
 									if(node){
 										DomNode_InsertAfter(node,nodes[j]);
@@ -30631,6 +30623,7 @@
 				loader.setURL(param.url);
 				switch(work.bbs_name){
 				case "5ch_v8":
+				case "bbspink":
 					loader.overrideMimeType("text/plain; charset=Shift_JIS");
 					break;
 				}
@@ -30669,6 +30662,7 @@
 			var get_elements;
 			switch(work.bbs_name){
 			case "5ch_v8":
+			case "bbspink":
 				get_elements = function(target){
 					return ElementGetElementsByClassName(target,"post");
 				};
@@ -30693,6 +30687,7 @@
 			var get_elements;
 			switch(work.bbs_name){
 			case "5ch_v8":
+			case "bbspink":
 				get_elements = function(target){
 					return ElementGetElementsByClassName(target,"post");
 				};
@@ -30808,6 +30803,7 @@
 					var i;
 					switch(work.bbs_name){
 					case "5ch_v8":
+					case "bbspink":
 						for(i=0;i<nodes.length;i++){
 							if(nodes[i].action.indexOf("/test/bbs.cgi") >= 0){
 								return nodes[i];
@@ -30862,6 +30858,7 @@
 					var h;
 					switch(work.bbs_name){
 					case "5ch_v8":
+					case "bbspink":
 						w = 800;
 						h = 600;
 						var cookie = document.cookie;
@@ -30900,6 +30897,7 @@
 								if(href.match(/^(http|https):/)){
 									switch(work.bbs_name){
 									case "5ch_v8":
+									case "bbspink":
 										if(href.indexOf("/test/bbs.cgi") == -1){
 											closed = true;
 										}else if(!timer){
@@ -30981,6 +30979,7 @@
 				loader.setURL(param.url);
 				switch(work.bbs_name){
 				case "5ch_v8":
+				case "bbspink":
 					loader.overrideMimeType("text/plain; charset=Shift_JIS");
 					break;
 				}
@@ -31832,6 +31831,7 @@
 
 			switch(work.bbs_name){
 			case "5ch_v8":
+			case "bbspink":
 				var info_post = node.clone_nodes[0];
 				info_number = ElementGetElementsByClassName(info_post,"postid")[0];
 				info_name = ElementGetElementsByClassName(info_post,"postusername")[0];
@@ -31876,6 +31876,7 @@
 
 			switch(work.bbs_name){
 			case "5ch_v8":
+			case "bbspink":
 				try{
 					info_post = element;
 					if(!(info_post.classList.contains("post"))) return false;
@@ -31978,6 +31979,7 @@
 			(function(){
 				switch(work.bbs_name){
 				case "5ch_v8":
+				case "bbspink":
 					var node_list = ElementGetElementsByClassName(info_post,"back-links");
 					var i;
 					var num = node_list.length;
@@ -39891,7 +39893,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.7.5");
+				new UI_Text(parent,"PageExpand ver.1.7.6");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
