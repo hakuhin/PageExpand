@@ -1103,6 +1103,7 @@ function PageExpand(page_expand_arguments){
 
 					// 基本設定
 					proj_obj.standard = _proj_src.standard;
+					proj_obj.bbs_board = _proj_src.bbs_board;
 
 					// ダウンロード設定
 					proj_obj.download = _proj_src.download;
@@ -1186,6 +1187,7 @@ function PageExpand(page_expand_arguments){
 
 				// 基本設定
 				proj_obj.standard = _proj_src.standard;
+				proj_obj.bbs_board = _proj_src.bbs_board;
 
 				// ダウンロード設定
 				proj_obj.download = _proj_src.download;
@@ -1533,6 +1535,7 @@ function PageExpand(page_expand_arguments){
 			_project_unknown.importObjectForBackground({
 				enable:true,
 				standard:_proj_src.standard,
+				bbs_board:_proj_src.bbs_board,
 				download:_proj_src.download,
 				language:_proj_src.language,
 				expand_bbs:null
@@ -1957,6 +1960,7 @@ function PageExpand(page_expand_arguments){
 			_proj_ins = {
 				enable:_proj_src.enable,
 				standard:_proj_src.standard,
+				bbs_board:_proj_src.bbs_board,
 				download:_proj_src.download,
 				language:_proj_src.language,
 				expand_bbs:_proj_src.expand_bbs
@@ -1987,6 +1991,7 @@ function PageExpand(page_expand_arguments){
 			_proj_ins.mixed_passive_content = _proj_src.mixed_passive_content;
 			_proj_ins.mixed_active_content = _proj_src.mixed_active_content;
 			_proj_ins.standard = _proj_src.standard;
+			_proj_ins.bbs_board = _proj_src.bbs_board;
 			_proj_ins.download = _proj_src.download;
 			_proj_ins.language = _proj_src.language;
 
@@ -2073,6 +2078,20 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		_this.getEnableStartup = function(){
 			return _proj_ins.standard.enable_startup;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 掲示板ボードが有効か
+		// --------------------------------------------------------------------------------
+		_this.getEnableBbsBoard = function(){
+			return Boolean(_proj_ins.bbs_board.enable);
+		};
+
+		// --------------------------------------------------------------------------------
+		// 掲示板を訪問したか
+		// --------------------------------------------------------------------------------
+		_this.getVisitedBbs = function(site){
+			return Boolean(_proj_ins.bbs_board.visited[site]);
 		};
 
 		// --------------------------------------------------------------------------------
@@ -11905,6 +11924,16 @@ function PageExpand(page_expand_arguments){
 
 			var preset = getPreset(proj.urlmap,"bbs");
 			preset.make_link_to_text.id = "5ch";
+		}
+		if(exit())	return proj;
+
+		if(proj.version < 54){
+			proj.version = 54;
+
+			proj.bbs_board = {
+				enable:false,
+				visited:{}
+			};
 		}
 		if(exit())	return proj;
 
@@ -35361,27 +35390,29 @@ function PageExpand(page_expand_arguments){
 				id:"separator1"
 			});
 
-			// 掲示板ボードを開く（アプリ）
-			items.push({
-				title:_i18n.getMessage("context_menu_pageexpand_open_bbs_board"),
-				contexts:["all"],
-				id:"openBbsBoard"
-			});
-
-			// 掲示板ボードを開く（サイドバー）
-			if(GoogleChromeExtensionSidebarSupported()){
+			if(project.getEnableBbsBoard()){
+				// 掲示板ボードを開く（アプリ）
 				items.push({
-					title:_i18n.getMessage("context_menu_pageexpand_open_bbs_board_sidebar"),
+					title:_i18n.getMessage("context_menu_pageexpand_open_bbs_board"),
 					contexts:["all"],
-					id:"openBbsBoardSidebar"
+					id:"openBbsBoard"
+				});
+
+				// 掲示板ボードを開く（サイドバー）
+				if(GoogleChromeExtensionSidebarSupported()){
+					items.push({
+						title:_i18n.getMessage("context_menu_pageexpand_open_bbs_board_sidebar"),
+						contexts:["all"],
+						id:"openBbsBoardSidebar"
+					});
+				}
+
+				items.push({
+					type:"separator",
+					contexts:["all"],
+					id:"separator2"
 				});
 			}
-
-			items.push({
-				type:"separator",
-				contexts:["all"],
-				id:"separator2"
-			});
 
 			// 現在のページの設定を編集
 			items.push({
@@ -35548,11 +35579,49 @@ function PageExpand(page_expand_arguments){
 			};
 
 			// Project 取得
-			command_dictionary["getProject"] = function(port,data){
-				// JSON 文字列を返す
-				port.postMessage(JsonStringify(page_expand_project.getProject(data.url)));
-				port.close();
-			};
+			command_dictionary["getProject"] = (function(){
+
+				var bbs_board_dic = [
+					{type:"5ch",domain:"5ch.net"},
+					{type:"bbspink",domain:"bbspink.com"},
+					{type:"open2ch",domain:"open2ch.net"},
+					{type:"2chan",domain:"2chan.net"},
+					{type:"4chan",domain:"4chan.net"},
+					{type:"8kun",domain:"8kun.top"},
+					{type:"2ch.hk",domain:"2ch.hk"}
+				];
+				bbs_board_dic.forEach(function(o){
+					o.domain = o.domain.split(".").reverse();
+				});
+
+				return function(port,data){
+					var bbs_board = page_expand_project.getObject().bbs_board;
+					var visited = bbs_board.visited;
+
+					var parser = URL_Parser(data.url);
+					var domain = parser.hostname.split(".").reverse();
+					var updated = bbs_board_dic.some(function(o){
+						if(visited[o.type]) return false;
+						if(!o.domain.every(function(s,i){
+							return (s === domain[i]);
+						})){
+							return false;
+						};
+						bbs_board.enable = true;
+						visited[o.type] = true;
+						return true;
+					});
+
+					// ローカルストレージに保存
+					if(updated) page_expand_project.saveLocalStorage(function(e){});
+
+					// JSON 文字列を返す
+					port.postMessage(JsonStringify(page_expand_project.getProject(data.url)));
+					port.close();
+				};
+			})();
+
+
 
 			// プロジェクト設定をリロード
 			command_dictionary["reloadPageExpandProject"] = function(port,data){
@@ -42691,7 +42760,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.7.6");
+				new UI_Text(parent,"PageExpand ver.1.7.7");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -49326,24 +49395,25 @@ function PageExpand(page_expand_arguments){
 
 			items.push({ type:"separator" });
 
-			// 掲示板ボードを開く（アプリ）
-			items.push({
-				type:"button",
-				id:"openBbsBoard",
-				i18n:"open_bbs_board"
-			});
-
-			// 掲示板ボードを開く（サイド）
-			if(GoogleChromeExtensionSidebarSupported()){
+			if(project.getEnableBbsBoard()){
+				// 掲示板ボードを開く（アプリ）
 				items.push({
 					type:"button",
-					id:"openBbsBoardSidebar",
-					i18n:"open_bbs_board_sidebar"
+					id:"openBbsBoard",
+					i18n:"open_bbs_board"
 				});
+
+				// 掲示板ボードを開く（サイド）
+				if(GoogleChromeExtensionSidebarSupported()){
+					items.push({
+						type:"button",
+						id:"openBbsBoardSidebar",
+						i18n:"open_bbs_board_sidebar"
+					});
+				}
+
+				items.push({ type:"separator" });
 			}
-
-			items.push({ type:"separator" });
-
 
 			// 現在のページの設定を編集
 			items.push({
@@ -51240,10 +51310,18 @@ function PageExpand(page_expand_arguments){
 									url = StringLiteral_To_String(url) || url;
 									url = StringUrl_To_Absolute(url,loader_url);
 
+									var url_parser = URL_Parser(url);
+									var domain = (function(){
+										var m = url_parser.hostname.match(/[^.]+[.][^.]+$/) || {};
+										return m[0] || "";
+									})();
+
+									if(!project.getVisitedBbs("bbspink")){
+										if(domain == "bbspink.com") return;
+									}
+
 									switch(_current_site){
 									case "itest5ch":
-										var url_parser = URL_Parser(url);
-										var domain = (url_parser.hostname.search(/bbspink[.]com/) >= 0) ? "bbspink.com" : "5ch.net";
 										url = "https://itest." + domain + "/subback" + url_parser.pathname;
 										break;
 									case "5ch_pc":
@@ -52935,49 +53013,28 @@ function PageExpand(page_expand_arguments){
 
 					var option = DocumentCreateElement("option");
 					ElementSetStyle(option,"color:#aaa;");
-					ElementSetTextContent(option,"Select the site ...");
+					ElementSetTextContent(option,project.getEnableBbsBoard() ? "Select the site ..." : "If you have visited relevant BBS even once, the BbsBoard unlocked.");
 					option.value = "";
 					_select_site.appendChild(option);
 
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"5ch.net (PC)");
-					option.value = "5ch_pc";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"5ch.net (classic)");
-					option.value = "5ch_classic";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"itest.5ch.net");
-					option.value = "itest5ch";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"open2ch.net");
-					option.value = "open2ch";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"2chan.net");
-					option.value = "2chan";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"4chan.org");
-					option.value = "4chan";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"8kun.top");
-					option.value = "8kun";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"2ch.hk");
-					option.value = "2ch.hk";
-					_select_site.appendChild(option);
+					[
+						{site:["5ch","bbspink"],text:"5ch.net (PC)",value:"5ch_pc"},
+						{site:["5ch","bbspink"],text:"5ch.net (classic)",value:"5ch_classic"},
+						{site:["5ch","bbspink"],text:"itest.5ch.net",value:"itest5ch"},
+						{site:["open2ch"],text:"open2ch.net",value:"open2ch"},
+						{site:["2chan"],text:"2chan.net",value:"2chan"},
+						{site:["4chan"],text:"4chan.net",value:"4chan"},
+						{site:["8kun"],text:"8kun.top",value:"8kun"},
+						{site:["2ch.hk"],text:"2ch.hk",value:"2ch.hk"}
+					].forEach(function(o){
+						if(!o.site.some(function(v){
+							return project.getVisitedBbs(v);
+						})) return;
+						var option = DocumentCreateElement("option");
+						ElementSetTextContent(option,o.text);
+						option.value = o.value;
+						_select_site.appendChild(option);
+					});
 
 				// カテゴリボタン
 				_button_menu_category = new UI_ToolButton(container_left);
