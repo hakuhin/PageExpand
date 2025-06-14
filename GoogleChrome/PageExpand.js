@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2024  https://hakuhin.jp
+// Hakuhin 2010-2025  https://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -35586,7 +35586,7 @@ function PageExpand(page_expand_arguments){
 					{type:"bbspink",domain:"bbspink.com"},
 					{type:"open2ch",domain:"open2ch.net"},
 					{type:"2chan",domain:"2chan.net"},
-					{type:"4chan",domain:"4chan.net"},
+					{type:"4chan",domain:"4chan.org"},
 					{type:"8kun",domain:"8kun.top"},
 					{type:"2ch.hk",domain:"2ch.hk"}
 				];
@@ -42760,7 +42760,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.7.7");
+				new UI_Text(parent,"PageExpand ver.1.7.8");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -42770,7 +42770,7 @@ function PageExpand(page_expand_arguments){
 				var tr = table.insertRow(-1);
 				new UI_Text(tr.insertCell(-1),'by');
 				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","https://hakuhin.jp/");
-				new UI_Text(tr.insertCell(-1),'2010-2024');
+				new UI_Text(tr.insertCell(-1),'2010-2025');
 				new UI_AnchorText(parent,"https://github.com/hakuhin/PageExpand","https://github.com/hakuhin/PageExpand");
 
 				// 翻訳者
@@ -43923,8 +43923,15 @@ function PageExpand(page_expand_arguments){
 							_warning.insertText(_i18n.getMessage("menu_scriptarea_unsupport"));
 							return;
 						}
-						["","_step1","_step2","_step3","_note"].forEach(function(s){
-							_warning.insertText(_i18n.getMessage("menu_warning_how_to_enable_userscript"+s));
+						var ver = (function(){
+							var m = navigator.userAgent.match(/(Chrome|Chromium)[/]([0-9]+)/);
+							if(m){
+								if(parseInt(m[2]) >= 138) return "_v138";
+							}
+							return "";
+						})();
+						[{s:""},{s:"_step1",v:1},{s:"_step2",v:1},{s:"_step3",v:1},{s:"_note"}].forEach(function(o){
+							_warning.insertText(_i18n.getMessage("menu_warning_how_to_enable_userscript"+(o.v?ver:"")+o.s));
 						});
 					})();
 				}
@@ -53023,7 +53030,7 @@ function PageExpand(page_expand_arguments){
 						{site:["5ch","bbspink"],text:"itest.5ch.net",value:"itest5ch"},
 						{site:["open2ch"],text:"open2ch.net",value:"open2ch"},
 						{site:["2chan"],text:"2chan.net",value:"2chan"},
-						{site:["4chan"],text:"4chan.net",value:"4chan"},
+						{site:["4chan"],text:"4chan.org",value:"4chan"},
 						{site:["8kun"],text:"8kun.top",value:"8kun"},
 						{site:["2ch.hk"],text:"2ch.hk",value:"2ch.hk"}
 					].forEach(function(o){
@@ -69250,6 +69257,15 @@ function PageExpand(page_expand_arguments){
 			menu_warning_how_to_enable_userscript_step3: {
 				message: "３.ブラウザを再起動します。"
 			},
+			menu_warning_how_to_enable_userscript_v138_step1: {
+				message: "１.PageExpand の詳細ページを開きます。( chrome://extensions/?id=bjnobgdfhefpilajplncgjjeopakpepc ）"
+			},
+			menu_warning_how_to_enable_userscript_v138_step2: {
+				message: "２.「ユーザー スクリプトを許可する」を有効にします。"
+			},
+			menu_warning_how_to_enable_userscript_v138_step3: {
+				message: "３.ブラウザを再起動します。"
+			},
 			menu_warning_how_to_enable_userscript_note: {
 				message: "（この警告が表示されている場合、デフォルトのスクリプトが実行されます。）"
 			},
@@ -70853,6 +70869,15 @@ function PageExpand(page_expand_arguments){
 			menu_warning_how_to_enable_userscript_step3: {
 				message: "3. Restart your browser."
 			},
+			menu_warning_how_to_enable_userscript_v138_step1: {
+				message: "1. Go to the PageExpand details page. ( chrome://extensions/?id=bjnobgdfhefpilajplncgjjeopakpepc ）"
+			},
+			menu_warning_how_to_enable_userscript_v138_step2: {
+				message: "2. Click the toggle switch next to Allow User Scripts."
+			},
+			menu_warning_how_to_enable_userscript_v138_step3: {
+				message: "3. Restart your browser."
+			},
 			menu_warning_how_to_enable_userscript_note: {
 				message: "(If this warning is displaying, the default script will be executed.)"
 			},
@@ -72453,6 +72478,15 @@ function PageExpand(page_expand_arguments){
 				message: "2. Enable Developer Mode by clicking the toggle switch."
 			},
 			menu_warning_how_to_enable_userscript_step3: {
+				message: "3. Restart your browser."
+			},
+			menu_warning_how_to_enable_userscript_v138_step1: {
+				message: "1. Go to the PageExpand details page. ( chrome://extensions/?id=bjnobgdfhefpilajplncgjjeopakpepc ）"
+			},
+			menu_warning_how_to_enable_userscript_v138_step2: {
+				message: "2. Click the toggle switch next to Allow User Scripts."
+			},
+			menu_warning_how_to_enable_userscript_v138_step3: {
 				message: "3. Restart your browser."
 			},
 			menu_warning_how_to_enable_userscript_note: {
@@ -85095,7 +85129,7 @@ function PageExpand(page_expand_arguments){
 				return (this.crc32 ^ 0xffffffff) >>> 0;
 			},
 			pos:0,
-			crc32:0xffffffff,
+			crc32:0xffffffff
 		};
 		return CRC32;
 	})();
