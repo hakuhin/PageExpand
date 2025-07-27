@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2024  https://hakuhin.jp
+// Hakuhin 2010-2025  https://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -12,7 +12,7 @@
 // @name           PageExpand
 // @name:ja        PageExpand
 // @name:zh        PageExpand
-// @version        1.7.6
+// @version        1.7.9
 // @namespace      http://hakuhin.jp/page_expand
 // @description    Popup image. Batch download. Extend BBS. etc...
 // @description:ja 画像のポップアップ、一括ダウンロードツール、匿名掲示板の専ブラ機能など
@@ -134,9 +134,6 @@
 	// ビデオ管理
 	var element_limitter_video;
 
-	// 解析辞書
-	var analyze_work_dictionary;
-
 	// 掲示板辞書
 	var bbs_dictionary;
 
@@ -199,6 +196,11 @@
 	// PageExpand コンストラクタ
 	// --------------------------------------------------------------------------------
 	function PageExpandConstructor(){
+
+		// ウィンドウ管理
+		if(!window_manager){
+			window_manager = new WindowManager(window);
+		}
 
 		// マウス入力
 		if(!input_mouse){
@@ -288,7 +290,7 @@
 
 		// イメージ管理
 		if(!element_limitter_image){
-			element_limitter_image = new ElementLimiterByByteSize();
+			element_limitter_image = new ElementLimiter();
 		}
 		if(!popup_image_container){
 			popup_image_container = new PopupImageContainer();
@@ -296,27 +298,17 @@
 
 		// サウンド管理
 		if(!element_limitter_sound){
-			element_limitter_sound = new ElementLimiterByCount();
+			element_limitter_sound = new ElementLimiter();
 		}
 
 		// ビデオ管理
 		if(!element_limitter_video){
-			element_limitter_video = new ElementLimiterByCount();
-		}
-
-		// 解析辞書
-		if(!analyze_work_dictionary){
-			analyze_work_dictionary = new AnalyzeWorkDictionary();
+			element_limitter_video = new ElementLimiter();
 		}
 
 		// 掲示板辞書
 		if(!bbs_dictionary){
 			bbs_dictionary = new BbsDictionary();
-		}
-
-		// ウィンドウ管理
-		if(!window_manager){
-			window_manager = new WindowManager(window);
 		}
 
 		// ダウンロードボード
@@ -369,12 +361,6 @@
 			download_board = null;
 		}
 
-		// ウィンドウ管理
-		if(window_manager){
-			window_manager.release();
-			window_manager = null;
-		}
-
 		// 拡張機能通信
 		if(extension_message){
 			extension_message.release();
@@ -403,12 +389,6 @@
 		if(preset_script_dictionary){
 			preset_script_dictionary.release();
 			preset_script_dictionary = null;
-		}
-
-		// 解析辞書
-		if(analyze_work_dictionary){
-			analyze_work_dictionary.release();
-			analyze_work_dictionary = null;
 		}
 
 		// ビデオ管理
@@ -503,6 +483,12 @@
 			input_mouse = null;
 		}
 
+		// ウィンドウ管理
+		if(window_manager){
+			window_manager.release();
+			window_manager = null;
+		}
+
 		// イベントディスパッチャー
 		if(page_expand_event_dispatcher){
 			page_expand_event_dispatcher.release();
@@ -539,37 +525,26 @@
 	// アンロード監視
 	// --------------------------------------------------------------------------------
 	function PageExpandObserverUnload(){
-		var event_handler_release;
+		var releasers = [];
 
-		var removeEvent = function (e){
-			if(event_handler_release){
-				event_handler_release.release();
-				event_handler_release = null;
-			}
-			if(window.removeEventListener){
-				window.removeEventListener("unload",unload);
-			}else if(window.detachEvent){
-				window.detachEvent("onunload",unload);
-			}
-		};
-
-		var unload = function (e){
-			removeEvent();
-			PageExpandRelease();
-		};
-
-		// アンロード監視
-		if(window.addEventListener){
-			window.addEventListener("unload",unload);
-		}else if(window.attachEvent){
-			window.attachEvent("onunload",unload);
+		function release(){
+			releasers.forEach(function(e){
+				e.release();
+			});
+			releasers.length = 0;
 		}
 
-		// 開放イベント
-		event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
-		event_handler_release.setFunction(function(){
-			removeEvent();
+		var listener = new EventListenerWrapper(window);
+		listener.start("pagehide",function(e){
+			if(e.persisted) return;
+			release();
+			PageExpandRelease();
 		});
+		releasers.push(listener);
+
+		var event_handler = page_expand_event_dispatcher.createEventHandler("release");
+		event_handler.setFunction(release);
+		releasers.push(event_handler);
 	}
 
 
@@ -586,9 +561,11 @@
 		// --------------------------------------------------------------------------------
 		loader_queue.setMaxThread(project.getLoadThreadMax());
 		downloader_queue.setMaxThread(project.getDownloadThreadMax());
-		element_limitter_image.setEnableUnload(project.getEnableUnloadExpandImage());
+		element_limitter_image.setEnableUnloadByByteSize(project.getEnableUnloadExpandImage());
 		element_limitter_image.setByteSizeMax(project.getSizeMoreThenAllowUnloadExpandImage());
+		element_limitter_sound.setEnableUnloadByCount(true);
 		element_limitter_sound.setMaxUse(project.getSoundMaxInlineSound());
+		element_limitter_video.setEnableUnloadByCount(true);
 		element_limitter_video.setMaxUse(project.getVideoMaxInlineVideo());
 		execute_queue.setOccupancyTime(project.getExecuteQueueOccupancyTime());
 		execute_queue.setSleepTime(project.getExecuteQueueSleepTime());
@@ -670,51 +647,6 @@
 		})();
 
 		// --------------------------------------------------------------------------------
-		// ルートウィンドウのマウス操作
-		// --------------------------------------------------------------------------------
-		(function(){
-			if(!window_manager.existWindowRoot()) return;
-
-			function mouseMove (e){
-				if(!(task_container.getCountTask())) return;
-
-				var offset = window_manager.getPositionFromRoot();
-
-				// マウス入力を更新
-				input_mouse.setMouseEvent({
-					clientX:e.clientX - offset.x,
-					clientY:e.clientY - offset.y,
-					detail:e.detail,
-					screenX:e.screenX,
-					screenY:e.screenY,
-					ctrlKey:e.ctrlKey,
-					shiftKey:e.shiftKey,
-					altKey:e.altKey,
-					metaKey:e.metaKey,
-					button:e.button
-				});
-			}
-
-			var document_obj = window_manager.getWindowRoot().document;
-
-			// 開放イベント
-			var event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
-			event_handler_release.setFunction(function(){
-				if(document_obj.removeEventListener){
-					document_obj.removeEventListener("mousemove",mouseMove);
-				}else if(document_obj.detachEvent){
-					document_obj.detachEvent("onmousemove",mouseMove);
-				}
-			});
-
-			if(document_obj.addEventListener){
-				document_obj.addEventListener("mousemove",mouseMove);
-			}else if(document_obj.attachEvent){
-				document_obj.attachEvent("onmousemove",mouseMove);
-			}
-		})();
-
-		// --------------------------------------------------------------------------------
 		// 変更オブザーバー未対応
 		// --------------------------------------------------------------------------------
 		if(!MutationObserverSupported()){
@@ -776,24 +708,11 @@
 						}
 
 						mutation_observer = MutationObserverCreate(function(mutations) {
-							var i;
-							var num = mutations.length;
-							for(i=0;i<num;i++){
-								var nodes = mutations[i].addedNodes || [];
-								var j;
-								var node_num = nodes.length;
-								for(j=0;j<node_num;j++){
-									var node = nodes[j];
-									var analyzed = (function(){
-										var node_info = node_info_dictionary.getNodeInfo(node);
-										if(!node_info) return false;
-										return node_info.getAnalyzed();
-									})();
-									if(!analyzed){
-										execute_queue.attachLastForInsertDomNode(DomNodeAnalyzeRoot,node);
-									}
-								}
-							}
+							mutations.forEach(function(mutation){
+								mutation.addedNodes.forEach(function(node){
+									execute_queue.attachLastForInsertDomNode(DomNodeAnalyzeRoot,node);
+								});
+							});
 						});
 						mutation_observer.observe(document.documentElement,{subtree:true,childList:true});
 
@@ -1149,6 +1068,7 @@
 
 					// 基本設定
 					proj_obj.standard = _proj_src.standard;
+					proj_obj.bbs_board = _proj_src.bbs_board;
 
 					// ダウンロード設定
 					proj_obj.download = _proj_src.download;
@@ -1232,6 +1152,7 @@
 
 				// 基本設定
 				proj_obj.standard = _proj_src.standard;
+				proj_obj.bbs_board = _proj_src.bbs_board;
 
 				// ダウンロード設定
 				proj_obj.download = _proj_src.download;
@@ -1579,6 +1500,7 @@
 			_project_unknown.importObjectForBackground({
 				enable:true,
 				standard:_proj_src.standard,
+				bbs_board:_proj_src.bbs_board,
 				download:_proj_src.download,
 				language:_proj_src.language,
 				expand_bbs:null
@@ -1943,6 +1865,7 @@
 			_proj_ins = {
 				enable:_proj_src.enable,
 				standard:_proj_src.standard,
+				bbs_board:_proj_src.bbs_board,
 				download:_proj_src.download,
 				language:_proj_src.language,
 				expand_bbs:_proj_src.expand_bbs
@@ -1973,6 +1896,7 @@
 			_proj_ins.mixed_passive_content = _proj_src.mixed_passive_content;
 			_proj_ins.mixed_active_content = _proj_src.mixed_active_content;
 			_proj_ins.standard = _proj_src.standard;
+			_proj_ins.bbs_board = _proj_src.bbs_board;
 			_proj_ins.download = _proj_src.download;
 			_proj_ins.language = _proj_src.language;
 
@@ -2059,6 +1983,20 @@
 		// --------------------------------------------------------------------------------
 		_this.getEnableStartup = function(){
 			return _proj_ins.standard.enable_startup;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 掲示板ボードが有効か
+		// --------------------------------------------------------------------------------
+		_this.getEnableBbsBoard = function(){
+			return true;
+		};
+
+		// --------------------------------------------------------------------------------
+		// 掲示板を訪問したか
+		// --------------------------------------------------------------------------------
+		_this.getVisitedBbs = function(site){
+			return true;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -3043,19 +2981,17 @@
 		};
 
 		// --------------------------------------------------------------------------------
-		// サムネイルイメージのプリロード設定を取得
+		// サムネイルイメージのロードタイプを取得
 		// --------------------------------------------------------------------------------
-		_this.getEnablePreLoadThumbnailImage = function(){
-			if(_proj_ins.expand_image.thumbnail.load_type == "preload")	return true;
-			return false;
+		_this.getLoadTypeThumbnailImage = function(){
+			return _proj_ins.expand_image.thumbnail.load_type;
 		};
 
 		// --------------------------------------------------------------------------------
-		// ポップアップイメージのプリロード設定を取得
+		// ポップアップイメージのロードタイプを取得
 		// --------------------------------------------------------------------------------
-		_this.getEnablePreLoadPopupImage = function(){
-			if(_proj_ins.expand_image.popup.load_type == "preload")	return true;
-			return false;
+		_this.getLoadTypePopupImage = function(){
+			return _proj_ins.expand_image.popup.load_type;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -3432,6 +3368,13 @@
 		};
 
 		// --------------------------------------------------------------------------------
+		// tiktok の録画ビデオを表示するか
+		// --------------------------------------------------------------------------------
+		_this.getVisibleVideoTiktok = function(){
+			return _proj_ins.expand_video.tiktok.visible_video;
+		};
+
+		// --------------------------------------------------------------------------------
 		// nicovideo のビデオを表示するか
 		// --------------------------------------------------------------------------------
 		_this.getVisibleVideoNicovideo = function(){
@@ -3538,6 +3481,16 @@
 		_this.getStyleSheetExpandVideoYoutubeInlineVideo = function(){
 			if(_proj_ins.style_sheet){
 				return _proj_ins.style_sheet.expand_video.inline.youtube.video;
+			}
+			return "";
+		};
+
+		// --------------------------------------------------------------------------------
+		// tiktok インライン表示ビデオのスタイルシート
+		// --------------------------------------------------------------------------------
+		_this.getStyleSheetExpandVideoTiktokInlineVideo  = function(){
+			if(_proj_ins.style_sheet){
+				return _proj_ins.style_sheet.expand_video.inline.tiktok.video;
 			}
 			return "";
 		};
@@ -4546,8 +4499,7 @@
 						if(_this.released) return;
 
 						if(file_reader.error){
-							response.errorText = file_reader.error;
-							reply({state:"complete"});
+							dispatch_error.call(_this,file_reader.error);
 							return;
 						}
 
@@ -11888,6 +11840,102 @@
 		}
 		if(exit())	return proj;
 
+		if(proj.version < 54){
+			proj.version = 54;
+
+			proj.bbs_board = {
+				enable:false,
+				visited:{}
+			};
+		}
+		if(exit())	return proj;
+
+		if(proj.version < 55){
+			proj.version = 55;
+
+			update(proj.expand_video,"*",function(obj){
+				obj.tiktok = {visible_video:false};
+			});
+			updatePreset(proj.expand_video,"*",function(obj){
+				obj.tiktok.visible_video = true;
+			});
+			update(proj.style_sheet,"*",function(obj){
+				obj.expand_video.inline.tiktok = {video:""};
+			});
+			update(proj.style_sheet,"default",function(obj){
+				obj.expand_video.inline.tiktok.video = "margin:2px 0px 2px 0px; border:1px #000 solid; background-color:#000; width:720px; height:405px;";
+			});
+			update(proj.style_sheet,"simple",function(obj){
+				obj.expand_video.inline.tiktok.video = "margin:2px 0px 2px 0px; width:720px; height:405px; border:0px;";
+			});
+
+			// google分を削除
+			updatePreset(proj.urlmap,"search",function(obj){
+				obj.filter.asterisk.filter.splice(0,4);
+			});
+			updatePreset(proj.urlmap,"image_search",function(obj){
+				obj.filter.regexp.filter.splice(0,1);
+			});
+
+			var obj = addPreset(proj.urlmap,"google_search","search");
+			obj.preset = {
+				name:{
+					standard:"Google Search",
+					locales:{
+						ja:"Google 検索",
+						en:"Google Search"
+					}
+				},
+				enable:true,
+				filter:{
+					type:"asterisk",
+					asterisk:{
+						filter:["https://www.google.com/search?*"]
+					},
+					regexp:{
+						filter:[]
+					}
+				},
+                mixed_passive_content:"unsafe",
+                mixed_active_content:"safe",
+				access_block:{enable:false,id:[]},
+				replacement_to_element:{enable:true,id:["assist_google_search"]},
+				replacement_to_text:{enable:false,id:[]},
+				replacement_to_anchor:{enable:true,id:["no_referrer"]},
+				replacement_to_link:{enable:true,id:["direct_link_image_search"]},
+				replacement_to_referer:{enable:false,id:[]},
+				replacement_to_useragent:{enable:false,id:""},
+				make_link_to_text:{enable:true,id:"detail"},
+				expand_short_url:{enable:true,id:"detail"},
+				expand_text:{enable:false,id:""},
+				expand_image:{enable:true,id:"popup_include_image"},
+				expand_sound:{enable:true,id:"inline_from_assist"},
+				expand_video:{enable:true,id:"inline_from_assist"},
+				expand_iframe:{enable:false,id:""},
+				style_sheet:{enable:true,id:"default"},
+				experimental:{enable:false,id:""}
+			};
+
+			var obj = addPreset(proj.replacement_to_element,"assist_google_search","assist_image_search");
+			obj.preset = {
+				name:{
+					standard:"Assist Expand (google)",
+					locales:{
+						ja:"展開アシスト（Google 用）",
+						en:"Assist Expand (google)"
+					}
+				},
+				"script": {
+					"has_preset":true,
+					"has_user":false,
+					"preset":{"asset":"ReplacementToElement_AssistGoogleSearch"},
+					"user":{"script":""}
+				}
+			};
+
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
@@ -12049,6 +12097,102 @@
 				}
 				element = element.parentNode;
 			}
+		}
+
+		return false;
+	},
+	function(info,response){
+		response({});
+		return true;
+	}
+
+			]);
+
+			// --------------------------------------------------------------------------------
+			// エレメント置換定義「展開アシスト（Google検索用）」
+			// --------------------------------------------------------------------------------
+			attachItem( "ReplacementToElement_AssistGoogleSearch" , [
+
+	function(info,response){
+		var element = info.element;
+
+		var parser = URL_Parser(document.URL);
+		var query = QueryString_To_Object(parser.search);
+		var udm = parseInt(query["udm"]) || 0;
+
+		function element_get_anchor(element){
+			var nodes = ElementGetElementsByTagName(element,"a");
+			return Array.from(nodes).find(function(node){
+				if(!node.href) return;
+				return true;
+			});
+		}
+
+		// 「画像」検索用 (2024/03/23以降)
+		if((udm == 2) || (query["tbm"] == "isch")){
+			try{
+				if("docid" in element.dataset){
+					var image = element.getElementsByTagName("IMG")[0];
+					if(image){
+						var mouse_event = document.createEvent("MouseEvent");
+						mouse_event.initMouseEvent("mouseover",true,false,document.defaultView,0,0,0,0,0,false,false,false,false,0,null);
+						image.dispatchEvent(mouse_event);
+					}
+				}
+			}catch(e){}
+		}
+
+		// 「動画」検索用
+		if(udm == 7){
+			if([
+				'div[jsname="pKB8Bc"] > div'
+			].find(function(s){
+				return ElementMatchesSelector(element,s);
+			})){
+				var anchor = element_get_anchor(element);
+				if(anchor){
+					response({url:anchor.href});
+					return true;
+				}
+			}
+		}
+
+		// 「すべて」検索用
+		if(udm == 0){
+			if([
+				'div[jsname="pKB8Bc"] > div'
+			].find(function(s){
+				return ElementMatchesSelector(element,s);
+			})){
+				var anchor = element_get_anchor(element);
+				if(anchor){
+					response({url:anchor.href});
+					return true;
+				}
+			}
+		}
+
+		// サイド画像検索用（onmousedown発火でURLが変わるのですべて剥がしている）
+		if([
+			"#Sva75c a img[data-noaft]"
+		].find(function(s){
+			return ElementMatchesSelector(element,s);
+		})){
+			try{
+				var mouse_event = document.createEvent("MouseEvent");
+				mouse_event.initMouseEvent("mousedown",true,false,document.defaultView,0,0,0,0,0,false,false,false,false,0,null);
+				element.dispatchEvent(mouse_event);
+			}catch(e){}
+		}
+
+		// サイド画像検索用のフォーカス画像
+		if([
+			"#Sva75c c-wiz a > img"
+		].find(function(s){
+			return ElementMatchesSelector(element,s);
+		})){
+			response({url:element.src});
+			return true;
 		}
 
 		return false;
@@ -14882,7 +15026,7 @@
 			}
 
 			p = m.index;
-			url = (function(){
+			var url = (function(){
 				var o;
 
 				o = scheme_dictionary[m[0]];
@@ -15329,23 +15473,6 @@
 		// スクロール補正
 		revise_scroll.executeAttachElementAfter(image);
 
-		// クリック時に実行されるイベント
-		function click_func(e){
-			if(e.ctrlKey){
-				// Ctrl + クリックで等倍配置
-				style.width  = natural_size.width  + "px";
-				style.height = natural_size.height + "px";
-
-			}else{
-				release();
-			}
-		}
-		if(image.addEventListener){
-			image.addEventListener("click",click_func,true);
-		}else if(image.attachEvent){
-			image.attachEvent("onclick",click_func);
-		}
-
 		// 開放時に実行されるイベント
 		var event_handler = event_dispatcher.createEventHandler("release");
 		event_handler.setFunction(release);
@@ -15416,6 +15543,17 @@
 		return false;
 	},
 	function(info,response){
+		var url_info = url_info_dictionary.getUrlInfo(info.url);
+		if (url_info) {
+			var content_type = url_info.getValue("type")||"";
+			if (content_type.match(/^image/i)) {
+				response({result:true});
+				return true;
+			}
+		}
+		return false;
+	},
+	function(info,response){
 		// ポップアップ表示しない
 		response({result:false});
 		return true;
@@ -15444,6 +15582,11 @@
 	function(info,response){
 		var current_element = info.current_element;
 		var result = (function(){
+
+			// イメージ要素
+			if(current_element.tagName == "IMG"){
+				return true;
+			}
 
 			// イメージ要素を含む
 			var nodes = ElementGetElementsByTagName(current_element,"img");
@@ -15512,6 +15655,17 @@
 			return true;
 		}
 
+		return false;
+	},
+	function(info,response){
+		var url_info = url_info_dictionary.getUrlInfo(info.url);
+		if (url_info) {
+			var content_type = url_info.getValue("type")||"";
+			if (content_type.match(/^image/i)) {
+				response({result:true});
+				return true;
+			}
+		}
 		return false;
 	},
 	function(info,response){
@@ -15594,6 +15748,17 @@
 		return false;
 	},
 	function(info,response){
+		var url_info = url_info_dictionary.getUrlInfo(info.url);
+		if (url_info) {
+			var content_type = url_info.getValue("type")||"";
+			if (content_type.match(/^image/i)) {
+				response({result:true});
+				return true;
+			}
+		}
+		return false;
+	},
+	function(info,response){
 		// サムネイル表示しない
 		response({result:false});
 		return true;
@@ -15655,6 +15820,17 @@
 			return true;
 		}
 
+		return false;
+	},
+	function(info,response){
+		var url_info = url_info_dictionary.getUrlInfo(info.url);
+		if (url_info) {
+			var content_type = url_info.getValue("type")||"";
+			if (content_type.match(/^image/i)) {
+				response({result:true});
+				return true;
+			}
+		}
 		return false;
 	},
 	function(info,response){
@@ -15725,6 +15901,17 @@
 			return true;
 		}
 
+		return false;
+	},
+	function(info,response){
+		var url_info = url_info_dictionary.getUrlInfo(info.url);
+		if (url_info) {
+			var content_type = url_info.getValue("type")||"";
+			if (content_type.match(/^image/i)) {
+				response({result:true});
+				return true;
+			}
+		}
 		return false;
 	},
 	function(info,response){
@@ -15849,6 +16036,17 @@
 		return false;
 	},
 	function(info,response){
+		var url_info = url_info_dictionary.getUrlInfo(info.url);
+		if (url_info) {
+			var content_type = url_info.getValue("type")||"";
+			if (content_type.match(/^image/i)) {
+				response({result:true});
+				return true;
+			}
+		}
+		return false;
+	},
+	function(info,response){
 		// サムネイル表示しない
 		response({result:false});
 		return true;
@@ -15963,6 +16161,17 @@
 		return false;
 	},
 	function(info,response){
+		var url_info = url_info_dictionary.getUrlInfo(info.url);
+		if (url_info) {
+			var content_type = url_info.getValue("type")||"";
+			if (content_type.match(/^image/i)) {
+				response({result:true});
+				return true;
+			}
+		}
+		return false;
+	},
+	function(info,response){
 		// サムネイル表示しない
 		response({result:false});
 		return true;
@@ -16033,6 +16242,17 @@
 			return true;
 		}
 
+		return false;
+	},
+	function(info,response){
+		var url_info = url_info_dictionary.getUrlInfo(info.url);
+		if (url_info) {
+			var content_type = url_info.getValue("type")||"";
+			if (content_type.match(/^image/i)) {
+				response({result:true});
+				return true;
+			}
+		}
 		return false;
 	},
 	function(info,response){
@@ -16193,6 +16413,17 @@
 		return false;
 	},
 	function(info,response){
+		var url_info = url_info_dictionary.getUrlInfo(info.url);
+		if (url_info) {
+			var content_type = url_info.getValue("type")||"";
+			if (content_type.match(/^image/i)) {
+				response({result:true});
+				return true;
+			}
+		}
+		return false;
+	},
+	function(info,response){
 		// サムネイル表示しない
 		response({result:false});
 		return true;
@@ -16254,6 +16485,17 @@
 			return true;
 		}
 
+		return false;
+	},
+	function(info,response){
+		var url_info = url_info_dictionary.getUrlInfo(info.url);
+		if (url_info) {
+			var content_type = url_info.getValue("type")||"";
+			if (content_type.match(/^image/i)) {
+				response({result:true});
+				return true;
+			}
+		}
 		return false;
 	},
 	function(info,response){
@@ -16374,6 +16616,17 @@
 		return false;
 	},
 	function(info,response){
+		var url_info = url_info_dictionary.getUrlInfo(info.url);
+		if (url_info) {
+			var content_type = url_info.getValue("type")||"";
+			if (content_type.match(/^image/i)) {
+				response({result:true});
+				return true;
+			}
+		}
+		return false;
+	},
+	function(info,response){
 		// サムネイル表示しない
 		response({result:false});
 		return true;
@@ -16457,6 +16710,17 @@
 			return true;
 		}
 
+		return false;
+	},
+	function(info,response){
+		var url_info = url_info_dictionary.getUrlInfo(info.url);
+		if (url_info) {
+			var content_type = url_info.getValue("type")||"";
+			if (content_type.match(/^image/i)) {
+				response({result:true});
+				return true;
+			}
+		}
 		return false;
 	},
 	function(info,response){
@@ -22527,6 +22791,7 @@
 					var m = ElementGetTextContent(n).match(new RegExp("No[.][0-9]+","i"));
 					if(!m)	return;
 
+					var control_reply;
 					var element_reply;
 					switch(n.nodeType){
 					// 2019/11/18 以降
@@ -34661,25 +34926,14 @@
 		// 解放
 		// --------------------------------------------------------------------------------
 		_this.release = function (){
-			if(_analyze_work){
-				// 解析辞書除外
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
-				_analyze_work = null;
+			if(_event_handler_release){
+				_event_handler_release.release();
+				_event_handler_release = null;
 			}
-
-			// リムーブ監視を破棄
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
-			}
-
-			// タスク解放
 			if(_task){
 				_task.release();
 				_task = null;
 			}
-
-			// ウィンドウ破棄
 			if(_window){
 				DomNodeRemove(_window);
 				_window = null;
@@ -34699,22 +34953,13 @@
 			ElementSetStyle(container,"width:220px;border:3px #888 outset; padding:0px; margin:0px; right:5px; bottom:5px; position:fixed; text-align:left; color:#000; font-size:12px; line-height:1.0; z-index:2147483647;");
 			_window = container;
 
-			// 解析ワーク作成
-			_analyze_work = AnalyzeWorkCreate(_window);
+			var node_info = node_info_dictionary.addNode(_window);
+			node_info.setInvalid();
+			node_info.setOwnerToPageExpand();
+			node_info.observerRemove();
 
-			// 解析無効化
-			AnalyzeWorkSetInvalid(_analyze_work);
-
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			attach_options.SetOutsider();
-
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
-
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_window);
-			_observer_remove.setFunction(_this.release);
+			_event_handler_release = node_info.createEventHandler("release");
+			_event_handler_release.setFunction(_this.release);
 
 			var background = DocumentCreateElement("div");
 			ElementSetStyle(background,"background-color:#FFF; line-height:1.0; border:1px #ccc solid; padding:0px; margin:0px; opacity:0.8;");
@@ -34950,103 +35195,65 @@
 		// --------------------------------------------------------------------------------
 		// テキスト（内部用）
 		// --------------------------------------------------------------------------------
-		function UI_Text(parent){
-			var _this = this;
-
-			// --------------------------------------------------------------------------------
-			// テキストをセット
-			// --------------------------------------------------------------------------------
-			_this.setText = function(value){
-				if(_text != value){
-					_text = value;
-					DomNodeSetNodeValue(_node,_text);
-				}
+		var UI_Text = (function(){
+			var f = function(parent){
+				this.node = DocumentCreateText("");
+				parent.appendChild(this.node);
 			};
-
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _node;
-			var _text;
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_node = DocumentCreateText("");
-				parent.appendChild(_node);
-			})();
-		}
+			f.prototype = {
+				setText:function(v){
+					if(DomNodeGetNodeValue(this.node) == v) return;
+					DomNodeSetNodeValue(this.node,v);
+				},
+				node:null
+			};
+			return f;
+		})();
 
 		// --------------------------------------------------------------------------------
 		// ブログレスバー（内部用）
 		// --------------------------------------------------------------------------------
-		function UI_ProgressBar(parent){
-			var _this = this;
-
-			// --------------------------------------------------------------------------------
-			// 値をセット
-			// --------------------------------------------------------------------------------
-			_this.setValue = function(value){
-				if(_now != value){
-					_now = value;
-					update();
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// 最大値をセット
-			// --------------------------------------------------------------------------------
-			_this.setMaximum = function(value){
-				if(_max != value){
-					_max = value;
-					update();
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// 更新（内部用）
-			// --------------------------------------------------------------------------------
+		var UI_ProgressBar = (function(){
 			function update(){
 				var percent = 0;
-				if(_max){
-					percent = Math.floor(_now / _max * 100);
+				if(this.max){
+					percent = Math.floor(this.now / this.max * 100);
 				}
-				_bar.style.width = percent + "%";
+				this.bar.style.width = percent + "%";
 			}
+			var f = function(parent){
+				var mater = DocumentCreateElement("div");
+				ElementSetStyle(mater,"height:2px; min-height:0; border:1px #888 solid; margin:0px 5px 2px; line-height:1.0;");
+				parent.appendChild(mater);
 
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _mater;
-			var _bar;
-			var _now;
-			var _max;
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_now = 0;
-				_max = 0;
-
-				_mater = DocumentCreateElement("div");
-				ElementSetStyle(_mater,"height:2px; min-height:0; border:1px #888 solid; margin:0px 5px 2px; line-height:1.0;");
-				parent.appendChild(_mater);
-
-				_bar = DocumentCreateElement("div");
-				ElementSetStyle(_bar,"height:2px; min-height:0; background-color :#888; margin:0px 0px 2px; width:0%; line-height:1.0;");
-				_mater.appendChild(_bar);
-			})();
-		}
+				this.bar = DocumentCreateElement("div");
+				ElementSetStyle(this.bar,"height:2px; min-height:0; background-color :#888; margin:0px 0px 2px; width:0%; line-height:1.0;");
+				mater.appendChild(this.bar);
+			};
+			f.prototype = {
+				setValue:function(v){
+					if(this.now == v) return;
+					this.now = v;
+					update.call(this);
+				},
+				setMaximum:function(v){
+					if(this.max == v) return;
+					this.max = v;
+					update.call(this);
+				},
+				bar:null,
+				now:0,
+				max:0
+			};
+			return f;
+		})();
 
 		// --------------------------------------------------------------------------------
 		// プライベート変数
 		// --------------------------------------------------------------------------------
 		var _window;
 		var _task;
-		var _analyze_work;
-		var _observer_remove;
+		var _event_handler_release;
 		var _visible;
 
 		// --------------------------------------------------------------------------------
@@ -35056,11 +35263,6 @@
 			_visible = false;
 		})();
 	}
-
-
-
-
-
 
 
 	// --------------------------------------------------------------------------------
@@ -38390,6 +38592,7 @@
 				var combo_box_thumbnail_load_type = new UI_ComboBox(parent);
 				combo_box_thumbnail_load_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_start_type_preload"),"preload");
 				combo_box_thumbnail_load_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_start_type_scroll"),"scroll");
+				combo_box_thumbnail_load_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_start_type_mouseover"),"mouseover");
 				combo_box_thumbnail_load_type.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.thumbnail.load_type = v;
@@ -38484,6 +38687,7 @@
 				var combo_box_popup_load_type = new UI_ComboBox(parent);
 				combo_box_popup_load_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_start_type_preload"),"preload");
 				combo_box_popup_load_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_start_type_scroll"),"scroll");
+				combo_box_popup_load_type.attachItem(_i18n.getMessage("menu_setting_expand_image_load_start_type_mouseover"),"mouseover");
 				combo_box_popup_load_type.onchange = function(v){
 					_setting_define.getSelectedDefinitions(function(c){
 						c.popup.load_type = v;
@@ -39183,6 +39387,29 @@
 				new UI_Break(form_parent);
 
 				// タイトル
+				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_tiktok"));
+
+				// グループ
+				var group = new UI_GroupContainer(form_parent);
+				var group_parent = group.getElement();
+
+				// www.tiktok.com の設定
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_expand_video_inline_tiktok_check_box_container"));
+				var parent = container.getElement();
+
+				// ビデオを表示
+				var check_box_tiktok_visible_video = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_expand_video_inline_tiktok_visible_video"));
+				check_box_tiktok_visible_video.onchange = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.tiktok.visible_video = v;
+					});
+
+					_setting_define.update();
+					projectModify();
+				};
+				new UI_Break(form_parent);
+
+				// タイトル
 				var title = new UI_TitleSub(form_parent,_i18n.getMessage("menu_setting_expand_video_inline_nicovideo"));
 
 				// グループ
@@ -39279,6 +39506,8 @@
 					combo_box_video_element_src_type.setValue(c.video_element.src_type);
 					// youtube ビデオ表示
 					check_box_youtube_visible_video.setValue(c.youtube.visible_video);
+					// tiktok ビデオ表示
+					check_box_tiktok_visible_video.setValue(c.tiktok.visible_video);
 					// nicovideo ビデオ表示
 					check_box_nicovideo_visible_video.setValue(c.nicovideo.visible_video);
 					// dailymotion ビデオ表示
@@ -39653,6 +39882,20 @@
 					projectModify();
 				};
 
+				// www.tiktok.com の設定
+				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_tiktok"));
+				var parent = container.getElement();
+
+				new UI_TitleItem(parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_tiktok_inline_video"));
+				var text_input_expand_video_tiktok_inline_video = new UI_TextInput(parent);
+				text_input_expand_video_tiktok_inline_video.oninput = function(v){
+					_setting_define.getSelectedDefinitions(function(c){
+						c.expand_video.inline.tiktok.video = v;
+					});
+					_setting_define.update();
+					projectModify();
+				};
+
 				// www.nicovideo.jp の設定
 				var container = new UI_LineContainer(group_parent,_i18n.getMessage("menu_setting_style_sheet_expand_video_nicovideo"));
 				var parent = container.getElement();
@@ -39753,6 +39996,7 @@
 					text_input_expand_video_inline_video_element.setValue(c.expand_video.inline.video_element.video);
 					text_input_expand_video_inline_video_element_unsafe.setValue(c.expand_video.inline.video_element.video_unsafe);
 					text_input_expand_video_youtube_inline_video.setValue(c.expand_video.inline.youtube.video);
+					text_input_expand_video_tiktok_inline_video.setValue(c.expand_video.inline.tiktok.video);
 					text_input_expand_video_nicovideo_inline_video.setValue(c.expand_video.inline.nicovideo.video);
 					text_input_expand_video_dailymotion_inline_video.setValue(c.expand_video.inline.dailymotion.video);
 					text_input_expand_video_vimeo_inline_video.setValue(c.expand_video.inline.vimeo.video);
@@ -39893,7 +40137,7 @@
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.7.6");
+				new UI_Text(parent,"PageExpand ver.1.7.9");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -39903,7 +40147,7 @@
 				var tr = table.insertRow(-1);
 				new UI_Text(tr.insertCell(-1),'by');
 				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","https://hakuhin.jp/");
-				new UI_Text(tr.insertCell(-1),'2010-2024');
+				new UI_Text(tr.insertCell(-1),'2010-2025');
 				new UI_AnchorText(parent,"https://github.com/hakuhin/PageExpand","https://github.com/hakuhin/PageExpand");
 
 				// 翻訳者
@@ -41039,8 +41283,6 @@
 			// 初期化
 			// --------------------------------------------------------------------------------
 			(function(){
-				_visible = false;
-
 				_body = DocumentCreateElement("div");
 				ElementSetStyle(_body,"margin:0px 0px 0px 0px;");
 				parent.appendChild(_body);
@@ -45891,6 +46133,9 @@
 					youtube:{
 						visible_video:false
 					},
+					tiktok:{
+						visible_video:false
+					},
 					nicovideo:{
 						visible_video:false
 					},
@@ -45966,6 +46211,9 @@
 								video_unsafe:""
 							},
 							youtube:{
+								video:""
+							},
+							tiktok:{
 								video:""
 							},
 							nicovideo:{
@@ -46301,429 +46549,6 @@
 	PageExpandConfig.MENU_TYPE_SETTING_DOWNLOAD = 19;
 	PageExpandConfig.MENU_TYPE_SETTING_LANGUAGE = 20;
 	PageExpandConfig.MENU_TYPE_CREDIT = 21;
-
-
-	// --------------------------------------------------------------------------------
-	// ポップアップメニュー
-	// --------------------------------------------------------------------------------
-	var PageExpandPopupMenu = (function(){
-
-		// --------------------------------------------------------------------------------
-		// アクティブな Tab を更新
-		// --------------------------------------------------------------------------------
-		function update_activeTab(callback){
-			var _this = this;
-			chrome.tabs.query({active:true,currentWindow:true},function(tabs) {
-				tabs = tabs || [];
-				_this.tab = tabs[0];
-				callback();
-			});
-		}
-
-		// --------------------------------------------------------------------------------
-		// プロジェクトを更新
-		// --------------------------------------------------------------------------------
-		function update_project(callback){
-			var _this = this;
-			var proj = new PageExpandProject();
-			proj.loadLocalStorage(function(e){
-				page_expand_project = proj;
-				project = new Project();
-				project.importObjectForBackground(page_expand_project.getProject(Tab_getURL(_this.tab)));
-				_this.i18n = new InternationalMessage(page_expand_project.getLanguage());
-				callback(e);
-			});
-		}
-
-		// --------------------------------------------------------------------------------
-		// コンテントステータスを更新
-		// --------------------------------------------------------------------------------
-		function update_status(callback){
-			var _this = this;
-
-			var release = function(){
-				released = true;
-				if(time_handle !== null){
-					clearTimeout(time_handle);
-					time_handle = null;
-				}
-				if(port){
-					port.release();
-					port = null;
-				}
-			};
-			var success = function(data){
-				if(released) return;
-				release();
-				_this.status = data;
-				callback();
-			};
-			var failure = function(){
-				if(released) return;
-				release();
-				delete _this.status;
-				callback();
-			};
-
-			var released = false;
-			var time_handle = null;
-			var port = extension_message.connectToContent(_this.tab,{frameId:0});
-			if(!port){
-				failure();
-				return;
-			}
-
-			// タイムアウト（スタック回避）
-			time_handle = setTimeout(failure,1000);
-
-			port.onmessage = success;
-			port.ondisconnect = failure;
-			port.start(function(){
-				port.postMessage({command:"getStatus"});
-			});
-		}
-
-		// --------------------------------------------------------------------------------
-		// UI
-		// --------------------------------------------------------------------------------
-		var UI_LineButton = (function(){
-			function mouse_normal(){
-				this.style.color = "#222";
-				this.style.background = "none";
-			}
-			function mouse_over(){
-				this.style.color = "#fff";
-				this.style.background = "#4281F4";
-			}
-			function mouse_down(){
-				this.style.color = "#fff";
-				this.style.background = "#404040";
-			}
-
-			var f = function(parent,label){
-				var _this = this;
-
-				var _item = DocumentCreateElement("a");
-				_item.href = "";
-				_this.style = _item.style;
-				ElementSetStyle(_item,"display:block; text-decoration: none; font-size:13px; color:#000; margin:0px 0px 2px; padding:5px 20px; border-radius:5px; line-height:1.0;");
-				ElementSetTextContent(_item,label);
-				parent.appendChild(_item);
-
-				_item.addEventListener("click",function(e){
-					var f = _this.onclick;
-					if(f) f(e);
-					e.preventDefault();
-				});
-				_item.addEventListener("mouseover",function(e){
-					mouse_over.call(_this);
-				});
-				_item.addEventListener("mousedown",function(e){
-					mouse_down.call(_this);
-				});
-				_item.addEventListener("mouseup",function(e){
-					mouse_over.call(_this);
-				});
-				_item.addEventListener("mouseout",function(e){
-					mouse_normal.call(_this);
-				});
-			};
-			f.prototype = {
-				onclick : function(){},
-				style : null
-			};
-			return f;
-		})();
-
-		var UI_Separator = (function(){
-			var f = function(parent){
-				var _item = DocumentCreateElement("div");
-				ElementSetStyle(_item,"height: 0px; border-top:1px solid #ddd; margin:5px 0px;");
-				parent.appendChild(_item);
-			};
-			return f;
-		})();
-
-		function update_document(callback){
-			var _this = this;
-			var root = document.body;
-
-			DomNodeRemoveChildren(root);
-
-			document.title = this.i18n.getMessage("page_expand_popup_menu");
-			ElementSetStyle(root,'background-color:#ccc; font-family:"Meiryo","sans-serif"; margin:0px; padding:0px; width:300px; border:0px solid #000; overflow-x:hidden; box-sizing:border-box;');
-
-			// ヘッダ
-			var head_window = DocumentCreateElement("div");
-			ElementSetStyle(head_window,"background-color:#000; color:#fff; font-size:12px; font-weight:bold; padding:2px 5px; margin:0px;");
-			ElementSetTextContent(head_window,this.i18n.getMessage("page_expand_popup_menu"));
-			root.appendChild(head_window);
-
-			// ボディ
-			var body_window = DocumentCreateElement("div");
-			ElementSetStyle(body_window,"border:2px inset #f0f0f0; background-color:#fcfcfc;");
-			root.appendChild(body_window);
-
-			// 外周
-			var out_window = DocumentCreateElement("div");
-			ElementSetStyle(out_window,"margin:5px 5px 5px 5px;");
-			body_window.appendChild(out_window);
-
-			// 外周
-			var out_table = DocumentCreateElement("div");
-			ElementSetStyle(out_table,"width:100%; display:table;");
-			out_window.appendChild(out_table);
-
-			// メニュー部
-			var _menu_window = DocumentCreateElement("div");
-			ElementSetStyle(_menu_window,"display:table-cell; vertical-align:top; user-select:none; -webkit-user-select:none; -moz-user-select:none; -khtml-user-select:none; margin:0px;");
-			out_table.appendChild(_menu_window);
-
-			var items = new Array();
-
-			if(_this.status.alive){
-				// イメージビューワを開く
-				items.push({
-					type:"button",
-					id:"openImageViewer",
-					i18n:"open_image_viewer"
-				});
-			}
-
-			items.push({ type:"separator" });
-
-			// ダウンロードボードを開く（アプリ）
-			items.push({
-				type:"button",
-				id:"openDownloadBoardApplication",
-				i18n:"open_download_board_application"
-			});
-
-			if(_this.status.alive){
-				// ダウンロードボードを開く（ここで）
-				items.push({
-					type:"button",
-					id:"openDownloadBoardInline",
-					i18n:"open_download_board_inline"
-				});
-
-				// 一括ダウンロード（メディア）
-				items.push({
-					type:"button",
-					id:"batchDownloadMedia",
-					i18n:"batch_download_media"
-				});
-			}
-
-			items.push({ type:"separator" });
-
-			// 掲示板ボードを開く（アプリ）
-			items.push({
-				type:"button",
-				id:"openBbsBoard",
-				i18n:"open_bbs_board"
-			});
-
-			// 掲示板ボードを開く（サイド）
-			if(GoogleChromeExtensionSidebarSupported()){
-				items.push({
-					type:"button",
-					id:"openBbsBoardSidebar",
-					i18n:"open_bbs_board_sidebar"
-				});
-			}
-
-			items.push({ type:"separator" });
-
-
-			// 現在のページの設定を編集
-			items.push({
-				type:"button",
-				id:"configCurrentPage",
-				i18n:"config_current_page"
-			});
-
-			// 掲示板拡張の設定
-			if(project.getEnableExpandBbs()){
-				items.push({
-					type:"button",
-					id:"configCurrentBbs",
-					i18n:"config_current_bbs"
-				});
-			}
-
-			items.push({ type:"separator" });
-
-			if(_this.status.alive){
-
-				if(!(_this.status.started)){
-					// PageExpand の開始
-					if(!(project.getEnableStartup())){
-						items.push({
-							type:"button",
-							id:"startPageExpand",
-							i18n:"start"
-						});
-					}
-				}
-
-				// PageExpand の中止
-				items.push({
-					type:"button",
-					id:"abortPageExpand",
-					i18n:"abort"
-				});
-
-				if(_this.status.started){
-					// PageExpand の最速実行
-					items.push({
-						type:"button",
-						id:"executeFastest",
-						i18n:"execute_fastest"
-					});
-				}
-
-				// PageExpand デバッグ
-				items.push({
-					type:"button",
-					id:"executeDebug",
-					i18n:"debug"
-				});
-			}
-
-			var i;
-			var num;
-
-			// 最先頭のセパレータを削除
-			num = items.length;
-			for(i=0;i<num;i++){
-				if(items[i].type != "separator") break;
-			}
-			if(0 < i) items.splice(0,i);
-
-			// 最後尾のセパレータを削除
-			num = items.length;
-			for(i=0;i<num;i++){
-				if(items[num-i-1].type != "separator") break;
-			}
-			if(0 < i) items.splice(num-i,i);
-
-			num = items.length;
-			for(i=0;i<num;i++){
-				(function(){
-					var item = items[i];
-					var ui;
-					switch(item.type){
-					case "button":
-						ui = new UI_LineButton(_menu_window , _this.i18n.getMessage("context_menu_pageexpand_"+item.i18n));
-						ui.onclick = function(){
-							click.call(_this,item.id);
-						};
-						break;
-					case "separator":
-						ui = new UI_Separator(_menu_window);
-						break;
-					}
-				})();
-			}
-
-			callback();
-		}
-
-		// --------------------------------------------------------------------------------
-		// クリック
-		// --------------------------------------------------------------------------------
-		var click = (function(){
-			var menu_commands = Object();
-			menu_commands["openBbsBoard"] = function(info) {
-				var query = new Object();
-				query.referer = encodeURIComponent(Tab_getURL(this.tab));
-				GoogleChromeExtensionOpenBbsBoard(query);
-			};
-			menu_commands["openBbsBoardSidebar"] = function(info) {
-				if(!(this.tab)) return;
-				GoogleChromeExtensionOpenBbsBoardInSidebar({windowId: this.tab.windowId});
-			};
-			menu_commands["openDownloadBoardApplication"] = function() {
-				GoogleChromeExtensionOpenDownloadBoard();
-			};
-			menu_commands["configCurrentPage"] = function(info) {
-				var query = new Object();
-				query.type = "urlmap";
-				query.url = encodeURIComponent(Tab_getURL(this.tab));
-				GoogleChromeExtensionOpenPageExpandConfig(query);
-			};
-			menu_commands["configCurrentBbs"] = function(info) {
-				var query = new Object();
-				query.type = "expand_bbs";
-				query.url = encodeURIComponent(Tab_getURL(this.tab));
-				GoogleChromeExtensionOpenPageExpandConfig(query);
-			};
-			menu_commands["startPageExpand"] =
-			menu_commands["abortPageExpand"] =
-			menu_commands["executeFastest"] = function(info) {
-				var _this = this;
-				var port = extension_message.connectToContent(this.tab);
-				if(!port) return;
-				port.start(function (){
-					port.postMessage({command:info.menuItemId});
-					port.terminate();
-					reload.call(_this);
-				});
-			};
-			menu_commands["executeDebug"] =
-			menu_commands["openImageViewer"] =
-			menu_commands["openDownloadBoardInline"] =
-			menu_commands["batchDownloadMedia"] = function(info) {
-				var port = extension_message.connectToContent(this.tab);
-				if(!port) return;
-				port.start(function (){
-					port.postMessage({command:info.menuItemId,onlyTopWindow:true});
-					port.terminate();
-				});
-			};
-
-			return function(command){
-				var f = menu_commands[command];
-				if(f) f.call(this,{menuItemId:command});
-			};
-		})();
-
-		// --------------------------------------------------------------------------------
-		// リロード
-		// --------------------------------------------------------------------------------
-		function reload(newTab){
-			if(this.exec_methods){
-				this.exec_methods.release();
-				this.exec_methods = null;
-			}
-			this.exec_methods = new ExecuteMethods(this);
-			if(newTab){
-				this.tab = newTab;
-			}else{
-				this.exec_methods.push(update_activeTab);
-			}
-			this.exec_methods.push(update_project);
-			this.exec_methods.push(update_status);
-			this.exec_methods.push(update_document);
-		}
-
-		var PageExpandPopupMenu = function(){
-			var _this = this;
-			chrome.tabs.onUpdated.addListener( function(tab_id , info , tab){
-				if(tab.status != chrome.tabs.TabStatus.COMPLETE) return;
-				reload.call(_this,tab);
-			});
-			reload.call(_this);
-		};
-		PageExpandPopupMenu.prototype = {
-			exec_methods : null,
-			i18n : null,
-			tab : null,
-			status : { alive:false }
-		};
-		return PageExpandPopupMenu;
-	})();
 
 
 	// --------------------------------------------------------------------------------
@@ -48402,6 +48227,7 @@
 
 					var p = 0;
 					var n = str.length;
+					var e;
 					function f(){
 						if(exit()) return;
 
@@ -48431,10 +48257,18 @@
 									url = StringLiteral_To_String(url) || url;
 									url = StringUrl_To_Absolute(url,loader_url);
 
+									var url_parser = URL_Parser(url);
+									var domain = (function(){
+										var m = url_parser.hostname.match(/[^.]+[.][^.]+$/) || {};
+										return m[0] || "";
+									})();
+
+									if(!project.getVisitedBbs("bbspink")){
+										if(domain == "bbspink.com") return;
+									}
+
 									switch(_current_site){
 									case "itest5ch":
-										var url_parser = URL_Parser(url);
-										var domain = (url_parser.hostname.search(/bbspink[.]com/) >= 0) ? "bbspink.com" : "5ch.net";
 										url = "https://itest." + domain + "/subback" + url_parser.pathname;
 										break;
 									case "5ch_pc":
@@ -50130,49 +49964,28 @@
 
 					var option = DocumentCreateElement("option");
 					ElementSetStyle(option,"color:#aaa;");
-					ElementSetTextContent(option,"Select the site ...");
+					ElementSetTextContent(option,project.getEnableBbsBoard() ? "Select the site ..." : "If you have visited relevant BBS even once, the BbsBoard unlocked.");
 					option.value = "";
 					_select_site.appendChild(option);
 
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"5ch.net (PC)");
-					option.value = "5ch_pc";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"5ch.net (classic)");
-					option.value = "5ch_classic";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"itest.5ch.net");
-					option.value = "itest5ch";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"open2ch.net");
-					option.value = "open2ch";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"2chan.net");
-					option.value = "2chan";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"4chan.org");
-					option.value = "4chan";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"8kun.top");
-					option.value = "8kun";
-					_select_site.appendChild(option);
-
-					var option = DocumentCreateElement("option");
-					ElementSetTextContent(option,"2ch.hk");
-					option.value = "2ch.hk";
-					_select_site.appendChild(option);
+					[
+						{site:["5ch","bbspink"],text:"5ch.net (PC)",value:"5ch_pc"},
+						{site:["5ch","bbspink"],text:"5ch.net (classic)",value:"5ch_classic"},
+						{site:["5ch","bbspink"],text:"itest.5ch.net",value:"itest5ch"},
+						{site:["open2ch"],text:"open2ch.net",value:"open2ch"},
+						{site:["2chan"],text:"2chan.net",value:"2chan"},
+						{site:["4chan"],text:"4chan.org",value:"4chan"},
+						{site:["8kun"],text:"8kun.top",value:"8kun"},
+						{site:["2ch.hk"],text:"2ch.hk",value:"2ch.hk"}
+					].forEach(function(o){
+						if(!o.site.some(function(v){
+							return project.getVisitedBbs(v);
+						})) return;
+						var option = DocumentCreateElement("option");
+						ElementSetTextContent(option,o.text);
+						option.value = o.value;
+						_select_site.appendChild(option);
+					});
 
 				// カテゴリボタン
 				_button_menu_category = new UI_ToolButton(container_left);
@@ -50858,6 +50671,7 @@
 		var _style_item_separator;
 		var _open_mode;
 		var _folder_dictionary;
+		var _selected_item;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
@@ -52535,7 +52349,7 @@
 					_element_info.appendChild(node);
 				};
 
-				wait_analyze = new WaitAnalize();
+				wait_analyze = new WaitAnalyze();
 				wait_analyze.onprogress = function(r){
 					_info_wait.setText(0,"analyzing this document...");
 					var s = r.value + " / " + r.max;
@@ -52569,10 +52383,10 @@
 			wait_analyze.start();
 		}
 
-		function WaitAnalize(){
+		function WaitAnalyze(){
 			this.event_dispatcher = new EventDispatcher();
 		}
-		WaitAnalize.prototype = {
+		WaitAnalyze.prototype = {
 			release : function(){
 				this.event_dispatcher.release();
 				if(this.task){
@@ -53911,7 +53725,9 @@
 				}
 				item.updateVisible();
 			},
-			elements : {},
+			url_info : null,
+			elements : null,
+			textnodes : null,
 			visible:false,
 			released:false
 		};
@@ -55160,7 +54976,7 @@
 						if(p.released) return;
 
 						if(file_reader.error){
-							failure(file_reader.error);
+							failure(Error_to_String(file_reader.error));
 							return;
 						}
 
@@ -55218,7 +55034,7 @@
 						var blob = new Blob([file_name_obj.filename],{type:"text/plain"});
 						success(blob);
 					}catch(e){
-						failure(e.message);
+						failure(Error_to_String(e));
 					}
 				}
 
@@ -55572,10 +55388,14 @@
 				for(i=0;i<num;i++){
 					items[i].abort();
 				}
-				dispatch_progress.call(this);
-				dispatch_statechange.call(this,ArchiveCreaterState.FAILED);
-				dispatch_error.call(this,"operation was aborted");
-				this.release();
+				if(this.downloader){
+					this.downloader.cancel();
+				}else{
+					dispatch_progress.call(this);
+					dispatch_statechange.call(this,ArchiveCreaterState.FAILED);
+					dispatch_error.call(this,"operation was aborted");
+				}
+				this.executing = false;
 			},
 			abortLoader : function(){
 				var items = this.items;
@@ -55583,6 +55403,9 @@
 				var num = this.items.length;
 				for(i=0;i<num;i++){
 					items[i].abortLoader();
+				}
+				if(this.downloader){
+					this.downloader.cancel();
 				}
 			},
 			attachUrlInfo : function(url_info){
@@ -55863,7 +55686,7 @@
 						}catch(e){
 							_this.executing = false;
 							dispatch_statechange.call(_this,ArchiveCreaterState.FAILED);
-							dispatch_error.call(_this,e.message);
+							dispatch_error.call(_this,Error_to_String(e));
 						}
 					};
 					o.forEach(function(item,callback){
@@ -55878,21 +55701,6 @@
 				// ダウンロード開始
 				this.exec_methods.push(function(callback){
 
-					function complete(response){
-						_this.executing = false;
-						_this.progress.progress_rate = 1.0;
-						dispatch_progress.call(_this);
-						if(response.result){
-							dispatch_statechange.call(_this,ArchiveCreaterState.DOWNLOAD_SUCCESS);
-						}else{
-							if(_this.blob){
-								_this.blobURL = BlobURLCreate(_this.blob);
-							}
-							dispatch_statechange.call(_this,ArchiveCreaterState.DOWNLOAD_FAILURE);
-						}
-						dispatch_complete.call(_this,response);
-					}
-
 					if(!_this.fileName){
 						_this.fileName = "PageExpand_" + (new Date()).getTime() + ".zip";
 					}
@@ -55901,29 +55709,47 @@
 
 					if((function(){
 						// Firefox は BlobURL のバックグラウンド送信コストが重すぎるので使用しない
-						if(UserAgentGetFirefox()) return false;
-						return true;
+						if(UserAgentGetFirefox()) return true;
+						return false;
 					})()){
-					var downloader = _this.downloader = new Downloader();
-						downloader.onprogress = function(r){
-							var p = _this.progress;
-							var rate = (function(){
-								if(!r.bytesTotal) return 1.0;
-								return (r.bytesLoaded / r.bytesTotal);
-							})();
-							p.progress_rate = (4/5) + rate * (1/5);
-							dispatch_progress.call(_this);
-						};
-						downloader.oncomplete = complete;
-						downloader.setFile(_this.blob);
-						downloader.setFileName(_this.fileName);
-						downloader.setSaveAs(true);
-						downloader.setSilent(false);
-						downloader.setAllowSameRequest(true);
-						downloader.start();
-					}else{
-						complete({result:false});
+						callback({result:false});
+						return;
 					}
+
+					var downloader = _this.downloader = new Downloader();
+					downloader.onprogress = function(r){
+						var p = _this.progress;
+						var rate = (function(){
+							if(!r.bytesTotal) return 1.0;
+							return (r.bytesLoaded / r.bytesTotal);
+						})();
+						p.progress_rate = (4/5) + rate * (1/5);
+						dispatch_progress.call(_this);
+					};
+					downloader.oncomplete = callback;
+					downloader.setFile(_this.blob);
+					downloader.setFileName(_this.fileName);
+					downloader.setSaveAs(true);
+					downloader.setSilent(false);
+					downloader.setAllowSameRequest(true);
+					downloader.start();
+				});
+
+				// ダウンロード完了
+				this.exec_methods.push(function(callback){
+					var response = this.exec_methods.arguments[0];
+					_this.executing = false;
+					_this.progress.progress_rate = 1.0;
+					dispatch_progress.call(_this);
+					if(response.result){
+						dispatch_statechange.call(_this,ArchiveCreaterState.DOWNLOAD_SUCCESS);
+					}else{
+						if(_this.blob){
+							_this.blobURL = BlobURLCreate(_this.blob);
+						}
+						dispatch_statechange.call(_this,ArchiveCreaterState.DOWNLOAD_FAILURE);
+					}
+					dispatch_complete.call(_this,response);
 				});
 
 			},
@@ -56028,274 +55854,296 @@
 	// --------------------------------------------------------------------------------
 	// DOM オブジェクトの解析（ルート）
 	// --------------------------------------------------------------------------------
-	function DomNodeAnalyzeRoot(node){
+	var DomNodeAnalyzeRoot = (function(){
+		return function(node){
+			var p;
+			var n;
+			var q = new Object();
+			var o = {node:node,p:q,n:q};
+			q.p = o;
+			q.n = o;
 
-		var w;
-		var o;
-		var p;
-		var n;
-		var i = 0;
-		var c = 0;
-		var m = 100;
-		var q = new Object();
-		var nodes = node.childNodes;
-		q.p = q;
-		q.n = q;
+			var c = 0;
+			var m = 100;
+			function analyze(){
+				while(true){
+					c++;
+					if(c > m){
+						c = 0;
+						execute_queue.attachFirstForInsertDomNode(analyze,null);
+						return;
+					}
 
-		// 解析無効化
-		w = analyze_work_dictionary.getAnalyzeWork(node);
-		if(w){
-			if(w.a_inv)	return;
-		}
-		var analyzed = (function(){
-			var node_info = node_info_dictionary.getNodeInfo(node);
-			if(!node_info) return false;
-			return node_info.getAnalyzed();
-		})();
-		if(analyzed) return;
+					// キューを消化
+					o = q.n;
+					p = o.p;
+					n = o.n;
+					p.n = n;
+					n.p = p;
+					var node = o.node;
+					if(!node) return;
 
-		// 中断
-		function interrupt(){
-			c = 0;
-			execute_queue.attachFirstForInsertDomNode(analyze,null);
-		}
+					// 無効ならスキップ
+					var invalid = (function(){
+						var node_info = node_info_dictionary.getNodeInfo(node);
+						if(!node_info) return false;
+						return node_info.getInvalid();
+					})();
+					if(invalid) continue;
 
-		// 子孫抽出
-		function analyze(){
-			while(node){
-				if(nodes){
-					while(nodes[i]){
-						o = {node:nodes[i]};
+					DomNodeAnalyzePhaseAnalyzeNode(node);
+
+					if(!(window.addEventListener)){
+						DomNodeSetInserted(node);
+					}
+
+					// 子リストをキューに登録
+					var nodes = node.childNodes || [];
+					nodes.forEach(function(node){
+						o = {node:node};
 						n = q;
 						p = n.p;
 						o.p = p;
 						o.n = n;
 						p.n = o;
 						n.p = o;
-						i++;
 						c++;
-						if(c > m){
-							interrupt();
-							return;
-						}
-					}
-				}
+					});
 
-				switch(node.nodeType){
-				case 1:
-					execute_queue.attachForAnalyzeElement(DomNodeAnalyzePhaseAnalyzeElement,node);
-					break;
-				case 3:
-					DomNodeAnalyzePhaseAnalyzeTextNode(node);
-					break;
-				}
-
-				if(!(window.addEventListener)){
-					DomNodeSetInserted(node);
-				}
-
-				o = q.n;
-				p = o.p;
-				n = o.n;
-				p.n = n;
-				n.p = p;
-				node = o.node;
-				if(node){
-					i = 0;
-					nodes = node.childNodes;
-
-					// 解析無効化
-					w = analyze_work_dictionary.getAnalyzeWork(node);
-					if(w){
-						if(w.a_inv){
-							nodes = null;
-						}
-					}
-				}
-
-				c++;
-				if(c > m){
-					interrupt();
-					return;
 				}
 			}
-		}
 
-		analyze();
-	}
+			analyze();
+		};
+	})();
+
+	// --------------------------------------------------------------------------------
+	// ノードの解析フェーズ
+	// --------------------------------------------------------------------------------
+	var DomNodeAnalyzePhaseAnalyzeNode = (function(){
+		var switch_node_type = new Array();
+		switch_node_type[1] = function(param){
+			execute_queue.attachForAnalyzeElement(DomNodeAnalyzePhaseAnalyzeElement,param);
+		};
+		switch_node_type[3] = function(param){
+			DomNodeAnalyzePhaseAnalyzeTextNode(param);
+		};
+		return function(node){
+			var f = switch_node_type[node.nodeType];
+			if(!f) return;
+
+			var node_info = node_info_dictionary.addNode(node);
+			var param = {
+				nodeInfo:node_info,
+				revision:node_info.getRevision()
+			};
+			f(param);
+		};
+	})();
 
 	// --------------------------------------------------------------------------------
 	// エレメントの解析フェーズ
 	// --------------------------------------------------------------------------------
-	function DomNodeAnalyzePhaseAnalyzeElement(node){
+	var DomNodeAnalyzePhaseAnalyzeElement = (function(){
+		var switch_tag_name = new Object();
+		switch_tag_name["A"] = function(param){
+			var node_info = param.nodeInfo;
+			var anchor = node_info.getNode();
+			node_info.observerRemove();
+			node_info.setData("AnchorElement",anchor);
 
-		// ゲスト検出
-		if(analyze_work_dictionary.verifyGuest(node)){
-			return;
-		}
-
-		// Content Editable
-		if(node.isContentEditable){
-			return;
-		}
-
-		// クローン検出
-		if(analyze_work_dictionary.verifyClone(node)){
-			// スクロール補正
-			var revise_scroll = new DocumentReviseScroll();
-			revise_scroll.executeRemoveElementBefore(node);
-			DomNodeRemove(node);
-			revise_scroll.executeRemoveElementAfter(node);
-			return;
-		}
-
-		// 解析ワーク取得
-		var work = analyze_work_dictionary.getAnalyzeWork(node);
-		if(!work){
-			// 解析ワーク作成
-			work = AnalyzeWorkCreate(node);
-
-		}
-
-		if(!AnalyzeWorkGetInitializedObserverElement(work)){
-
-			// --------------------------------------------------------------------------------
-			// アンカー
-			// --------------------------------------------------------------------------------
-			if(node.tagName == "A"){
-
-				// 要素を監視
-				AnalyzeWorkObserveElement(work);
-
-				// アドレス変更監視
-				var observer_modify_element = document_observer_modify_node.createElement();
-				AnalyzeWorkSetObserverModifyAnchor(work,observer_modify_element);
-				observer_modify_element.setElement(node,"href");
-				observer_modify_element.setFunction(function (){
-
-					// 修正カウンタ加算
-					AnalyzeWorkAddModifyCount(work);
-
-					var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-					if(event_dispatcher){
-						// イベント発火
-						event_dispatcher.dispatchEvent("anchor_href_change",null);
-						event_dispatcher.dispatchEvent("release",null);
-					}
-
-					// 解析状況をクリア
-					AnalyzeWorkClearAnalyzedReplacementToAnchor(work);
-					AnalyzeWorkClearAnalyzedReplacementToLink(work);
-					AnalyzeWorkClearAnalyzedExpandShortUrl(work);
-					AnalyzeWorkClearAnalyzedExpandInlineText(work);
-					AnalyzeWorkClearAnalyzedExpandThumbnailImage(work);
-					AnalyzeWorkClearAnalyzedExpandPopupImage(work);
-					AnalyzeWorkClearAnalyzedExpandInlineSound(work);
-					AnalyzeWorkClearAnalyzedExpandInlineVideo(work);
-					AnalyzeWorkClearAnalyzedExpandInlineIframe(work);
-					AnalyzeWorkClearExpandUrl(work);
-					AnalyzeWorkClearExpandContentType(work);
+			var observer_modify_element = node_info.getData("ObserverModifyAnchor");
+			if(!observer_modify_element){
+				observer_modify_element = node_info.observerModify("href",function(){
+					node_info.addRevision();
+					node_info.dispatchEvent("anchor_href_change",null);
+					node_info.dispatchEvent("release",null);
+					node_info.release();
 
 					// 再解析
-					DomNodeAnalyzePhaseAnalyzeElement(node);
+					DomNodeAnalyzePhaseAnalyzeNode(anchor);
 				});
-
-				// 破棄イベント
-				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-				var event_handler = event_dispatcher.createEventHandler("destructor");
-				event_handler.setFunction(function(){
-					// アドレス変更監視を破棄
-					if(observer_modify_element){
-						observer_modify_element.release();
-						observer_modify_element = null;
-						AnalyzeWorkClearObserverModifyAnchor(work);
-					}
-				});
-
-				// アンカー要素を登録
-				AnalyzeWorkSetAnchorElement(work,node);
-
-			// --------------------------------------------------------------------------------
-			// インラインフレーム
-			// --------------------------------------------------------------------------------
-			}else if(node.tagName == "IFRAME"){
-
-				// 要素を監視
-				AnalyzeWorkObserveElement(work);
+				node_info.setData("ObserverModifyAnchor",observer_modify_element);
 			}
-		}
-
-		var param = {
-			modify:AnalyzeWorkGetModifyCount(work),
-			work:work
+		};
+		switch_tag_name["IFRAME"] = function(param){
+			var node_info = param.nodeInfo;
+			node_info.observerRemove();
 		};
 
-		// --------------------------------------------------------------------------------
-		// アドレスコレクション
-		// --------------------------------------------------------------------------------
-		ElementAnalyzeAddressCollection(param);
+		var analyze_address = (function(){
+			var switch_tag_name = Object();
 
-		// --------------------------------------------------------------------------------
-		// インラインフレーム内コンテンツ
-		// --------------------------------------------------------------------------------
-		// 解析済みチェック
-		if(!AnalyzeWorkGetAnalyzedExpandIframeContent(work)){
-			AnalyzeWorkSetAnalyzedExpandIframeContent(work);
-			execute_queue.attachForExpandElement(ElementAnalyzePhaseExpandIframeContent,param);
-		}
+			(function(){
+				var dict = {
+					"AUDIO":{url:"src",type:"audio"},
+					"VIDEO":{url:"src",type:"video"},
+					"IFRAME":{url:"src"},
+					"EMBED":{url:"src"},
+					"OBJECT":{url:"src"},
+					"A":{url:"href"}
+				};
+				var f = function(list,node){
+					var o = new Object();
+					var p = dict[node.tagName];
+					if(!p) return;
+					if(p.type) o.type = p.type;
+					o.url = node[p.url];
+					list.push(o);
+				};
+				Object.keys(dict).forEach(function(key){
+					switch_tag_name[key] = f;
+				});
+			})();
+			switch_tag_name["IMG"] = function(list,element){
+				var parser = SrcSet_Parser(element);
+				parser.forEach(function(o){
+					list.push({url:o.url,type:"image"});
+				});
+				list.push({url:element.src,type:"image"});
+			};
+			switch_tag_name["SOURCE"] = (function(){
+				var tagname_to_type = {
+					"PICTURE":"image",
+					"AUDIO":"audio",
+					"VIDEO":"video"
+				};
+				return function(list,element){
+					var type = element.type || (function(){
+						var node = element.parentNode;
+						while(node){
+							if(tagname_to_type.hasOwnProperty(node.tagName)){
+								return tagname_to_type[node.tagName];
+							}
+							node = node.parentNode;
+						}
+						return "";
+					})();
+					var parser = SrcSet_Parser(element);
+					parser.forEach(function(o){
+						list.push({url:o.url,type:type});
+					});
+					list.push({url:element.src,type:type});
+				};
+			})();
 
-		// --------------------------------------------------------------------------------
-		// 掲示板解析
-		// --------------------------------------------------------------------------------
-		if(project.getEnableExpandBbs()){
-			if(expand_bbs.initialized){
-				if(expand_bbs.enable){
-					execute_queue.attachForExpandBbs(ElementAnalyzeBbs,param);
-				}
-			}else{
-				expand_bbs.node_queue.push(param);
+			return function(element){
+				var list = new Array();
+
+				// 要素からアドレスを取得
+				var f = switch_tag_name[element.tagName];
+				if(f) f(list,element);
+
+				// background-image のアドレスを調べる
+				(function(){
+					var style = ElementGetComputedStyle(element,null) || {};
+					var bg_image = style.backgroundImage || "";
+					bg_image.replace(new RegExp("url[(]([^)]*?)[)]","ig"),function (m,url){
+						url = StringLiteral_To_String(url) || url;
+						url = StringUrl_To_Absolute(url,element.baseURI);
+						list.push({url:url,type:"image"});
+					});
+				})();
+
+				// 辞書に登録
+				list.forEach(function(o){
+					var url_parser = URL_Parser(o.url);
+					if(url_parser.protocol.match(/^(http|https|data|blob):/)){
+						var url_info = url_info_dictionary.addURL(o.url);
+						url_info.setMimeTypeByElement(o.type);
+					}
+				});
+			};
+		})();
+
+		return function(param){
+			var node_info = param.nodeInfo;
+			var revision = param.revision;
+			if(!node_info.equalRevision(revision))	return;
+
+			var element = node_info.getNode();
+
+			// Content Editable
+			if(element.isContentEditable){
+				return;
 			}
-		}
 
-		// --------------------------------------------------------------------------------
-		// アンカーを置換
-		// --------------------------------------------------------------------------------
-		if(project.getEnableReplacementToAnchor()){
-			execute_queue.attachForExpandElement(ElementAnalyzeReplacementToAnchor,param);
-		}else{
-			// 短縮URL展開関連のフェーズへ
-			ElementAnalyzePhaseExpandShortUrl(param);
-		}
+			// ゲスト検出
+			if(node_info_dictionary.verifyGuest(element)){
+				return;
+			}
 
-		// --------------------------------------------------------------------------------
-		// エレメントの置換
-		// --------------------------------------------------------------------------------
-		if(project.getEnableReplacementToElement()){
-			execute_queue.attachForExpandElement(ElementAnalyzeReplacementToElement,param);
-		}else{
-			// 縮小画像のポップアップのフェーズへ
-			ElementAnalyzePhasePopupReducedImage(param);
-		}
+			// クローン検出
+			if(node_info_dictionary.verifyClone(element)){
+				// スクロール補正
+				var revise_scroll = new DocumentReviseScroll();
+				revise_scroll.executeRemoveElementBefore(element);
+				DomNodeRemove(element);
+				revise_scroll.executeRemoveElementAfter(element);
+				return;
+			}
 
-	}
+			var f = switch_tag_name[element.tagName];
+			if(f) f(param);
+
+			// URLを収集
+			analyze_address(element);
+
+			// --------------------------------------------------------------------------------
+			// インラインフレーム内コンテンツ
+			// --------------------------------------------------------------------------------
+			if(!node_info.getExecuted("ExpandIframeContent")){
+				node_info.setExecuted("ExpandIframeContent");
+				execute_queue.attachForExpandElement(ElementAnalyzePhaseExpandIframeContent,param);
+			}
+
+			// --------------------------------------------------------------------------------
+			// Shadow DOM 内コンテンツ
+			// --------------------------------------------------------------------------------
+			if(0){
+				var shadow_root = element.openOrClosedShadowRoot || element.shadowRoot;
+				if(shadow_root){
+					execute_queue.attachLastForInsertDomNode(DomNodeAnalyzeRoot,shadow_root);
+					var mutation_observer = MutationObserverCreate(function(mutations) {
+						mutations.forEach(function(mutation){
+							mutation.addedNodes.forEach(function(node){
+								execute_queue.attachLastForInsertDomNode(DomNodeAnalyzeRoot,node);
+							});
+						});
+					});
+					mutation_observer.observe(shadow_root,{childList:true,subtree:true});
+				}
+			}
+
+			// --------------------------------------------------------------------------------
+			// 掲示板解析
+			// --------------------------------------------------------------------------------
+			if(project.getEnableExpandBbs()){
+				if(expand_bbs.initialized){
+					if(expand_bbs.enable){
+						execute_queue.attachForExpandBbs(ElementAnalyzeBbs,param);
+					}
+				}else{
+					expand_bbs.node_queue.push(param);
+				}
+			}
+
+			// --------------------------------------------------------------------------------
+			// エレメントの置換
+			// --------------------------------------------------------------------------------
+			if(project.getEnableReplacementToElement()){
+				execute_queue.attachForExpandElement(ElementAnalyzeReplacementToElement,param);
+			}else{
+				// 要素置換後のフェーズへ
+				ElementAnalyzePhaseFinishReplacementToElement(param);
+			}
+		};
+	})();
 
 	// --------------------------------------------------------------------------------
 	// テキストノードの解析フェーズ
 	// --------------------------------------------------------------------------------
-	function DomNodeAnalyzePhaseAnalyzeTextNode(node){
-
-		// 解析ワーク取得
-		var work = analyze_work_dictionary.getAnalyzeWork(node);
-		if(!work){
-			// 解析ワーク作成
-			work = AnalyzeWorkCreate(node);
-
-		}
-
-		var param = {
-			modify:AnalyzeWorkGetModifyCount(work),
-			work:work
-		};
+	function DomNodeAnalyzePhaseAnalyzeTextNode(param){
 
 		// --------------------------------------------------------------------------------
 		// テキストの置換
@@ -56310,12 +56158,38 @@
 	}
 
 	// --------------------------------------------------------------------------------
+	// エレメントの解析フェーズ（要素置換後）
+	// --------------------------------------------------------------------------------
+	function ElementAnalyzePhaseFinishReplacementToElement(param){
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
+
+		// --------------------------------------------------------------------------------
+		// アンカーを置換
+		// --------------------------------------------------------------------------------
+		if(project.getEnableReplacementToAnchor()){
+			execute_queue.attachForExpandElement(ElementAnalyzeReplacementToAnchor,param);
+		}else{
+			// 短縮URL展開関連のフェーズへ
+			ElementAnalyzePhaseExpandShortUrl(param);
+		}
+
+		// --------------------------------------------------------------------------------
+		// 縮小画像を解析
+		// --------------------------------------------------------------------------------
+		if(project.getEnablePopupReducedImage()){
+			execute_queue.attachForExpandElement(ElementAnalyzePopupReducedImage,param);
+		}
+	}
+
+	// --------------------------------------------------------------------------------
 	// エレメントの解析フェーズ（短縮URLの展開）
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzePhaseExpandShortUrl(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
 		// --------------------------------------------------------------------------------
 		// 短縮 URL の展開
@@ -56332,9 +56206,9 @@
 	// エレメントの解析フェーズ（アンカーの置換）
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzePhaseReplacementToAnchor(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
 		// --------------------------------------------------------------------------------
 		// アンカーを置換
@@ -56351,9 +56225,9 @@
 	// エレメントの解析フェーズ（ハイパーリンクの置換）
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzePhaseReplacementToLink(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
 		// --------------------------------------------------------------------------------
 		// アンカーを置換
@@ -56370,9 +56244,9 @@
 	// エレメントの解析フェーズ（ハイパーリンク化）
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzePhaseMakeLinkToText(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
 		// --------------------------------------------------------------------------------
 		// テキストのハイパーリンク化
@@ -56387,20 +56261,21 @@
 	// エレメントの解析フェーズ（展開関連）
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzePhaseExpand(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var element = AnalyzeWorkGetDomNode(work);
-		var anchor = AnalyzeWorkGetAnchorElement(work);
+		var element = node_info.getNode();
+		var anchor = node_info.getData("AnchorElement");
 
 		if(!anchor) return;
-
-		// アンカー
 		if(anchor.tagName != "A")	return;
-
-		// document に未登録
 		if(!DomNodeGetAttachedDocument(element))	return;
+
+		// 不可視
+		if(0){
+			if(!ElementGetVisibility(element)) return;
+		}
 
 		// 実行対象外のタグ
 		var selector_result = ElementMatchesSelector(element,"head *,script *,style *");
@@ -56418,17 +56293,22 @@
 		// --------------------------------------------------------------------------------
 		// アドレス
 		// --------------------------------------------------------------------------------
-		if(!AnalyzeWorkGetExpandUrl(work)){
-			AnalyzeWorkSetExpandUrl(work,anchor.href);
+		if(!node_info.getData("ExpandUrl")){
+			node_info.setData("ExpandUrl",anchor.href);
 		}
+
+		// --------------------------------------------------------------------------------
+		// 埋め込みURLの取得
+		// --------------------------------------------------------------------------------
+		param.embed_url = PageExpandEmbed_Parser(node_info.getData("ExpandUrl"));
 
 		// --------------------------------------------------------------------------------
 		// テキストの展開
 		// --------------------------------------------------------------------------------
 		if(project.getEnableExpandText()){
 			// 解析済みチェック
-			if(!AnalyzeWorkGetAnalyzedExpandInlineText(work)){
-				AnalyzeWorkSetAnalyzedExpandInlineText(work);
+			if(!node_info.getExecuted("ExpandInlineText")){
+				node_info.setExecuted("ExpandInlineText");
 
 				// 実行キューに登録
 				execute_queue.attachForExpandElement(ElementExpandInlineText,param);
@@ -56440,8 +56320,8 @@
 		// --------------------------------------------------------------------------------
 		if(project.getEnableExpandImage()){
 			// 解析済みチェック
-			if(!AnalyzeWorkGetAnalyzedExpandThumbnailImage(work)){
-				AnalyzeWorkSetAnalyzedExpandThumbnailImage(work);
+			if(!node_info.getExecuted("ExpandThumbnailImage")){
+				node_info.setExecuted("ExpandThumbnailImage");
 				if(project.getEnableThumbnailImage()){
 					// 実行キューに登録
 					execute_queue.attachForExpandElement(ElementExpandThumbnailImage,param);
@@ -56449,8 +56329,8 @@
 			}
 
 			// 解析済みチェック
-			if(!AnalyzeWorkGetAnalyzedExpandPopupImage(work)){
-				AnalyzeWorkSetAnalyzedExpandPopupImage(work);
+			if(!node_info.getExecuted("ExpandPopupImage")){
+				node_info.setExecuted("ExpandPopupImage");
 				if(project.getEnablePopupImage()){
 					// 実行キューに登録
 					execute_queue.attachForExpandElement(ElementExpandPopupImage,param);
@@ -56463,8 +56343,8 @@
 		// --------------------------------------------------------------------------------
 		if(project.getEnableExpandSound()){
 			// 解析済みチェック
-			if(!AnalyzeWorkGetAnalyzedExpandInlineSound(work)){
-				AnalyzeWorkSetAnalyzedExpandInlineSound(work);
+			if(!node_info.getExecuted("ExpandInlineSound")){
+				node_info.setExecuted("ExpandInlineSound");
 
 				// 実行キューに登録
 				execute_queue.attachForExpandElement(ElementExpandInlineSound,param);
@@ -56476,8 +56356,8 @@
 		// --------------------------------------------------------------------------------
 		if(project.getEnableExpandVideo()){
 			// 解析済みチェック
-			if(!AnalyzeWorkGetAnalyzedExpandInlineVideo(work)){
-				AnalyzeWorkSetAnalyzedExpandInlineVideo(work);
+			if(!node_info.getExecuted("ExpandInlineVideo")){
+				node_info.setExecuted("ExpandInlineVideo");
 
 				// 実行キューに登録
 				execute_queue.attachForExpandElement(ElementExpandInlineVideo,param);
@@ -56489,8 +56369,8 @@
 		// --------------------------------------------------------------------------------
 		if(project.getEnableExpandIframe()){
 			// 解析済みチェック
-			if(!AnalyzeWorkGetAnalyzedExpandInlineIframe(work)){
-				AnalyzeWorkSetAnalyzedExpandInlineIframe(work);
+			if(!node_info.getExecuted("ExpandInlineIframe")){
+				node_info.setExecuted("ExpandInlineIframe");
 
 				// 実行キューに登録
 				execute_queue.attachForExpandElement(ElementExpandInlineIframe,param);
@@ -56499,167 +56379,31 @@
 	}
 
 	// --------------------------------------------------------------------------------
-	// エレメントの解析フェーズ（縮小画像のポップアップ）
-	// --------------------------------------------------------------------------------
-	function ElementAnalyzePhasePopupReducedImage(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-		// --------------------------------------------------------------------------------
-		// 縮小画像を解析
-		// --------------------------------------------------------------------------------
-		if(project.getEnablePopupReducedImage()){
-			execute_queue.attachForExpandElement(ElementAnalyzePopupReducedImage,param);
-		}
-
-		// --------------------------------------------------------------------------------
-		// アンカーを置換
-		// --------------------------------------------------------------------------------
-		var element = AnalyzeWorkGetDomNode(work);
-
-		if(AnalyzeWorkGetOverrodeAnchorElement(work) && AnalyzeWorkGetAnchorElement(work)){
-
-			if(project.getEnableReplacementToAnchor()){
-				execute_queue.attachForExpandElement(ElementAnalyzeReplacementToAnchor,param);
-			}else{
-				// 短縮URL展開関連のフェーズへ
-				ElementAnalyzePhaseExpandShortUrl(param);
-			}
-
-		}
-	}
-
-	// --------------------------------------------------------------------------------
 	// エレメントの解析フェーズ（インラインフレーム内コンテンツの展開）
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzePhaseExpandIframeContent(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var element = AnalyzeWorkGetDomNode(work);
+		var element = node_info.getNode();
 
-		// インラインフレーム
 		if(element.tagName != "IFRAME")	return;
-
-		// document に未登録
 		if(!DomNodeGetAttachedDocument(element))	return;
 
 		ElementExpandIframeContent(param);
 	}
 
 	// --------------------------------------------------------------------------------
-	// エレメントの解析（アドレスコレクション）
-	// --------------------------------------------------------------------------------
-	function ElementAnalyzeAddressCollection(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-		var element = AnalyzeWorkGetDomNode(work);
-		var tag_name = element.tagName;
-
-		var list = new Array();
-
-		// --------------------------------------------------------------------------------
-		// 要素からアドレスを取得
-		// --------------------------------------------------------------------------------
-		switch(tag_name){
-		case "AUDIO":
-			list.push({url:element.src,type:"audio"});
-			break;
-		case "VIDEO":
-			list.push({url:element.src,type:"video"});
-			break;
-		case "IFRAME":
-		case "EMBED":
-		case "OBJECT":
-			list.push({url:element.src});
-			break;
-		case "A":
-			list.push({url:element.href});
-			break;
-		}
-
-		// --------------------------------------------------------------------------------
-		// IMG 要素
-		// --------------------------------------------------------------------------------
-		if(tag_name == "IMG"){
-			var parser = SrcSet_Parser(element);
-			var i;
-			var num = parser.length;
-			for(i=0;i<num;i++){
-				list.push({url:parser[i].url,type:"image"});
-			}
-			list.push({url:element.src,type:"image"});
-		}
-
-		// --------------------------------------------------------------------------------
-		// source 要素
-		// --------------------------------------------------------------------------------
-		if(tag_name == "SOURCE"){
-			var type = element.type || (function(){
-				var node = element.parentNode;
-				while(node){
-					switch(node.tagName){
-					case "PICTURE":
-						return "image";
-					case "AUDIO":
-						return "audio";
-					case "VIDEO":
-						return "video";
-					}
-					node = node.parentNode;
-				}
-				return "";
-			})();
-			var parser = SrcSet_Parser(element);
-			var i;
-			var num = parser.length;
-			for(i=0;i<num;i++){
-				list.push({url:parser[i].url,type:type});
-			}
-			list.push({url:element.src,type:type});
-		}
-
-		// --------------------------------------------------------------------------------
-		// background-image のアドレスを調べる
-		// --------------------------------------------------------------------------------
-		(function(){
-			var style = ElementGetComputedStyle(element,null) || {};
-			var bg_image = style.backgroundImage || "";
-			bg_image.replace(new RegExp("url[(]([^)]*?)[)]","ig"),function (m,url){
-				url = StringLiteral_To_String(url) || url;
-				url = StringUrl_To_Absolute(url,element.baseURI);
-				list.push({url:url,type:"image"});
-			});
-		})();
-
-		var i;
-		var num = list.length;
-		for(i=0;i<num;i++){
-			var param = list[i];
-			var url_parser = URL_Parser(param.url);
-			if(url_parser.protocol.match(/^(http|https|data|blob):/)){
-				var url_info = url_info_dictionary.addURL(param.url);
-				url_info.setMimeTypeByElement(param.type);
-			}
-		}
-
-	}
-
-	// --------------------------------------------------------------------------------
 	// エレメントの解析（エレメント置換用）
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzeReplacementToElement(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var element = AnalyzeWorkGetDomNode(work);
+		var element = node_info.getNode();
 
-		// document に未登録
 		if(!DomNodeGetAttachedDocument(element))	return;
 
 		ElementReplacementToElement(param);
@@ -56669,15 +56413,14 @@
 	// エレメントの解析（テキスト置換用）
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzeReplacementToText(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var text_node = AnalyzeWorkGetDomNode(work);
+		var text_node = node_info.getNode();
 		var element = text_node.parentNode;
-		if(!element) return;
 
-		// document に未登録
+		if(!element) return;
 		if(!DomNodeGetAttachedDocument(element))	return;
 
 		// 実行対象外のタグ
@@ -56700,19 +56443,15 @@
 	// エレメントの解析（アンカー置換用）
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzeReplacementToAnchor(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var element = AnalyzeWorkGetDomNode(work);
-		var anchor = AnalyzeWorkGetAnchorElement(work);
+		var element = node_info.getNode();
+		var anchor = node_info.getData("AnchorElement");
 
 		if(!anchor) return;
-
-		// アンカー
 		if(anchor.tagName != "A")	return;
-
-		// document に未登録
 		if(!DomNodeGetAttachedDocument(element))	return;
 
 		// 実行対象外のタグ
@@ -56737,19 +56476,15 @@
 	// エレメントの解析（リンク置換用）
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzeReplacementToLink(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var element = AnalyzeWorkGetDomNode(work);
-		var anchor = AnalyzeWorkGetAnchorElement(work);
+		var element = node_info.getNode();
+		var anchor = node_info.getData("AnchorElement");
 
 		if(!anchor) return;
-
-		// アンカー
 		if(anchor.tagName != "A")	return;
-
-		// document に未登録
 		if(!DomNodeGetAttachedDocument(element))	return;
 
 		// 実行対象外のタグ
@@ -56774,15 +56509,14 @@
 	// エレメントの解析（テキストからハイパーリンクを生成用）
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzeMakeLinkToText(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var text_node = AnalyzeWorkGetDomNode(work);
+		var text_node = node_info.getNode();
 		var element = text_node.parentNode;
-		if(!element) return;
 
-		// document に未登録
+		if(!element) return;
 		if(!DomNodeGetAttachedDocument(element))	return;
 
 		// 実行対象外のタグ
@@ -56805,19 +56539,15 @@
 	// エレメントの解析（短縮 URL の展開用）
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzeExpandShortUrl(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var element = AnalyzeWorkGetDomNode(work);
-		var anchor = AnalyzeWorkGetAnchorElement(work);
+		var element = node_info.getNode();
+		var anchor = node_info.getData("AnchorElement");
 
 		if(!anchor) return;
-
-		// アンカー
 		if(anchor.tagName != "A")	return;
-
-		// document に未登録
 		if(!DomNodeGetAttachedDocument(element))	return;
 
 		// 実行対象外のタグ
@@ -56842,16 +56572,12 @@
 	// エレメントの解析（縮小画像のポップアップ用）
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzePopupReducedImage(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var element = AnalyzeWorkGetDomNode(work);
-
-		// イメージ
+		var element = node_info.getNode();
 		if(element.tagName != "IMG")	return;
-
-		// document に未登録
 		if(!DomNodeGetAttachedDocument(element))	return;
 
 		ElementPopupReducedImage(param);
@@ -56861,13 +56587,11 @@
 	// エレメントの解析（掲示板用）
 	// --------------------------------------------------------------------------------
 	function ElementAnalyzeBbs(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var dom_node = AnalyzeWorkGetDomNode(work);
-
-		// document に未登録
+		var dom_node = node_info.getNode();
 		if(!DomNodeGetAttachedDocument(dom_node))	return;
 
 		// 実行対象外のタグ
@@ -56890,15 +56614,15 @@
 	// エレメントを置換
 	// --------------------------------------------------------------------------------
 	function ElementReplacementToElement(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var element = AnalyzeWorkGetDomNode(work);
+		var element = node_info.getNode();
 
 		var completed = false;
 		function response(result){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+			if(!node_info.equalRevision(revision))	return;
 
 			if(completed)	return;
 			completed = true;
@@ -56908,35 +56632,26 @@
 				// --------------------------------------------------------------------------------
 				// アンカーのオーバーライド
 				// --------------------------------------------------------------------------------
-				if(!AnalyzeWorkGetOverrodeAnchorElement(work)){
-					// アンカーを作成
+				if(!node_info.getExecuted("OverrodeUrl")){
+					node_info.setExecuted("OverrodeUrl");
+
 					var anchor = DocumentCreateElement("a");
 					anchor.href = result.url;
-
-					// アンカー要素を登録
-					AnalyzeWorkSetAnchorElement(work,anchor);
-
-					// オーバーライド済み
-					AnalyzeWorkSetOverrodeAnchorElement(work);
-					AnalyzeWorkSetOverrodeUrl(work);
+					node_info.setData("AnchorElement",anchor);
 				}
 
-				// --------------------------------------------------------------------------------
-				// 要素を監視
-				// --------------------------------------------------------------------------------
-				AnalyzeWorkObserveElement(work);
-
+				node_info.observerRemove();
 			}
 
-			// 縮小画像のポップアップのフェーズへ
-			ElementAnalyzePhasePopupReducedImage(param);
+			// 要素置換後のフェーズへ
+			ElementAnalyzePhaseFinishReplacementToElement(param);
 		}
 
 		// 解析済みチェック
-		if(AnalyzeWorkGetAnalyzedReplacementToElement(work)){
+		if(node_info.getExecuted("ReplacementToElement")){
 			return;
 		}
-		AnalyzeWorkSetAnalyzedReplacementToElement(work);
+		node_info.setExecuted("ReplacementToElement");
 
 		// コールバック関数を実行
 		var request = {
@@ -56949,15 +56664,15 @@
 	// テキストを置換
 	// --------------------------------------------------------------------------------
 	function ElementReplacementToText(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var text_node = AnalyzeWorkGetDomNode(work);
+		var text_node = node_info.getNode();
 
 		var completed = false;
 		function response(){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+			if(!node_info.equalRevision(revision))	return;
 
 			if(completed)	return;
 			completed = true;
@@ -56967,10 +56682,10 @@
 		}
 
 		// 解析済みチェック
-		if(AnalyzeWorkGetAnalyzedReplacementToText(work)){
+		if(node_info.getExecuted("ReplacementToText")){
 			return;
 		}
-		AnalyzeWorkSetAnalyzedReplacementToText(work);
+		node_info.setExecuted("ReplacementToText");
 
 		// コールバック関数を実行
 		project.executeScriptReplacementToText(text_node,response);
@@ -56980,22 +56695,22 @@
 	// アンカーを置換
 	// --------------------------------------------------------------------------------
 	function ElementReplacementToAnchor(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var element = AnalyzeWorkGetDomNode(work);
-		var anchor = AnalyzeWorkGetAnchorElement(work);
+		var element = node_info.getNode();
+		var anchor = node_info.getData("AnchorElement");
 
 		var completed = false;
 		function response(){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+			if(!node_info.equalRevision(revision))	return;
 
 			if(completed)	return;
 			completed = true;
 
 			// 短縮URL展開済み
-			if(AnalyzeWorkGetAnalyzedExpandShortUrl(work)){
+			if(node_info.getExecuted("ExpandShortUrl")){
 				// ハイパーリンク展開関連のフェーズへ
 				ElementAnalyzePhaseReplacementToLink(param);
 			}else{
@@ -57005,30 +56720,30 @@
 		}
 
 		// 解析済みチェック
-		if(AnalyzeWorkGetAnalyzedReplacementToAnchor(work)){
+		if(node_info.getExecuted("ReplacementToAnchor")){
 			return;
 		}
-		AnalyzeWorkSetAnalyzedReplacementToAnchor(work);
+		node_info.setExecuted("ReplacementToAnchor");
 
 		// コールバック関数を実行
-		project.executeScriptReplacementToAnchor(anchor,work.event_dispatcher,response);
+		project.executeScriptReplacementToAnchor(anchor,node_info.getEventDispatcher(),response);
 	}
 
 	// --------------------------------------------------------------------------------
 	// リンクを置換
 	// --------------------------------------------------------------------------------
 	function ElementReplacementToLink(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var element = AnalyzeWorkGetDomNode(work);
-		var anchor = AnalyzeWorkGetAnchorElement(work);
+		var element = node_info.getNode();
+		var anchor = node_info.getData("AnchorElement");
 		var replacement_to_link = project.getReplacementToLink(anchor);
 
 		var completed = false;
 		function response(r){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+			if(!node_info.equalRevision(revision))	return;
 
 			if(completed)	return;
 			completed = true;
@@ -57038,7 +56753,7 @@
 			//リンクの変更をアンカーに反映する
 			if(r.getEnableReflectToAnchor()){
 				if(obj.result){
-					var monitor_element = AnalyzeWorkGetObserverModifyAnchor(work);
+					var monitor_element = node_info.getData("ObserverModifyAnchor");
 					if(monitor_element){
 						monitor_element.setBaseValue(obj.url);
 					}
@@ -57048,18 +56763,16 @@
 
 			if(obj.result){
 				if(obj.url){
-					AnalyzeWorkSetExpandUrl(work,obj.url);
+					node_info.setData("ExpandUrl",obj.url);
 				}
 				if(obj.content_type){
 					try{
-						var a = obj.content_type;
-						var i;
-						var num = a.length;
-						for(i=0;i<num;i++){
-							if(typeof(a[i]) == "string"){
-								AnalyzeWorkAddContentType(work,a[i]);
-							}
-						}
+						var a = node_info.getData("ExpandContentType") || [];
+						obj.content_type.forEach(function(type){
+							if(typeof(type) != "string") return;
+							a.push(type);
+						});
+						node_info.setData("ExpandContentType",a);
 					}catch(e){
 					}
 				}
@@ -57070,10 +56783,10 @@
 		}
 
 		// 解析済みチェック
-		if(AnalyzeWorkGetAnalyzedReplacementToLink(work)){
+		if(node_info.getExecuted("ReplacementToLink")){
 			return;
 		}
-		AnalyzeWorkSetAnalyzedReplacementToLink(work);
+		node_info.setExecuted("ReplacementToLink");
 
 		// 結果を取得
 		replacement_to_link.getResult(response);
@@ -57083,25 +56796,25 @@
 	// テキストからハイパーリンクを生成
 	// --------------------------------------------------------------------------------
 	function ElementMakeLinkToText(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var text_node = AnalyzeWorkGetDomNode(work);
+		var text_node = node_info.getNode();
 
 		var completed = false;
 		function response(){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+			if(!node_info.equalRevision(revision))	return;
 
 			if(completed)	return;
 			completed = true;
 		}
 
 		// 解析済みチェック
-		if(AnalyzeWorkGetAnalyzedMakeLinkToText(work)){
+		if(node_info.getExecuted("MakeLinkToText")){
 			return;
 		}
-		AnalyzeWorkSetAnalyzedMakeLinkToText(work);
+		node_info.setExecuted("MakeLinkToText");
 
 		// コールバック関数を実行
 		project.executeScriptMakeLinkToText(text_node,response);
@@ -57111,300 +56824,367 @@
 	// 短縮 URL の展開
 	// --------------------------------------------------------------------------------
 	function ElementExpandShortUrl(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var element = AnalyzeWorkGetDomNode(work);
-		var anchor = AnalyzeWorkGetAnchorElement(work);
-
-		var completed = false;
-		function response(result){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-			if(completed)	return;
-			completed = true;
-
-			if(result){
-				// 解析フラグをクリア
-				AnalyzeWorkClearAnalyzedReplacementToAnchor(work);
-
-				// アンカーの置換フェーズへ
-				execute_queue.attachForExpandElement(ElementAnalyzePhaseReplacementToAnchor,param);
-			}else{
-				// ハイパーリンク展開関連のフェーズへ
-				ElementAnalyzePhaseReplacementToLink(param);
-			}
-		}
+		var anchor = node_info.getData("AnchorElement");
+		var url = anchor.href;
 
 		// 解析済みチェック
-		if(AnalyzeWorkGetAnalyzedExpandShortUrl(work)){
+		if(node_info.getExecuted("ExpandShortUrl")){
 			return;
 		}
-		AnalyzeWorkSetAnalyzedExpandShortUrl(work);
+		node_info.setExecuted("ExpandShortUrl");
 
-		// アドレスチェック
-		var url = anchor.href;
-		if(!url){
-			response(false);
-			return;
+		var event_handler_release = null;
+		var exec_methods = null;
+		var loader = null;
+
+		function release(){
+			if(exec_methods){
+				exec_methods.release();
+				exec_methods = null;
+			}
+			if(loader){
+				loader.release();
+				loader = null;
+			}
+			if(event_handler_release){
+				event_handler_release.release();
+				event_handler_release = null;
+			}
+		}
+		function success(){
+			if(!node_info.equalRevision(revision))	return;
+
+			release();
+
+			// アンカーの置換フェーズへ
+			node_info.clearExecuted("ReplacementToAnchor");
+			execute_queue.attachForExpandElement(ElementAnalyzePhaseReplacementToAnchor,param);
+		}
+		function failure(){
+			if(!node_info.equalRevision(revision))	return;
+
+			release();
+
+			// ハイパーリンク展開関連のフェーズへ
+			ElementAnalyzePhaseReplacementToLink(param);
 		}
 
-		// フィルタ
-		if(project.checkExpandShortUrl(url)){
+		event_handler_release = node_info.createEventHandler("release");
+		event_handler_release.setFunction(release);
 
-			var loader = new Loader();
+		exec_methods = new ExecuteMethods(this);
+		exec_methods.pause();
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
 
-			// ロード完了時に実行されるイベント
-			loader.onload = function(v){
-				if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+			if((function(){
+				if(!url) return true;
+				if(!project.checkExpandShortUrl(url)) return true;
+				return false;
+			})()){
+				failure();
+				return;
+			}
 
-				var monitor_element = AnalyzeWorkGetObserverModifyAnchor(work);
-				if(monitor_element){
-					monitor_element.setBaseValue(v);
-				}
+			callback();
+		});
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
 
-				// 取得結果をセット
-				anchor.href = v;
-				// 終了通知
-				if(url != v){
-					response(true);
-				}else{
-					response(false);
-				}
-			};
-
-			// ロード失敗時に実行されるイベント
-			loader.onerror = function(){
-				if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-				// 終了通知
-				response(false);
-			};
+			loader = new Loader();
+			loader.onload = callback;
+			loader.onerror = failure;
 			loader.setURL(url);
 			loader.setSendData(null);
 			loader.loadFinalURL();
+		});
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
 
-		}else{
-			response(false);
-		}
+			var final_url = exec_methods.arguments[0];
+			if(url == final_url){
+				failure();
+				return;
+			}
+
+			var monitor_element = node_info.getData("ObserverModifyAnchor");
+			if(monitor_element){
+				monitor_element.setBaseValue(final_url);
+			}
+
+			// 取得結果をセット
+			anchor.href = final_url;
+			success();
+		});
+		exec_methods.play();
 	}
 
 	// --------------------------------------------------------------------------------
 	// テキストの展開
 	// --------------------------------------------------------------------------------
 	function ElementExpandInlineText(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
+
+		var element = node_info.getNode();
+		var url = node_info.getData("ExpandUrl");
 		url = project.fixURL_PassiveContent(url);
-		var content_type = AnalyzeWorkGetContentType(work);
 
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var event_handlers = [];
+		var exec_methods = null;
+		var loader = null;
+		var url_info_text = url_info_dictionary.addURL(url);
+		var text_area = null;
 
-		function complete(){
+		function release_loader(){
+			if(loader){
+				loader.release();
+				loader = null;
+			}
+		}
+		function release(){
+			if(url_info_text){
+				url_info_text.removeAlone("text");
+				url_info_text = null;
+			}
+			release_loader();
+			if(exec_methods){
+				exec_methods.release();
+				exec_methods = null;
+			}
+			event_handlers.forEach(function(e){
+				e.release();
+			});
+			event_handlers.length = 0;
+			if(text_area){
+				var revise_scroll = new DocumentReviseScroll();
+				revise_scroll.executeRemoveElementBefore(text_area);
+				DomNodeRemove(text_area);
+				revise_scroll.executeRemoveElementAfter(text_area);
+				text_area = null;
+			}
+		}
+		function suicide(){
+			release();
+			node_info.dispatchEvent("release");
 		}
 
-		function response_allow(param){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var event_handler = node_info.createEventHandler("release");
+		event_handler.setFunction(release);
+		event_handlers.push(event_handler);
+
+		exec_methods = new ExecuteMethods(this);
+		exec_methods.pause();
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
+			var content_type = node_info.getData("ExpandContentType") || [];
+			project.executeScriptAllowInlineText(element,url,content_type,callback);
+		});
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
+			var param = exec_methods.arguments[0];
 
 			if(!(param.result)){
-				complete();
+				release();
 				return;
 			}
 
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var loader = null;
-			var text_area = null;
-			var text_area_analyze_work = null;
-			var text_url = url;
-			var url_info = url_info_dictionary.addURL(text_url);
-			var event_handler = null;
-			var observer_remove = null;
-
-			// 開放イベントを発行
-			function dispatchEventRelease(e){
-				event_dispatcher.dispatchEvent("release",null);
-			}
-
-			// テキストエリアを破棄
-			function releaseTextarea(e){
-				// ローダーを中断
-				if(loader){
-					loader.onload = null;
-					loader.onerror = null;
-					loader = null;
-				}
-
-				if(text_url){
-					url_info.removeAlone("text");
-					text_url = null;
-				}
-
-				// イベントハンドラを破棄
-				if(event_handler){
-					event_handler.release();
-					event_handler = null;
-				}
-
-				// 監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// 解析辞書除外
-				if(text_area_analyze_work){
-					analyze_work_dictionary.removeAnalyzeWork(text_area_analyze_work);
-					text_area_analyze_work = null;
-				}
-
-				// テキストエリアを外す
-				if(text_area){
-					DomNodeRemove(text_area);
-					text_area = null;
-				}
-			}
-
-			// 重複チェック
 			if(project.getDisableSameInlineText()){
-				if(url_info.getAlone("text")){
-					text_url = null;
-					releaseTextarea();
-					complete();
+				if(url_info_text.getAlone("text")){
+					release();
 					return;
 				}
-				url_info.attachAlone("text");
+				url_info_text.attachAlone("text");
 			}
 
-			// イベントハンドラを作成
-			event_handler = event_dispatcher.createEventHandler("release");
-			event_handler.setFunction(releaseTextarea);
-
-			// テキストの読み込み
 			loader = new Loader();
-			loader.onload = function(str){
-				complete();
-
-				// テキストエリアを生成
-				text_area = DocumentCreateElement("textarea");
-				text_area.value = str;
-
-				// スタイルをセット
-				ElementSetStyle(text_area,project.getStyleSheetExpandTextInline(text_url));
-
-				// 解析ワーク作成
-				text_area_analyze_work = AnalyzeWorkCreate(text_area);
-
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(text_area_analyze_work,attach_options);
-
-				// テキストエリアのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(text_area);
-				observer_remove.setFunction(dispatchEventRelease);
-
-				function responseInsert(){
-				}
-
-				// コールバック関数を実行
-				project.executeScriptInsertInlineText(element,text_area,work.event_dispatcher,responseInsert);
-			};
-
-			loader.onerror = function(){
-				complete();
-			};
+			loader.onload = callback;
+			loader.onerror = release;
 			loader.setMethod("GET");
-			loader.setURL(text_url);
+			loader.setURL(url_info_text.getURL());
 			loader.loadText();
-		}
+		});
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
 
-		// コールバック関数を実行
-		project.executeScriptAllowInlineText(element,url,content_type,response_allow);
+			text_area = DocumentCreateElement("textarea");
+			text_area.value = loader.response.responseText;
+			release_loader();
+			ElementSetStyle(text_area,project.getStyleSheetExpandTextInline(url));
+
+			var node_info_text = node_info_dictionary.addNode(text_area);
+			node_info_text.observerRemove();
+			node_info_text.setOwnerToPageExpand();
+
+			var event_handler = node_info_text.createEventHandler("remove");
+			event_handler.setFunction(suicide);
+			event_handlers.push(event_handler);
+
+			project.executeScriptInsertInlineText(element,text_area,node_info.getEventDispatcher(),callback);
+		});
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
+
+			// 不可視
+			if(0){
+				if(!ElementGetVisibility(text_area)){
+					release();
+					return;
+				}
+			}
+		});
+		exec_methods.play();
 	}
 
 	// --------------------------------------------------------------------------------
 	// サムネイルイメージ
 	// --------------------------------------------------------------------------------
 	function ElementExpandThumbnailImage(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
+
+		var element = node_info.getNode();
+		var url = node_info.getData("ExpandUrl");
 		url = project.fixURL_PassiveContent(url);
-		var content_type = AnalyzeWorkGetContentType(work);
 
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var releasers = [];
+		var exec_methods = null;
+		var url_info_thumbnail = url_info_dictionary.addURL(url);
+		var limitter_thumbnail = null;
+		var limitter_popup = null;
+		var thumbnail_image = null;
+		var step_1 = null;
+		var step_2 = null;
 
-		function complete(){
+		function release_step_1(){
+			if(step_1){
+				step_1.release();
+				step_1 = null;
+			}
+		}
+		function release_step_2(){
+			if(step_2){
+				step_2.release();
+				step_2 = null;
+			}
+		}
+		function release_limitter_thumbnail(){
+			if(limitter_thumbnail){
+				limitter_thumbnail.release();
+				limitter_thumbnail = null;
+			}
+		}
+		function release_limitter_popup(){
+			if(limitter_popup){
+				limitter_popup.release();
+				limitter_popup = null;
+			}
+		}
+		function release(){
+			release_step_2();
+			release_step_1();
+			release_limitter_thumbnail();
+			if(url_info_thumbnail){
+				url_info_thumbnail.removeAlone("image");
+				url_info_thumbnail = null;
+			}
+			if(exec_methods){
+				exec_methods.release();
+				exec_methods = null;
+			}
+			releasers.forEach(function(e){
+				e.release();
+			});
+			releasers.length = 0;
+		}
+		function suicide(){
+			release();
+			node_info.dispatchEvent("release");
 		}
 
-		function response_allow(param){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var event_handler = node_info.createEventHandler("release");
+		event_handler.setFunction(release);
+		releasers.push(event_handler);
 
+		exec_methods = new ExecuteMethods(this);
+		exec_methods.pause();
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
+
+			var content_type = node_info.getData("ExpandContentType") || [];
+			var request = {
+				element:element,
+				url:url,
+				content_type:content_type,
+				is_overridden_url:node_info.getExecuted("OverrodeUrl")
+			};
+			project.executeScriptAllowThumbnailImage(request,callback);
+		});
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
+
+			var param = exec_methods.arguments[0];
 			if(!(param.result)){
-				complete();
+				release();
 				return;
 			}
 
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var loader = null;
-			var popup_image = null;
-			var thumbnail_image = null;
-			var thumbnail_analyze_work = null;
-			var thumbnail_url = url;
-			var url_info = url_info_dictionary.addURL(thumbnail_url);
-			var event_handler = null;
-			var observer_remove = null;
-			var limitter_element = null;
+			if(project.getDisableSameThumbnailImage()){
+				if(url_info_thumbnail.getAlone("image")){
+					release();
+					return;
+				}
+				url_info_thumbnail.attachAlone("image");
+			}
+
+			limitter_thumbnail = element_limitter_image.createElement();
+			limitter_thumbnail.onattach = function(){
+				step_1 = start_step_1();
+			};
+			limitter_thumbnail.onremove = function(){
+				release_step_1();
+			};
+			limitter_thumbnail.setElementHitArea(element);
+			limitter_thumbnail.setLoadType(project.getLoadTypeThumbnailImage());
+			limitter_thumbnail.update();
+
+			callback();
+		});
+		exec_methods.play();
+
+		function start_step_1(){
+			var _this = {};
+			var releasers = [];
+			var exec_methods;
+			var loader;
 			var notify_element = null;
 
-			// サムネイルイメージを破棄（ElementLimiter 用）
-			function releaseThumbnailImageForElementLimiter(e){
-				// ローダーを中断
-				if(loader){
-					loader.onload = null;
-					loader.onerror = null;
-					loader = null;
-				}
-
-				// ポップアップイメージを破棄
-				releasePopupImage();
-
-				if(thumbnail_url){
-					url_info.removeAlone("image");
-					thumbnail_url = null;
-				}
-
-				// イベントハンドラを破棄
-				if(event_handler){
-					event_handler.release();
-					event_handler = null;
-				}
-
-				// 監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// 通知破棄
+			function release_notify_element(){
 				if(notify_element){
 					notify_element.release();
 					notify_element = null;
 				}
-
-				// 解析辞書除外
-				if(thumbnail_analyze_work){
-					analyze_work_dictionary.removeAnalyzeWork(thumbnail_analyze_work);
-					thumbnail_analyze_work = null;
+			}
+			function release_loader(){
+				if(loader){
+					loader.release();
+					loader = null;
 				}
-
-				// サムネイルイメージを破棄
+			}
+			_this.release = function(){
+				release_notify_element();
+				release_loader();
+				release_limitter_popup();
+				if(exec_methods){
+					exec_methods.release();
+					exec_methods = null;
+				}
 				if(thumbnail_image){
 					var revise_scroll = new DocumentReviseScroll();
 					revise_scroll.executeRemoveElementBefore(thumbnail_image);
@@ -57412,52 +57192,17 @@
 					revise_scroll.executeRemoveElementAfter(thumbnail_image);
 					thumbnail_image = null;
 				}
+				releasers.forEach(function(e){
+					e.release();
+				});
+				releasers.length = 0;
+			};
 
-				initializeLimitterElement();
-			}
+			exec_methods = new ExecuteMethods(this);
+			exec_methods.pause();
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
 
-			// ポップアップイメージを破棄
-			function releasePopupImage(e){
-				// ポップアップイメージを破棄
-				if(popup_image){
-					popup_image.suicide();
-					popup_image = null;
-				}
-			}
-
-			// サムネイルイメージを破棄
-			function releaseThumbnailImage(e){
-				releaseThumbnailImageForElementLimiter();
-
-				AnalyzeWorkClearPopupImage(work);
-
-				if(limitter_element){
-					limitter_element.release();
-					limitter_element = null;
-				}
-			}
-
-			// 開放イベントを発行
-			function dispatchEventRelease(e){
-				event_dispatcher.dispatchEvent("release",null);
-			}
-
-			// 制限初期化
-			function initializeLimitterElement(){
-				if(limitter_element){
-					limitter_element.onattach = function(){
-						createThumbnailImage();
-					};
-					limitter_element.onremove = function(){
-						releaseThumbnailImageForElementLimiter();
-					};
-					limitter_element.setElementHitArea(element);
-					limitter_element.setEnablePreload(project.getEnablePreLoadThumbnailImage());
-				}
-			}
-
-			// サムネイルイメージを登録
-			function createThumbnailImage(e){
 				if(project.getEnableLoadNotifyExpandImage()){
 					notify_element = notify_progress.createElement();
 				}
@@ -57466,242 +57211,339 @@
 					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_LOADING);
 				}
 
-				// 画像の読み込み
 				loader = new Loader();
-				loader.onload = function(image){
-					thumbnail_image = image;
-
-					// 解析済み
-					var node_info = node_info_dictionary.addNode(thumbnail_image);
-					node_info.setAnalyzed(true);
-
-					// 解析ワーク作成
-					thumbnail_analyze_work = AnalyzeWorkCreate(thumbnail_image);
-
-					// 解析済み
-					AnalyzeWorkSetAnalyzedPopupReducedImage(thumbnail_analyze_work);
-
-					// 解析辞書登録オプション
-					var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-					attach_options.SetOutsider();
-
-					// 解析辞書登録
-					analyze_work_dictionary.attachAnalyzeWork(thumbnail_analyze_work,attach_options);
-
-					complete();
-
-					// 成功通知
-					if(notify_element){
-						notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_COMPLETE);
-						notify_element.release();
-						notify_element = null;
-					}
-
-					// 画像サイズをセット
-					var image_size = ImageGetNaturalSize(thumbnail_image);
-					limitter_element.setByteSize(image_size.width * image_size.height * 4);
-
-					// 古い要素を破棄
-					element_limitter_image.removeOldElements();
-					if(!thumbnail_image)	return;
-
-					// スタイルをセット
-					ElementSetStyle(thumbnail_image,project.getStyleSheetExpandImageThumbnail(thumbnail_url));
-
-					function responseInsert(){
-						if(!thumbnail_image)	return;
-
-						// ポップアップイメージを生成
-						function createPopupImage(){
-
-							// 縮小画像のポップアップ
-							if(project.getEnablePopupMouseoverToThumbnailImage()){
-
-								// 既存の PopupImage を全て破棄
-								PopupReducedImageReleaseAll(element);
-
-								// イメージを複製
-								var loader = new Loader();
-								loader.setURL(thumbnail_url);
-								loader.onload = function(image_clone){
-									if(!thumbnail_image)	return;
-
-									// ポップアップイメージ
-									popup_image = new PopupImage(image_clone);
-									popup_image.setElementParent(document.body);
-									popup_image.setElementAnchor(thumbnail_image);
-									popup_image.setElementHitArea(thumbnail_image);
-									popup_image.setElementBeginArea(thumbnail_image);
-									popup_image.setOriginalURL(thumbnail_url);
-									AnalyzeWorkSetPopupImage(work,popup_image);
-								};
-								loader.loadImage();
-							}
-						}
-
-						// イメージのリムーブ監視
-						observer_remove = new DomNodeObserverRemoveFromDocument(thumbnail_image);
-						observer_remove.setFunction(dispatchEventRelease);
-
-						// サムネイルソース
-						var image_src = thumbnail_image.src;
-
-						// コールバックを変更
-						limitter_element.onattach = function(){
-							thumbnail_image.src = image_src;
-							createPopupImage();
-						};
-						limitter_element.onremove = function(){
-							thumbnail_image.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEHAAAALAAAAAABAAEAAAICRAEAOw==";
-							releasePopupImage();
-						};
-						limitter_element.setElementHitArea(thumbnail_image);
-
-						// ドラッガー
-						var image_dragger = new ImageDragger(thumbnail_image);
-						image_dragger.setOriginalURL(thumbnail_url);
-
-						createPopupImage();
-					}
-
-					// コールバック関数を実行
-					project.executeScriptInsertThumbnailImage(element,thumbnail_image,work.event_dispatcher,responseInsert);
-				};
-
+				loader.onload = callback;
 				loader.onerror = function(){
-					complete();
-
-					// 失敗通知
 					if(notify_element){
 						notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_ERROR);
 					}
+					release_limitter_thumbnail();
 				};
 				loader.setMethod("GET");
-				loader.setURL(thumbnail_url);
+				loader.setURL(url_info_thumbnail.getURL());
 				loader.loadImage();
-			}
+			});
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
 
-			// 重複チェック
-			if(project.getDisableSameThumbnailImage()){
-				if(url_info.getAlone("image")){
-					thumbnail_url = null;
-					releaseThumbnailImage();
-					complete();
-					return;
+				thumbnail_image = exec_methods.arguments[0];
+				release_loader();
+				ElementSetStyle(thumbnail_image,project.getStyleSheetExpandImageThumbnail(url_info_thumbnail.getURL()));
+
+				var node_info_thumbnail = node_info_dictionary.addNode(thumbnail_image);
+				node_info_thumbnail.observerRemove();
+				node_info_thumbnail.setOwnerToPageExpand();
+				node_info_thumbnail.setInvalid(true);
+
+				var event_listener = node_info_thumbnail.createEventHandler("remove");
+				event_listener.setFunction(suicide);
+				releasers.push(event_listener);
+
+				project.executeScriptInsertThumbnailImage(element,thumbnail_image,node_info.getEventDispatcher(),callback);
+			});
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
+
+				// 不可視
+				if(0){
+					if(!ElementGetVisibility(thumbnail_image)){
+						release();
+						return;
+					}
 				}
 
-				// アドレスを登録
-				url_info.attachAlone("image");
-			}
+				// サムネイルソース
+				var thumbnail_src = thumbnail_image.src;
 
-			// イベントハンドラを作成
-			event_handler = event_dispatcher.createEventHandler("release");
-			event_handler.setFunction(releaseThumbnailImage);
+				// コールバックと当たり判定を更新
+				limitter_thumbnail.onattach = function(){
+					thumbnail_image.src = thumbnail_src;
+				};
+				limitter_thumbnail.onremove = function(){
+					thumbnail_image.removeAttribute("src");
+				};
+				limitter_thumbnail.setElementHitArea(thumbnail_image);
+				limitter_thumbnail.update();
 
-			// イメージ管理
-			limitter_element = element_limitter_image.createElement();
-			initializeLimitterElement();
+				var image_size = ImageGetNaturalSize(thumbnail_image);
+				var image_byte_size = image_size.width * image_size.height * 4;
+				limitter_thumbnail.setByteSize(image_byte_size);
+				element_limitter_image.removeExcessElements();
 
-			// 更新
-			limitter_element.update();
+				// ドラッガー
+				var image_dragger = new ImageDragger(thumbnail_image);
+				image_dragger.setOriginalURL(url_info_thumbnail.getURL());
+				releasers.push(image_dragger);
+
+				var listener = new EventListenerWrapper(thumbnail_image);
+				listener.start("click",function click_func(e){
+					if(e.ctrlKey){
+						// Ctrl + クリックで等倍配置
+						var style = thumbnail_image.style;
+						style.width  = image_size.width  + "px";
+						style.height = image_size.height + "px";
+					}else{
+						suicide();
+					}
+				});
+				releasers.push(listener);
+
+				// 成功通知
+				if(notify_element){
+					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_COMPLETE);
+				}
+				release_notify_element();
+
+				if(!project.getEnablePopupMouseoverToThumbnailImage()) return;
+
+				limitter_popup = element_limitter_image.createElement();
+				limitter_popup.onattach = function(){
+					step_2 = start_step_2();
+				};
+				limitter_popup.onremove = function(){
+					release_step_2();
+				};
+				limitter_popup.setElementHitArea(thumbnail_image);
+				limitter_popup.setLoadType(project.getLoadTypePopupImage());
+				limitter_popup.setByteSize(image_byte_size);
+				limitter_popup.update();
+			});
+			exec_methods.play();
+			return _this;
 		}
 
-		// コールバック関数を実行
-		var request = {
-			element:element,
-			url:url,
-			content_type:content_type,
-			is_overridden_url:AnalyzeWorkGetOverrodeUrl(work)
-		};
-		project.executeScriptAllowThumbnailImage(request,response_allow);
+		function start_step_2(){
+			var _this = {};
+			var releasers = [];
+			var exec_methods;
+			var loader;
+			var popup_image;
+			var notify_element = null;
+
+			function release_popup_image(){
+				if(popup_image){
+					popup_image.suicide();
+					popup_image = null;
+				}
+			}
+			function release_notify_element(){
+				if(notify_element){
+					notify_element.release();
+					notify_element = null;
+				}
+			}
+			function release_loader(){
+				if(loader){
+					loader.release();
+					loader = null;
+				}
+			}
+			_this.release = function(){
+				release_popup_image();
+				release_notify_element();
+				release_loader();
+				if(exec_methods){
+					exec_methods.release();
+					exec_methods = null;
+				}
+				releasers.forEach(function(e){
+					e.release();
+				});
+				releasers.length = 0;
+			};
+
+			exec_methods = new ExecuteMethods(this);
+			exec_methods.pause();
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
+
+				if(project.getEnableLoadNotifyExpandImage()){
+					notify_element = notify_progress.createElement();
+				}
+				if(notify_element){
+					notify_element.setElementHitArea(thumbnail_image);
+					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_LOADING);
+				}
+
+				loader = new Loader();
+				loader.onload = callback;
+				loader.onerror = function(){
+					if(notify_element){
+						notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_ERROR);
+					}
+					release_limitter_popup();
+				};
+				loader.setMethod("GET");
+				loader.setURL(url_info_thumbnail.getURL());
+				loader.loadImage();
+			});
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
+
+				var image_clone = exec_methods.arguments[0];
+				release_loader();
+
+				popup_image = new PopupImage(image_clone);
+				popup_image.setElementParent(document.body);
+				popup_image.setElementAnchor(thumbnail_image);
+				popup_image.setElementHitArea(thumbnail_image);
+				popup_image.setElementBeginArea(thumbnail_image);
+				popup_image.setOriginalURL(url_info_thumbnail.getURL());
+
+				var event_listener = popup_image.createEventHandler("close");
+				event_listener.setFunction(function(){
+					release_step_2();
+					release_limitter_popup();
+				});
+				releasers.push(event_listener);
+
+				// 成功通知
+				if(notify_element){
+					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_COMPLETE);
+				}
+				release_notify_element();
+
+				// ポップアップ
+				if(ElementHitTestMousePosition(thumbnail_image,input_mouse.getPositionClient(),true)){
+					popup_image.popup();
+				}
+			});
+			exec_methods.play();
+			return _this;
+		}
+
 	}
 
 	// --------------------------------------------------------------------------------
 	// ポップアップイメージ
 	// --------------------------------------------------------------------------------
 	function ElementExpandPopupImage(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
+
+		var element = node_info.getNode();
+		var url = node_info.getData("ExpandUrl");
 		url = project.fixURL_PassiveContent(url);
-		var content_type = AnalyzeWorkGetContentType(work);
 
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var event_handlers = [];
+		var exec_methods = null;
+		var url_info_image = url_info_dictionary.addURL(url);
+		var limitter_element = null;
+		var step_1 = null;
 
-		function complete(){
+		function release_step_1(){
+			if(step_1){
+				step_1.release();
+				step_1 = null;
+			}
+		}
+		function release_limitter(){
+			if(limitter_element){
+				limitter_element.release();
+				limitter_element = null;
+			}
+		}
+		function release(){
+			release_step_1();
+			release_limitter();
+			if(exec_methods){
+				exec_methods.release();
+				exec_methods = null;
+			}
+			event_handlers.forEach(function(e){
+				e.release();
+			});
+			event_handlers.length = 0;
+		}
+		function suicide(){
+			release();
+			node_info.dispatchEvent("release");
 		}
 
-		function response_allow(param){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var event_handler = node_info.createEventHandler("release");
+		event_handler.setFunction(release);
+		event_handlers.push(event_handler);
 
+		exec_methods = new ExecuteMethods(this);
+		exec_methods.pause();
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
+			var content_type = node_info.getData("ExpandContentType") || [];
+			var request = {
+				element:element,
+				url:url_info_image.getURL(),
+				content_type:content_type,
+				is_overridden_url:node_info.getExecuted("OverrodeUrl")
+			};
+			project.executeScriptAllowPopupImage(request,callback);
+		});
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
+
+			var param = exec_methods.arguments[0];
 			if(!(param.result)){
-				complete();
 				return;
 			}
 
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var loader = null;
-			var popup_image = null;
-			var begin_area = null;
-			var event_handler = null;
-			var observer_remove = null;
-			var limitter_element = null;
-			var notify_element = null;
+			limitter_element = element_limitter_image.createElement();
+			limitter_element.onattach = function(){
+				step_1 = start_step_1();
+			};
+			limitter_element.onremove = function(){
+				release_step_1();
+			};
+			limitter_element.setElementHitArea(element);
+			limitter_element.setLoadType(project.getLoadTypePopupImage());
+			limitter_element.update();
+			callback();
+		});
+		exec_methods.play();
 
-			// ポップアップイメージを破棄（ElementLimiter 用）
-			function releasePopupImageForElementLimiter(e){
-				// ローダーを中断
-				if(loader){
-					loader.onload = null;
-					loader.onerror = null;
-					loader = null;
-				}
+		function start_step_1(){
+			var _this = {};
+			var event_handlers = [];
+			var exec_methods;
+			var loader;
+			var popup_image;
+			var node_info_begin_area;
+			var notify_element;
 
-				// ワークを破棄
-				if(popup_image){
-					popup_image.suicide();
-					popup_image = null;
-				}
-
-				// イベントハンドラを破棄
-				if(event_handler){
-					event_handler.release();
-					event_handler = null;
-				}
-
-				// 監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// 通知破棄
+			function release_notify_element(){
 				if(notify_element){
 					notify_element.release();
 					notify_element = null;
 				}
 			}
-
-			// ポップアップイメージを破棄
-			function releasePopupImage(e){
-				releasePopupImageForElementLimiter(e);
-
-				AnalyzeWorkClearPopupImage(work);
-
-				if(limitter_element){
-					limitter_element.release();
-					limitter_element = null;
+			function release_loader(){
+				if(loader){
+					loader.release();
+					loader = null;
 				}
 			}
+			_this.release = function(){
+				release_notify_element();
+				if(popup_image){
+					popup_image.release();
+					popup_image = null;
+				}
+				node_info.clearData("PopupImage");
+				release_loader();
+				if(exec_methods){
+					exec_methods.release();
+					exec_methods = null;
+				}
+				event_handlers.forEach(function(e){
+					e.release();
+				});
+				event_handlers.length = 0;
+			};
 
-			// 開放イベントを発行
-			function dispatchEventRelease(e){
-				event_dispatcher.dispatchEvent("release",null);
-			}
+			exec_methods = new ExecuteMethods(this);
+			exec_methods.pause();
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
 
-			// ポップアップイメージを登録
-			function createPopupImage(e){
 				if(project.getEnableLoadNotifyExpandImage()){
 					notify_element = notify_progress.createElement();
 				}
@@ -57710,138 +57552,104 @@
 					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_LOADING);
 				}
 
-				// 画像の読み込み
 				loader = new Loader();
-				loader.onload = function(image){
-					complete();
-
-					// 画像サイズをセット
-					var image_size = ImageGetNaturalSize(image);
-					limitter_element.setByteSize(image_size.width * image_size.height * 4);
-
-					// 古い要素を破棄
-					element_limitter_image.removeOldElements();
-					if(!loader)	return;
-
-					// １ドット画像を排除
-					if(image_size.width > 1){
-					}else if(image_size.height > 1){
-					}else{
-						releasePopupImage();
-						return;
-					}
-
-					// 画像を１つだけ保有するなら画像を開始矩形とする
-					(function(){
-						var begin_element = null;
-
-						if(element.tagName == "IMG"){
-							if(ElementGetVisibility(element)){
-								begin_element = element;
-							}
-						}
-
-						var nodes = ElementGetElementsByTagName(element,"img");
-						var i;
-						var num = nodes.length;
-						for(i=0;i<num;i++){
-							var node = nodes[i];
-							if(ElementGetVisibility(node)){
-								if(begin_element) return;
-								begin_element = node;
-							}
-						}
-
-						if(begin_element){
-							begin_area = begin_element;
-						}
-					})();
-
-					// 矩形が画像サイズより小さいか
-					if(!begin_area){
-						var r = DomTreeGetBoundingClientRect(element);
-						if((r.bottom - r.top) > image_size.height){
-						}else if((r.right - r.left) > image_size.width){
-						}else{
-							begin_area = element;
-						}
-					}
-
-					// 既存の PopupImage を全て破棄
-					PopupReducedImageReleaseAll(element);
-
-					// 開始矩形エレメントを監視
-					if(begin_area){
-						observer_remove = new DomNodeObserverRemoveFromDocument(begin_area);
-					}
-
-					// 開始範囲のリムーブ監視
-					if(observer_remove){
-						observer_remove.setFunction(dispatchEventRelease);
-					}
-
-					// ポップアップイメージを作成
-					popup_image = new PopupImage(image);
-					popup_image.setElementParent(document.body);
-					popup_image.setElementAnchor(element);
-					popup_image.setElementHitArea(element);
-					popup_image.setElementBeginArea(begin_area);
-					popup_image.setOriginalURL(url);
-					AnalyzeWorkSetPopupImage(work,popup_image);
-
-					// 成功通知
-					if(notify_element){
-						notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_COMPLETE);
-						notify_element.release();
-						notify_element = null;
-					}
-
-					// ポップアップ
-					if(ElementHitTestMousePosition(element,input_mouse.getPositionClient(),true)){
-						popup_image.popup();
-					}
-				};
-
+				loader.onload = callback;
 				loader.onerror = function(){
-					complete();
-
-					// 失敗通知
 					if(notify_element){
 						notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_ERROR);
 					}
+					release_limitter();
 				};
 				loader.setMethod("GET");
-				loader.setURL(url);
+				loader.setURL(url_info_image.getURL());
 				loader.loadImage();
-			}
+			});
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
 
-			// イベントハンドラを作成
-			event_handler = event_dispatcher.createEventHandler("release");
-			event_handler.setFunction(releasePopupImage);
+				var image = exec_methods.arguments[0];
+				release_loader();
 
-			// イメージ管理
-			limitter_element = element_limitter_image.createElement();
-			limitter_element.onattach = function(){
-				createPopupImage();
-			};
-			limitter_element.onremove = function(){
-				releasePopupImageForElementLimiter();
-			};
-			limitter_element.setElementHitArea(element);
-			limitter_element.setEnablePreload(project.getEnablePreLoadPopupImage());
+				// 画像サイズをセット
+				var image_size = ImageGetNaturalSize(image);
+				limitter_element.setByteSize(image_size.width * image_size.height * 4);
+				element_limitter_image.removeExcessElements();
 
-			// 更新
-			limitter_element.update();
+				// １ドット画像を排除
+				if(image_size.width > 1){
+				}else if(image_size.height > 1){
+				}else{
+					release();
+					return;
+				}
+
+				var begin_area = (function(){
+					var begin_element = null;
+
+					if(element.tagName == "IMG"){
+						if(ElementGetVisibility(element)){
+							return element;
+						}
+					}
+
+					// アンカー内の画像を使用
+					var nodes = ElementGetElementsByTagName(element,"img");
+					var node = Array.from(nodes).find(function(node){
+						return (ElementGetVisibility(node));
+					});
+					if(node) return node;
+
+					// 矩形が画像サイズより小さい
+					var r = DomTreeGetBoundingClientRect(element);
+					if((r.bottom - r.top) > image_size.height){
+					}else if((r.right - r.left) > image_size.width){
+					}else{
+						return element;
+					}
+
+					return null;
+				})();
+
+				// 開始矩形エレメントを監視
+				if(begin_area){
+					node_info_begin_area = node_info_dictionary.addNode(begin_area);
+					node_info_begin_area.observerRemove();
+
+					var event_listener = node_info_begin_area.createEventHandler("remove");
+					event_listener.setFunction(suicide);
+					event_handlers.push(event_listener);
+				}
+
+				// 既存の PopupImage を全て破棄
+				PopupReducedImageReleaseAll(element);
+
+				// ポップアップイメージを作成
+				popup_image = new PopupImage(image);
+				popup_image.setElementParent(document.body);
+				popup_image.setElementAnchor(element);
+				popup_image.setElementHitArea(element);
+				popup_image.setElementBeginArea(begin_area);
+				popup_image.setOriginalURL(url_info_image.getURL());
+				node_info.setData("PopupImage",popup_image);
+
+				var event_listener = popup_image.createEventHandler("close");
+				event_listener.setFunction(suicide);
+				event_handlers.push(event_listener);
+
+				// 成功通知
+				if(notify_element){
+					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_COMPLETE);
+				}
+				release_notify_element();
+
+				// ポップアップ
+				if(ElementHitTestMousePosition(element,input_mouse.getPositionClient(),true)){
+					popup_image.popup();
+				}
+			});
+			exec_methods.play();
+			return _this;
 		}
-
-		// コールバック関数を実行
-		var request = {
-			element:element,
-			url:url,
-			content_type:content_type,
-			is_overridden_url:AnalyzeWorkGetOverrodeUrl(work)
-		};
-		project.executeScriptAllowPopupImage(request,response_allow);
 
 	}
 
@@ -57849,31 +57657,31 @@
 	// インラインサウンド
 	// --------------------------------------------------------------------------------
 	function ElementExpandInlineSound(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-		var content_type = AnalyzeWorkGetContentType(work);
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var element = node_info.getNode();
+		var url = node_info.getData("ExpandUrl");
+		var content_type = node_info.getData("ExpandContentType") || [];
 
 		function complete(){
 		}
 
 		function response_allow(response){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+			if(!node_info.equalRevision(revision))	return;
 
 			if(!(response.result)){
 				complete();
 				return;
 			}
 
-			// AudioElement
-			ElementExpandInlineAudioElement(param);
-			// SoundCloud
-			ElementExpandInlinePlayerSoundcloud(param);
-			// MixCloud
-			ElementExpandInlinePlayerMixcloud(param);
+			ElementExpandInlineMediaElement(param,{type:"audio"});
+
+			var embed_url = param.embed_url;
+			if(embed_url.ok && (embed_url.type == "audio")){
+				ElementExpandInlineIFrameElement(param,embed_url);
+			}
 		}
 
 		// コールバック関数を実行
@@ -57881,603 +57689,40 @@
 			element:element,
 			url:url,
 			content_type:content_type,
-			is_overridden_url:AnalyzeWorkGetOverrodeUrl(work)
+			is_overridden_url:node_info.getExecuted("OverrodeUrl")
 		};
 		project.executeScriptAllowInlineSound(request,response_allow);
-	}
-
-	// --------------------------------------------------------------------------------
-	// インライン AudioElement
-	// --------------------------------------------------------------------------------
-	function ElementExpandInlineAudioElement(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-		url = project.fixURL_PassiveContent(url);
-		var content_type = AnalyzeWorkGetContentType(work);
-
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-		function complete(){
-		}
-
-		function response_allow(param){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-			if(!(param.result)){
-				complete();
-				return;
-			}
-
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var loader = null;
-			var audio = null;
-			var audio_analyze_work = null;
-			var audio_url = url;
-			var url_info = url_info_dictionary.addURL(audio_url);
-			var event_handler = null;
-			var limitter_element = null;
-			var observer_remove = null;
-			var media_player_ui = null;
-
-			// 開放イベントを発行
-			function dispatchEventRelease(e){
-				event_dispatcher.dispatchEvent("release",null);
-			}
-
-			// オーディオエレメントを破棄
-			function releaseAudioElement(e){
-				// ローダーを中断
-				if(loader){
-					loader.onload = null;
-					loader.onerror = null;
-					loader = null;
-				}
-
-				if(audio_url){
-					url_info.removeAlone("sound");
-					audio_url = null;
-				}
-
-				// イベントハンドラを破棄
-				if(event_handler){
-					event_handler.release();
-					event_handler = null;
-				}
-
-				if(limitter_element){
-					limitter_element.onremove = null;
-					limitter_element.release();
-					limitter_element = null;
-				}
-
-				// 監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// メディアプレイヤー UI を破棄
-				if(media_player_ui){
-					media_player_ui.release();
-					media_player_ui = null;
-				}
-
-				// 解析辞書除外
-				if(audio_analyze_work){
-					analyze_work_dictionary.removeAnalyzeWork(audio_analyze_work);
-					audio_analyze_work = null;
-				}
-
-				// オーディオエレメントを外す
-				if(audio){
-					DomNodeRemove(audio);
-					audio = null;
-				}
-			}
-
-			// 重複チェック
-			if(project.getDisableSameInlineSound()){
-				if(url_info.getAlone("sound")){
-					audio_url = null;
-					releaseAudioElement();
-					complete();
-					return;
-				}
-				// アドレスを登録
-				url_info.attachAlone("sound");
-			}
-
-			// イベントハンドラを作成
-			event_handler = event_dispatcher.createEventHandler("release");
-			event_handler.setFunction(releaseAudioElement);
-
-			// オーディオの読み込み
-			loader = new Loader();
-			loader.onload = function(audio_element){
-				audio = audio_element;
-
-				// 解析ワーク作成
-				audio_analyze_work = AnalyzeWorkCreate(audio);
-
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(audio_analyze_work,attach_options);
-
-				complete();
-
-				// スタイルをセット
-				ElementSetStyle(audio,project.getStyleSheetExpandSoundInlineAudioElement(audio_url));
-
-				// オーディオエレメントのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(audio);
-				observer_remove.setFunction(dispatchEventRelease);
-
-				// メディアプレイヤー UI
-				media_player_ui = new MediaPlayerExtendUI(audio);
-				var event_handler_close = media_player_ui.createEventHandler("close");
-				event_handler_close.setFunction(dispatchEventRelease);
-
-				function responseInsert(){
-					if(!audio)	return;
-
-					limitter_element = element_limitter_sound.createElement();
-					limitter_element.onattach = function(){
-						//audio.preload = "metadata";
-						//audio.src = audio_url;
-						//audio.load();
-					};
-					limitter_element.onremove = function(){
-						audio.preload = "none";
-						//audio.src = "";
-						audio.load();
-					};
-					limitter_element.setElementHitArea(audio);
-
-					// 更新
-					limitter_element.update();
-				}
-
-				// コールバック関数を実行
-				project.executeScriptInsertInlineSound(element,audio,work.event_dispatcher,responseInsert);
-			};
-
-			loader.onerror = function(){
-				complete();
-			};
-			loader.setMethod("GET");
-			loader.setURL(audio_url);
-			loader.loadAudio();
-		}
-
-		// コールバック関数を実行
-		project.executeScriptAllowAudioElement(element,url,content_type,response_allow);
-	}
-
-	// --------------------------------------------------------------------------------
-	// インラインプレイヤー Soundcloud
-	// --------------------------------------------------------------------------------
-	function ElementExpandInlinePlayerSoundcloud(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-		function complete(){
-		}
-
-		// soundcloud.com 内では動作禁止
-		var deny_list = [
-			"*://soundcloud.com/*",
-			"*://*.soundcloud.com/*"
-		];
-		var i;
-		var num = deny_list.length;
-		for(i=0;i<num;i++){
-			if(StringUrlMatchAsteriskWord(document.URL,deny_list[i])){
-				return;
-			}
-		}
-
-		// 動画を展開
-		function expand_player(){
-
-			// 展開処理の完了
-			function expand_player_complete(){
-			}
-
-			if(project.getVisiblePlayerHtml5Soundcloud()){
-				(function(){
-					var iframe_url = "https://w.soundcloud.com/player/?url=" + encodeURIComponent(url);
-					var url_info = url_info_dictionary.addURL(iframe_url);
-					var height = 166;
-
-					var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-					var iframe = null;
-					var iframe_analyze_work = null;
-					var event_handler = null;
-					var limitter_element = null;
-					var observer_remove = null;
-					var media_player_ui = null;
-
-					// 開放イベントを発行
-					function dispatchEventRelease(e){
-						event_dispatcher.dispatchEvent("release",null);
-					}
-
-					// インラインフレームを破棄
-					function releaseIframeHtml5(e){
-						if(iframe_url){
-							url_info.removeAlone("sound");
-							iframe_url = null;
-						}
-
-						// イベントハンドラを破棄
-						if(event_handler){
-							event_handler.release();
-							event_handler = null;
-						}
-
-						if(limitter_element){
-							limitter_element.onremove = null;
-							limitter_element.release();
-							limitter_element = null;
-						}
-
-						// 監視を破棄
-						if(observer_remove){
-							observer_remove.release();
-							observer_remove = null;
-						}
-
-						// メディアプレイヤー UI を破棄
-						if(media_player_ui){
-							media_player_ui.release();
-							media_player_ui = null;
-						}
-
-						// 解析辞書除外
-						if(iframe_analyze_work){
-							analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-							iframe_analyze_work = null;
-						}
-
-						// インラインフレームを外す
-						if(iframe){
-							DomNodeRemove(iframe);
-							iframe = null;
-						}
-					}
-
-					// 混在コンテンツの展開が可能か
-					if(!(project.checkAllowExpandIframeElement(iframe_url))){
-						releaseIframeHtml5();
-						complete();
-						return;
-					}
-
-					// 重複チェック
-					if(project.getDisableSameInlineSound()){
-						if(url_info.getAlone("sound")){
-							iframe_url = null;
-							releaseIframeHtml5();
-							complete();
-							return;
-						}
-						// アドレスを登録
-						url_info.attachAlone("sound");
-					}
-
-					// イベントハンドラを作成
-					event_handler = event_dispatcher.createEventHandler("release");
-					event_handler.setFunction(releaseIframeHtml5);
-
-					// インラインフレームを作成
-					iframe = DocumentCreateElement('iframe');
-					iframe.frameBorder = "0";
-					iframe.scrolling = "no";
-					iframe.allowFullscreen = true;
-
-					// スタイルをセット
-					ElementSetStyle(iframe,project.getStyleSheetExpandSoundSoundcloudInlinePlayerHtml5());
-
-					if(height){
-						// 高さを設定
-						iframe.style.height = parseInt(height) + "px";
-					}
-
-					// 解析ワーク作成
-					iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-					// 解析辞書登録オプション
-					var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-					attach_options.SetOutsider();
-
-					// 解析辞書登録
-					analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-					// インラインフレームのリムーブ監視
-					observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-					observer_remove.setFunction(dispatchEventRelease);
-
-					// メディアプレイヤー UI
-					media_player_ui = new MediaPlayerExtendUI(iframe);
-					var event_handler_close = media_player_ui.createEventHandler("close");
-					event_handler_close.setFunction(dispatchEventRelease);
-
-					function responseInsertHtml5(){
-						if(!iframe)	return;
-
-						limitter_element = element_limitter_sound.createElement();
-						limitter_element.onattach = function(){
-							iframe.src = iframe_url;
-						};
-						limitter_element.onremove = function(){
-							iframe.src = "";
-						};
-						limitter_element.setElementHitArea(iframe);
-
-						// 更新
-						limitter_element.update();
-					}
-
-					// コールバック関数を実行
-					project.executeScriptInsertInlineSound(element,iframe,work.event_dispatcher,responseInsertHtml5);
-				})();
-			}
-
-		}
-
-		if(project.getVisiblePlayerHtml5Soundcloud()){
-
-			// soundcloud.com へのリンク
-			var allow_list = [
-				"(http|https)://soundcloud\\.com/.+?/.+([?]|$)"
-			];
-			num = allow_list.length;
-			for(i=0;i<num;i++){
-				if(url.match(new RegExp(allow_list[i],"i"))){
-					expand_player();
-					return;
-				}
-			}
-		}
-
-		// 完了
-		complete();
-	}
-
-	// --------------------------------------------------------------------------------
-	// インラインプレイヤー Mixcloud
-	// --------------------------------------------------------------------------------
-	function ElementExpandInlinePlayerMixcloud(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-		function complete(){
-		}
-
-		// www.mixcloud.com 内では動作禁止
-		var deny_list = [
-			"*://mixcloud.com/*",
-			"*://*.mixcloud.com/*"
-		];
-		var i;
-		var num = deny_list.length;
-		for(i=0;i<num;i++){
-			if(StringUrlMatchAsteriskWord(document.URL,deny_list[i])){
-				return;
-			}
-		}
-
-		// 動画を展開
-		function expand_player(path){
-
-			// 展開処理の完了
-			function expand_player_complete(){
-			}
-
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var iframe = null;
-			var iframe_analyze_work = null;
-			var iframe_url = "https://www.mixcloud.com/widget/iframe/?hide_cover=1&light=1&feed=" + encodeURIComponent(path);
-			var url_info = url_info_dictionary.addURL(iframe_url);
-			var event_handler = null;
-			var limitter_element = null;
-			var observer_remove = null;
-			var media_player_ui = null;
-
-			// 開放イベントを発行
-			function dispatchEventRelease(e){
-				event_dispatcher.dispatchEvent("release",null);
-			}
-
-			// インラインフレームを破棄
-			function releaseIframe(e){
-				if(iframe_url){
-					url_info.removeAlone("sound");
-					iframe_url = null;
-				}
-
-				// イベントハンドラを破棄
-				if(event_handler){
-					event_handler.release();
-					event_handler = null;
-				}
-
-				if(limitter_element){
-					limitter_element.onremove = null;
-					limitter_element.release();
-					limitter_element = null;
-				}
-
-				// 監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// メディアプレイヤー UI を破棄
-				if(media_player_ui){
-					media_player_ui.release();
-					media_player_ui = null;
-				}
-
-				// 解析辞書除外
-				if(iframe_analyze_work){
-					analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-					iframe_analyze_work = null;
-				}
-
-				// インラインフレームを外す
-				if(iframe){
-					DomNodeRemove(iframe);
-					iframe = null;
-				}
-			}
-
-			// イベントハンドラを作成
-			event_handler = event_dispatcher.createEventHandler("release");
-			event_handler.setFunction(releaseIframe);
-
-			// 混在コンテンツの展開が可能か
-			if(!(project.checkAllowExpandIframeElement(iframe_url))){
-				releaseIframe();
-				complete();
-				return;
-			}
-
-			// 重複チェック
-			if(project.getDisableSameInlineSound()){
-				if(url_info.getAlone("sound")){
-					iframe_url = null;
-					releaseIframe();
-					complete();
-					return;
-				}
-				// アドレスを登録
-				url_info.attachAlone("sound");
-			}
-
-			// インラインフレームを作成
-			iframe = DocumentCreateElement('iframe');
-			iframe.frameBorder = "0";
-			iframe.scrolling = "no";
-			iframe.allowFullscreen = true;
-
-			// スタイルをセット
-			ElementSetStyle(iframe,project.getStyleSheetExpandSoundMixcloudInlinePlayer());
-
-			// 高さを設定
-			iframe.style.height = 120 + "px";
-
-			// 解析ワーク作成
-			iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			attach_options.SetOutsider();
-
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-			// インラインフレームのリムーブ監視
-			observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-			observer_remove.setFunction(dispatchEventRelease);
-
-			// メディアプレイヤー UI
-			media_player_ui = new MediaPlayerExtendUI(iframe);
-			var event_handler_close = media_player_ui.createEventHandler("close");
-			event_handler_close.setFunction(dispatchEventRelease);
-
-			function responseInsert(){
-				if(!iframe)	return;
-
-				limitter_element = element_limitter_sound.createElement();
-				limitter_element.onattach = function(){
-					iframe.src = iframe_url;
-				};
-				limitter_element.onremove = function(){
-					iframe.src = "";
-				};
-				limitter_element.setElementHitArea(iframe);
-
-				// 更新
-				limitter_element.update();
-			}
-
-			// コールバック関数を実行
-			project.executeScriptInsertInlineSound(element,iframe,work.event_dispatcher,responseInsert);
-		}
-
-		if(project.getVisiblePlayerMixcloud()){
-
-			// mixcloud.com へのリンク
-			var allow_list = [
-				"^(http|https)://[^.]+\\.mixcloud\\.com/([^/]+)[/]([^/]+)[/]([?]|$)"
-			];
-
-			var forbid_user = {live:1,discover:1,upload:1,pro:1};
-			var forbid_name = {stream:1,uploads:1,favorites:1,listens:1,playlists:1};
-
-			num = allow_list.length;
-			for(i=0;i<num;i++){
-				var m = url.match(new RegExp(allow_list[i],"i"));
-				if(m){
-					if(!(forbid_user[m[2]]) && !(forbid_name[m[3]])){
-						expand_player("/"+m[2]+"/"+m[3]+"/");
-						return;
-					}
-				}
-			}
-		}
-
-		// 完了
-		complete();
 	}
 
 	// --------------------------------------------------------------------------------
 	// インラインビデオ
 	// --------------------------------------------------------------------------------
 	function ElementExpandInlineVideo(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-		var content_type = AnalyzeWorkGetContentType(work);
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var element = node_info.getNode();
+		var url = node_info.getData("ExpandUrl");
+		var content_type = node_info.getData("ExpandContentType") || [];
 
 		function complete(){
 		}
 
 		function response_allow(response){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+			if(!node_info.equalRevision(revision))	return;
 
 			if(!(response.result)){
 				complete();
 				return;
 			}
 
-			// VideoElement
-			ElementExpandInlineVideoElement(param);
-			// youtube
-			ElementExpandInlineVideoYoutube(param);
-			// nicovideo
-			ElementExpandInlineVideoNicovideo(param);
-			// dailymotion
-			ElementExpandInlineVideoDailymotion(param);
-			// vimeo
-			ElementExpandInlineVideoVimeo(param);
+			ElementExpandInlineMediaElement(param,{type:"video"});
+
+			var embed_url = param.embed_url;
+			if(embed_url.ok && (embed_url.type == "video")){
+				ElementExpandInlineIFrameElement(param,embed_url);
+			}
 		}
 
 		// コールバック関数を実行
@@ -58485,1185 +57730,36 @@
 			element:element,
 			url:url,
 			content_type:content_type,
-			is_overridden_url:AnalyzeWorkGetOverrodeUrl(work)
+			is_overridden_url:node_info.getExecuted("OverrodeUrl")
 		};
 		project.executeScriptAllowInlineVideo(request,response_allow);
-	}
-
-	// --------------------------------------------------------------------------------
-	// インライン VideoElement
-	// --------------------------------------------------------------------------------
-	function ElementExpandInlineVideoElement(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-		url = project.fixURL_PassiveContent(url);
-		var content_type = AnalyzeWorkGetContentType(work);
-
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-		function complete(){
-		}
-
-		function response_allow(param){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-			if(!(param.result)){
-				complete();
-				return;
-			}
-
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var loader = null;
-			var video = null;
-			var video_analyze_work = null;
-			var video_url = url;
-			var url_info = url_info_dictionary.addURL(video_url);
-			var event_handler = null;
-			var limitter_element = null;
-			var observer_remove = null;
-			var media_player_ui = null;
-
-			// 開放イベントを発行
-			function dispatchEventRelease(e){
-				event_dispatcher.dispatchEvent("release",null);
-			}
-
-			// ビデオエレメントを破棄
-			function releaseVideoElement(e){
-				// ローダーを中断
-				if(loader){
-					loader.onload = null;
-					loader.onerror = null;
-					loader = null;
-				}
-
-				if(video_url){
-					url_info.removeAlone("video");
-					video_url = null;
-				}
-
-				// イベントハンドラを破棄
-				if(event_handler){
-					event_handler.release();
-					event_handler = null;
-				}
-
-				if(limitter_element){
-					limitter_element.onremove = null;
-					limitter_element.release();
-					limitter_element = null;
-				}
-
-				// 監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// メディアプレイヤー UI を破棄
-				if(media_player_ui){
-					media_player_ui.release();
-					media_player_ui = null;
-				}
-
-				// 解析辞書除外
-				if(video_analyze_work){
-					analyze_work_dictionary.removeAnalyzeWork(video_analyze_work);
-					video_analyze_work = null;
-				}
-
-				// ビデオエレメントを外す
-				if(video){
-					DomNodeRemove(video);
-					video = null;
-				}
-			}
-
-			// 重複チェック
-			if(project.getDisableSameInlineVideo()){
-				if(url_info.getAlone("video")){
-					video_url = null;
-					releaseVideoElement();
-					complete();
-					return;
-				}
-				// アドレスを登録
-				url_info.attachAlone("video");
-			}
-
-			// イベントハンドラを作成
-			event_handler = event_dispatcher.createEventHandler("release");
-			event_handler.setFunction(releaseVideoElement);
-
-			// ビデオの読み込み
-			loader = new Loader();
-			loader.onload = function(video_element){
-				video = video_element;
-
-				// 解析ワーク作成
-				video_analyze_work = AnalyzeWorkCreate(video);
-
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(video_analyze_work,attach_options);
-
-				complete();
-
-				// スタイルをセット
-				ElementSetStyle(video,project.getStyleSheetExpandVideoInlineVideoElement(video_url));
-
-				// ビデオエレメントのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(video);
-				observer_remove.setFunction(dispatchEventRelease);
-
-				// メディアプレイヤー UI
-				media_player_ui = new MediaPlayerExtendUI(video);
-				var event_handler_close = media_player_ui.createEventHandler("close");
-				event_handler_close.setFunction(dispatchEventRelease);
-
-				function responseInsert(){
-					if(!video)	return;
-
-					limitter_element = element_limitter_video.createElement();
-					limitter_element.onattach = function(){
-						//video.preload = "metadata";
-						//video.src = video_url;
-						//video.load();
-					};
-					limitter_element.onremove = function(){
-						video.preload = "none";
-						//video.src = "";
-						video.load();
-					};
-					limitter_element.setElementHitArea(video);
-
-					// 更新
-					limitter_element.update();
-				}
-
-				// コールバック関数を実行
-				project.executeScriptInsertInlineVideo(element,video,work.event_dispatcher,responseInsert);
-			};
-
-			loader.onerror = function(){
-				complete();
-			};
-			loader.setMethod("GET");
-			loader.setURL(video_url);
-			loader.loadVideo();
-		}
-
-		// コールバック関数を実行
-		project.executeScriptAllowVideoElement(element,url,content_type,response_allow);
-	}
-
-	// --------------------------------------------------------------------------------
-	// インラインビデオ youtube
-	// --------------------------------------------------------------------------------
-	function ElementExpandInlineVideoYoutube(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-		function complete(){
-		}
-
-		// youtube.com 内では動作禁止
-		var deny_list = [
-			"*://*.youtube.com/*",
-			"*://youtube.com/*"
-		];
-		var i;
-		var num = deny_list.length;
-		for(i=0;i<num;i++){
-			if(StringUrlMatchAsteriskWord(document.URL,deny_list[i])){
-				return;
-			}
-		}
-
-		// 動画を展開
-		function expand_video(url){
-
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var iframe = null;
-			var iframe_analyze_work = null;
-			var iframe_url = url;
-			var url_info = url_info_dictionary.addURL(iframe_url);
-			var event_handler = null;
-			var limitter_element = null;
-			var observer_remove = null;
-			var media_player_ui = null;
-
-			// 開放イベントを発行
-			function dispatchEventRelease(e){
-				event_dispatcher.dispatchEvent("release",null);
-			}
-
-			// インラインフレームを破棄
-			function releaseIframe(e){
-				if(iframe_url){
-					url_info.removeAlone("video");
-					iframe_url = null;
-				}
-
-				// イベントハンドラを破棄
-				if(event_handler){
-					event_handler.release();
-					event_handler = null;
-				}
-
-				if(limitter_element){
-					limitter_element.onremove = null;
-					limitter_element.release();
-					limitter_element = null;
-				}
-
-				// 監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// メディアプレイヤー UI を破棄
-				if(media_player_ui){
-					media_player_ui.release();
-					media_player_ui = null;
-				}
-
-				// 解析辞書除外
-				if(iframe_analyze_work){
-					analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-					iframe_analyze_work = null;
-				}
-
-				// インラインフレームを外す
-				if(iframe){
-					DomNodeRemove(iframe);
-					iframe = null;
-				}
-			}
-
-			// 混在コンテンツの展開が可能か
-			if(!(project.checkAllowExpandIframeElement(iframe_url))){
-				releaseIframe();
-				complete();
-				return;
-			}
-
-			// 重複チェック
-			if(project.getDisableSameInlineVideo()){
-				if(url_info.getAlone("video")){
-					iframe_url = null;
-					releaseIframe();
-					complete();
-					return;
-				}
-				// アドレスを登録
-				url_info.attachAlone("video");
-			}
-
-			// イベントハンドラを作成
-			event_handler = event_dispatcher.createEventHandler("release");
-			event_handler.setFunction(releaseIframe);
-
-			// インラインフレームを作成
-			iframe = DocumentCreateElement('iframe');
-			iframe.frameBorder = "0";
-			iframe.scrolling = "no";
-			iframe.allowFullscreen = true;
-
-			// スタイルをセット
-			ElementSetStyle(iframe,project.getStyleSheetExpandVideoYoutubeInlineVideo());
-
-			// 解析ワーク作成
-			iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			attach_options.SetOutsider();
-
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-			// インラインフレームのリムーブ監視
-			observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-			observer_remove.setFunction(dispatchEventRelease);
-
-			// メディアプレイヤー UI
-			media_player_ui = new MediaPlayerExtendUI(iframe);
-			var event_handler_close = media_player_ui.createEventHandler("close");
-			event_handler_close.setFunction(dispatchEventRelease);
-
-			function responseInsert(){
-				if(!iframe)	return;
-
-				limitter_element = element_limitter_video.createElement();
-				limitter_element.onattach = function(){
-					iframe.src = iframe_url;
-				};
-				limitter_element.onremove = function(){
-					iframe.src = "";
-				};
-				limitter_element.setElementHitArea(iframe);
-
-				// 更新
-				limitter_element.update();
-			}
-
-			// コールバック関数を実行
-			project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
-		}
-
-		function getHashQuery(url){
-			var q = new Object();
-			var m = url.match(new RegExp("[#](.*?)([?]|$)"));
-			if(!m)	return q;
-			var a = m[1].split('&');
-			var i;
-			var num = a.length;
-			for(i=0;i<num;i++){
-				var b = a[i].split('=');
-				if(b.length == 2){
-					q[b[0]] = b[1];
-				}
-			}
-			return q;
-		}
-
-		function getIframeURL(url,v){
-			var q = StringGetQuery(url);
-			var h = getHashQuery(url);
-			var start = q["t"] || h["t"];
-			if(start){
-				var t = 0;
-				var m;
-				m = start.match(/([0-9]+)h/i);
-				if(m){
-					t += parseInt(m[1]) * 60 * 60;
-				}
-				m = start.match(/([0-9]+)m/i);
-				if(m){
-					t += parseInt(m[1]) * 60;
-				}
-				m = start.match(/([0-9]+)s/i);
-				if(m){
-					t += parseInt(m[1]);
-				}
-				if(t){
-					start = t + "";
-				}
-				m = start.match(/([0-9]+)/i);
-				if(m){
-					start = m[1];
-				}else{
-					start = "";
-				}
-			}
-			var protocol = project.getSecureCurrent() ? "https" : "http";
-			var iframe_url = protocol + "://www.youtube-nocookie.com/embed/" + v;
-			if(start) iframe_url += "?start=" + start;
-			return iframe_url;
-		}
-
-		if(project.getVisibleVideoYoutube()){
-			// youtube へのリンク
-			var allow_list_query = [
-				"*://www.youtube.com/watch?*",
-				"*://www.youtube.com/watch_popup?*",
-				"*://m.youtube.com/watch?*",
-				"*://m.youtube.com/#/watch?*"
-			];
-			num = allow_list_query.length;
-			for(i=0;i<num;i++){
-				if(StringUrlMatchAsteriskWord(url,allow_list_query[i])){
-					var query = StringGetQuery(url);
-					if(query.v){
-						expand_video(getIframeURL(url,query.v));
-						return;
-					}
-				}
-			}
-
-			// 短縮 URL など
-			var allow_list_regexp = [
-				"(http|https)://www\\.youtube\\.com/v/",
-				"(http|https)://youtu\\.be/"
-			];
-			num = allow_list_regexp.length;
-			for(i=0;i<num;i++){
-				if(url.match(new RegExp(allow_list_regexp[i],"i"))){
-					if(RegExp.rightContext.match(new RegExp("^([-_a-zA-Z0-9]+)","i"))){
-						expand_video(getIframeURL(url,RegExp.$1));
-						return;
-					}
-				}
-			}
-		}
-
-		// 完了
-		complete();
-	}
-
-	// --------------------------------------------------------------------------------
-	// インラインビデオ nicovideo
-	// --------------------------------------------------------------------------------
-	function ElementExpandInlineVideoNicovideo(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-		function complete(){
-		}
-
-		// .nicovideo.jp 内では動作禁止
-		var deny_list = [
-			"*://nicovideo.jp/*",
-			"*://*.nicovideo.jp/*"
-		];
-		var i;
-		var num = deny_list.length;
-		for(i=0;i<num;i++){
-			if(StringUrlMatchAsteriskWord(document.URL,deny_list[i])){
-				return;
-			}
-		}
-
-		// 動画を展開
-		function expand_video(video_id,language){
-
-			(function(){
-
-				// 展開処理の完了
-				function expand_video_complete(){
-				}
-
-				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-				var iframe = null;
-				var iframe_analyze_work = null;
-				var iframe_url = "https://embed.nicovideo.jp/watch/" + video_id;
-				var url_info = url_info_dictionary.addURL(iframe_url);
-				var event_handler = null;
-				var limitter_element = null;
-				var observer_remove = null;
-				var media_player_ui = null;
-
-				// 開放イベントを発行
-				function dispatchEventRelease(e){
-					event_dispatcher.dispatchEvent("release",null);
-				}
-
-				// インラインフレームを破棄
-				function releaseIframe(e){
-					if(iframe_url){
-						url_info.removeAlone("video");
-						iframe_url = null;
-					}
-
-					// イベントハンドラを破棄
-					if(event_handler){
-						event_handler.release();
-						event_handler = null;
-					}
-
-					if(limitter_element){
-						limitter_element.onremove = null;
-						limitter_element.release();
-						limitter_element = null;
-					}
-
-					// 監視を破棄
-					if(observer_remove){
-						observer_remove.release();
-						observer_remove = null;
-					}
-
-					// メディアプレイヤー UI を破棄
-					if(media_player_ui){
-						media_player_ui.release();
-						media_player_ui = null;
-					}
-
-					// 解析辞書除外
-					if(iframe_analyze_work){
-						analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-						iframe_analyze_work = null;
-					}
-
-					// インラインフレームを外す
-					if(iframe){
-						DomNodeRemove(iframe);
-						iframe = null;
-					}
-				}
-
-				// 混在コンテンツの展開が可能か
-				if(!(project.checkAllowExpandIframeElement(iframe_url))){
-					releaseIframe();
-					expand_video_complete();
-					return;
-				}
-
-				// 重複チェック
-				if(project.getDisableSameInlineVideo()){
-					if(url_info.getAlone("video")){
-						iframe_url = null;
-						releaseIframe();
-						complete();
-						return;
-					}
-					// アドレスを登録
-					url_info.attachAlone("video");
-				}
-
-				// イベントハンドラを作成
-				event_handler = event_dispatcher.createEventHandler("release");
-				event_handler.setFunction(releaseIframe);
-
-				iframe = DocumentCreateElement('iframe');
-				iframe.frameBorder = "0";
-				iframe.scrolling = "no";
-				iframe.allowFullscreen = true;
-
-				// スタイルをセット
-				ElementSetStyle(iframe,project.getStyleSheetExpandVideoNicovideoInlineVideo());
-
-				// 解析ワーク作成
-				iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-				// インラインフレームのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-				observer_remove.setFunction(dispatchEventRelease);
-
-				// メディアプレイヤー UI
-				media_player_ui = new MediaPlayerExtendUI(iframe);
-				var event_handler_close = media_player_ui.createEventHandler("close");
-				event_handler_close.setFunction(dispatchEventRelease);
-
-				function responseInsert(){
-					if(!iframe)	return;
-
-					limitter_element = element_limitter_video.createElement();
-					limitter_element.onattach = function(){
-						iframe.src = iframe_url;
-					};
-					limitter_element.onremove = function(){
-						iframe.src = "";
-					};
-					limitter_element.setElementHitArea(iframe);
-
-					// 更新
-					limitter_element.update();
-
-					expand_video_complete();
-				}
-
-				// コールバック関数を実行
-				project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
-			})();
-		}
-
-		// nicovideo.jp へのリンク
-		var allow_list_video = [
-			"(http|https)://.*\\.nicovideo\\.jp/watch/",
-			"(http|https)://nicovideo\\.jp/watch/",
-			"(http|https)://nico\\.ms/.*/",
-			"(http|https)://nico\\.ms/"
-		];
-		num = allow_list_video.length;
-		for(i=0;i<num;i++){
-			if(url.match(new RegExp(allow_list_video[i],"i"))){
-				var language = null;
-				var video_id = RegExp.rightContext;
-
-				if(video_id.match(new RegExp("^(.*?)[?#]","i"))){
-					video_id = RegExp.$1;
-				}
-
-				// アルファベット2文字 + 数値
-				if(video_id.match(/([a-z]{2})([0-9]+$)/i)){
-					video_id = RegExp.$1 + RegExp.$2;
-
-					// 接尾辞
-					switch(RegExp.$1){
-					case "im":
-					case "mg":
-					case "lv":
-					case "bk":
-					case "nw":
-					case "co":
-						video_id = null;
-						break;
-					}
-				}
-
-				// nicovideo.jp サブドメイン
-				if(url.match(new RegExp("^(http|https)://([a-z]+?)\\.nicovideo\\.jp/","i"))){
-					// 対応言語
-					switch(RegExp.$2){
-					case "de":
-					case "es":
-					case "tw":
-						language = RegExp.$2;
-						break;
-					}
-
-					switch(RegExp.$2){
-					case "live":
-					case "news":
-					case "seiga":
-						video_id = null;
-						break;
-					}
-				}
-
-				if(video_id){
-					if(project.getVisibleVideoNicovideo()){
-						expand_video(video_id,language);
-						return;
-					}
-				}
-			}
-		}
-
-		// 完了
-		complete();
-	}
-
-	// --------------------------------------------------------------------------------
-	// インラインビデオ dailymotion
-	// --------------------------------------------------------------------------------
-	function ElementExpandInlineVideoDailymotion(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-		function complete(){
-		}
-
-		// www.dailymotion.com 内では動作禁止
-		var deny_list = [
-			"*//www.dailymotion.com/*"
-		];
-		var i;
-		var num = deny_list.length;
-		for(i=0;i<num;i++){
-			if(StringUrlMatchAsteriskWord(document.URL,deny_list[i])){
-				return;
-			}
-		}
-
-		// 動画を展開
-		function expand_video(url){
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var iframe = null;
-			var iframe_analyze_work = null;
-			var iframe_url = url;
-			var url_info = url_info_dictionary.addURL(iframe_url);
-			var event_handler = null;
-			var limitter_element = null;
-			var observer_remove = null;
-			var media_player_ui = null;
-
-			// 開放イベントを発行
-			function dispatchEventRelease(e){
-				event_dispatcher.dispatchEvent("release",null);
-			}
-
-			// インラインフレームを破棄
-			function releaseIframe(e){
-				if(iframe_url){
-					url_info.removeAlone("video");
-					iframe_url = null;
-				}
-
-				// イベントハンドラを破棄
-				if(event_handler){
-					event_handler.release();
-					event_handler = null;
-				}
-
-				if(limitter_element){
-					limitter_element.onremove = null;
-					limitter_element.release();
-					limitter_element = null;
-				}
-
-				// 監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// メディアプレイヤー UI を破棄
-				if(media_player_ui){
-					media_player_ui.release();
-					media_player_ui = null;
-				}
-
-				// 解析辞書除外
-				if(iframe_analyze_work){
-					analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-					iframe_analyze_work = null;
-				}
-
-				// インラインフレームを外す
-				if(iframe){
-					DomNodeRemove(iframe);
-					iframe = null;
-				}
-			}
-
-			// 混在コンテンツの展開が可能か
-			if(!(project.checkAllowExpandIframeElement(iframe_url))){
-				releaseIframe();
-				complete();
-				return;
-			}
-
-			// 重複チェック
-			if(project.getDisableSameInlineVideo()){
-				if(url_info.getAlone("video")){
-					iframe_url = null;
-					releaseIframe();
-					complete();
-					return;
-				}
-				// アドレスを登録
-				url_info.attachAlone("video");
-			}
-
-			// イベントハンドラを作成
-			event_handler = event_dispatcher.createEventHandler("release");
-			event_handler.setFunction(releaseIframe);
-
-			iframe = DocumentCreateElement('iframe');
-			iframe.frameBorder = "0";
-			iframe.scrolling = "no";
-			iframe.allowFullscreen = true;
-
-			// スタイルをセット
-			ElementSetStyle(iframe,project.getStyleSheetExpandVideoDailymotionInlineVideo());
-
-			// 解析ワーク作成
-			iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			attach_options.SetOutsider();
-
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-			// インラインフレームのリムーブ監視
-			observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-			observer_remove.setFunction(dispatchEventRelease);
-
-			// メディアプレイヤー UI
-			media_player_ui = new MediaPlayerExtendUI(iframe);
-			var event_handler_close = media_player_ui.createEventHandler("close");
-			event_handler_close.setFunction(dispatchEventRelease);
-
-			function responseInsert(){
-				if(!iframe)	return;
-
-				limitter_element = element_limitter_video.createElement();
-				limitter_element.onattach = function(){
-					iframe.src = iframe_url;
-				};
-				limitter_element.onremove = function(){
-					iframe.src = "";
-				};
-				limitter_element.setElementHitArea(iframe);
-
-				// 更新
-				limitter_element.update();
-			}
-
-			// コールバック関数を実行
-			project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
-		}
-
-		if(project.getVisibleVideoDailymotion()){
-			var allow_list = [
-				"*//www.dailymotion.com/video/*",
-				"*//touch.dailymotion.com/video/*"
-			];
-			num = allow_list.length;
-			for(i=0;i<num;i++){
-				if(StringUrlMatchAsteriskWord(url,allow_list[i])){
-					var w = "/video/";
-					var s = url.indexOf(w);
-					if(s >= 0){
-						s += w.length;
-						var e = url.indexOf("_",s);
-						var video_id;
-						if(e >= 0)	video_id = url.substring(s,e);
-						else		video_id = url.substring(s);
-						if(video_id){
-							var protocol = project.getSecureCurrent() ? "https" : "http";
-							expand_video(protocol + "://www.dailymotion.com/embed/video/" + video_id);
-							return;
-						}
-					}
-				}
-			}
-		}
-
-		// 完了
-		complete();
-	}
-
-	// --------------------------------------------------------------------------------
-	// インラインビデオ vimeo
-	// --------------------------------------------------------------------------------
-	function ElementExpandInlineVideoVimeo(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-		function complete(){
-		}
-
-		// vimeo.com 内では動作禁止
-		var deny_list = [
-			"*//vimeo.com/*"
-		];
-		var i;
-		var num = deny_list.length;
-		for(i=0;i<num;i++){
-			if(StringUrlMatchAsteriskWord(document.URL,deny_list[i])){
-				return;
-			}
-		}
-
-		// 動画を展開
-		function expand_video(url){
-
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var iframe = null;
-			var iframe_analyze_work = null;
-			var iframe_url = url;
-			var url_info = url_info_dictionary.addURL(iframe_url);
-			var event_handler = null;
-			var limitter_element = null;
-			var observer_remove = null;
-			var media_player_ui = null;
-
-			// 開放イベントを発行
-			function dispatchEventRelease(e){
-				event_dispatcher.dispatchEvent("release",null);
-			}
-
-			// インラインフレームを破棄
-			function releaseIframe(e){
-				if(iframe_url){
-					url_info.removeAlone("video");
-					iframe_url = null;
-				}
-
-				// イベントハンドラを破棄
-				if(event_handler){
-					event_handler.release();
-					event_handler = null;
-				}
-
-				if(limitter_element){
-					limitter_element.onremove = null;
-					limitter_element.release();
-					limitter_element = null;
-				}
-
-				// 監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// メディアプレイヤー UI を破棄
-				if(media_player_ui){
-					media_player_ui.release();
-					media_player_ui = null;
-				}
-
-				// 解析辞書除外
-				if(iframe_analyze_work){
-					analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-					iframe_analyze_work = null;
-				}
-
-				// インラインフレームを外す
-				if(iframe){
-					DomNodeRemove(iframe);
-					iframe = null;
-				}
-			}
-
-			// 混在コンテンツの展開が可能か
-			if(!(project.checkAllowExpandIframeElement(iframe_url))){
-				releaseIframe();
-				complete();
-				return;
-			}
-
-			// 重複チェック
-			if(project.getDisableSameInlineVideo()){
-				if(url_info.getAlone("video")){
-					iframe_url = null;
-					releaseIframe();
-					complete();
-					return;
-				}
-				// アドレスを登録
-				url_info.attachAlone("video");
-			}
-
-			// イベントハンドラを作成
-			event_handler = event_dispatcher.createEventHandler("release");
-			event_handler.setFunction(releaseIframe);
-
-			iframe = DocumentCreateElement('iframe');
-			iframe.frameBorder = "0";
-			iframe.scrolling = "no";
-			iframe.allowFullscreen = true;
-
-			// スタイルをセット
-			ElementSetStyle(iframe,project.getStyleSheetExpandVideoVimeoInlineVideo());
-
-			// 解析ワーク作成
-			iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			attach_options.SetOutsider();
-
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-			// インラインフレームのリムーブ監視
-			observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-			observer_remove.setFunction(dispatchEventRelease);
-
-			// メディアプレイヤー UI
-			media_player_ui = new MediaPlayerExtendUI(iframe);
-			var event_handler_close = media_player_ui.createEventHandler("close");
-			event_handler_close.setFunction(dispatchEventRelease);
-
-			function responseInsert(){
-				if(!iframe)	return;
-
-				limitter_element = element_limitter_video.createElement();
-				limitter_element.onattach = function(){
-					iframe.src = iframe_url;
-				};
-				limitter_element.onremove = function(){
-					iframe.src = "";
-				};
-				limitter_element.setElementHitArea(iframe);
-
-				// 更新
-				limitter_element.update();
-			}
-
-			// コールバック関数を実行
-			project.executeScriptInsertInlineVideo(element,iframe,work.event_dispatcher,responseInsert);
-		}
-
-		if(project.getVisibleVideoVimeo()){
-			var allow_list = [
-				"*//vimeo.com/*"
-			];
-			num = allow_list.length;
-			for(i=0;i<num;i++){
-				if(StringUrlMatchAsteriskWord(url,allow_list[i])){
-					var w = "://vimeo.com/";
-					var s = url.indexOf(w);
-					if(s >= 0){
-						s += w.length;
-						var e = url.indexOf("?",s);
-						var video_id;
-						if(e >= 0)	video_id = url.substring(s,e);
-						else		video_id = url.substring(s);
-						if(video_id){
-							// すべて数値
-							if(video_id.match(/^[0-9]+$/)){
-								expand_video("https://player.vimeo.com/video/" + video_id);
-								return;
-							}
-						}
-					}
-				}
-			}
-		}
-
-		// 完了
-		complete();
 	}
 
 	// --------------------------------------------------------------------------------
 	// インラインフレームの展開
 	// --------------------------------------------------------------------------------
 	function ElementExpandInlineIframe(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
-		var url = AnalyzeWorkGetExpandUrl(work);
-		url = project.fixURL_ActiveContent(url);
-		var content_type = AnalyzeWorkGetContentType(work);
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var element = node_info.getNode();
+		var url = node_info.getData("ExpandUrl");
+		url = project.fixURL_ActiveContent(url);
+		var content_type = node_info.getData("ExpandContentType") || [];
 
 		function complete(){
 		}
 
-		function response_allow(param){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		function response_allow(response){
+			if(!node_info.equalRevision(revision))	return;
 
-			if(!(param.result)){
+			if(!(response.result)){
 				complete();
 				return;
 			}
 
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			var loader = null;
-			var iframe = null;
-			var iframe_analyze_work = null;
-			var iframe_url = url;
-			var url_info = url_info_dictionary.addURL(iframe_url);
-			var event_handler = null;
-			var observer_remove = null;
-
-			// 開放イベントを発行
-			function dispatchEventRelease(e){
-				event_dispatcher.dispatchEvent("release",null);
-			}
-
-			// インラインフレームを破棄
-			function releaseIframe(e){
-				// ローダーを中断
-				if(loader){
-					loader.onload = null;
-					loader.onerror = null;
-					loader = null;
-				}
-
-				if(iframe_url){
-					url_info.removeAlone("iframe");
-					iframe_url = null;
-				}
-
-				// イベントハンドラを破棄
-				if(event_handler){
-					event_handler.release();
-					event_handler = null;
-				}
-
-				// 監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// 解析辞書除外
-				if(iframe_analyze_work){
-					analyze_work_dictionary.removeAnalyzeWork(iframe_analyze_work);
-					iframe_analyze_work = null;
-				}
-
-				// インラインフレームを外す
-				if(iframe){
-					DomNodeRemove(iframe);
-					iframe = null;
-				}
-			}
-
-			// 混在コンテンツの展開が可能か
-			if(!(project.checkAllowExpandIframeElement(iframe_url))){
-				releaseIframe();
-				complete();
-				return;
-			}
-
-			// 重複チェック
-			if(project.getDisableSameInlineIframe()){
-				if(url_info.getAlone("iframe")){
-					iframe_url = null;
-					releaseIframe();
-					complete();
-					return;
-				}
-				// アドレスを登録
-				url_info.attachAlone("iframe");
-			}
-
-			// イベントハンドラを作成
-			event_handler = event_dispatcher.createEventHandler("release");
-			event_handler.setFunction(releaseIframe);
-
-			// テキストの読み込み
-			loader = new Loader();
-			loader.onload = function(headers){
-				complete();
-
-				// インラインフレームを生成
-				iframe = DocumentCreateElement("iframe");
-				iframe.frameBorder = "0";
-				iframe.src = iframe_url;
-
-				// スタイルをセット
-				ElementSetStyle(iframe,project.getStyleSheetExpandIframeInline(iframe_url));
-
-				// 解析ワーク作成
-				iframe_analyze_work = AnalyzeWorkCreate(iframe);
-
-				// 解析辞書登録オプション
-				var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-				attach_options.SetOutsider();
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(iframe_analyze_work,attach_options);
-
-				// インラインフレームのリムーブ監視
-				observer_remove = new DomNodeObserverRemoveFromDocument(iframe);
-				observer_remove.setFunction(dispatchEventRelease);
-
-				function responseInsert(){
-					if(!iframe)	return;
-				}
-
-				// コールバック関数を実行
-				project.executeScriptInsertInlineIframe(element,iframe,work.event_dispatcher,responseInsert);
-			};
-
-			loader.onerror = function(){
-				complete();
-			};
-			loader.setMethod("GET");
-			loader.setURL(iframe_url);
-			loader.loadResponseHeader();
+			ElementExpandInlineIFrameElement(param,{type:"iframe",site:"iframe"});
 		}
 
 		// コールバック関数を実行
@@ -59674,426 +57770,936 @@
 	// インラインフレーム内コンテンツの展開
 	// --------------------------------------------------------------------------------
 	function ElementExpandIframeContent(param){
-		var work = param.work;
-		var modify = param.modify;
-		var element = AnalyzeWorkGetDomNode(work);
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var element = node_info.getNode();
 
-		var event_dispatcher;
-		var event_handler;
-		var observer_modify_element;
-		var timer;
-		var expanded = false;
+		var releasers = [];
+		var step_1 = null;
 
-		// 破棄
-		function releaseIframeContent(){
-
-			removeEvent();
-
-			// アドレス変更監視を破棄
-			if(observer_modify_element){
-				observer_modify_element.release();
-				observer_modify_element = null;
+		function release_step_1(){
+			if(step_1){
+				step_1.release();
+				step_1 = null;
 			}
-
+		}
+		function release(){
+			release_step_1();
+			releasers.forEach(function(e){
+				e.release();
+			});
+			releasers.length = 0;
+		}
+		function restart(){
+			release_step_1();
+			step_1 = start_step_1();
 		}
 
-		// イベントを除外
-		function removeEvent(){
-			if(timer){
-				timer.release();
-				timer = null;
-			}
-			try{
-				var window_obj = element.contentWindow;
-				if(window_obj.removeEventListener){
-					window_obj.removeEventListener("unload",unload);
-				}else if(window_obj.detachEvent){
-					window_obj.detachEvent("onunload",unload);
+		node_info.observerRemove();
+		var observer_modify_element = node_info.observerModify("src",restart);
+		releasers.push(observer_modify_element);
+
+		var event_handler = node_info.createEventHandler("release");
+		event_handler.setFunction(release);
+		releasers.push(event_handler);
+
+		function start_step_1(){
+			var _this = {};
+			var releasers = [];
+			var exec_methods;
+
+			_this.release = function(){
+				if(exec_methods){
+					exec_methods.release();
+					exec_methods = null;
 				}
-			}catch(e){
-			}
-		}
+				releasers.forEach(function(e){
+					e.release();
+				});
+				releasers.length = 0;
+			};
 
-		// アンロード
-		function unload(){
-			expanded = false;
-			start();
-		}
+			exec_methods = new ExecuteMethods(this);
+			exec_methods.pause();
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
 
-		// スタート
-		function start(){
-			if(expanded) return;
-
-			removeEvent();
-
-			timer = new Timer(1,1);
-			timer.oncomplete = function(){
-				if(expanded) return;
+				var timer = new Timer(1,1);
+				timer.oncomplete = callback;
+				timer.start();
+				releasers.push(timer);
+			});
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
 
 				try{
 					var window_obj = element.contentWindow;
 					if(WindowIsExecutedByPageExpand(window_obj)){
 
-						// アンロード監視
-						if(window_obj.addEventListener){
-							window_obj.addEventListener("unload",unload);
-						}else if(window_obj.attachEvent){
-							window_obj.attachEvent("onunload",unload);
-						}
+						var listener = new EventListenerWrapper(window_obj);
+						listener.start("pagehide",function(e){
+							if(e.persisted) return;
+							restart();
+						});
+						releasers.push(listener);
 
-						expanded = true;
 						PageExpand({execute_type:page_expand_arguments.execute_type,admin:admin,window:window_obj,page_expand_parent:page_expand_node});
 					}
 				}catch(e){
 				}
-			};
-			timer.start();
+				callback();
+			});
+			exec_methods.play();
+			return _this;
 		}
 
-		// 要素を監視
-		AnalyzeWorkObserveElement(work);
-		event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-
-		// 開放イベント
-		event_handler = event_dispatcher.createEventHandler("release");
-		event_handler.setFunction(releaseIframeContent);
-
-		// アドレス変更監視
-		observer_modify_element = document_observer_modify_node.createElement();
-		observer_modify_element.setElement(element,"src");
-		observer_modify_element.setFunction(function (){
-			start();
-		});
-
-		start();
+		restart();
 	}
+
+	// --------------------------------------------------------------------------------
+	// インライン MediaElement
+	// --------------------------------------------------------------------------------
+	var ElementExpandInlineMediaElement = (function(){
+		var executeScriptAllowMediaElement = {
+			"audio":"executeScriptAllowAudioElement",
+			"video":"executeScriptAllowVideoElement"
+		};
+		var loadMedia = {
+			"audio":"loadAudio",
+			"video":"loadVideo"
+		};
+		var getDisableSameInlineMedia = {
+			"audio":"getDisableSameInlineSound",
+			"video":"getDisableSameInlineVideo"
+		};
+		var getStyleSheetExpandMediaInlineMediaElement = {
+			"audio":"getStyleSheetExpandSoundInlineAudioElement",
+			"video":"getStyleSheetExpandVideoInlineVideoElement"
+		};
+		var executeScriptInsertInlineMedia = {
+			"audio":"executeScriptInsertInlineSound",
+			"video":"executeScriptInsertInlineVideo"
+		};
+
+		var switch_element_limitter = {
+			"audio":function(){
+				return element_limitter_sound;
+			},
+			"video":function(){
+				return element_limitter_video;
+			}
+		};
+
+		return function (param,options){
+			var node_info = param.nodeInfo;
+			var revision = param.revision;
+			if(!node_info.equalRevision(revision))	return;
+
+			var element = node_info.getNode();
+			var url = node_info.getData("ExpandUrl");
+			url = project.fixURL_PassiveContent(url);
+
+			var event_handlers = [];
+			var exec_methods = null;
+			var url_info_media = url_info_dictionary.addURL(url);
+			var limitter_element = null;
+			var step_1 = null;
+
+			function release_step_1(){
+				if(step_1){
+					step_1.release();
+					step_1 = null;
+				}
+			}
+			function release_limitter(){
+				if(limitter_element){
+					limitter_element.release();
+					limitter_element = null;
+				}
+			}
+			function release(){
+				release_step_1();
+				release_limitter();
+				if(exec_methods){
+					exec_methods.release();
+					exec_methods = null;
+				}
+				event_handlers.forEach(function(e){
+					e.release();
+				});
+				event_handlers.length = 0;
+			}
+			function suicide(){
+				release();
+				node_info.dispatchEvent("release");
+			}
+
+			var event_handler = node_info.createEventHandler("release");
+			event_handler.setFunction(release);
+			event_handlers.push(event_handler);
+
+			exec_methods = new ExecuteMethods(this);
+			exec_methods.pause();
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
+				var content_type = node_info.getData("ExpandContentType") || [];
+				project[executeScriptAllowMediaElement[options.type]](element,url,content_type,callback);
+			});
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
+
+				var param = exec_methods.arguments[0];
+				if(!(param.result)){
+					release();
+					return;
+				}
+
+				if(project[getDisableSameInlineMedia[options.type]]()){
+					if(url_info_media.getAlone(options.type)){
+						release();
+						return;
+					}
+					url_info_media.attachAlone(options.type);
+				}
+
+				limitter_element = switch_element_limitter[options.type]().createElement();
+				limitter_element.onattach = function(){
+					step_1 = start_step_1();
+				};
+				limitter_element.onremove = function(){
+					release_step_1();
+				};
+				limitter_element.setElementHitArea(element);
+				limitter_element.update();
+
+				callback();
+			});
+			exec_methods.play();
+
+			function start_step_1(){
+				var _this = {};
+				var event_handlers = [];
+				var exec_methods;
+				var loader;
+				var notify_element;
+				var media_element = null;
+				var media_player_ui = null;
+
+
+				function release_notify_element(){
+					if(notify_element){
+						notify_element.release();
+						notify_element = null;
+					}
+				}
+				function release_loader(){
+					if(loader){
+						loader.release();
+						loader = null;
+					}
+				}
+				_this.release = function(){
+					release_notify_element();
+					if(media_player_ui){
+						media_player_ui.release();
+						media_player_ui = null;
+					}
+					if(media_element){
+						var revise_scroll = new DocumentReviseScroll();
+						revise_scroll.executeRemoveElementBefore(media_element);
+						DomNodeRemove(media_element);
+						revise_scroll.executeRemoveElementAfter(media_element);
+						media_element = null;
+					}
+					if(url_info_media){
+						url_info_media.removeAlone(options.type);
+						url_info_media = null;
+					}
+					release_loader();
+					if(exec_methods){
+						exec_methods.release();
+						exec_methods = null;
+					}
+					event_handlers.forEach(function(e){
+						e.release();
+					});
+					event_handlers.length = 0;
+				};
+
+				exec_methods = new ExecuteMethods(this);
+				exec_methods.pause();
+				exec_methods.push(function(callback){
+					if(!node_info.equalRevision(revision))	return;
+
+					if(0){
+						notify_element = notify_progress.createElement();
+					}
+					if(notify_element){
+						notify_element.setElementHitArea(element);
+						notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_LOADING);
+					}
+
+					loader = new Loader();
+					loader.onload = callback;
+					loader.onerror = function(){
+						if(notify_element){
+							notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_ERROR);
+						}
+						release_limitter();
+					};
+					loader.setMethod("GET");
+					loader.setURL(url_info_media.getURL());
+					loader[loadMedia[options.type]]();
+				});
+				exec_methods.push(function(callback){
+					if(!node_info.equalRevision(revision))	return;
+
+					media_element = exec_methods.arguments[0];
+					release_loader();
+
+					ElementSetStyle(media_element,project[getStyleSheetExpandMediaInlineMediaElement[options.type]](url_info_media.getURL()));
+
+					var node_info_media = node_info_dictionary.addNode(media_element);
+					node_info_media.observerRemove();
+					node_info_media.setOwnerToPageExpand();
+
+					var event_handler = node_info_media.createEventHandler("remove");
+					event_handler.setFunction(suicide);
+					event_handlers.push(event_handler);
+
+					// メディアプレイヤー UI
+					media_player_ui = new MediaPlayerExtendUI(media_element);
+					media_player_ui.setOriginalURLInfo(url_info_media);
+					var event_handler = media_player_ui.createEventHandler("close");
+					event_handler.setFunction(suicide);
+					event_handlers.push(event_handler);
+
+					project[executeScriptInsertInlineMedia[options.type]](element,media_element,node_info.getEventDispatcher(),callback);
+				});
+				exec_methods.push(function(callback){
+					if(!node_info.equalRevision(revision))	return;
+
+					// 不可視
+					if(0){
+						if(!ElementGetVisibility(media_element)){
+							release();
+							return;
+						}
+					}
+
+					// メディアソース
+					var media_src = media_element.src;
+
+					// コールバックと当たり判定を更新
+					limitter_element.onattach = function(){
+						media_element.src = media_src;
+					};
+					limitter_element.onremove = function(){
+						media_element.removeAttribute("src");
+						media_element.load();
+					};
+					limitter_element.setElementHitArea(media_element);
+					limitter_element.update();
+
+					// 成功通知
+					if(notify_element){
+						notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_COMPLETE);
+					}
+					release_notify_element();
+
+					callback();
+				});
+				exec_methods.play();
+				return _this;
+			}
+		};
+	})();
+
+	// --------------------------------------------------------------------------------
+	// インライン IFrameElement
+	// --------------------------------------------------------------------------------
+	var ElementExpandInlineIFrameElement = (function(){
+		var getDisableSameInlineMedia = {
+			"audio":"getDisableSameInlineSound",
+			"video":"getDisableSameInlineVideo",
+			"iframe":"getDisableSameInlineIframe"
+		};
+		var getVisible = {
+			"soundcloud":"getVisiblePlayerHtml5Soundcloud",
+			"mixcloud":"getVisiblePlayerMixcloud",
+			"youtube":"getVisibleVideoYoutube",
+			"tiktok":"getVisibleVideoTiktok",
+			"nicovideo":"getVisibleVideoNicovideo",
+			"dailymotion":"getVisibleVideoDailymotion",
+			"vimeo":"getVisibleVideoVimeo"
+		};
+		var getStyleSheetExpand = {
+			"soundcloud":"getStyleSheetExpandSoundSoundcloudInlinePlayerHtml5",
+			"mixcloud":"getStyleSheetExpandSoundMixcloudInlinePlayer",
+			"youtube":"getStyleSheetExpandVideoYoutubeInlineVideo",
+			"tiktok":"getStyleSheetExpandVideoTiktokInlineVideo",
+			"nicovideo":"getStyleSheetExpandVideoNicovideoInlineVideo",
+			"dailymotion":"getStyleSheetExpandVideoDailymotionInlineVideo",
+			"vimeo":"getStyleSheetExpandVideoVimeoInlineVideo",
+			"iframe":"getStyleSheetExpandIframeInline"
+		};
+		var executeScriptInsertInlineMedia = {
+			"audio":"executeScriptInsertInlineSound",
+			"video":"executeScriptInsertInlineVideo",
+			"iframe":"executeScriptInsertInlineIframe"
+		};
+		var switch_element_limitter = {
+			"audio":function(){
+				return element_limitter_sound;
+			},
+			"video":function(){
+				return element_limitter_video;
+			}
+		};
+
+		return function (param,options){
+			var node_info = param.nodeInfo;
+			var revision = param.revision;
+			if(!node_info.equalRevision(revision))	return;
+
+			var element = node_info.getNode();
+			var url = options.url || node_info.getData("ExpandUrl");
+			url = project.fixURL_PassiveContent(url);
+
+			var event_handlers = [];
+			var exec_methods = null;
+			var loader = null;
+			var url_info_iframe = url_info_dictionary.addURL(url);
+			var iframe_element = null;
+			var limitter_element = null;
+			var media_player_ui = null;
+
+			function release(){
+				if(media_player_ui){
+					media_player_ui.release();
+					media_player_ui = null;
+				}
+				if(limitter_element){
+					limitter_element.onremove = null;
+					limitter_element.release();
+					limitter_element = null;
+				}
+				if(iframe_element){
+					var revise_scroll = new DocumentReviseScroll();
+					revise_scroll.executeRemoveElementBefore(iframe_element);
+					DomNodeRemove(iframe_element);
+					revise_scroll.executeRemoveElementAfter(iframe_element);
+					iframe_element = null;
+				}
+				if(url_info_iframe){
+					url_info_iframe.removeAlone(options.type);
+					url_info_iframe = null;
+				}
+				if(loader){
+					loader.release();
+					loader = null;
+				}
+				if(exec_methods){
+					exec_methods.release();
+					exec_methods = null;
+				}
+				event_handlers.forEach(function(e){
+					e.release();
+				});
+				event_handlers.length = 0;
+			}
+			function suicide(){
+				release();
+				node_info.dispatchEvent("release");
+			}
+
+			var event_handler = node_info.createEventHandler("release");
+			event_handler.setFunction(release);
+			event_handlers.push(event_handler);
+
+			exec_methods = new ExecuteMethods(this);
+			exec_methods.pause();
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
+
+				// 動作禁止か調べる
+				if(options.type != "iframe"){
+					if(!project[getVisible[options.site]]()){
+						release();
+						return;
+					}
+				}
+
+				// 混在コンテンツの展開が可能か
+				if(!(project.checkAllowExpandIframeElement(url_info_iframe.getURL()))){
+					release();
+					return;
+				}
+
+				if(project[getDisableSameInlineMedia[options.type]]()){
+					if(url_info_iframe.getAlone(options.type)){
+						release();
+						return;
+					}
+					url_info_iframe.attachAlone(options.type);
+				}
+
+				callback();
+			});
+			if(options.type == "iframe"){
+				exec_methods.push(function(callback){
+					if(!node_info.equalRevision(revision))	return;
+
+					loader = new Loader();
+					loader.onload = callback;
+					loader.onerror = release;
+					loader.setMethod("GET");
+					loader.setURL(url_info_iframe.getURL());
+					loader.loadResponseHeader();
+				});
+			}
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
+
+				iframe_element = DocumentCreateElement('iframe');
+				iframe_element.frameBorder = "0";
+				if(options.type == "iframe"){
+					iframe_element.src = url_info_iframe.getURL();
+				}else{
+					iframe_element.scrolling = "no";
+					iframe_element.allowFullscreen = true;
+				}
+				ElementSetStyle(iframe_element,project[getStyleSheetExpand[options.site]](url_info_iframe.getURL()));
+				if(options.height){
+					iframe_element.style.height = (options.height) + "px";
+				}
+
+				var node_info_iframe = node_info_dictionary.addNode(iframe_element);
+				node_info_iframe.observerRemove();
+				node_info_iframe.setOwnerToPageExpand();
+
+				var event_handler = node_info_iframe.createEventHandler("remove");
+				event_handler.setFunction(suicide);
+				event_handlers.push(event_handler);
+
+				if(options.type != "iframe"){
+					// メディアプレイヤー UI
+					media_player_ui = new MediaPlayerExtendUI(iframe_element);
+					media_player_ui.setOriginalURLInfo(url_info_iframe);
+					var event_handler = media_player_ui.createEventHandler("close");
+					event_handler.setFunction(suicide);
+					event_handlers.push(event_handler);
+				}
+
+				project[executeScriptInsertInlineMedia[options.type]](element,iframe_element,node_info.getEventDispatcher(),callback);
+			});
+			if(options.type != "iframe"){
+				exec_methods.push(function(callback){
+					if(!node_info.equalRevision(revision))	return;
+
+					// 不可視
+					if(0){
+						if(!ElementGetVisibility(iframe_element)){
+							release();
+							return;
+						}
+					}
+
+					limitter_element = switch_element_limitter[options.type]().createElement();
+					limitter_element.onattach = function(){
+						iframe_element.src = url_info_iframe.getURL();
+					};
+					limitter_element.onremove = function(){
+						iframe_element.removeAttribute("src");
+					};
+					limitter_element.setElementHitArea(iframe_element);
+					limitter_element.update();
+
+					callback();
+				});
+			}
+			exec_methods.play();
+		};
+	})();
 
 	// --------------------------------------------------------------------------------
 	// 縮小画像のポップアップ
 	// --------------------------------------------------------------------------------
 	function ElementPopupReducedImage(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var element = AnalyzeWorkGetDomNode(work);
+		var element = node_info.getNode();
 
 		// 解析済みチェック
-		if(AnalyzeWorkGetAnalyzedPopupReducedImage(work)){
+		if(node_info.getExecuted("PopupReducedImage")){
 			return;
 		}
-		AnalyzeWorkSetAnalyzedPopupReducedImage(work);
+		node_info.setExecuted("PopupReducedImage");
 
-		var popup_image;
-		var event_dispatcher;
-		var event_handler;
-		var observer_modify_element;
-		var released = false;
+		var releasers = [];
+		var exec_methods = null;
+		var url_info_image;
+		var limitter_element = null;
+		var step_1 = null;
 
-		// 縮小画像のポップアップを破棄
-		function releasePopupReducedImage(){
-
-			// アドレス変更監視を破棄
-			if(observer_modify_element){
-				observer_modify_element.release();
-				observer_modify_element = null;
+		function release_step_1(){
+			if(step_1){
+				step_1.release();
+				step_1 = null;
 			}
-
-			// ポップアップイメージを破棄
-			if(popup_image){
-				popup_image.suicide();
-				popup_image = null;
+		}
+		function release_limitter(){
+			if(limitter_element){
+				limitter_element.release();
+				limitter_element = null;
 			}
-
-			released = true;
+		}
+		function release(){
+			release_step_1();
+			release_limitter();
+			releasers.forEach(function(e){
+				e.release();
+			});
+			releasers.length = 0;
+			if(exec_methods){
+				exec_methods.release();
+				exec_methods = null;
+			}
+		}
+		function suicide(){
+			release();
+			node_info.dispatchEvent("release");
 		}
 
-		// 要素を監視
-		AnalyzeWorkObserveElement(work);
-		event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
+		var event_handler = node_info.createEventHandler("release");
+		event_handler.setFunction(release);
+		releasers.push(event_handler);
 
-		// ポップアップイメージの破棄イベント
-		event_handler = event_dispatcher.createEventHandler("release_popup_image");
-		event_handler.setFunction(function(){
+		var event_handler = node_info.createEventHandler("release_popup_image");
+		event_handler.setFunction(release);
+		releasers.push(event_handler);
 
-			// ポップアップイメージを破棄
-			if(popup_image){
-				popup_image.release();
-				popup_image = null;
-			}
+		node_info.observerRemove();
+		if(0){
+			var observer_modify = node_info.observerModify("src",function (){
+				node_info.addRevision();
+				node_info.dispatchEvent("release",null);
+				["ReplacementToLink","ExpandShortUrl","PopupReducedImage"].forEach(function(type){
+					node_info.clearExecuted(type);
+				});
 
-			releasePopupReducedImage();
+				// 再解析
+				DomNodeAnalyzePhaseAnalyzeNode(element);
+			});
+			releasers.push(observer_modify);
+		}
 
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			if(event_dispatcher){
-				if(!AnalyzeWorkGetOverrodeAnchorElement(work)){
-					event_dispatcher.dispatchEvent("destructor",null);
-				}
-			}
+		exec_methods = new ExecuteMethods(this);
+		exec_methods.pause();
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
+
+			ImageGetLoaded(element,callback);
 		});
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
 
-		// 開放イベント
-		event_handler = event_dispatcher.createEventHandler("release");
-		event_handler.setFunction(releasePopupReducedImage);
+			if(!(function(){
+				// ソースが無い
+				if(!(element.src)) return false;
 
-		// アドレス変更監視
-		observer_modify_element = document_observer_modify_node.createElement();
-		observer_modify_element.setElement(element,"src");
-		observer_modify_element.setFunction(function (){
-
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			if(event_dispatcher){
-				event_dispatcher.dispatchEvent("destructor",null);
-			}
-
-			// 再解析
-			DomNodeAnalyzePhaseAnalyzeElement(element);
-		});
-
-		// 読み込み完了
-		ImageGetLoaded(element,function(){
-
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-			if(released) return;
-
-			var allow = true;
-			if(allow){
-				try{
-					// ソースが無い
-					if(!(element.src)){
-						allow = false;
-					}
-				}catch(e){
-					allow = false;
-				}
-			}
-
-			if(allow){
-				// 画像の縮小率を調べる
+				// 画像の縮小率
 				var natural_size = ImageGetNaturalSize(element);
-
 				var scale = project.getScaleLessThenAllowPopupReducedImage();
+				if(element.width  > natural_size.width   / 100 * scale) return false;
+				if(element.height > natural_size.height  / 100 * scale) return false;
 
-				if(element.width  > natural_size.width   / 100 * scale)	allow = false;
-				if(element.height > natural_size.height  / 100 * scale)	allow = false;
+				// ブラウザで直接画像を閲覧している場合は除外
+				if(element.src == document.URL) return false;
+
+				// 祖先に PopupImage が存在する
+				var node = element;
+				while(node){
+					var node_info = node_info_dictionary.getNodeInfo(node);
+					if(node_info){
+						if(node_info.getData("PopupImage")){
+							return false;
+						}
+					}
+					node = node.parentNode;
+				}
+
+				return true;
+			})()){
+				release();
+				return;
 			}
 
-			if(allow){
-				// ブラウザで直接画像を閲覧している場合は除外
-				if(element.src == document.URL){
-					allow = false;
+			callback();
+		});
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
+
+			var url = project.fixURL_PassiveContent(element.src);
+			url_info_image = url_info_dictionary.addURL(url);
+
+			limitter_element = element_limitter_image.createElement();
+			limitter_element.onattach = function(){
+				step_1 = start_step_1();
+			};
+			limitter_element.onremove = function(){
+				release_step_1();
+			};
+			limitter_element.setElementHitArea(element);
+			limitter_element.setLoadType(project.getLoadTypePopupImage());
+			limitter_element.update();
+			callback();
+		});
+		exec_methods.play();
+
+		function start_step_1(){
+			var _this = {};
+			var releasers = [];
+			var exec_methods;
+			var loader;
+			var popup_image;
+			var notify_element;
+
+			function release_notify_element(){
+				if(notify_element){
+					notify_element.release();
+					notify_element = null;
 				}
 			}
+			function release_loader(){
+				if(loader){
+					loader.release();
+					loader = null;
+				}
+			}
+			_this.release = function(){
+				release_notify_element();
+				if(popup_image){
+					popup_image.release();
+					popup_image = null;
+				}
+				release_loader();
+				if(exec_methods){
+					exec_methods.release();
+					exec_methods = null;
+				}
+				releasers.forEach(function(e){
+					e.release();
+				});
+				releasers.length = 0;
+			};
 
-			if(allow){
-				(function(){
+			exec_methods = new ExecuteMethods(this);
+			exec_methods.pause();
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
+
+				if(project.getEnableLoadNotifyExpandImage()){
+					notify_element = notify_progress.createElement();
+				}
+				if(notify_element){
+					notify_element.setElementHitArea(element);
+					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_LOADING);
+				}
+
+				loader = new Loader();
+				loader.onload = callback;
+				loader.onerror = function(){
+					if(notify_element){
+						notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_ERROR);
+					}
+					release_limitter();
+				};
+				loader.setMethod("GET");
+				loader.setURL(url_info_image.getURL());
+				loader.loadImage();
+			});
+			exec_methods.push(function(callback){
+				if(!node_info.equalRevision(revision))	return;
+
+				var image = exec_methods.arguments[0];
+				release_loader();
+
+				// 画像サイズをセット
+				var image_size = ImageGetNaturalSize(image);
+				limitter_element.setByteSize(image_size.width * image_size.height * 4);
+				element_limitter_image.removeExcessElements();
+
+				popup_image = new PopupImage(image);
+				popup_image.setElementParent(document.body);
+				popup_image.setElementAnchor(element);
+				popup_image.setElementHitArea(element);
+				popup_image.setElementBeginArea(element);
+				popup_image.setOriginalURL(url_info_image.getURL());
+				popup_image.ontrim = function (){
+					if(!popup_image) return;
+
+					var trim_check = false;
+					var trim_rect = new Object();
+					var bounding_rect = ElementGetBoundingClientRect(element);
+					var view_rect = ObjectCopy(bounding_rect);
+
+					var overflow_hidden_x = {"hidden":1};
+					var overflow_hidden_y = {"hidden":1};
+					var display_inline = {"inline":1,"none":1,"table-column":1,"table-column-group":1};
+					var position_fixed = {"fixed":1};
 					var node = element;
 					while(node){
-						// 解析ワーク取得
-						var work = analyze_work_dictionary.getAnalyzeWork(node);
-						if(work){
-							// 祖先に PopupImage が存在する
-							if(AnalyzeWorkGetPopupImage(work)){
-								allow = false;
-								break;
+						var r = ElementGetBoundingClientRect(node);
+						if(!r) break;
+
+						if(node.tagName == "BODY") break;
+
+						var style = ElementGetComputedStyle(node,null);
+						if(style){
+							if(!display_inline[style.display]){
+								if(overflow_hidden_x[style.overflowX]){
+									if(r.right  < view_rect.right ) view_rect.right  = r.right;
+									if(r.left   > view_rect.left  ) view_rect.left   = r.left;
+									trim_check = true;
+								}
+								if(overflow_hidden_y[style.overflowY]){
+									if(r.bottom < view_rect.bottom) view_rect.bottom = r.bottom;
+									if(r.top    > view_rect.top   ) view_rect.top    = r.top;
+									trim_check = true;
+								}
 							}
+							if(position_fixed[style.position]) break;
 						}
 
 						node = node.parentNode;
 					}
-				})();
-			}
 
-			if(allow){
-				var thumbnail_url = project.fixURL_PassiveContent(element.src);
+					if(trim_rect){
+						var natural_size = ImageGetNaturalSize(element);
+						var computed_style = ElementGetComputedStyle(element,null);
+						var boader_rect = ComputedStyleGetBoaderWidth(computed_style);
+						var padding_rect = ComputedStyleGetPaddingWidth(computed_style);
 
-				// ポップアップイメージ
-				var loader = new Loader();
-				loader.setURL(thumbnail_url);
-				loader.onload = function(image){
-					if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-					if(released) return;
+						var px = bounding_rect.left + boader_rect.left + padding_rect.left;
+						var py = bounding_rect.top  + boader_rect.top  + padding_rect.top;
+						var w = (bounding_rect.right  - px) - boader_rect.right  + padding_rect.right;
+						var h = (bounding_rect.bottom - py) - boader_rect.bottom + padding_rect.bottom;
+						var sx = natural_size.width  / w;
+						var sy = natural_size.height / h;
 
-					popup_image = new PopupImage(image);
-					popup_image.setElementParent(document.body);
-					popup_image.setElementAnchor(element);
-					popup_image.setElementHitArea(element);
-					popup_image.setElementBeginArea(element);
-					popup_image.setOriginalURL(thumbnail_url);
-					popup_image.ontrim = function (){
-						if(!popup_image) return;
+						trim_rect.left   = (view_rect.left   - px) * sx;
+						trim_rect.top    = (view_rect.top    - py) * sy;
+						trim_rect.right  = (view_rect.right  - px) * sx;
+						trim_rect.bottom = (view_rect.bottom - py) * sy;
+					}
 
-						var trim_check = false;
-						var trim_rect = new Object();
-						var bounding_rect = ElementGetBoundingClientRect(element);
-						var view_rect = ObjectCopy(bounding_rect);
-
-						var overflow_hidden_x = {"hidden":1};
-						var overflow_hidden_y = {"hidden":1};
-						var display_inline = {"inline":1,"none":1,"table-column":1,"table-column-group":1};
-						var node = element;
-						while(node){
-							var r = ElementGetBoundingClientRect(node);
-							if(!r) break;
-
-							if(node.tagName == "BODY") break;
-
-							var style = ElementGetComputedStyle(node,null);
-							if(style){
-								if(!display_inline[style.display]){
-									if(overflow_hidden_x[style.overflowX]){
-										if(r.right  < view_rect.right ) view_rect.right  = r.right;
-										if(r.left   > view_rect.left  ) view_rect.left   = r.left;
-										trim_check = true;
-									}
-									if(overflow_hidden_y[style.overflowY]){
-										if(r.bottom < view_rect.bottom) view_rect.bottom = r.bottom;
-										if(r.top    > view_rect.top   ) view_rect.top    = r.top;
-										trim_check = true;
-									}
-								}
-							}
-
-							node = node.parentNode;
-						}
-
-						if(trim_rect){
-							var natural_size = ImageGetNaturalSize(element);
-							var computed_style = ElementGetComputedStyle(element,null);
-							var boader_rect = ComputedStyleGetBoaderWidth(computed_style);
-							var padding_rect = ComputedStyleGetPaddingWidth(computed_style);
-
-							var px = bounding_rect.left + boader_rect.left + padding_rect.left;
-							var py = bounding_rect.top  + boader_rect.top  + padding_rect.top;
-							var w = (bounding_rect.right  - px) - boader_rect.right  + padding_rect.right;
-							var h = (bounding_rect.bottom - py) - boader_rect.bottom + padding_rect.bottom;
-							var sx = natural_size.width  / w;
-							var sy = natural_size.height / h;
-
-							trim_rect.left   = (view_rect.left   - px) * sx;
-							trim_rect.top    = (view_rect.top    - py) * sy;
-							trim_rect.right  = (view_rect.right  - px) * sx;
-							trim_rect.bottom = (view_rect.bottom - py) * sy;
-						}
-
-						if(trim_check){
-							popup_image.setTrimRect(trim_rect);
-						}
-					};
-					popup_image.ontrim();
-					AnalyzeWorkSetPopupImage(work,popup_image);
+					if(trim_check){
+						popup_image.setTrimRect(trim_rect);
+					}
 				};
-				loader.loadImage();
-			}else{
-				// 解放イベント発行
-				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-				if(event_dispatcher){
-					event_dispatcher.dispatchEvent("release_popup_image",null);
-				}
-			}
-		});
+				popup_image.ontrim();
 
+				var event_listener = popup_image.createEventHandler("close");
+				event_listener.setFunction(suicide);
+				releasers.push(event_listener);
+
+				// 成功通知
+				if(notify_element){
+					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_COMPLETE);
+				}
+				release_notify_element();
+
+				// ポップアップ
+				if(ElementHitTestMousePosition(element,input_mouse.getPositionClient(),true)){
+					popup_image.popup();
+				}
+			});
+			exec_methods.play();
+			return _this;
+		}
 	}
 
 	// --------------------------------------------------------------------------------
 	// 縮小画像のポップアップを全て破棄
 	// --------------------------------------------------------------------------------
-	function PopupReducedImageReleaseAll(element){
-
-		// 子孫抽出
-		function analyze(node){
-			// 解析ワーク取得
-			var work = analyze_work_dictionary.getAnalyzeWork(node);
-			if(work){
-				// 解放イベント発行
-				var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-				if(event_dispatcher){
-					event_dispatcher.dispatchEvent("release_popup_image",null);
+	var PopupReducedImageReleaseAll = (function(){
+		function dispatch(node){
+			var node_info = node_info_dictionary.getNodeInfo(node);
+			if(!node_info) return;
+			node_info.dispatchEvent("release_popup_image",null);
+		}
+		return function(element){
+			if(element.nodeType == 1){
+				if(element.tagName == "IMG"){
+					dispatch(element);
 				}
-			}
-		}
 
-		if(element.nodeType == 1){
-			// イメージ
-			if(element.tagName == "IMG"){
-				analyze(element);
+				var nodes = ElementGetElementsByTagName(element,"img");
+				Array.from(nodes).forEach(dispatch);
 			}
-
-			// 画像をすべて取得
-			var nodes = ElementGetElementsByTagName(element,"img");
-			var i;
-			var num = nodes.length;
-			for(i=0;i<num;i++){
-				analyze(nodes[i]);
-			}
-		}
-	}
+		};
+	})();
 
 	// --------------------------------------------------------------------------------
 	// 掲示板拡張
 	// --------------------------------------------------------------------------------
 	function ElementExpandBbs(param){
-		var work = param.work;
-		var modify = param.modify;
-		if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
+		var node_info = param.nodeInfo;
+		var revision = param.revision;
+		if(!node_info.equalRevision(revision))	return;
 
-		var element = AnalyzeWorkGetDomNode(work);
-
-		var completed = false;
-		function response(obj){
-			if(!AnalyzeWorkEqualModifyCount(work,modify))	return;
-
-			if(completed) return;
-			completed = true;
-
-			if(!obj) return;
-			if(!(obj.useful)) return;
-
-			var observer_remove;
-			var event_handler_release;
-
-			// 解放
-			function releaseExpandBbs(){
-				// 解析クリア
-				AnalyzeWorkClearAnalyzedExpandBbs(work);
-
-				if(event_handler_release){
-					event_handler_release.release();
-					event_handler_release = null;
-				}
-
-				// リムーブ監視を破棄
-				if(observer_remove){
-					observer_remove.release();
-					observer_remove = null;
-				}
-
-				// 解析辞書除外
-				analyze_work_dictionary.removeAnalyzeWork(work);
-			}
-
-			// リムーブ監視
-			observer_remove = new DomNodeObserverRemoveFromDocument(element);
-			observer_remove.setFunction(releaseExpandBbs);
-
-			// 開放イベント
-			event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
-			event_handler_release.setFunction(releaseExpandBbs);
-
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(work);
-		}
+		var element = node_info.getNode();
 
 		// 解析済みチェック
-		if(AnalyzeWorkGetAnalyzedExpandBbs(work)){
+		if(node_info.getExecuted("ExpandBbs")){
 			return;
 		}
-		AnalyzeWorkSetAnalyzedExpandBbs(work);
+		node_info.setExecuted("ExpandBbs");
 
-		// コールバック関数を実行
-		project.executeScriptCallbackExpandBbs(element,response);
+		var releasers = [];
+		var exec_methods = null;
+
+		function release(){
+			node_info.clearExecuted("ExpandBbs");
+			releasers.forEach(function(e){
+				e.release();
+			});
+			releasers.length = 0;
+			if(exec_methods){
+				exec_methods.release();
+				exec_methods = null;
+			}
+		}
+
+		var event_handler = node_info.createEventHandler("release");
+		event_handler.setFunction(release);
+		releasers.push(event_handler);
+
+		exec_methods = new ExecuteMethods(this);
+		exec_methods.pause();
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
+			project.executeScriptCallbackExpandBbs(element,callback);
+		});
+		exec_methods.push(function(callback){
+			if(!node_info.equalRevision(revision))	return;
+
+			var obj = exec_methods.arguments[0] || {};
+			if(!(obj.useful)){
+				release();
+				return;
+			}
+
+			node_info.observerRemove();
+			callback();
+		});
+		exec_methods.play();
+
 	}
 
 
@@ -60172,33 +58778,6 @@
 	// --------------------------------------------------------------------------------
 	function PageExpandSetEnableAnalyze(type){
 		enable_analyze = type;
-	}
-
-	// --------------------------------------------------------------------------------
-	// コンテンツタイプをセット
-	// --------------------------------------------------------------------------------
-	function DomNodeSetContentType(node,type){
-		// 解析ワーク取得
-		var work = analyze_work_dictionary.getAnalyzeWork(node);
-		if(work){
-			AnalyzeWorkAddContentType(work,type);
-		}
-	}
-
-	// --------------------------------------------------------------------------------
-	// コンテンツタイプを取得
-	// --------------------------------------------------------------------------------
-	function DomNodeGetContentType(node){
-		// 解析ワーク取得
-		var work = analyze_work_dictionary.getAnalyzeWork(node);
-		if(work){
-			var ary = AnalyzeWorkGetContentType(work);
-			if(ary){
-				return ary.join(",");
-			}
-		}
-
-		return "";
 	}
 
 	// --------------------------------------------------------------------------------
@@ -60366,13 +58945,6 @@
 				_event_handler_release = null;
 			}
 
-			if(_input_mouse_current){
-				if(window_manager.existWindowRoot()){
-					_input_mouse_current.release();
-				}
-				_input_mouse_current = null;
-			}
-
 			// クリックイベントを外す
 			removeEventClick();
 
@@ -60394,13 +58966,18 @@
 				_task = null;
 			}
 
-			// 解析辞書除外
-			analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
+			if(_event_dispatcher){
+				_event_dispatcher.release();
+				_event_dispatcher = null;
+			}
 
 			// コンテナから除外
 			popup_image_container.remove(_this);
 
-			_image = null;
+			if(_image){
+				_image.removeAttribute("src");
+				_image = null;
+			}
 		};
 
 		// --------------------------------------------------------------------------------
@@ -60491,7 +59068,7 @@
 				_element_current = div;
 
 				var node_info = node_info_dictionary.addNode(_element_current);
-				node_info.setAnalyzed(true);
+				node_info.setInvalid(true);
 
 				// イベント
 				addEventClick();
@@ -60530,6 +59107,13 @@
 		// --------------------------------------------------------------------------------
 		_this.popup = function(element){
 			createTask();
+		};
+
+		// --------------------------------------------------------------------------------
+		// イベントハンドラを作成
+		// --------------------------------------------------------------------------------
+		_this.createEventHandler = function(type){
+			return _event_dispatcher.createEventHandler(type);
 		};
 
 		// --------------------------------------------------------------------------------
@@ -60698,15 +59282,13 @@
 		// マウスダウンイベント（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseDown(e){
-			// マウス入力を更新
-			_input_mouse_current.setMouseEvent(e);
+			input_mouse.setMouseEvent(e);
 
 			if(
-				(_input_mouse_current.getButtonCenter()) ||
-				(_input_mouse_current.getButtonLeft() && _input_mouse_current.getButtonRight())
+				(input_mouse.getButtonCenter()) ||
+				(input_mouse.getButtonLeft() && input_mouse.getButtonRight())
 			){
 				var image_viewer = new ImageViewer(_this);
-				image_viewer.setInputMouse(_input_mouse_current);
 			}
 
 			// スクロールを無効化
@@ -60723,9 +59305,7 @@
 		// マウスクリックイベント（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseClick(e){
-			// マウス入力を更新
-			_input_mouse_current.setMouseEvent(e);
-
+			_event_dispatcher.dispatchEvent("close");
 			_this.release();
 		}
 
@@ -60733,9 +59313,6 @@
 		// ホイールイベント（内部用）
 		// --------------------------------------------------------------------------------
 		function wheel(e){
-			// マウス入力を更新
-			_input_mouse_current.setMouseEvent(e);
-
 			var vec = {x:0,y:0};
 			switch(e.deltaMode){
 			case 0:
@@ -60760,9 +59337,6 @@
 		// マウススクロールイベント（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseScroll(e){
-			// マウス入力を更新
-			_input_mouse_current.setMouseEvent(e);
-
 			// 擬似スクロール
 			wheelScroll(e,{
 				x:0,
@@ -60774,9 +59348,6 @@
 		// マウスホイールイベント（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseWheel(e){
-			// マウス入力を更新
-			_input_mouse_current.setMouseEvent(e);
-
 			// 擬似スクロール
 			wheelScroll(e,{
 				x:0,
@@ -60839,8 +59410,9 @@
 				}
 			}
 
-			// Shift キー押下で無視
-			if(input_mouse.getKeyShift())	return;
+			// 装飾キー押下で無視
+			if(input_mouse.getKeyShift()) return;
+			if(input_mouse.getKeyCtrl()) return;
 
 			// ドラッグ中は無視
 			if(input_mouse.getButtonLeft())	return;
@@ -61538,13 +60110,12 @@
 		var _element_rects_tree;
 		var _scroll_pos_begin;
 		var _scroll_pos_offset;
-		var _analyze_work;
 		var _observer_remove;
 		var _event_handler_revise_scroll;
 		var _event_handler_release;
-		var _input_mouse_current;
 		var _original_url;
 		var _image_dragger;
+		var _event_dispatcher;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
@@ -61557,35 +60128,22 @@
 			_element_current = _image;
 			_suicide = false;
 			_element_rects_tree = null;
-			if(window_manager.existWindowRoot()){
-				_input_mouse_current = new InputMouse(window_manager.getWindowRoot());
-				_input_mouse_current.setInputMouse(input_mouse);
-			}else{
-				_input_mouse_current = input_mouse;
-			}
 			_original_url = "";
 			image = null;
 
 			// リスト
 			popup_image_container.initializePopupImage(_this);
 
-			// 解析済み
 			var node_info = node_info_dictionary.addNode(_element_current);
-			node_info.setAnalyzed(true);
-
-			// 解析ワーク作成
-			_analyze_work = AnalyzeWorkCreate(_image);
-
-			// 解析済み
-			AnalyzeWorkSetAnalyzedPopupReducedImage(_analyze_work);
-
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			attach_options.SetOutsider();
-			if(window_manager.existWindowRoot()) attach_options.SetGuest();
-
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
+			node_info.setInvalid(true);
+			if(window_manager.existWindowRoot()){
+				node_info.setOwnerToGuest();
+				try{
+					window_manager.getWindowRoot().document.adoptNode(_element_current);
+				}catch(e){}
+			}else{
+				node_info.setOwnerToPageExpand();
+			}
 
 			// イベント
 			addEventClick();
@@ -61598,6 +60156,8 @@
 
 			// ドラッガー
 			_image_dragger = new ImageDragger(_image);
+
+			_event_dispatcher = new EventDispatcher();
 		})();
 	}
 
@@ -61743,15 +60303,6 @@
 		};
 
 		// --------------------------------------------------------------------------------
-		// マウス操作をセット
-		// --------------------------------------------------------------------------------
-		_this.setInputMouse = function(input_mouse){
-			_input_mouse.setInputMouse(input_mouse);
-			_prevent_context_menu = _input_mouse.getButtonRight();
-			_prevent_click = _input_mouse.getButtonLeft();
-		};
-
-		// --------------------------------------------------------------------------------
 		// 自殺（内部用）
 		// --------------------------------------------------------------------------------
 		function suicide(){
@@ -61787,11 +60338,6 @@
 		function release_0 (){
 			removeEvent();
 
-			if(_event_handler_release){
-				_event_handler_release.release();
-				_event_handler_release = null;
-			}
-
 			// マウスイベント無効化
 			_element_viewer.style.pointerEvents = "none";
 
@@ -61809,23 +60355,13 @@
 			DomNodeRemove(_element_viewer);
 			DomNodeRemove(_shadow_host);
 
-			if(_input_mouse){
-				if(window_manager.existWindowRoot()){
-					_input_mouse.release();
-				}
-				_input_mouse = null;
+			if(_event_handler_release){
+				_event_handler_release.release();
+				_event_handler_release = null;
 			}
-
-			// リムーブ監視を破棄
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
-			}
-
-			// 解析辞書除外
-			if(_analyze_work_viewer){
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work_viewer);
-				_analyze_work_viewer = null;
+			if(_node_info_viewer){
+				_node_info_viewer.release();
+				_node_info_viewer = null;
 			}
 
 			// タスク破棄
@@ -61900,23 +60436,22 @@
 		// マウスダウンイベント（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseDown(e){
-			// マウス入力を更新
-			_input_mouse.setMouseEvent(e);
+			input_mouse.setMouseEvent(e);
 
-			if(_input_mouse.getButtonLeft()){
+			if(input_mouse.getButtonLeft()){
 				if(_mouse_buttons & 0x01){
 				}else{
 					_mouse_buttons |= 0x01;
 					_translate_work.working = false;
-					_translate_work.pos_old = _input_mouse.getPositionClient();
+					_translate_work.pos_old = input_mouse.getPositionTop();
 				}
 			}
-			if(_input_mouse.getButtonRight()){
+			if(input_mouse.getButtonRight()){
 				if(_mouse_buttons & 0x02){
 				}else{
 					_mouse_buttons |= 0x02;
 					_transform_work.working = false;
-					_transform_work.mouse_start = _input_mouse.getPositionClient();
+					_transform_work.mouse_start = input_mouse.getPositionTop();
 					_transform_work.origin = ObjectCopy(_image_origin);
 					_transform_work.scale = ObjectCopy(_image_scale);
 					_transform_work.zoom = ObjectCopy(_image_zoom);
@@ -61927,8 +60462,8 @@
 			}
 
 			if(
-				(_input_mouse.getButtonCenter()) ||
-				(_input_mouse.getButtonLeft() && _input_mouse.getButtonRight())
+				(input_mouse.getButtonCenter()) ||
+				(input_mouse.getButtonLeft() && input_mouse.getButtonRight())
 			){
 				suicide();
 			}
@@ -61947,11 +60482,10 @@
 		// マウスダウンイベント（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseMove(e){
-			// マウス入力を更新
-			_input_mouse.setMouseEvent(e);
+			input_mouse.setMouseEvent(e);
 
 			if(_mouse_buttons & 0x01){
-				var pos = _input_mouse.getPositionClient();
+				var pos = input_mouse.getPositionTop();
 				var old = _translate_work.pos_old;
 				var vec_x = pos.x - old.x;
 				var vec_y = pos.y - old.y;
@@ -61986,11 +60520,10 @@
 		// マウスアップイベント（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseUp(e){
-			// マウス入力を更新
-			_input_mouse.setMouseEvent(e);
+			input_mouse.setMouseEvent(e);
 
 			if(_mouse_buttons & 0x01){
-				if(!_input_mouse.getButtonLeft()){
+				if(!input_mouse.getButtonLeft()){
 					_mouse_buttons &= ~0x01;
 					_translate_work.working = false;
 					if(!_prevent_click){
@@ -62000,7 +60533,7 @@
 				}
 			}
 			if(_mouse_buttons & 0x02){
-				if(!_input_mouse.getButtonRight()){
+				if(!input_mouse.getButtonRight()){
 					_mouse_buttons &= ~0x02;
 					_transform_work.working = false;
 					DomNodeRemove(_element_transform);
@@ -62017,13 +60550,12 @@
 		// マウスコンテキストメニューイベント（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseContextMenu(e){
-			// マウス入力を更新
-			_input_mouse.setMouseEvent(e);
+			input_mouse.setMouseEvent(e);
 
 			_prevent_context_menu = true;
 
 			// 装飾キー押下で無視
-			if(_input_mouse.getKeyShift() || _input_mouse.getKeyCtrl()){
+			if(input_mouse.getKeyShift() || input_mouse.getKeyCtrl()){
 				_prevent_context_menu = false;
 			}
 
@@ -62057,23 +60589,22 @@
 		// ホイール回転（内部用）
 		// --------------------------------------------------------------------------------
 		function wheel(e,delta){
-			// マウス入力を更新
-			_input_mouse.setMouseEvent(e);
+			input_mouse.setMouseEvent(e);
 
 			var cancel = false;
-			if(_input_mouse.getButtonRight()){
+			if(input_mouse.getButtonRight()){
 				_prevent_context_menu = true;
 
 				gotoImage(delta);
 
 				_transform_work.working = false;
 				DomNodeRemove(_element_transform);
-				_transform_work.mouse_start = _input_mouse.getPositionClient();
+				_transform_work.mouse_start = input_mouse.getPositionTop();
 
 				cancel = true;
 			}
 
-			if(_input_mouse.getButtonLeft()){
+			if(input_mouse.getButtonLeft()){
 				if(delta > 0){
 					setCursor("zoom-out");
 				}else{
@@ -62238,21 +60769,9 @@
 				_element_image.src = image.src;
 			}
 
-			// 解析済み
-			var node_info = node_info_dictionary.addNode(_element_image);
-			node_info.setAnalyzed(true);
-
-			// 解析ワーク作成
-			_analyze_work_image = AnalyzeWorkCreate(_element_image);
-
-			// 解析済み
-			AnalyzeWorkSetInvalid(_analyze_work_image);
-
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			attach_options.SetOutsider();
-			if(window_manager.existWindowRoot()) attach_options.SetGuest();
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work_image,attach_options);
+			_node_info_image = node_info_dictionary.addNode(_element_image);
+			_node_info_image.setOwnerToPageExpand();
+			_node_info_image.setInvalid(true);
 
 			_element_container.appendChild(_element_image);
 
@@ -62263,9 +60782,9 @@
 		// 画像除外（内部用）
 		// --------------------------------------------------------------------------------
 		function removeImage(){
-			if(_analyze_work_image){
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work_image);
-				_analyze_work_image = null;
+			if(_node_info_image){
+				_node_info_image.release();
+				_node_info_image = null;
 			}
 			if(_element_image){
 				DomNodeRemove(_element_image);
@@ -62392,7 +60911,7 @@
 			var cx = _element_window.clientWidth  * 0.5;
 			var cy = _element_window.clientHeight * 0.5;
 			var p0 = _transform_work.mouse_start;
-			var p1 = _input_mouse.getPositionClient();
+			var p1 = input_mouse.getPositionTop();
 			var sx = p1.x - p0.x;
 			var sy = p1.y - p0.y;
 			var v0_x = p0.x - cx;
@@ -62410,7 +60929,7 @@
 				}else{
 					_prevent_context_menu = true;
 					_transform_work.working = true;
-					_transform_work.mouse_start = _input_mouse.getPositionClient();
+					_transform_work.mouse_start = input_mouse.getPositionTop();
 					_transform_work.origin = ObjectCopy(_image_origin);
 					_transform_work.scale = ObjectCopy(_image_scale);
 					_transform_work.zoom = ObjectCopy(_image_zoom);
@@ -62738,10 +61257,9 @@
 		var _message_task;
 		var _message_alpha;
 		var _cursor_task;
-		var _observer_remove;
-		var _analyze_work_viewer;
-		var _analyze_work_image;
-		var _input_mouse;
+		var _node_info_viewer;
+		var _node_info_image;
+		var _event_handler_release;
 		var _scale_mode;
 		var _image_origin;
 		var _image_scale;
@@ -62753,7 +61271,6 @@
 		var _translate_work;
 		var _transform_work;
 		var _pixel_ratio;
-		var _event_handler_release;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
@@ -62762,13 +61279,8 @@
 			_window_root = window_manager.getWindowRoot();
 			var document_root = _window_root.document;
 			_element_root = document_root.body;
-			if(window_manager.existWindowRoot()){
-				_input_mouse = new InputMouse(_window_root);
-			}else{
-				_input_mouse = input_mouse;
-			}
-			_prevent_context_menu = _input_mouse.getButtonRight();
-			_prevent_click = _input_mouse.getButtonLeft();
+			_prevent_context_menu = input_mouse.getButtonRight();
+			_prevent_click = input_mouse.getButtonLeft();
 			_prevent_scroll = false;
 			_scale_mode = ImageViewer.SCALE_MODE_AUTO;
 			_image_origin = {x:0.0,y:0.0};
@@ -62951,21 +61463,19 @@
 				_element_message.appendChild(_textnode_message);
 				_message_alpha = 0.0;
 
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_element_viewer);
-			_observer_remove.setFunction(_this.release);
+			_node_info_viewer = node_info_dictionary.addNode(_element_viewer);
+			_node_info_viewer.observerRemove();
+			if(window_manager.existWindowRoot()){
+				_node_info_viewer.setOwnerToGuest();
+			}else{
+				_node_info_viewer.setOwnerToPageExpand();
+			}
+			_node_info_viewer.setInvalid(true);
 
-			// 解析ワーク作成
-			_analyze_work_viewer = AnalyzeWorkCreate(_element_viewer);
-
-			// 解析済み
-			AnalyzeWorkSetInvalid(_analyze_work_viewer);
-
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			attach_options.SetOutsider();
-			if(window_manager.existWindowRoot()) attach_options.SetGuest();
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work_viewer,attach_options);
+			_event_handler_release = _node_info_viewer.createEventHandler("release");
+			_event_handler_release.setFunction(function(){
+				_this.release();
+			});
 
 			// ノードリスト登録
 			_element_viewer.appendChild(_element_window);
@@ -63043,7 +61553,7 @@
 				}
 				function MenuTaskHideExec(task){
 					var client_w = _element_window.clientWidth;
-					var pos = _input_mouse.getPositionClient();
+					var pos = input_mouse.getPositionTop();
 					if(pos.y <= MENU_WIDTH){
 						updateMenu(ImageViewer.MENU_TYPE_HORIZONTAL);
 						task.setExecuteFunc(MenuTaskFadeInInit);
@@ -63073,7 +61583,7 @@
 				}
 				function MenuTaskShowExec(task){
 					var client_w = _element_window.clientWidth;
-					var pos = _input_mouse.getPositionClient();
+					var pos = input_mouse.getPositionTop();
 					if(menu_type == ImageViewer.MENU_TYPE_HORIZONTAL){
 						if(pos.y > MENU_WIDTH){
 							task.setExecuteFunc(MenuTaskWaitInit);
@@ -63191,11 +61701,6 @@
 				task_execute_level &= ~TASK_EXECUTE_LEVEL_POPUP;
 			})();
 
-			// 開放イベント
-			_event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
-			_event_handler_release.setFunction(function(){
-				_this.release();
-			});
 		})();
 	}
 
@@ -63287,7 +61792,7 @@
 				image.addEventListener("dragstart",dragStart,false);
 				image.addEventListener("dragend",dragEnd,false);
 			}else if(image.attachEvent){
-				image.attachEvent("ondragstart",mouseMove);
+				image.attachEvent("ondragstart",dragStart);
 				image.attachEvent("ondragend",dragEnd);
 			}
 		}
@@ -63366,11 +61871,6 @@
 		function release_0 (){
 			removeEvent();
 
-			if(_event_handler_release){
-				_event_handler_release.release();
-				_event_handler_release = null;
-			}
-
 			// マウスイベント無効化
 			_window.style.pointerEvents = "none";
 
@@ -63385,16 +61885,13 @@
 		function release_1 (){
 			DomNodeRemove(_shadow_host);
 
-			// リムーブ監視を破棄
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
+			if(_event_handler_release){
+				_event_handler_release.release();
+				_event_handler_release = null;
 			}
-
-			// 解析辞書除外
-			if(_analyze_work_shadow_host){
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work_shadow_host);
-				_analyze_work_shadow_host = null;
+			if(_node_info_shadow_host){
+				_node_info_shadow_host.release();
+				_node_info_shadow_host = null;
 			}
 
 			// タスク破棄
@@ -63664,8 +62161,7 @@
 		var _svg_download;
 		var _parent_task;
 		var _fade_alpha;
-		var _observer_remove;
-		var _analyze_work_shadow_host;
+		var _node_info_shadow_host;
 		var _event_handler_release;
 
 		// --------------------------------------------------------------------------------
@@ -63674,22 +62170,23 @@
 		(function(){
 			_shadow_host = DocumentCreateElement("div");
 
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_shadow_host);
-			_observer_remove.setFunction(_this.release);
+			_node_info_shadow_host = node_info_dictionary.addNode(_shadow_host);
+			_node_info_shadow_host.observerRemove();
+			_node_info_shadow_host.setOwnerToPageExpand();
+			_node_info_shadow_host.setInvalid(true);
 
-			// 解析ワーク作成
-			_analyze_work_shadow_host = AnalyzeWorkCreate(_shadow_host);
+			_event_handler_release = _node_info_shadow_host.createEventHandler("release");
+			_event_handler_release.setFunction(function(){
+				_this.release();
+			});
 
-			// 解析済み
-			AnalyzeWorkSetInvalid(_analyze_work_shadow_host);
+			if(window_manager.existWindowRoot()){
+				_node_info_shadow_host.setOwnerToGuest();
+				window_manager.getWindowRoot().document.body.appendChild(_shadow_host);
+			}else{
+				document.body.appendChild(_shadow_host);
+			}
 
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			attach_options.SetOutsider();
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work_shadow_host,attach_options);
-
-			document.body.appendChild(_shadow_host);
 			var shadow_root;
 			if(_shadow_host.attachShadow){
 				shadow_root = _shadow_host.attachShadow({mode:"closed"});
@@ -63699,7 +62196,7 @@
 
 			_window = DocumentCreateElement("div");
 			ElementSetStyle(_window,CSSTextGetInitialDivElement());
-			ElementAddStyle(_window,"background:#fcfcfc; color:#000; font-size:14px; line-height:1; position:fixed; padding:15px; z-index:2147483646; border-radius:10px; box-shadow:0px 0px 5px #c0c0c0; pointer-events:inherit;");
+			ElementAddStyle(_window,"background:#fcfcfc; color:#000; font-size:14px; line-height:1; position:fixed; padding:15px; z-index:2147483647; border-radius:10px; box-shadow:0px 0px 5px #c0c0c0; pointer-events:inherit;");
 			shadow_root.appendChild(_window);
 
 			var style_droperea = "margin:0px; padding:0px; background:#ffc; font-size:12px; font-weight:bold; text-align:center; width:100px; height:100px; display:inline-block; pointer-events:inherit; border-radius:10px; overflow:hidden;";
@@ -63716,14 +62213,11 @@
 			addEvent();
 
 			var client_rect = ElementGetBoundingClientRect(_window);
-			var mouse_pos = input_mouse.getPositionClient();
+			var mouse_pos = input_mouse.getPositionTop();
 			var w = client_rect.right - client_rect.left;
 			var h = client_rect.bottom - client_rect.top;
 			var x = mouse_pos.x - w * 0.5;
 			var y = mouse_pos.y - h * 0.5;
-			var offset = window_manager.getPositionFromRoot();
-			x -= offset.x;
-			y -= offset.y;
 			var style = _window.style;
 			style.left = (x) + "px";
 			style.top  = (y) + "px";
@@ -63758,10 +62252,7 @@
 					task = null;
 				});
 				task.setExecuteFunc(function(){
-					var mouse_pos = input_mouse.getPositionClient();
-					var offset = window_manager.getPositionFromRoot();
-					mouse_pos.x -= offset.x;
-					mouse_pos.y -= offset.y;
+					var mouse_pos = input_mouse.getPositionTop();
 					if(!ElementHitTestPosition(_window,mouse_pos,true)){
 						task.release();
 						suicide();
@@ -63769,12 +62260,6 @@
 				});
 				task.execute(0xffffffff);
 			})();
-
-			// 開放イベント
-			_event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
-			_event_handler_release.setFunction(function(){
-				_this.release();
-			});
 
 		})();
 	}
@@ -63808,18 +62293,19 @@
 				_event_handler_release = null;
 			}
 
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
-			}
-
-			// 解析辞書除外
-			if(_analyze_work_container){
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work_container);
-				_analyze_work_container = null;
+			if(_node_info_container){
+				_node_info_container.release();
+				_node_info_container = null;
 			}
 
 			DomNodeRemove(_element_container);
+		};
+
+		// --------------------------------------------------------------------------------
+		// 元のアドレスをセット
+		// --------------------------------------------------------------------------------
+		_this.setOriginalURLInfo = function(url_info){
+			_original_url_info = url_info;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -64110,10 +62596,10 @@
 		var _element_resize;
 		var _element_hitarea;
 		var _element_target;
+		var _original_url_info;
 		var _event_dispatcher;
 		var _event_handler_release;
-		var _observer_remove;
-		var _analyze_work_container;
+		var _node_info_container;
 		var _parent_task;
 		var _player_task;
 		var _resize_task;
@@ -64129,9 +62615,12 @@
 			_event_dispatcher = new EventDispatcher();
 			_fade_alpha = 0.0;
 
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_element_target);
-			_observer_remove.setFunction(_this.release);
+			var node_info_target = node_info_dictionary.addNode(_element_target);
+			node_info_target.observerRemove();
+			_event_handler_release = node_info_target.createEventHandler("release");
+			_event_handler_release.setFunction(function(){
+				_this.release();
+			});
 
 			_element_container = DocumentCreateElement("div");
 			_element_container.draggable = true;
@@ -64193,9 +62682,8 @@
 						var target_rect = ElementGetBoundingClientRect(_element_target);
 						var target_w = target_rect.right - target_rect.left;
 						var target_h = target_rect.bottom - target_rect.top;
-						var options = "left=" + (target_rect.left + ofs_x) + ",top=" + (target_rect.top + ofs_y) + ",width=" + target_w + ",height=" + target_h;
+						var options = "popup=true,left=" + (target_rect.left + ofs_x) + ",top=" + (target_rect.top + ofs_y) + ",width=" + target_w + ",height=" + target_h;
 						var window_obj = window;
-						var document_obj;
 
 						try{
 							if((window_obj.wrappedJSObject) && typeof(window_obj.wrappedJSObject) === "object"){
@@ -64204,30 +62692,10 @@
 								}
 							}
 
-							window_obj = window_obj.open("","_blank",options);
-							document_obj = window_obj.document;
-							document_obj.body.style.cssText = "margin:0px; padding:0px; line-height:0; overflow:hidden; width:100%; height:100%;";
-							document_obj.title = "PageExpand Media Player";
+							window_obj = window_obj.open(_original_url_info.getURL(),"_blank",options);
 						}catch(e){
 						}
-
 						close();
-
-						ElementSetStyle(_element_target,CSSTextGetInitialDivElement());
-						ElementAddStyle(_element_target,"width:100%; height:100%;");
-
-						// 解析ワーク作成
-						var analyze_work_target = AnalyzeWorkCreate(_element_target);
-						AnalyzeWorkSetInvalid(analyze_work_target);
-						var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-						attach_options.SetOutsider();
-						attach_options.SetGuest();
-						analyze_work_dictionary.attachAnalyzeWork(analyze_work_target,attach_options);
-
-						if(document_obj.adoptNode){
-							document_obj.adoptNode(_element_target);
-						}
-						document_obj.body.appendChild(_element_target);
 					};
 					var image_popup = DocumentCreateElement("img");
 					ElementSetStyle(image_popup,CSSTextGetInitialImageElement());
@@ -64251,27 +62719,14 @@
 			_element_header.appendChild(_element_menu);
 			_element_container.appendChild(_element_resize);
 
-			// 解析ワーク作成
-			_analyze_work_container = AnalyzeWorkCreate(_element_container);
-
-			// 解析済み
-			AnalyzeWorkSetInvalid(_analyze_work_container);
-
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			attach_options.SetOutsider();
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work_container,attach_options);
+			_node_info_container = node_info_dictionary.addNode(_element_container);
+			_node_info_container.setOwnerToPageExpand();
+			_node_info_container.setInvalid(true);
 
 			// 親タスク
 			_parent_task = task_container.createTask();
 			_parent_task.setDestructorFunc(function(){
 				_parent_task = null;
-			});
-
-			// 開放イベント
-			_event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
-			_event_handler_release.setFunction(function(){
-				_this.release();
 			});
 
 			addEvent();
@@ -65582,7 +64037,10 @@
 				message: "すべて事前に読み込む"
 			},
 			menu_setting_expand_image_load_start_type_scroll: {
-				message: "スクロールと連動して読み込む"
+				message: "スクロール時に読み込む"
+			},
+			menu_setting_expand_image_load_start_type_mouseover: {
+				message: "マウスオーバー時に読み込む"
 			},
 			menu_setting_expand_image_load_src_type: {
 				message: "イメージのソースタイプ"
@@ -65722,6 +64180,15 @@
 			menu_setting_expand_video_inline_youtube_visible_video: {
 				message: "ビデオを表示"
 			},
+			menu_setting_expand_video_inline_tiktok: {
+				message: "www.tiktok.com の設定"
+			},
+			menu_setting_expand_video_inline_tiktok_check_box_container: {
+				message: "www.tiktok.com の設定"
+			},
+			menu_setting_expand_video_inline_tiktok_visible_video: {
+				message: "ビデオを表示"
+			},
 			menu_setting_expand_video_inline_nicovideo: {
 				message: "www.nicovideo.jp の設定"
 			},
@@ -65840,6 +64307,12 @@
 				message: "www.youtube.com の設定"
 			},
 			menu_setting_style_sheet_expand_video_youtube_inline_video: {
+				message: "ビデオのインライン表示"
+			},
+			menu_setting_style_sheet_expand_video_tiktok: {
+				message: "www.tiktok.com の設定"
+			},
+			menu_setting_style_sheet_expand_video_tiktok_inline_video: {
 				message: "ビデオのインライン表示"
 			},
 			menu_setting_style_sheet_expand_video_nicovideo: {
@@ -67161,7 +65634,10 @@
 				message: "Preload"
 			},
 			menu_setting_expand_image_load_start_type_scroll: {
-				message: "Conjunction with the scroll"
+				message: "Load on Scroll"
+			},
+			menu_setting_expand_image_load_start_type_mouseover: {
+				message: "Load on Mouseover"
 			},
 			menu_setting_expand_image_load_src_type: {
 				message: "Image Source Format"
@@ -67301,6 +65777,15 @@
 			menu_setting_expand_video_inline_youtube_visible_video: {
 				message: "enable video"
 			},
+			menu_setting_expand_video_inline_tiktok: {
+				message: "www.tiktok.com Setting"
+			},
+			menu_setting_expand_video_inline_tiktok_check_box_container: {
+				message: "www.tiktok.com Setting"
+			},
+			menu_setting_expand_video_inline_tiktok_visible_video: {
+				message: "enable video"
+			},
 			menu_setting_expand_video_inline_nicovideo: {
 				message: "www.nicovideo.jp Setting"
 			},
@@ -67419,6 +65904,12 @@
 				message: "www.youtube.com Setting"
 			},
 			menu_setting_style_sheet_expand_video_youtube_inline_video: {
+				message: "Video Inline Display"
+			},
+			menu_setting_style_sheet_expand_video_tiktok: {
+				message: "www.tiktok.com Setting"
+			},
+			menu_setting_style_sheet_expand_video_tiktok_inline_video: {
 				message: "Video Inline Display"
 			},
 			menu_setting_style_sheet_expand_video_nicovideo: {
@@ -68739,7 +67230,10 @@
 				message: "预加载"
 			},
 			menu_setting_expand_image_load_start_type_scroll: {
-				message: "滚动结合"
+				message: "Load on Scroll"
+			},
+			menu_setting_expand_image_load_start_type_mouseover: {
+				message: "Load on Mouseover"
 			},
 			menu_setting_expand_image_load_src_type: {
 				message: "Image Source Format"
@@ -68879,6 +67373,15 @@
 			menu_setting_expand_video_inline_youtube_visible_video: {
 				message: "启用视频"
 			},
+			menu_setting_expand_video_inline_tiktok: {
+				message: "www.tiktok.com 设置"
+			},
+			menu_setting_expand_video_inline_tiktok_check_box_container: {
+				message: "www.tiktok.com 设置"
+			},
+			menu_setting_expand_video_inline_tiktok_visible_video: {
+				message: "启用视频"
+			},
 			menu_setting_expand_video_inline_nicovideo: {
 				message: "www.nicovideo.jp 设置"
 			},
@@ -68997,6 +67500,12 @@
 				message: "www.youtube.com 设置"
 			},
 			menu_setting_style_sheet_expand_video_youtube_inline_video: {
+				message: "视频内联显示"
+			},
+			menu_setting_style_sheet_expand_video_tiktok: {
+				message: "www.tiktok.com 设置"
+			},
+			menu_setting_style_sheet_expand_video_tiktok_inline_video: {
 				message: "视频内联显示"
 			},
 			menu_setting_style_sheet_expand_video_nicovideo: {
@@ -69602,12 +68111,17 @@
 		function execute(){
 			var _this = this;
 			if(_this.released) return;
+			if(_this.pausing) return;
 			var f = _this.methods[0];
 			if(!f) return;
 			_this.executing = true;
+			var completed = false;
 			f.call(_this.self,function(v){
 				if(_this.released) return;
+				if(completed) return;
+				completed = true;
 				_this.executing = false;
+				_this.arguments = arguments;
 				_this.methods.shift();
 				execute.call(_this);
 			});
@@ -69622,6 +68136,7 @@
 				if(this.released) return;
 				this.released = true;
 				this.methods.length = 0;
+				delete this.arguments;
 			},
 			unshift : function(f){
 				this.methods.unshift(f);
@@ -69633,8 +68148,18 @@
 				if(this.executing) return;
 				execute.call(this);
 			},
+			pause : function(){
+				this.pausing = true;
+			},
+			play : function(){
+				this.pausing = false;
+				if(this.executing) return;
+				execute.call(this);
+			},
 			executing : false,
-			released : false
+			pausing : false,
+			released : false,
+			arguments : []
 		};
 		return ExecuteMethods;
 	})();
@@ -69653,6 +68178,7 @@
 			this.id = _unique_id;
 			this.alone = new Object();
 			this.values = new Object();
+			this.cached = new Object();
 			_unique_id += 1;
 			_url_count += 1;
 		}
@@ -69661,7 +68187,12 @@
 				if(!this.url) return;
 				delete _dictionary[UrlInfo_url_to_key(this.url)];
 				delete this.url;
-				this.releaseBlobURL();
+				var cached_blob_url = this.cached["BlobURL"];
+				if(cached_blob_url){
+					var blob_url = cached_blob_url.value;
+					if(blob_url) BlobURLRevoke(blob_url);
+					delete this.cached["BlobURL"];
+				}
 				_url_count -= 1;
 			},
 			getId : function(){
@@ -69670,57 +68201,65 @@
 			getURL : function(){
 				return this.url;
 			},
-			analyzeRedirect : function(){
-				var _this = this;
-				if(this.analyze_redirect) return null;
-				if(this.redirect !== undefined) return null;
-
-				var _analyze_element = this.analyze_redirect = new Object();
-
-				// --------------------------------------------------------------------------------
-				// 開放
-				// --------------------------------------------------------------------------------
-				_analyze_element.release = function(){
-					if(_analyze_element.released) return;
-					_analyze_element.released = true;
-					_analyze_element.event_dispatcher.release();
-					delete _this.analyze_redirect;
+			analyzeCached : (function(){
+				function CachedItem(v){
+					this.value = v;
+				}
+				CachedItem.prototype = {
+					ok:false,
+					aborted:false,
+					value:null
 				};
-
-				// --------------------------------------------------------------------------------
-				// 調査成功
-				// --------------------------------------------------------------------------------
-				_analyze_element.success = function(redirect){
-					_this.redirect = redirect;
-					_analyze_element.event_dispatcher.dispatchEvent("success",null);
-					_analyze_element.release();
+				function AnalyzeElement(parent,type){
+					this.url_info = parent;
+					this.type = type;
+					this.released = false;
+					this.event_dispatcher = new EventDispatcher();
+				}
+				AnalyzeElement.prototype = {
+					release:function(){
+						if(this.released) return;
+						this.released = true;
+						this.event_dispatcher.release();
+						var item = this.url_info.cached[this.type];
+						if(item) delete item.analyze;
+					},
+					success:function(v){
+						var item = this.url_info.cached[this.type] = new CachedItem(v);
+						item.ok = true;
+						this.event_dispatcher.dispatchEvent("success",item);
+						this.release();
+					},
+					failure:function(){
+						var item = this.url_info.cached[this.type] = new CachedItem();
+						this.event_dispatcher.dispatchEvent("failure",item);
+						this.release();
+					},
+					abort:function(){
+						var item = new CachedItem();
+						item.aborted = true;
+						this.event_dispatcher.dispatchEvent("failure",item);
+						delete this.url_info.cached[this.type];
+						this.release();
+					},
+					url_info:null,
+					type:"",
+					released:false,
+					event_dispatcher:null
 				};
-
-				// --------------------------------------------------------------------------------
-				// 調査失敗
-				// --------------------------------------------------------------------------------
-				_analyze_element.failure = function(e){
-					_this.redirect = null;
-					_analyze_element.event_dispatcher.dispatchEvent("failure",e);
-					_analyze_element.release();
+				return function(type){
+					if(this.cached[type]) return null;
+					var analyze_element = new AnalyzeElement(this,type);
+					this.cached[type] = {analyze:analyze_element};
+					return analyze_element;
 				};
-
-				// --------------------------------------------------------------------------------
-				// 初期化
-				// --------------------------------------------------------------------------------
-				(function(){
-					_analyze_element.released = false;
-					_analyze_element.event_dispatcher = new EventDispatcher();
-				})();
-
-				return _analyze_element;
-			},
-			getRedirect : function(callback){
+			})(),
+			getCached : function(type,callback){
 				var _this = this;
 				var event_handler_success = null;
 				var event_handler_failure = null;
 
-				function complete(){
+				function complete(e){
 					if(event_handler_success){
 						event_handler_success.release();
 						event_handler_success = null;
@@ -69729,201 +68268,32 @@
 						event_handler_failure.release();
 						event_handler_failure = null;
 					}
-					callback(_this.redirect);
+					callback(e);
 				}
 
-				var analyze_element = _this.analyze_redirect;
+				var item = _this.cached[type];
 				if((function (){
-					if(!analyze_element) return true;
-					if(_this.redirect !== undefined) return true;
+					if(!item) return true;
+					if(!item.analyze) return true;
 					return false;
 				})()){
-					complete();
+					// 非同期実行
+					setTimeout(function(){
+						complete(item);
+					},1);
 					return;
 				}
 
+				var analyze_element = item.analyze;
 				var event_dispatcher = analyze_element.event_dispatcher;
 				event_handler_success = event_dispatcher.createEventHandler("success");
-				event_handler_success.setFunction(function(event){
-					complete();
+				event_handler_success.setFunction(function(e){
+					complete(e);
 				});
 				event_handler_failure = event_dispatcher.createEventHandler("failure");
-				event_handler_failure.setFunction(function(event){
-					complete();
+				event_handler_failure.setFunction(function(e){
+					complete(e);
 				});
-			},
-			analyzeBlobURL : function(){
-				var _this = this;
-				if(this.analyze_blob_url) return null;
-				if(this.blob_url !== undefined) return null;
-
-				var _analyze_element = this.analyze_blob_url = new Object();
-
-				// --------------------------------------------------------------------------------
-				// 開放
-				// --------------------------------------------------------------------------------
-				_analyze_element.release = function(){
-					if(_analyze_element.released) return;
-					_analyze_element.released = true;
-					_analyze_element.event_dispatcher.release();
-					delete _this.analyze_blob_url;
-				};
-
-				// --------------------------------------------------------------------------------
-				// 調査成功
-				// --------------------------------------------------------------------------------
-				_analyze_element.success = function(blob_url){
-					_this.blob_url = blob_url;
-					_analyze_element.event_dispatcher.dispatchEvent("success",null);
-					_analyze_element.release();
-				};
-
-				// --------------------------------------------------------------------------------
-				// 調査失敗
-				// --------------------------------------------------------------------------------
-				_analyze_element.failure = function(e){
-					_this.blob_url = "";
-					_analyze_element.event_dispatcher.dispatchEvent("failure",e);
-					_analyze_element.release();
-				};
-
-				// --------------------------------------------------------------------------------
-				// 初期化
-				// --------------------------------------------------------------------------------
-				(function(){
-					_analyze_element.released = false;
-					_analyze_element.event_dispatcher = new EventDispatcher();
-				})();
-
-				return _analyze_element;
-			},
-			getBlobURL : function(callback){
-				var _this = this;
-				var event_handler_success = null;
-				var event_handler_failure = null;
-
-				function complete(){
-					if(event_handler_success){
-						event_handler_success.release();
-						event_handler_success = null;
-					}
-					if(event_handler_failure){
-						event_handler_failure.release();
-						event_handler_failure = null;
-					}
-					callback(_this.blob_url);
-				}
-
-				var analyze_element = _this.analyze_blob_url;
-				if((function (){
-					if(!analyze_element) return true;
-					if(_this.blob_url !== undefined) return true;
-					return false;
-				})()){
-					complete();
-					return;
-				}
-
-				var event_dispatcher = analyze_element.event_dispatcher;
-				event_handler_success = event_dispatcher.createEventHandler("success");
-				event_handler_success.setFunction(function(event){
-					complete();
-				});
-				event_handler_failure = event_dispatcher.createEventHandler("failure");
-				event_handler_failure.setFunction(function(event){
-					complete();
-				});
-			},
-			releaseBlobURL : function(){
-				if(this.blob_url){
-					BlobURLRevoke(this.blob_url);
-					delete this.blob_url;
-				}
-			},
-			getCached : function(callback){
-				var _this = this;
-				var event_handler_success = null;
-				var event_handler_failure = null;
-
-				function complete(){
-					if(event_handler_success){
-						event_handler_success.release();
-						event_handler_success = null;
-					}
-					if(event_handler_failure){
-						event_handler_failure.release();
-						event_handler_failure = null;
-					}
-					callback(_this.cached,null);
-				}
-
-				var analyze_element = _this.analyze_cached;
-				if((!analyze_element) && (_this.cached === undefined)){
-					_this.analyze_cached = (function(){
-						var analyze_element = new Object();
-
-						// --------------------------------------------------------------------------------
-						// 開放
-						// --------------------------------------------------------------------------------
-						analyze_element.release = function(){
-							if(analyze_element.released) return;
-							analyze_element.released = true;
-							analyze_element.event_dispatcher.release();
-							delete _this.analyze_cached;
-						};
-
-						// --------------------------------------------------------------------------------
-						// 調査成功
-						// --------------------------------------------------------------------------------
-						analyze_element.success = function(){
-							_this.cached = {ok:true};
-							analyze_element.event_dispatcher.dispatchEvent("success",null);
-							analyze_element.release();
-						};
-
-						// --------------------------------------------------------------------------------
-						// 調査失敗
-						// --------------------------------------------------------------------------------
-						analyze_element.failure = function(e){
-							_this.cached = {ok:false};
-							analyze_element.event_dispatcher.dispatchEvent("failure",e);
-							analyze_element.release();
-						};
-
-						// --------------------------------------------------------------------------------
-						// 初期化
-						// --------------------------------------------------------------------------------
-						(function(){
-							analyze_element.released = false;
-							analyze_element.event_dispatcher = new EventDispatcher();
-						})();
-
-						return analyze_element;
-					})();
-
-					callback(_this.cached,_this.analyze_cached);
-					return;
-				}
-
-				if((function (){
-					if(!analyze_element) return true;
-					if(_this.cached !== undefined) return true;
-					return false;
-				})()){
-					complete();
-					return;
-				}
-
-				var event_dispatcher = analyze_element.event_dispatcher;
-				event_handler_success = event_dispatcher.createEventHandler("success");
-				event_handler_success.setFunction(function(event){
-					complete();
-				});
-				event_handler_failure = event_dispatcher.createEventHandler("failure");
-				event_handler_failure.setFunction(function(event){
-					complete();
-				});
-
 			},
 			setMimeTypeByElement : function(v){
 				if(this.level > 1) return;
@@ -69980,11 +68350,6 @@
 			url : "",
 			id : 0,
 			level : 0,
-			analyze_redirect : null,
-			analyze_blob_url : null,
-			analyze_cached : null,
-			redirect : undefined,
-			blob_url : undefined,
 			cached : undefined,
 			private : false
 		};
@@ -70067,37 +68432,51 @@
 		// リダイレクト先を取得
 		// --------------------------------------------------------------------------------
 		_this.getRedirectURL = function(current_url,callback){
-			var redirected = false;
-			var item = _this.getUrlInfo(current_url);
-
-			var complete = function(){
-				callback({
-					redirected:redirected,
-					url_info:item
-				});
+			var url_info = _this.getUrlInfo(current_url);
+			var response = {
+				ok:false,
+				aborted:false,
+				redirected:false,
+				url_info:null,
+				url:""
 			};
 
-			if(!item){
+			var complete = function(){
+				if(url_info){
+					response.url_info = url_info;
+					response.url = url_info.getURL();
+				}else{
+					response.url = current_url;
+				}
+				callback(response);
+			};
+
+			if(!url_info){
 				complete();
 				return;
 			}
 
-			var i = 0;
+			var trial_count = _repeat_max;
 			var f = function(){
-				item.getRedirect(function(next){
-					if(next){
-						redirected = true;
-						item = next;
-						i++;
-						if(i < _repeat_max){
-							f();
+				url_info.getCached("Redirect",function(item){
+						if((function(){
+							if(!item) return true;
+							if(!item.ok) return true;
+							if(trial_count <= 0) return true;
+							return false;
+						})()){
+							if(item) response.aborted = item.aborted;
+							complete(url_info);
 							return;
 						}
-					}
-					complete();
+
+						trial_count -= 1;
+						response.ok = item.ok;
+						response.redirected = true;
+						url_info = item.value;
+						f();
 				});
 			};
-
 			f();
 		};
 
@@ -70147,25 +68526,153 @@
 		// --------------------------------------------------------------------------------
 		function NodeInfo(node){
 			this.node = node;
+			this.executed = new Object();
+			this.data = new Object();
+			this.releasers = new Array();
 		}
-		NodeInfo.prototype = {
-			release : function(){
-				if(!this.node) return;
-				_dictionary.delete(this.node);
-				delete this.node;
-			},
-			getNode : function(){
-				return this.node;
-			},
-			getAnalyzed : function(){
-				return this.analyzed;
-			},
-			setAnalyzed : function(v){
-				this.analyzed = v;
-			},
-			node : null,
-			analyzed : false,
-		};
+		NodeInfo.prototype = (function(){
+			var ltos = {
+				"ExpandInlineText":"it",
+				"ExpandThumbnailImage":"ti",
+				"ExpandPopupImage":"pi",
+				"ExpandInlineSound":"is",
+				"ExpandInlineVideo":"iv",
+				"ExpandInlineIframe":"if",
+				"ExpandIframeContent":"fc",
+				"PopupReducedImage":"ri",
+				"ReplacementToElement":"re",
+				"ReplacementToText":"rt",
+				"ReplacementToAnchor":"ra",
+				"ReplacementToLink":"rl",
+				"MakeLinkToText":"ml",
+				"OverrodeUrl":"ou",
+				"ExpandShortUrl":"su",
+				"ExpandBbs":"eb"
+			};
+			return {
+				release : function(){
+					if(this.released) return;
+					this.released = true;
+					this.dispatchEvent("release",null);
+					this.releasers.forEach(function(e){
+						e.release();
+					});
+					this.releasers.length = 0;
+					if(this.event_dispatcher){
+						this.event_dispatcher.release();
+						this.event_dispatcher = null;
+					}
+					if(this.node.removeAttribute){
+						this.node.removeAttribute("_pageexpand_");
+					}
+					_dictionary.delete(this.node);
+					delete this.executed;
+					delete this.data;
+					delete this.node;
+				},
+				getNode : function(){
+					return this.node;
+				},
+				getRevision : function(){
+					return this.revision;
+				},
+				addRevision : function(){
+					this.revision += 1;
+				},
+				equalRevision : function(v){
+					return (this.revision === v);
+				},
+				getExecuted : function(type){
+					return this.executed[(ltos[type]||type)];
+				},
+				setExecuted : function(type){
+					this.executed[(ltos[type]||type)] = true;
+				},
+				clearExecuted : function(type){
+					delete this.executed[(ltos[type]||type)];
+				},
+				getData : function(type){
+					return this.data[type];
+				},
+				setData : function(type,v){
+					this.data[type] = v;
+				},
+				clearData : function(type){
+					delete this.data[type];
+				},
+				getInvalid : function(){
+					return this.invalid;
+				},
+				setInvalid : function(v){
+					this.invalid = v;
+				},
+				getEventDispatcher : function(){
+					var _this = this;
+					if(!(this.event_dispatcher)){
+						this.event_dispatcher = new EventDispatcher();
+						var event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
+						event_handler_release.setFunction(function(){
+							_this.release();
+						});
+						this.releasers.push(event_handler_release);
+					}
+					return this.event_dispatcher;
+				},
+				createEventHandler : function(name){
+					var event_dispatcher = this.getEventDispatcher();
+					return event_dispatcher.createEventHandler(name);
+				},
+				dispatchEvent : function(name,param){
+					if(!(this.event_dispatcher)) return;
+					this.event_dispatcher.dispatchEvent(name,param);
+				},
+
+				observerRemove : function(){
+					var _this = this;
+					if(this.getExecuted("ObserverRemove")) return;
+					this.setExecuted("ObserverRemove");
+
+					// リムーブ監視
+					var observer_remove = new DomNodeObserverRemoveFromDocument(this.node);
+					observer_remove.setFunction(function(){
+						_this.addRevision();
+						_this.dispatchEvent("remove",null);
+						//_this.dispatchEvent("release",null);
+						_this.release();
+
+						if(!(window.addEventListener)){
+							DomNodeClearInserted(_this.node);
+						}
+					});
+					this.releasers.push(observer_remove);
+
+					_dictionary.set(this.node,this);
+				},
+				observerModify : function(name,callback){
+					var observer_modify_element = document_observer_modify_node.createElement();
+					observer_modify_element.setElement(this.node,name);
+					observer_modify_element.setFunction(callback);
+					this.releasers.push(observer_modify_element);
+
+					return observer_modify_element;
+				},
+				setOwnerToPageExpand : function(){
+					this.node.setAttribute("_pageexpand_","");
+					_dictionary.set(this.node,this);
+				},
+				setOwnerToGuest : function(){
+					this.node.setAttribute("_pageexpand_",0x01);
+					_dictionary.set(this.node,this);
+				},
+				node : null,
+				revision : 0,
+				executed : null,
+				data : null,
+				invalid : false,
+				event_dispatcher : null,
+				releasers : null
+			};
+		})();
 
 		// --------------------------------------------------------------------------------
 		// 開放
@@ -70175,14 +68682,22 @@
 		};
 
 		// --------------------------------------------------------------------------------
-		// DOMノードを登録
+		// NodeInfoを作成（辞書登録なし）
 		// --------------------------------------------------------------------------------
-		_this.addNode = function(node){
+		_this.createNodeInfo = function(node){
 			var node_info = _dictionary.get(node);
 			if(!node_info){
 				node_info = new NodeInfo(node);
-				_dictionary.set(node,node_info);
 			}
+			return node_info;
+		};
+
+		// --------------------------------------------------------------------------------
+		// NodeInfoを作成（辞書登録あり）
+		// --------------------------------------------------------------------------------
+		_this.addNode = function(node){
+			var node_info = _this.createNodeInfo(node);
+			_dictionary.set(node,node_info);
 			return node_info;
 		};
 
@@ -70191,6 +68706,23 @@
 		// --------------------------------------------------------------------------------
 		_this.getNodeInfo = function(node){
 			return _dictionary.get(node) || null;
+		};
+
+		// --------------------------------------------------------------------------------
+		// クローンであるか確認する
+		// --------------------------------------------------------------------------------
+		_this.verifyClone = function(node){
+			if(!node.hasAttribute("_pageexpand_")) return false;
+			return !Boolean(_dictionary.get(node));
+		};
+
+		// --------------------------------------------------------------------------------
+		// ゲスト要素であるか確認する
+		// --------------------------------------------------------------------------------
+		_this.verifyGuest = function(node){
+			if(!node.hasAttribute("_pageexpand_")) return false;
+			var id = parseInt(node.getAttribute("_pageexpand_") || 0);
+			return Boolean(id & 0x01);
 		};
 
 		// --------------------------------------------------------------------------------
@@ -70948,6 +69480,7 @@
 			o.response = null;
 			o.responseText = "";
 			o.errorText = "";
+			o.aborted = false;
 			o.ok = false;
 
 		}
@@ -70974,6 +69507,9 @@
 			}
 			return true;
 		}
+		function is_released(){
+			return Boolean(this._released);
+		}
 
 		// --------------------------------------------------------------------------------
 		// 発火
@@ -70981,6 +69517,7 @@
 		function dispatch_onprogress(){
 			var f = this.onprogress;
 			if(f) f(this.progress);
+			this._event_dispatcher.dispatchEvent("progress",this.progress);
 		}
 		function dispatch_onload(v){
 			var f = this.onload;
@@ -71001,8 +69538,8 @@
 				var released = false;
 				var event_handler_release;
 				var event_handler_abort;
-				var timeout_handle = null;
 				var fetch_abort = null;
+				var fetch_signal = null;
 
 				var request = _this.request;
 				var response = _this.response;
@@ -71010,15 +69547,8 @@
 
 				var abort = function(){
 					try{
-						release_timeout();
 						fetch_abort.abort();
 					}catch(e){
-					}
-				};
-				var release_timeout = function(){
-					if(timeout_handle !== null){
-						clearTimeout(timeout_handle);
-						timeout_handle = null;
 					}
 				};
 				var release = function(){
@@ -71027,7 +69557,6 @@
 
 					abort();
 
-					release_timeout();
 					if(event_handler_abort){
 						event_handler_abort.release();
 						event_handler_abort = null;
@@ -71044,7 +69573,7 @@
 				});
 				event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
 				event_handler_abort.setFunction(function(){
-					release();
+					abort();
 				});
 
 				var complete = function(){
@@ -71064,29 +69593,31 @@
 					response.status = 0;
 					response.readyState = 4;
 					response.errorText = msg;
+					response.aborted = fetch_signal.aborted;
 					complete();
 				};
 				var rejected = function(e){
-					failure(e.message);
+					failure(Error_to_String(e));
 				};
 
 				if((function(){
 					if(!window.fetch) return true;
 					if(!window.ReadableStream) return true;
+					if(!window.AbortSignal.timeout) return true;
+					if(!window.AbortSignal.any) return true;
 					return false;
 				})()){
 					throw new Error("not supported");
 				}
 
 				fetch_abort = new AbortController();
-				if(request.timeout){
-					timeout_handle = setTimeout(function(){
-						timeout_handle = null;
-						abort();
-					},request.timeout);
-				}
+				fetch_signal = AbortSignal.any((function(){
+					var signals = [fetch_abort.signal];
+					if(request.timeout) signals.push(AbortSignal.timeout(request.timeout));
+					return signals;
+				})());
 				var fetch_option = new Object();
-				fetch_option.signal = fetch_abort.signal;
+				fetch_option.signal = fetch_signal;
 				fetch_option.method = request.method;
 				fetch_option.headers = (function(){
 					var o = new Headers();
@@ -71104,7 +69635,6 @@
 
 				fetch_promise.then(
 					function(r){
-						fetch_response = r;
 						response.ok = r.ok;
 						response.readyState = 3;
 						response.status = r.status;
@@ -71167,7 +69697,7 @@
 										if(released) return;
 
 										if(file_reader.error){
-											failure(file_reader.error);
+											failure(Error_to_String(file_reader.error));
 										}else{
 											if(request.responseType == "arraybuffer"){
 												response.response = file_reader.result;
@@ -71248,7 +69778,7 @@
 					rejected
 				);
 			}catch(e){
-				response.errorText = e.message;
+				response.errorText = Error_to_String(e);
 				release();
 				callback({state:"unsupported"});
 			}
@@ -71308,7 +69838,7 @@
 				});
 				event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
 				event_handler_abort.setFunction(function(){
-					release();
+					abort();
 				});
 
 				var complete = function(){
@@ -71369,7 +69899,7 @@
 									if(released) return;
 
 									if(file_reader.error){
-										failure(file_reader.error);
+										failure(Error_to_String(file_reader.error));
 										return;
 									}
 
@@ -71403,7 +69933,7 @@
 								if(released) return;
 
 								if(file_reader.error){
-									failure(file_reader.error);
+									failure(Error_to_String(file_reader.error));
 								}else{
 									response.responseText = file_reader.result;
 									success();
@@ -71434,6 +69964,14 @@
 					progress.bytesTotal = e.total || 0;
 					dispatch_onprogress.call(_this);
 				};
+				xhr.ontimeout = function(e){
+					response.errorText = "XHR is timeouted";
+					response.aborted = true;
+				};
+				xhr.onabort = function(e){
+					response.errorText = "XHR is aborted";
+					response.aborted = true;
+				};
 
 				xhr.open(request.method,request.url,true);
 
@@ -71461,7 +69999,7 @@
 				}
 				xhr.send(request.data);
 			}catch(e){
-				response.errorText = e.message;
+				response.errorText = Error_to_String(e);
 				release();
 				callback({state:"unsupported"});
 			}
@@ -71479,6 +70017,7 @@
 				var onreadystatechange_func;
 				var onloadheader_func;
 				var onloadend_func;
+				var timer;
 				var gmxhr;
 
 				var request = _this.request;
@@ -71497,6 +70036,11 @@
 					released = true;
 
 					abort();
+
+					if(timer){
+						timer.release();
+						timer = null;
+					}
 
 					onreadystatechange_func = null;
 					onloadheader_func = null;
@@ -71520,7 +70064,13 @@
 				});
 				event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
 				event_handler_abort.setFunction(function(){
-					release();
+					if(1){
+						// onabort が不完全なのでここから終了
+						gmxhr_request.onabort();
+						failure(response.errorText);
+					}else{
+						abort();
+					}
 				});
 
 				var complete = function(){
@@ -71546,6 +70096,7 @@
 				var gmxhr_request = new Object();
 
 				gmxhr_request.onprogress = function(e){
+					if(released) return;
 					var total = e.total || 0;
 					if(total < 0) total = 0;
 					progress.bytesLoaded = e.loaded || 0;
@@ -71554,12 +70105,23 @@
 				};
 
 				gmxhr_request.onload = gmxhr_request.onerror = function(r){
+					if(released) return;
 					if(onloadend_func) onloadend_func(r);
 				};
 				gmxhr_request.onreadystatechange = function(r){
+					if(released) return;
 					if(onreadystatechange_func) onreadystatechange_func(r);
 				};
-
+				gmxhr_request.ontimeout = function(e){
+					if(released) return;
+					response.errorText = "GM_xmlhttpRequest is timeouted";
+					response.aborted = true;
+				};
+				gmxhr_request.onabort = function(e){
+					if(released) return;
+					response.errorText = "GM_xmlhttpRequest is aborted";
+					response.aborted = true;
+				};
 				onreadystatechange_func = function(r){
 					if(r.readyState == 2){
 						if(onloadheader_func) onloadheader_func(r);
@@ -71598,7 +70160,7 @@
 							var blob = r.response || {};
 							progress.bytesTotal = progress.bytesLoaded = blob.size || 0;
 							dispatch_onprogress.call(_this);
-							break;	
+							break;
 						default:
 							if(progress.bytesTotal <= 0){
 								progress.bytesTotal = progress.bytesLoaded;
@@ -71639,7 +70201,7 @@
 									if(released) return;
 
 									if(file_reader.error){
-										failure(file_reader.error);
+										failure(Error_to_String(file_reader.error));
 										return;
 									}
 
@@ -71673,7 +70235,7 @@
 								if(released) return;
 
 								if(file_reader.error){
-									failure(file_reader.error);
+									failure(Error_to_String(file_reader.error));
 								}else{
 									response.responseText = file_reader.result;
 									success();
@@ -71706,7 +70268,17 @@
 					gmxhr_request.overrideMimeType = request.overrideMimeType;
 				}
 				if(request.timeout){
-					gmxhr_request.timeout = request.timeout;
+					if(1){
+						// ontimeout が不完全なのでここから終了
+						var timer = new Timer(request.timeout,1);
+						timer.oncomplete = function(){
+							gmxhr_request.ontimeout();
+							failure(response.errorText);
+						};
+						timer.start();
+					}else{
+						gmxhr_request.timeout = request.timeout;
+					}
 				}
 				if(request.responseType){
 					switch(request.responseType){
@@ -71734,9 +70306,9 @@
 					return;
 				}catch(e){
 				}
-				throw {message:"GM_xmlhttpRequest is not supported"};
+				throw new Error("GM_xmlhttpRequest is not supported");
 			}catch(e){
-				response.errorText = e.message;
+				response.errorText = Error_to_String(e);
 				release();
 				callback({state:"unsupported"});
 			}
@@ -71746,6 +70318,196 @@
 		// --------------------------------------------------------------------------------
 		// media
 		// --------------------------------------------------------------------------------
+		function load_element(param){
+			var _this = this;
+
+			function complete(element){
+				if(element){
+					dispatch_onload.call(_this,element);
+				}else{
+					dispatch_onerror.call(_this);
+				}
+			}
+
+			_this.request.cache = project.getLoadCacheModeForMedia();
+
+			switch((function(){
+				var current_url_parser = URL_Parser(WindowGetOwnerURL(window));
+				if(_this.url_parser.protocol.match(/^(blob):/)) return "url";
+				if(_this.url_parser.protocol.match(/^(data):/)) return "blob_url";
+				if(current_url_parser.protocol.match(/^(https):/) && _this.url_parser.protocol.match(/^(http):/)) return "blob_url";
+				return param.src_type;
+			})()){
+			default:
+			case "url":
+				load_element_by_url.call(this,param,complete);
+				break;
+
+			case "blob_url":
+				load_element_by_blob_url.call(this,param,complete);
+				break;
+			}
+		}
+		function load_element_by_url(param,callback){
+			var _this = this;
+			var event_handler_release;
+			var event_handler_abort;
+			var analyze_element;
+
+			var replied = false;
+			function reply(element){
+				if(replied) return;
+				replied = true;
+				release();
+				callback(element);
+			}
+			function release_event_abort(){
+				if(event_handler_abort){
+					event_handler_abort.release();
+					event_handler_abort = null;
+				}
+			}
+			function release(){
+				if(event_handler_release){
+					event_handler_release.release();
+					event_handler_release = null;
+				}
+				release_event_abort();
+			}
+
+			event_handler_release = _this._event_dispatcher.createEventHandler("release");
+			event_handler_release.setFunction(function(){
+				if(analyze_element){
+					// ロード中に解放された場合は中断を通知する
+					analyze_element.abort();
+				}
+				release();
+			});
+
+			var create_and_load = function(){
+				request_element.call(_this,{tagName:param.tagName,url:_this.request.url},function(element){
+					reply(element);
+
+					if(!analyze_element) return;
+					if(element){
+						analyze_element.success(true);
+					}else if(_this.response.aborted){
+						analyze_element.abort();
+					}else{
+						analyze_element.failure();
+					}
+				});
+			};
+
+			analyze_element = _this.url_info.analyzeCached("Element.ok");
+			if(analyze_element){
+				create_and_load();
+				return;
+			}
+
+			// ブロッキング中に中断された場合
+			event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
+			event_handler_abort.setFunction(function(){
+				var response = _this.response;
+				response.aborted = true;
+				reply(null);
+			});
+
+			_this.url_info.getCached("Element.ok",function(item){
+				if(is_released.call(_this)) return;
+				if(replied) return;
+				release_event_abort();
+
+				// 前回失敗した結果を利用する
+				if(!item.ok){
+					var response = _this.response;
+					if(item) response.aborted = item.aborted;
+					reply(null);
+					return;
+				}
+
+				create_and_load();
+			});
+		}
+		function load_element_by_blob_url(param,callback){
+			var _this = this;
+			var event_handler_release;
+			var event_handler_abort;
+			var analyze_element;
+
+			var replied = false;
+			function reply(element){
+				if(replied) return;
+				replied = true;
+				release();
+				callback(element);
+			}
+			function release_event_abort(){
+				if(event_handler_abort){
+					event_handler_abort.release();
+					event_handler_abort = null;
+				}
+			}
+			function release(){
+				if(event_handler_release){
+					event_handler_release.release();
+					event_handler_release = null;
+				}
+				release_event_abort();
+			}
+
+			event_handler_release = _this._event_dispatcher.createEventHandler("release");
+			event_handler_release.setFunction(function(){
+				if(analyze_element){
+					// ロード中に解放された場合は中断を通知する
+					analyze_element.abort();
+				}
+				release();
+			});
+
+			analyze_element = _this.url_info.analyzeCached("BlobURL");
+			if(!analyze_element){
+				// ブロッキング中に中断された場合
+				event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
+				event_handler_abort.setFunction(function(){
+					var response = _this.response;
+					response.aborted = true;
+					reply(null);
+				});
+			}
+
+			_this.url_info.getCached("BlobURL",function(item){
+				if(is_released.call(_this)) return;
+				if(replied) return;
+				release_event_abort();
+
+				if(!item.ok){
+					var response = _this.response;
+					if(item) response.aborted = item.aborted;
+					reply(null);
+					return;
+				}
+
+				request_element.call(_this,{tagName:param.tagName,url:item.value},reply);
+			});
+
+			if(!analyze_element) return;
+
+			// Blob 読み込み
+			_this.setResponseType("blob");
+			load.call(_this,function(){
+				var response = _this.response;
+				var blob = response.response;
+				if(response.aborted){
+					analyze_element.abort();
+				}else if((response.ok) && (blob)){
+					var blob_url = BlobURLCreate(blob);
+					analyze_element.success(blob_url);
+				}else{
+					analyze_element.failure();
+				}
+			});
+		}
 		function request_element(param,callback){
 			var _this = this;
 
@@ -71786,14 +70548,22 @@
 			function success(){
 				if(released) return;
 				release();
+				var response = _this.response;
+				response.ok = true;
+				response.readyState = 4;
+				response.status = 200;
 				callback.call(_this,element);
 			}
 			function failure(){
 				if(released) return;
 				release();
-				if(element) element.src = "";
 				element = null;
 				callback.call(_this,null);
+			}
+			function abort(){
+				if(released) return;
+				if(element) element.removeAttribute("src");
+				_this.response.aborted = true;
 			}
 			function onload_handle(){
 				if(released) return;
@@ -71823,10 +70593,12 @@
 
 			event_handler_release = _this._event_dispatcher.createEventHandler("release");
 			event_handler_release.setFunction(function(){
+				abort();
 				release();
 			});
 			event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
 			event_handler_abort.setFunction(function(){
+				abort();
 				failure();
 			});
 
@@ -71844,7 +70616,10 @@
 				element.src = param.url;
 
 				if(_this.request.timeout){
-					time_handle = setTimeout(failure,_this.request.timeout);
+					time_handle = setTimeout(function(){
+						abort();
+						failure();
+					},_this.request.timeout);
 				}
 			};
 
@@ -71865,75 +70640,6 @@
 				queue_element.attachLast();
 				break;
 			}
-		}
-		function load_element(param){
-			var _this = this;
-
-			function complete(element){
-				if(element){
-					dispatch_onload.call(_this,element);
-				}else{
-					dispatch_onerror.call(_this);
-				}
-			}
-
-			_this.request.cache = project.getLoadCacheModeForMedia();
-
-			switch((function(){
-				var current_url_parser = URL_Parser(WindowGetOwnerURL(window));
-				if(_this.url_parser.protocol.match(/^(blob):/)) return "url";
-				if(_this.url_parser.protocol.match(/^(data):/)) return "blob_url";
-				if(current_url_parser.protocol.match(/^(https):/) && _this.url_parser.protocol.match(/^(http):/)) return "blob_url";
-				return param.src_type;
-			})()){
-			default:
-			case "url":
-				(function(){
-					_this.url_info.getCached(function(result,analyze_element){
-						if(result){
-							if(!result.ok){
-								complete(null);
-								return;
-							}
-						}
-						request_element.call(_this,{tagName:param.tagName,url:_this.request.url},function(element){
-							complete(element);
-							if(analyze_element){
-								if(element){
-									analyze_element.success(true);
-								}else{
-									analyze_element.failure();
-								}
-							}
-						});
-					});
-				})();
-				break;
-
-			case "blob_url":
-				(function(){
-					var analyze_element = _this.url_info.analyzeBlobURL();
-					_this.url_info.getBlobURL(function(blob_url){
-						request_element.call(_this,{tagName:param.tagName,url:blob_url},complete);
-					});
-
-					if(!analyze_element) return;
-
-					_this.setResponseType("blob");
-
-					load.call(_this,function(){
-						var blob = _this.response.response;
-						if(blob){
-							var blob_url = BlobURLCreate(blob);
-							analyze_element.success(blob_url);
-						}else{
-							analyze_element.failure();
-						}
-					});
-				})();
-				break;
-			}
-
 		}
 
 		// --------------------------------------------------------------------------------
@@ -71980,11 +70686,14 @@
 
 				callback.call(_this);
 			}
-			function release(){
+			function release_event_abort(){
 				if(event_handler_abort){
 					event_handler_abort.release();
 					event_handler_abort = null;
 				}
+			}
+			function release(){
+				release_event_abort();
 				if(event_handler_release){
 					event_handler_release.release();
 					event_handler_release = null;
@@ -71994,7 +70703,7 @@
 					queue_element.release();
 					queue_element = null;
 				}
-				command = {};
+				commands = {};
 			};
 			function success(){
 				release();
@@ -72036,6 +70745,8 @@
 			});
 			event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
 			event_handler_abort.setFunction(function(){
+				var response = _this.response;
+				response.aborted = true;
 				failure();
 			});
 
@@ -72057,7 +70768,7 @@
 				if(_this.url_parser.protocol.match(/blob|data/)) return false;
 				if(this._xhr_type == XHR_TYPE.ONLY_BACKGROUND) return true;
 				return Boolean(current_url_parser.origin != _this.url_parser.origin);
-			})()){
+			}).call(this)){
 				load_methods.push(request_gm_xhr);
 			}else{
 				load_methods.push(request_content_fetch);
@@ -72065,6 +70776,7 @@
 			}
 
 			queue_element.onstart = function(){
+				release_event_abort();
 				load_exec();
 			};
 			queue_element.onabort = function(){
@@ -72100,6 +70812,7 @@
 			// 開放
 			// --------------------------------------------------------------------------------
 			release : function(){
+				this._released = true;
 				if(this._event_dispatcher){
 					this._event_dispatcher.dispatchEvent("release",null);
 					this._event_dispatcher.release();
@@ -72262,7 +70975,7 @@
 
 				if(!(window.HTMLAudioElement)){
 					this.response.errorText = "not support HTMLAudioElement";
-					dispatch_onerror.call(_this);
+					dispatch_onerror.call(this);
 					return;
 				}
 
@@ -72281,7 +70994,7 @@
 
 				if(!(window.HTMLVideoElement)){
 					this.response.errorText = "not support HTMLVideoElement";
-					dispatch_onerror.call(_this);
+					dispatch_onerror.call(this);
 					return;
 				}
 
@@ -72300,33 +71013,84 @@
 					return;
 				}
 
-				var redirect_max = 16;
-				var request_url = _this.request.url;
-				var url_info = url_info_dictionary.addURL(_this.request.url);
-				var analyze_element;
-
 				_this.setTimeout(1000 * 10);
 				_this.setResponseType("text");
 				_this._xhr_type = XHR_TYPE.ONLY_BACKGROUND;
 				_this._queue_attch_type = QUEUE_ATTACH_TYPE.FIRST;
 
-				function success(next_url){
-					url_info = url_info_dictionary.addURL(next_url);
-					analyze_element.success(url_info);
+				var allowed_size = 1024*10;
+				var redirect_max = 16;
+				var url_info = url_info_dictionary.addURL(_this.request.url);
+				var redirected = false;
+				var event_handler_release;
+				var event_handler_abort;
+				var event_handler_progress;
+				var analyze_element;
+
+				var replied = false;
+				function reply(url_info){
+					if(replied) return;
+					replied = true;
+					release();
+
+					if(url_info){
+						var response = _this.response;
+						response.ok = true;
+						response.readyState = 4;
+						response.status = 200;
+						response.redirected = redirected;
+						response.responseURL = url_info.getURL();
+						dispatch_onload.call(_this,url_info.getURL());
+					}else{
+						dispatch_onerror.call(_this);
+					}
+				}
+				function release_event_release(){
+					if(event_handler_release){
+						event_handler_release.release();
+						event_handler_release = null;
+					}
+				}
+				function release_event_abort(){
+					if(event_handler_abort){
+						event_handler_abort.release();
+						event_handler_abort = null;
+					}
+				}
+				function release(){
+					release_event_release();
+					release_event_abort();
+					if(event_handler_progress){
+						event_handler_progress.release();
+						event_handler_progress = null;
+					}
 				}
 
-				function failure(){
-					analyze_element.failure();
-				}
+				// 許容サイズを超えた場合中断
+				event_handler_progress = _this._event_dispatcher.createEventHandler("progress");
+				event_handler_progress.setFunction(function(e){
+					if(e.bytesLoaded < allowed_size) return;
+					_this._event_dispatcher.dispatchEvent("abort");
+				});
+
+				event_handler_release = _this._event_dispatcher.createEventHandler("release");
+				event_handler_release.setFunction(function(){
+					if(analyze_element){
+						// ロード中に解放された場合は中断を通知する
+						analyze_element.abort();
+					}
+					release();
+				});
 
 				var redirect_status = {"300":1,"301":1,"302":1,"303":1,"307":1,"308":1};
-				function loadHeader(){
+				function load_head_and_body(callback){
 					_this.setURL(url_info.getURL());
 					if(!init_verify_check.call(_this)){
-						failure();
+						callback();
 						return;
 					}
 
+					// ヘッダ読み込み
 					_this.setMethod("HEAD");
 					load.call(_this,function(){
 						var response = _this.response;
@@ -72336,97 +71100,113 @@
 							//	Location ヘッダを取得
 							var url = headers.getResponseHeader("Location");
 							if(url){
-								success(url);
+								callback(url);
 								return;
 							}
 						}
 
 						// リダイレクトが発生した
 						if(response.redirected){
-							success(response.responseURL);
+							callback(response.responseURL);
 							return;
 						}
 
 						if((function(){
-							if(!(response.ok)) return false;
+							if(!(response.ok)) return true;
+							if(response.aborted) return true;
 
 							var total = parseInt(headers.getResponseHeader("Content-Length")) || 0;
-							if(!total) return false;
-							if(total > 1024 * 10) return false;
+							if(total > allowed_size) return true;
 
 							var mimetype = headers.getResponseHeader("Content-Type");
-							if(!(mimetype.match(/^text[/]/))) return false;
+							if(!(mimetype.match(/^text[/]/))) return true;
 
-							return true;
-						})()){
-							loadBody();
-							return;
-						}
-
-						failure();
-					});
-				}
-
-				function loadBody(){
-					_this.setMethod("GET");
-					load.call(_this,function(){
-						var response = _this.response;
-
-						// メタタグのリダイレクトを調べる
-						var redirect_url = null;
-						var m = response.responseText.match(new RegExp("<meta[^>]http-equiv[ \n\r\t]*=[ \n\r\t]*\"refresh\"[^>]*>","i"));
-						if(m){
-							m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"[0-9]+;URL=([^\"]+)\"","i"));
-							if(m){
-								redirect_url = m[1];
-							}
-						}
-
-						if(redirect_url){
-							success(redirect_url);
-							return;
-						}
-
-						failure();
-					});
-				}
-
-				function analyze(){
-					analyze_element = url_info.analyzeRedirect();
-					url_info.getRedirect(function(next){
-						redirect_max -= 1;
-
-						if((function(){
-							if(!next) return true;
-							if(redirect_max <= 0) return true;
 							return false;
 						})()){
-							url_info_dictionary.getRedirectURL(request_url,function (result){
-								if(result.redirected){
-									dispatch_onload.call(_this,result.url_info.getURL());
-								}else{
-									dispatch_onerror.call();
-								}
-							});
+							callback();
 							return;
 						}
 
-						url_info = next;
-						analyze();
+						// body 読み込み
+						_this.setMethod("GET");
+						load.call(_this,function(){
+							var response = _this.response;
+
+							// メタタグのリダイレクトを調べる
+							var redirect_url = null;
+							var m = response.responseText.match(new RegExp("<meta[^>]http-equiv[ \n\r\t]*=[ \n\r\t]*\"refresh\"[^>]*>","i"));
+							if(m){
+								m = m[0].match(new RegExp("content[ \n\r\t]*=[ \n\r\t]*\"[0-9]+;URL=([^\"]+)\"","i"));
+								if(m){
+									redirect_url = m[1];
+								}
+							}
+
+							callback(redirect_url);
+						});
+					});
+
+				}
+
+				var trial_count = redirect_max;
+				var f = function(){
+					analyze_element = url_info.analyzeCached("Redirect");
+
+					if(!analyze_element){
+						// ブロッキング中に中断された場合
+						event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
+						event_handler_abort.setFunction(function(){
+							init_response.call(_this);
+							var response = _this.response;
+							response.aborted = true;
+							reply(url_info);
+						});
+					}
+
+					url_info.getCached("Redirect",function(item){
+						if(is_released.call(_this)) return;
+						if(replied) return;
+						release_event_abort();
+						if((function(){
+							if(!item) return true;
+							if(!item.ok) return true;
+							if(trial_count <= 0) return true;
+							return false;
+						})()){
+							init_response.call(_this);
+							var response = _this.response;
+							if(item) response.aborted = item.aborted;
+							reply(url_info);
+							return;
+						}
+
+						trial_count -= 1;
+						redirected = true;
+						url_info = item.value;
+						f();
 					});
 
 					if(!analyze_element) return;
 
-					// ヘッダの読み込み
-					loadHeader();
-				}
-
-				analyze();
+					load_head_and_body(function(responseURL){
+						if(responseURL){
+							var url_info = url_info_dictionary.addURL(responseURL);
+							analyze_element.success(url_info);
+						}else if(_this.response.aborted){
+							// 巨大ファイルの可能性があるので失敗とする
+							//analyze_element.abort();
+							analyze_element.failure();
+						}else{
+							analyze_element.failure();
+						}
+					});
+				};
+				f();
 			},
 
-			request : {},
-			response : {},
-			progress : {},
+			request : null,
+			response : null,
+			progress : null,
 			url_parser : null,
 			url_info : null,
 			_queue_attch_type : QUEUE_ATTACH_TYPE.LAST,
@@ -72767,35 +71547,37 @@
 			response.state = DownloaderState.DOWNLOAD.LOADING;
 			dispatch_onstatechange.call(_this);
 
+
+			var load_end = function(r){
+				response.result = response.ok = r;
+				response.status = (r) ? 200 : 0;
+				_this.url_info.setValue("status",response.status);
+				response.state = (r) ? DownloaderState.DOWNLOAD.COMPLETED.SUCCEEDED : DownloaderState.DOWNLOAD.FAILED;
+				dispatch_onstatechange.call(_this);
+				reply({state:"complete"});
+			};
 			var options = {
 				url:request.url,
 				saveAs:request.saveAs,
 				name:file_name,
 				headers:request.headers,
-				onload:function(e){
+				onload:function(){
+					if(replied) return;
 					// onprogress が不完全なのでサイズを補完
 					if(progress.bytesTotal <= 0){
 						progress.bytesTotal = progress.bytesLoaded;
 						dispatch_onprogress.call(_this);
 					}
-
-					response.result = true;
-					response.ok = true;
-					response.status = 200;
-					response.state = DownloaderState.DOWNLOAD.COMPLETED.SUCCEEDED;
-					dispatch_onstatechange.call(_this);
-					reply({state:"complete"});
+					load_end(true);
 				},
 				onerror:function(e){
-					response.result = false;
-					response.ok = false;
-					response.status = 0;
-					response.state = DownloaderState.DOWNLOAD.FAILED;
-					dispatch_onstatechange.call(_this);
-					response.errorText = e.error;
-					reply({state:"complete"});
+					if(replied) return;
+					e = e || {};
+					response.errorText = Error_to_String(e.error);
+					load_end(false);
 				},
 				onprogress:function(e){
+					if(replied) return;
 					var total = e.total || 0;
 					if(total < 0) total = 0;
 					progress.bytesLoaded = e.loaded || 0;
@@ -72896,8 +71678,9 @@
 				return;
 			}
 			var node_info = node_info_dictionary.addNode(anchor);
-			node_info.setAnalyzed(true);
+			node_info.setInvalid(true);
 
+			exec_methods.pause();
 			exec_methods.push(function(callback){
 				if(_this._override_url_by_blob){
 					callback();
@@ -72909,7 +71692,7 @@
 
 				function load_complete(){
 					var xhr = loader.response;
-					response.ok = xhr.status;
+					response.ok = xhr.ok;
 					response.status = xhr.status;
 				}
 
@@ -72951,8 +71734,11 @@
 				};
 				var file_name_obj = ProjectDownloadSaveFile_Determining(request,optional);
 				if(file_name_obj.error){
-					dispatch_state_failed();
-					failure(file_name_obj.error);
+					response.result = false;
+					response.state = DownloaderState.DOWNLOAD.FAILED;
+					response.errorText = file_name_obj.error;
+					dispatch_onstatechange.call(_this);
+					reply({state:"complete"});
 					return;
 				}
 				file_name = file_name_obj.filename;
@@ -72979,8 +71765,7 @@
 					reply({state:"complete"});
 				},1000);
 			});
-
-
+			exec_methods.play();
 		}
 
 		// --------------------------------------------------------------------------------
@@ -73042,7 +71827,7 @@
 					queue_element.release();
 					queue_element = null;
 				}
-				command = {};
+				commands = {};
 			};
 			function success(){
 				release();
@@ -73226,9 +72011,9 @@
 				});
 			},
 
-			request : {},
-			response : {},
-			progress : {},
+			request : null,
+			response : null,
+			progress : null,
 			_blob_url : null,
 			_override_url_by_blob : null,
 			url_parser : null,
@@ -74218,603 +73003,336 @@
 	}
 
 	// --------------------------------------------------------------------------------
-	// 可視制限コンテナ（数指定）
+	// 可視制限コンテナ
 	// --------------------------------------------------------------------------------
-	function ElementLimiterByCount(){
-		var _this = this;
-
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			while(_use_list != _use_list._next){
-				_use_list._next.release();
-			}
-			while(_rest_list != _rest_list._next){
-				_rest_list._next.release();
-			}
-		};
-
-		// --------------------------------------------------------------------------------
-		// 要素生成
-		// --------------------------------------------------------------------------------
-		_this.createElement = function(){
-			var _element = new Object();
-
-			// --------------------------------------------------------------------------------
-			// 開放
-			// --------------------------------------------------------------------------------
-			_element.release = function(){
-				_element.remove();
-				removeObserver();
-				ElementRemove(_element);
-				_count -= 1;
-			};
-
-			// --------------------------------------------------------------------------------
-			// 当たり判定用エレメントをセット
-			// --------------------------------------------------------------------------------
-			_element.setElementHitArea = function(element){
-				_element._element_hit_area = element;
-			};
-
-			// --------------------------------------------------------------------------------
-			// アタッチイベント
-			// --------------------------------------------------------------------------------
-			_element.onattach = function(){};
-
-			// --------------------------------------------------------------------------------
-			// リムーブイベント
-			// --------------------------------------------------------------------------------
-			_element.onremove = function(){};
-
-			// --------------------------------------------------------------------------------
-			// アタッチ
-			// --------------------------------------------------------------------------------
-			_element.attach = function(){
-				if(!(_element._use)){
-					_element._use = true;
-					_use_count += 1;
-					ElementAttachUseList(_element);
-					removeObserver();
-					_element.onattach();
-				}
-
-			};
-
-			// --------------------------------------------------------------------------------
-			// リムーブ
-			// --------------------------------------------------------------------------------
-			_element.remove = function(){
-				if(_element._use){
-					_element._use = false;
-					_use_count -= 1;
-					ElementAttachRestList(_element);
-					attachObserver();
-					if(_element.onremove){
-						_element.onremove();
-					}
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// 監視開始
-			// --------------------------------------------------------------------------------
-			function attachObserver (){
-				removeObserver();
-				if(!_observer_Scroll){
-					_observer_Scroll = document_observer_scroll.createElement();
-					_observer_Scroll.setFunction(_element.update);
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// 監視終了
-			// --------------------------------------------------------------------------------
-			function removeObserver (){
-				if(_observer_Scroll){
-					_observer_Scroll.release();
-					_observer_Scroll = null;
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// 更新
-			// --------------------------------------------------------------------------------
-			_element.update = function(){
-				if(_use_count < _use_max){
-					// アタッチ
-					_element.attach();
-				}else{
-					var client_size = DocumentGetClientSize(document);
-					var r = DomTreeGetBoundingClientRect(_element._element_hit_area);
-					if(r.right < 0){
-					}else if(client_size.width < r.left){
-					}else if(r.bottom < 0){
-					}else if(client_size.height < r.top){
-					}else{
-						if(!_inner){
-							// 遠い要素を外す
-							var element_far = getElementFar();
-							if(element_far){
-								element_far.remove();
-							}
-
-							// アタッチ
-							_element.attach();
-						}
-						_inner = true;
-						return;
-					}
-					_inner = false;
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _observer_Scroll;
-			var _inner;
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_element._use = false;
-				_element._prev = _element;
-				_element._next = _element;
-				_element._element_hit_area = null;
-				attachObserver();
-				ElementAttachRestList(_element);
-				_inner = false;
-				_count += 1;
-			})();
-
-			return _element;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 使用数を取得
-		// --------------------------------------------------------------------------------
-		_this.getCountUse = function(){
-			return _use_count;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 使用最大数を取得
-		// --------------------------------------------------------------------------------
-		_this.getMaxUse = function(){
-			return _use_max;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 使用最大数をセット
-		// --------------------------------------------------------------------------------
-		_this.setMaxUse = function(v){
-			_use_max = v;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 使用数を取得
-		// --------------------------------------------------------------------------------
-		_this.getCount = function(){
-			return _count;
-		};
-
-		// --------------------------------------------------------------------------------
-		// エレメントを外す（内部用）
-		// --------------------------------------------------------------------------------
-		function ElementRemove(element){
-			var _prev = element._prev;
-			var _next = element._next;
+	var ElementLimiter = (function(){
+		function element_remove(){
+			var _prev = this._prev;
+			var _next = this._next;
 			_prev._next = _next;
 			_next._prev = _prev;
-			element._prev = element;
-			element._next = element;
+			this._prev = this._next = this;
 		}
-
-		// --------------------------------------------------------------------------------
-		// エレメント未使用リストに登録（内部用）
-		// --------------------------------------------------------------------------------
-		function ElementAttachRestList(element){
-			ElementRemove(element);
-			var _prev = _rest_list;
+		function element_attach_first(){
+			element_remove.call(this);
+			var _prev = this.parent._list_show;
 			var _next = _prev._next;
-			_prev._next = element;
-			_next._prev = element;
-			element._prev = _prev;
-			element._next = _next;
-			element._use = false;
+			this._prev = _prev;
+			this._next = _next;
+			_prev._next = this;
+			_next._prev = this;
+		}
+		function element_attach_last(){
+			element_remove.call(this);
+			var _next = this.parent._list_hide;
+			var _prev = _next._prev;
+			this._prev = _prev;
+			this._next = _next;
+			_prev._next = this;
+			_next._prev = this;
+		}
+		function element_to_attach(){
+			element_attach_first.call(this);
+			this._exec = element_exec_visible;
+			element_dispatch_attach.call(this);
+		}
+		function element_to_remove(){
+			element_attach_last.call(this);
+			this._exec = element_exec_hidden;
+			element_dispatch_remove.call(this);
+		}
+		function element_dispatch_attach(){
+			if(this.visible) return;
+			this.visible = true;
+			this.parent.use_count++;
+			this.parent.byte_size_now += this.byte_size;
+			var f = this.onattach;
+			if(f) f.call(this);
+		}
+		function element_dispatch_remove(){
+			if(!this.visible) return;
+			this.visible = false;
+			this.parent.use_count--;
+			this.parent.byte_size_now -= this.byte_size;
+			if(!this.released){
+				var f = this.onremove;
+				if(f) f.call(this);
+			}
+		}
+		function element_dispatch_exec(){
+			this._exec.call(this);
+		}
+		function element_observer_scroll(){
+			var _this = this;
+			element_release_observer.call(this);
+			this._observer_scroll = document_observer_scroll.createElement();
+			this._observer_scroll.setFunction(function(){
+				_this.update();
+			});
+		}
+		function element_release_observer(){
+			if(this._observer_scroll){
+				this._observer_scroll.release();
+				this._observer_scroll = null;
+			}
+		}
+		function element_release_mouseover(){
+			if(this._mouseover){
+				this._mouseover.release();
+				this._mouseover = null;
+			}
 		}
 
-		// --------------------------------------------------------------------------------
-		// エレメント使用リストに登録（内部用）
-		// --------------------------------------------------------------------------------
-		function ElementAttachUseList(element){
-			ElementRemove(element);
-			var _prev = _use_list;
-			var _next = _prev._next;
-			_prev._next = element;
-			_next._prev = element;
-			element._prev = _prev;
-			element._next = _next;
-			element._use = true;
-		}
-
-		// --------------------------------------------------------------------------------
-		// 一番遠い要素を取得（内部用）
-		// --------------------------------------------------------------------------------
-		function getElementFar(){
+		function element_hittest(){
 			var client_size = DocumentGetClientSize(document);
-			var client_x = client_size.width * 0.5;
-			var client_y = client_size.height * 0.5;
-			var element = null;
-			var distance = 0;
+			var r = DomTreeGetBoundingClientRect(this.element_hit_area);
 
-			// 使用リスト
-			var list = _use_list._next;
-			while(list != _use_list){
-				var next = list._next;
-				var r = DomTreeGetBoundingClientRect(list._element_hit_area);
-
-				var element_x = (r.left + r.right) * 0.5;
-				var element_y = (r.top + r.bottom) * 0.5;
-				var x = element_x - client_x;
-				var y = element_y - client_y;
-				var d = x * x + y * y;
-				if(d > distance){
-					distance = d;
-					element = list;
-				}
-
-				list = list._next;
+			// エラー
+			if(r.bottom != 0){
+			}else if(r.top != 0){
+			}else if(r.right != 0){
+			}else if(r.left != 0){
+			}else{
+				return false;
 			}
 
-			return element;
+			var margin = 0;
+			if(r.bottom < -margin){
+			}else if(client_size.height + margin < r.top){
+			}else if(r.right < -margin){
+			}else if(client_size.width + margin < r.left){
+			}else{
+				return true;
+			}
+			return false;
 		}
 
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _use_list;
-		var _rest_list;
-		var _count;
-		var _use_count;
-		var _use_max;
+		function element_exec_start(){
+			var parent = this.parent;
+			element_observer_scroll.call(this);
 
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_use_list = new Object();
-			_rest_list = new Object();
-			_count = 0;
-			_use_count = 0;
-			_use_max = 0;
-
-			_use_list._prev = _use_list;
-			_use_list._next = _use_list;
-			_rest_list._prev = _rest_list;
-			_rest_list._next = _rest_list;
-		})();
-	}
-
-	// --------------------------------------------------------------------------------
-	// 可視制限コンテナ（バイト数指定）
-	// --------------------------------------------------------------------------------
-	function ElementLimiterByByteSize(){
-		var _this = this;
-
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			while(_use_list != _use_list._next){
-				_use_list._next.release();
+			if(this.load_type == "mouseover"){
+				element_to_remove.call(this);
+				return;
 			}
-			while(_rest_list != _rest_list._next){
-				_rest_list._next.release();
-			}
-		};
 
-		// --------------------------------------------------------------------------------
-		// 要素生成
-		// --------------------------------------------------------------------------------
-		_this.createElement = function(){
-			var _element = new Object();
-
-			// --------------------------------------------------------------------------------
-			// 開放
-			// --------------------------------------------------------------------------------
-			_element.release = function(){
-				_element.remove();
-				removeObserver();
-				ElementRemove(_element);
-				_count -= 1;
-			};
-
-			// --------------------------------------------------------------------------------
-			// プリロード設定をセット
-			// --------------------------------------------------------------------------------
-			_element.setEnablePreload = function(v){
-				_element._preload = v;
-			};
-
-			// --------------------------------------------------------------------------------
-			// 当たり判定用エレメントをセット
-			// --------------------------------------------------------------------------------
-			_element.setElementHitArea = function(element){
-				_element._element_hit_area = element;
-			};
-
-			// --------------------------------------------------------------------------------
-			// サイズをセット
-			// --------------------------------------------------------------------------------
-			_element.setByteSize = function(size){
-				_element._byte_size = size;
-				_byte_size_now += size;
-			};
-
-			// --------------------------------------------------------------------------------
-			// アタッチイベント
-			// --------------------------------------------------------------------------------
-			_element.onattach = function(){};
-
-			// --------------------------------------------------------------------------------
-			// リムーブイベント
-			// --------------------------------------------------------------------------------
-			_element.onremove = function(){};
-
-			// --------------------------------------------------------------------------------
-			// アタッチ
-			// --------------------------------------------------------------------------------
-			_element.attach = function(){
-				if(!(_element._use)){
-					_element._use = true;
-					_use_count += 1;
-					ElementAttachUseList(_element);
-					removeObserver();
-					_element.onattach();
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// リムーブ
-			// --------------------------------------------------------------------------------
-			_element.remove = function(){
-				if(_element._use){
-					_element._use = false;
-					_use_count -= 1;
-					ElementAttachRestList(_element);
-					attachObserver();
-					if(_element.onremove){
-						_element.onremove();
-					}
-
-					_byte_size_now -= _element._byte_size;
-					_element._byte_size = 0;
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// 監視開始
-			// --------------------------------------------------------------------------------
-			function attachObserver (){
-				removeObserver();
-				if(!_observer_Scroll){
-					_observer_Scroll = document_observer_scroll.createElement();
-					_observer_Scroll.setFunction(_element.update);
+			if(this.load_type == "scroll"){
+				if(!element_hittest.call(this)){
+					element_to_remove.call(this);
+					return;
 				}
 			}
 
-			// --------------------------------------------------------------------------------
-			// 監視終了
-			// --------------------------------------------------------------------------------
-			function removeObserver (){
-				if(_observer_Scroll){
-					_observer_Scroll.release();
-					_observer_Scroll = null;
+			if(is_accept.call(parent)){
+				element_to_attach.call(this);
+				return;
+			}
+
+			if(element_hittest.call(this)){
+				remove_old_elements.call(this.parent);
+				if(is_accept.call(this.parent)){
+					element_to_attach.call(this);
+					return;
 				}
 			}
 
-			// --------------------------------------------------------------------------------
-			// 更新
-			// --------------------------------------------------------------------------------
-			_element.update = function(){
-				var preload = false;
-
-				if(_element._preload){
-					if(!_limit){
-						preload = true;
-					}
-				}
-
-				if(preload){
-					// アタッチ
-					_element.attach();
-				}else{
-					var client_size = DocumentGetClientSize(document);
-					var r = DomTreeGetBoundingClientRect(_element._element_hit_area);
-					if(r.right < 0){
-					}else if(client_size.width < r.left){
-					}else if(r.bottom < 0){
-					}else if(client_size.height < r.top){
-					}else{
-						if(!_inner){
-							// 古いデータを破棄
-							_this.removeOldElements();
-
-							// アタッチ
-							_element.attach();
-						}
-						_inner = true;
-						return;
-					}
-					_inner = false;
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _observer_Scroll;
-			var _inner;
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_element._use = false;
-				_element._byte_size = 0;
-				_element._prev = _element;
-				_element._next = _element;
-				_element._element_hit_area = null;
-				_element.setEnablePreload(true);
-				attachObserver();
-				ElementAttachRestList(_element);
-				_inner = false;
-				_count += 1;
-			})();
-
-			return _element;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 古い要素を破棄
-		// --------------------------------------------------------------------------------
-		_this.removeOldElements = function(){
-			if(!_enable_unload)	return;
-
-			if(_byte_size_now > _byte_size_max){
-				_limit = true;
-				var client_size = DocumentGetClientSize(document);
-
-				var list = _use_list._prev;
-				do {
-					if(list == _use_list)	return;
-
-					var r = DomTreeGetBoundingClientRect(list._element_hit_area);
-					if(r.right < 0){
-					}else if(client_size.width < r.left){
-					}else if(r.bottom < 0){
-					}else if(client_size.height < r.top){
-					}else{
-						list = list._prev;
-						continue;
-					}
-
-					list = list._prev;
-					list._next.remove();
-
-				} while(_byte_size_now > _byte_size_max);
+			element_to_remove.call(this);
+		}
+		function element_exec_visible(){
+			if(element_hittest.call(this)){
+				element_attach_first.call(this);
 			}
-		};
+		}
+		function element_exec_hidden(){
+			if(this.load_type == "mouseover"){
+				return;
+			}
 
-		// --------------------------------------------------------------------------------
-		// 使用数を取得
-		// --------------------------------------------------------------------------------
-		_this.getCountUse = function(){
-			return _use_count;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 現在の使用バイト数を取得
-		// --------------------------------------------------------------------------------
-		_this.getByteSizeNow = function(){
-			return _byte_size_now;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 使用最大バイト数をセット
-		// --------------------------------------------------------------------------------
-		_this.setByteSizeMax = function(v){
-			_byte_size_max = v * 1024 * 1024;
-		};
-
-		// --------------------------------------------------------------------------------
-		// アンロード設定のセット
-		// --------------------------------------------------------------------------------
-		_this.setEnableUnload = function(v){
-			_enable_unload = v;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 使用数を取得
-		// --------------------------------------------------------------------------------
-		_this.getCount = function(){
-			return _count;
-		};
-
-		// --------------------------------------------------------------------------------
-		// エレメントを外す（内部用）
-		// --------------------------------------------------------------------------------
-		function ElementRemove(element){
-			var _prev = element._prev;
-			var _next = element._next;
-			_prev._next = _next;
-			_next._prev = _prev;
-			element._prev = element;
-			element._next = element;
+			if(element_hittest.call(this)){
+				remove_old_elements.call(this.parent);
+				if(!is_accept.call(this.parent)) return;
+				element_to_attach.call(this);
+			}
 		}
 
-		// --------------------------------------------------------------------------------
-		// エレメント未使用リストに登録（内部用）
-		// --------------------------------------------------------------------------------
-		function ElementAttachRestList(element){
-			ElementRemove(element);
-			var _prev = _rest_list;
-			var _next = _prev._next;
-			_prev._next = element;
-			_next._prev = element;
-			element._prev = _prev;
-			element._next = _next;
-			element._use = false;
+		function Element(parent){
+			this.parent = parent;
+			this._prev = this._next = this;
+			this._exec = element_exec_start;
+			parent.count ++;
+		}
+		Element.prototype = {
+			release:function(){
+				if(this.released) return;
+				this.released = true;
+				element_release_mouseover.call(this);
+				element_dispatch_remove.call(this);
+				element_remove.call(this);
+				element_release_observer.call(this);
+				this.parent.count --;
+			},
+			setElementHitArea:function(element){
+				var _this = this;
+				element_release_mouseover.call(this);
+				this.element_hit_area = element;
+				if(element){
+					this._mouseover = new EventListenerWrapper(element);
+					this._mouseover.start("mouseover",function(e){
+						if(_this.visible) return;
+						input_mouse.setMouseEvent(e);
+						if(input_mouse.getKeyShift()) return;
+						if(input_mouse.getKeyCtrl()) return;
+						remove_old_elements.call(_this.parent,{absolutely:true});
+						element_to_attach.call(_this);
+					});
+				}
+			},
+			setLoadType:function(v){
+				this.load_type = v;
+			},
+			setByteSize:function(size){
+				var sub = size - this.byte_size;
+				this.byte_size = size;
+				if(this.visible) this.parent.byte_size_now += sub;
+			},
+			update:function(){
+				element_dispatch_exec.call(this);
+			},
+			parent:null,
+			onattach:function(){},
+			onremove:function(){},
+			element_hit_area:null,
+			visible:false,
+			load_type:"preload",
+			byte_size:0,
+			_exec:null,
+			_mouseover:null,
+			_prev:null,
+			_next:null
+		};
+
+		function is_accept(){
+			if(this.unload_count){
+				if(this.getCountUse() >= this.getMaxUse()) return false;
+			}
+			if(this.unload_byte_size){
+				if(this.byte_size_now >= this.byte_size_max) return false;
+			}
+			return true;
+		}
+		function remove_old_elements(options){
+			options = options || {};
+			if(is_accept.call(this)) return;
+			var _this = this;
+			var list = this._list_show;
+			var e = list._prev;
+			var a = [];
+			while(list != e){
+				a.push(e);
+				e = e._prev;
+			}
+			a.find(function(e){
+				if(!e.visible) return;
+				if(!options.absolutely){
+					if(element_hittest.call(e)) return;
+				}
+				element_to_remove.call(e);
+				return is_accept.call(_this);
+			});
+		}
+		function is_excess(){
+			if(this.unload_count){
+				if(this.getCountUse() > this.getMaxUse()) return true;
+			}
+			if(this.unload_byte_size){
+				if(this.byte_size_now > this.byte_size_max) return true;
+			}
+			return false;
+		}
+		function remove_excess_elements(options){
+			options = options || {};
+			if(!is_excess.call(this)) return;
+			var _this = this;
+			var list = this._list_show;
+			var e = list._prev;
+			var a = [];
+			while(list != e){
+				a.push(e);
+				e = e._prev;
+			}
+			a.find(function(e){
+				if(!e.visible) return;
+				if(!options.absolutely){
+					if(element_hittest.call(e)) return;
+				}
+				element_to_remove.call(e);
+				return !is_excess.call(_this);
+			});
 		}
 
-		// --------------------------------------------------------------------------------
-		// エレメント使用リストに登録（内部用）
-		// --------------------------------------------------------------------------------
-		function ElementAttachUseList(element){
-			ElementRemove(element);
-			var _prev = _use_list;
-			var _next = _prev._next;
-			_prev._next = element;
-			_next._prev = element;
-			element._prev = _prev;
-			element._next = _next;
-			element._use = true;
+		function ElementLimiter(){
+			var list = this._list_show = new Object();
+			list._prev = list._next = list;
+			var list = this._list_hide = new Object();
+			list._prev = list._next = list;
 		}
-
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _use_list;
-		var _rest_list;
-		var _count;
-		var _use_count;
-		var _byte_size_now;
-		var _byte_size_max;
-		var _enable_unload;
-		var _limit;
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_use_list = new Object();
-			_rest_list = new Object();
-			_count = 0;
-			_use_count = 0;
-			_byte_size_now = 0;
-			_byte_size_max = 0;
-			_limit = false;
-
-			_use_list._prev = _use_list;
-			_use_list._next = _use_list;
-			_rest_list._prev = _rest_list;
-			_rest_list._next = _rest_list;
-		})();
-	}
+		ElementLimiter.prototype = {
+			release:function(){
+				var list = this._list_show;
+				while(list != list._next){
+					list._next.release();
+				}
+				var list = this._list_hide;
+				while(list != list._next){
+					list._next.release();
+				}
+			},
+			createElement:function(){
+				var element = new Element(this);
+				return element;
+			},
+			removeExcessElements:function(){
+				remove_excess_elements.call(this);
+			},
+			getCount:function(){
+				return this.count;
+			},
+			getCountUse:function(){
+				return this.use_count;
+			},
+			getMaxUse:function(){
+				return this.use_max;
+			},
+			setMaxUse:function(v){
+				this.use_max = v;
+			},
+			getByteSizeNow:function(){
+				return this.byte_size_now;
+			},
+			getByteSizeMax:function(){
+				return this.byte_size_max;
+			},
+			setByteSizeMax:function(v){
+				this.byte_size_max = v * 1024 * 1024;
+			},
+			setEnableUnloadByCount:function(v){
+				this.unload_count = v;
+			},
+			setEnableUnloadByByteSize:function(v){
+				this.unload_byte_size = v;
+			},
+			count:0,
+			use_count:0,
+			use_max:0,
+			byte_size_now:0,
+			byte_size_max:0,
+			unload_count:false,
+			unload_byte_size:false,
+			_list_show:null,
+			_list_hide:null
+		};
+		return ElementLimiter;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// イベントディスパッチャー
@@ -74941,6 +73459,33 @@
 	}
 
 	// --------------------------------------------------------------------------------
+	// イベントリスナーの解放支援
+	// --------------------------------------------------------------------------------
+	var EventListenerWrapper = (function(){
+		function f(target){
+				this.target = target;
+		}
+		f.prototype = {
+			start:function(type,callback,options){
+				if(this.callback) return;
+				this.type = type;
+				this.callback = callback || function(){};
+				this.options = options || false;
+				this.target.addEventListener(this.type,this.callback,this.options);
+			},
+			release:function(){
+				if(!(this.callback)) return;
+				this.target.removeEventListener(this.type,this.callback,this.options);
+				delete this.type;
+				delete this.callback;
+				delete this.options;
+				delete this.target;
+			}
+		};
+		return f;
+	})();
+
+	// --------------------------------------------------------------------------------
 	// スクロール補正
 	// --------------------------------------------------------------------------------
 	function DocumentReviseScroll(){
@@ -75030,270 +73575,295 @@
 	// --------------------------------------------------------------------------------
 	// マウス入力
 	// --------------------------------------------------------------------------------
-	function InputMouse(window_obj){
-		var _this = this;
+	var InputMouse = (function(){
+		var events = [
+			"mousemove",
+			"mouseout",
+			"mousedown",
+			"mouseup",
+			"dragstart",
+			"drag",
+			"dragover",
+			"dragend",
+			"contextmenu",
+			"blur"
+		];
+		var event_type_down = {"mousedown":true,"dragstart":true};
+		var event_type_up = {"mouseup":true,"dragend":true};
+		var event_type_move = {"mousemove":true,"mouseover":true,"drag":true,"dragover":true};
+		var button_to_buttons = [0x01,0x04,0x02,0x08,0x10];
 
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			if(!_mouse_input_func) return;
-
-			if(_document_obj.removeEventListener){
-				_document_obj.removeEventListener("mousemove",mouse_move_func,true);
-				_document_obj.removeEventListener("mouseout",mouse_out_func,true);
-				_document_obj.removeEventListener("mousedown",mouse_down_func,true);
-				_document_obj.removeEventListener("mouseup",mouse_up_func,true);
-				_document_obj.removeEventListener("dragstart",mouse_down_func,true);
-				_document_obj.removeEventListener("drag",mouse_move_func,true);
-				_document_obj.removeEventListener("dragend",mouse_up_func,true);
-				window_obj.removeEventListener("contextmenu",context_menu_func);
-				window_obj.removeEventListener("blur",blur_func);
-			}else if(_document_obj.detachEvent){
-				_document_obj.detachEvent("onmousemove",mouse_move_func);
-				_document_obj.detachEvent("onmouseout",mouse_out_func,true);
-				_document_obj.detachEvent("onmousedown",mouse_down_func);
-				_document_obj.detachEvent("onmouseup",mouse_up_func);
-				_document_obj.detachEvent("ondragstart",mouse_down_func);
-				_document_obj.detachEvent("ondrag",mouse_move_func);
-				_document_obj.detachEvent("ondragend",mouse_up_func);
-				window_obj.detachEvent("oncontextmenu",context_menu_func);
-				window_obj.detachEvent("onblur",blur_func);
-			}
-
-			_mouse_input_func = null;
+		var dict = new Object();
+		dict["mousemove"] =
+		dict["mouseover"] =
+		dict["mousedown"] =
+		dict["mouseup"] =
+		dict["dragstart"] =
+		dict["dragover"] =
+		dict["drag"] =
+		dict["dragend"] = function(e,options){
+			this.enable = true;
+			dispatch_mouseevent.call(this,e,options);
 		};
-
-		// --------------------------------------------------------------------------------
-		// マウスイベントをセット
-		// --------------------------------------------------------------------------------
-		_this.setMouseEvent = function(e){
-			if(!_mouse_input_func) return;
-			mouse_move_func(e);
+		dict["mouseout"] = function(e,options){
+			//var client_size = DocumentGetClientSize(this.window.document);
+			//if(e.clientX < 0) this.enable = false;
+			//if(e.clientY < 0) this.enable = false;
+			//if(e.clientX >= client_size.width ) this.enable = false;
+			//if(e.clientY >= client_size.height) this.enable = false;
+			dispatch_mouseevent.call(this,e,options);
 		};
-
-		// --------------------------------------------------------------------------------
-		// マウス操作をセット
-		// --------------------------------------------------------------------------------
-		_this.setInputMouse = function(input_mouse){
-			_buttons = input_mouse.getButtons();
-			_key_shift = input_mouse.getKeyShift();
-			_key_ctrl = input_mouse.getKeyCtrl();
-			_enable_mouse = input_mouse.getEnableMouse();
-		}
-
-		// --------------------------------------------------------------------------------
-		// タッチ操作をセット
-		// --------------------------------------------------------------------------------
-		_this.setInputTouch = function(input_touch){
-			if(!_mouse_input_func) return;
-			if(!input_touch.getEnableTouch()){
-				_buttons = 0x00;
-			}
-
-			_pos_client = input_touch.getPositionAverage();
-		}
-
-		// --------------------------------------------------------------------------------
-		// 座標を取得
-		// --------------------------------------------------------------------------------
-		_this.getPositionClient = function(){
-			return ObjectCopy(_pos_client);
-		};
-
-		// --------------------------------------------------------------------------------
-		// ボタンの押下状態を取得
-		// --------------------------------------------------------------------------------
-		_this.getButtons = function(){
-			return _buttons;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 左ボタンの押下状態を取得
-		// --------------------------------------------------------------------------------
-		_this.getButtonLeft = function(){
-			return (_buttons & 0x01) ? true:false;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 右ボタンの押下状態を取得
-		// --------------------------------------------------------------------------------
-		_this.getButtonRight = function(){
-			return (_buttons & 0x02) ? true:false;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 中央ボタンの押下状態を取得
-		// --------------------------------------------------------------------------------
-		_this.getButtonCenter = function(){
-			return (_buttons & 0x04) ? true:false;
-		};
-
-		// --------------------------------------------------------------------------------
-		// Shift キーの押下状態を取得
-		// --------------------------------------------------------------------------------
-		_this.getKeyShift = function(){
-			return _key_shift;
-		};
-
-		// --------------------------------------------------------------------------------
-		// Ctrl キーの押下状態を取得
-		// --------------------------------------------------------------------------------
-		_this.getKeyCtrl = function(){
-			return _key_ctrl;
-		};
-
-		// --------------------------------------------------------------------------------
-		// マウスが有効か調べる
-		// --------------------------------------------------------------------------------
-		_this.getEnableMouse = function(){
-			return _enable_mouse;
-		};
-
-		// --------------------------------------------------------------------------------
-		// マウス移動（内部用）
-		// --------------------------------------------------------------------------------
-		function mouse_move_func(e){
-			_enable_mouse = true;
-			_mouse_input_func(e,false);
-		}
-
-		// --------------------------------------------------------------------------------
-		// マウスアウト（内部用）
-		// --------------------------------------------------------------------------------
-		function mouse_out_func(e){
-			// クライアントサイズ
-			var client_size = DocumentGetClientSize(document);
-			if(e.clientX < 0) _enable_mouse = false;
-			if(e.clientY < 0) _enable_mouse = false;
-			if(e.clientX >= client_size.width ) _enable_mouse = false;
-			if(e.clientY >= client_size.height) _enable_mouse = false;
-			_mouse_input_func(e,false);
-		}
-
-		// --------------------------------------------------------------------------------
-		// マウスボタンダウン（内部用）
-		// --------------------------------------------------------------------------------
-		function mouse_down_func(e){
-			_mouse_input_func(e,false);
-		}
-
-		// --------------------------------------------------------------------------------
-		// マウスボタンアップ（内部用）
-		// --------------------------------------------------------------------------------
-		function mouse_up_func(e){
-			_mouse_input_func(e,true);
-		}
-
-		// --------------------------------------------------------------------------------
-		// コンテキストメニュー（内部用）
-		// --------------------------------------------------------------------------------
-		function context_menu_func(e){
+		dict["contextmenu"] = function(e,options){
 			if(e.defaultPrevented === true) return;
 			if(e.returnValue === false) return;
-			_buttons &= ~0x02;
+			this.buttons &= ~0x02;
+		};
+		dict["blur"] = function(e,options){
+			//this.buttons = 0x00;
+			//this.altKey = false;
+			//this.shiftKey = false;
+			//this.ctrlKey = false;
+			//this.enable = false;
+		};
+		function dispatch_event(e,options){
+			var f = dict[e.type];
+			if(f) f.call(this,e,options);
 		}
+		function dispatch_mouseevent(e,options){
+			//if(this.timeStamp >= e.timeStamp) return;
+			this.timeStamp = e.timeStamp;
 
-		// --------------------------------------------------------------------------------
-		// 非アクティブ（内部用）
-		// --------------------------------------------------------------------------------
-		function blur_func(e){
-			_buttons = 0x00;
-			_key_shift = false;
-			_key_ctrl = false;
-			//_enable_mouse = false;
-		}
-
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _document_obj;
-		var _pos_client;
-		var _buttons;
-		var _key_shift;
-		var _key_ctrl;
-		var _enable_mouse;
-		var _mouse_input_func;
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_document_obj = window_obj.document;
-			_pos_client = new Object();
-			_pos_client.x = -1;
-			_pos_client.y = -1;
-			_buttons = 0x00;
-			_key_shift = false;
-			_key_ctrl = false;
-			_enable_mouse = false;
-
-			var event_type_down = { "mousedown":true , "dragstart":true };
-			var event_type_move = { "mousemove":true , "drag":true      };
-			var event_type_up   = { "mouseup":true   , "dragend":true   };
-
-			if(_document_obj.addEventListener){
-				_document_obj.addEventListener("mousemove",mouse_move_func,true);
-				_document_obj.addEventListener("mouseout",mouse_out_func,true);
-				_document_obj.addEventListener("mousedown",mouse_down_func,true);
-				_document_obj.addEventListener("mouseup",mouse_up_func,true);
-				_document_obj.addEventListener("dragstart",mouse_down_func,true);
-				_document_obj.addEventListener("drag",mouse_move_func,true);
-				_document_obj.addEventListener("dragend",mouse_up_func,true);
-				window_obj.addEventListener("contextmenu",context_menu_func);
-				window_obj.addEventListener("blur",blur_func);
-				_mouse_input_func = function(e,r){
-					if((function(){
-						if(e.buttons === undefined) return false;
-						if(!event_type_move[e.type]) return false;
-						return true;
-					})()){
-						_buttons = e.buttons;
-					}
-
-					if(event_type_down[e.type]){
-						if(e.button == 0) _buttons |=  0x01;
-						if(e.button == 1) _buttons |=  0x04;
-						if(e.button == 2) _buttons |=  0x02;
-					}else if(event_type_up[e.type]){
-						if(e.button == 0) _buttons &= ~0x01;
-						if(e.button == 1) _buttons &= ~0x04;
-						if(e.button == 2) _buttons &= ~0x02;
-					}
-
-					if(e.clientX || e.clientY){
-						_pos_client.x = e.clientX;
-						_pos_client.y = e.clientY;
-					}
-					_key_shift = e.shiftKey;
-					_key_ctrl = e.ctrlKey;
-				};
-			}else if(_document_obj.attachEvent){
-				_document_obj.attachEvent("onmousemove",mouse_move_func);
-				_document_obj.attachEvent("onmouseout",mouse_out_func,true);
-				_document_obj.attachEvent("onmousedown",mouse_down_func);
-				_document_obj.attachEvent("onmouseup",mouse_up_func);
-				_document_obj.attachEvent("ondragstart",mouse_down_func);
-				_document_obj.attachEvent("ondrag",mouse_move_func);
-				_document_obj.attachEvent("ondragend",mouse_up_func);
-				window_obj.attachEvent("oncontextmenu",context_menu_func);
-				window_obj.attachEvent("onblur",blur_func);
-				_mouse_input_func = function(e,r){
-					if(event_type_up[e.type]){
-						_buttons &= ~(e.button);
-					}else{
-						_buttons  =  (e.button);
-					}
-					if(e.clientX || e.clientY){
-						_pos_client.x = e.clientX;
-						_pos_client.y = e.clientY;
-					}
-					_key_shift = e.shiftKey;
-					_key_ctrl = e.ctrlKey;
-				};
+			if((function(){
+				if(e.buttons === undefined) return false;
+				if(!event_type_move[e.type]) return false;
+				return true;
+			}).call(this)){
+				this.buttons = e.buttons;
 			}
-		})();
-	}
+
+			if(event_type_down[e.type]){
+				this.buttons |= (button_to_buttons[e.button] || 0);
+			}else if(event_type_up[e.type]){
+				this.buttons &= ~(button_to_buttons[e.button] || 0);
+			}
+
+			if(e.clientX || e.clientY){
+				this.clientX = this.topX = e.clientX;
+				this.clientY = this.topY = e.clientY;
+				if(options.modifyClient) options.modifyClient.call(this);
+				if(options.modifyTop) options.modifyTop.call(this);
+			}
+
+			this.altKey = e.altKey;
+			this.shiftKey = e.shiftKey;
+			this.ctrlKey = e.ctrlKey;
+			this.event_dispatcher.dispatchEvent("modify",this);
+		}
+		function attach_window(window_obj,callback){
+			var _this = this;
+			var handler = callback.call(this);
+			events.forEach(function(type){
+				var listener = new EventListenerWrapper(window_obj);
+				listener.start(type,handler,true);
+				_this.releasers.push(listener);
+			});
+		}
+
+		function f(window_obj){
+			var _this = this;
+			this.releasers = [];
+			this.event_dispatcher = new EventDispatcher();
+			this.window = window_obj;
+			this.elements = [];
+
+			if(!window_manager.existWindowRoot()){
+				// カレントウィンドウを監視（シンプル）
+				attach_window.call(this,this.window,function(){
+					return function(e){
+						dispatch_event.call(_this,e,{});
+					}
+				});
+				return;
+			}
+
+			var window_top = window_manager.getWindowRoot();
+			try{
+				var window_now = this.window;
+				while(window_now != window_top){
+					var element = window_now.frameElement;
+					if(!element) break;
+					this.elements.push(element);
+					window_now = window_now.parent;
+				}
+			}catch(e){
+			}
+
+			// カレントウィンドウを監視（カレント座標をトップ座標に変換）
+			attach_window.call(this,this.window,function(){
+				var options = {};
+				options.modifyClient = function(){
+					var offsetX = 0;
+					var offsetY = 0;
+					this.elements.forEach(function(element){
+						var size = ComputedStyleGetSize(ElementGetComputedStyle(element,""));
+						var rect = ElementGetBoundingClientRect(element);
+						offsetX -= rect.left + size.paddingLeft + size.borderLeft;
+						offsetY -= rect.top  + size.paddingTop  + size.borderTop;
+					});
+					this.topX -= offsetX;
+					this.topY -= offsetY;
+				};
+				return function(e){
+					dispatch_event.call(_this,e,options);
+				};
+			});
+
+			// トップウィンドウを監視（トップ座標をカレント座標に変換）
+			attach_window.call(this,window_top,function(){
+				var options = {};
+				options.modifyClient = function(){
+					var offsetX = 0;
+					var offsetY = 0;
+					this.elements.forEach(function(element){
+						var size = ComputedStyleGetSize(ElementGetComputedStyle(element,""));
+						var rect = ElementGetBoundingClientRect(element);
+						offsetX -= rect.left + size.paddingLeft + size.borderLeft;
+						offsetY -= rect.top  + size.paddingTop  + size.borderTop;
+					});
+					this.clientX += offsetX;
+					this.clientY += offsetY;
+				};
+				return function(e){
+					dispatch_event.call(_this,e,options);
+				};
+			});
+		}
+		f.prototype = {
+			release:function(){
+				if(this.event_dispatcher){
+					this.event_dispatcher.release();
+					this.event_dispatcher = null;
+				}
+				this.releasers.forEach(function(e){
+					e.release();
+				});
+				this.releasers.length = 0;
+			},
+			getPositionClient:function(){
+				return {x:this.clientX,y:this.clientY};
+			},
+			getPositionTop:function(){
+				return {x:this.topX,y:this.topY};
+			},
+			getButtons:function(){
+				return this.buttons;
+			},
+			getButtonLeft:function(){
+				return Boolean(this.buttons & 0x01);
+			},
+			getButtonRight:function(){
+				return Boolean(this.buttons & 0x02);
+			},
+			getButtonCenter:function(){
+				return Boolean(this.buttons & 0x04);
+			},
+			getKeyShift:function(){
+				return this.shiftKey;
+			},
+			getKeyCtrl:function(){
+				return this.ctrlKey;
+			},
+			getKeyAlt:function(){
+				return this.altKey;
+			},
+			getEnableMouse:function(){
+				return this.enable;
+			},
+			setMouseEvent:function(e){
+				var options = {};
+				var window_top = window_manager.getWindowRoot();
+
+				// カレント座標をトップ座標に変換
+				if(this.window == e.view){
+					if(this.window != window_top){
+						options.modifyClient = function(){
+							var offsetX = 0;
+							var offsetY = 0;
+							this.elements.forEach(function(element){
+								var size = ComputedStyleGetSize(ElementGetComputedStyle(element,""));
+								var rect = ElementGetBoundingClientRect(element);
+								offsetX -= rect.left + size.paddingLeft + size.borderLeft;
+								offsetY -= rect.top  + size.paddingTop  + size.borderTop;
+							});
+							this.topX -= offsetX;
+							this.topY -= offsetY;
+						};
+					}
+				}
+
+				dispatch_event.call(this,e,options);
+			},
+			setInputMouse:function(input_mouse){
+				return;
+				if(this.timeStamp >= input_mouse.timeStamp) return;
+
+				var offset = false;
+				var offsetX = 0;
+				var offsetY = 0;
+				try{
+					var now = input_mouse.window;
+					var top = now.top;
+					while(true){
+						if(this.window == now){
+							offset = true;
+							break;
+						}
+						if(now == top) break;
+						var element = now.frameElement;
+						if(!element) break;
+						var size = ComputedStyleGetSize(ElementGetComputedStyle(element,""));
+						var rect = ElementGetBoundingClientRect(element);
+						offsetX += rect.left + size.paddingLeft + size.borderLeft;
+						offsetY += rect.top  + size.paddingTop  + size.borderTop;
+						now = now.parent;
+					}
+				}catch(e){
+				}
+				if(offset){
+					this.clientX = input_mouse.clientX + offsetX;
+					this.clientY = input_mouse.clientY + offsetY;
+				}
+				this.timeStamp = input_mouse.timeStamp;
+				this.buttons = input_mouse.buttons;
+				this.shiftKey = input_mouse.shiftKey;
+				this.ctrlKey = input_mouse.ctrlKey;
+				this.altKey = input_mouse.altKey;
+			},
+			setInputTouch:function(input_touch){
+				if(!input_touch.getEnableTouch()){
+					this.buttons = 0x00;
+				}
+				var pos = input_touch.getPositionAverage();
+				this.clientX = pos.x;
+				this.clientY = pos.y;
+			},
+			window:null,
+			elements:null,
+			timeStamp:0,
+			clientX:-1,
+			clientY:-1,
+			topX:-1,
+			topY:-1,
+			buttons:0x00,
+			shiftKey:false,
+			ctrlKey:false,
+			altKey:false,
+			enable:false,
+			event_dispatcher:null,
+			releasers:null
+		};
+		return f;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// タッチ入力
@@ -75517,8 +74087,8 @@
 		function mouse_move_func(){
 			var node = document_obj.elementFromPoint(_mouse_pos.x,_mouse_pos.y);
 			while(node){
-				var work = analyze_work_dictionary.getAnalyzeWork(node);
-				if(work){
+				var node_info = node_info_dictionary.getNodeInfo(node);
+				if(node_info){
 					break;
 				}
 
@@ -75659,539 +74229,42 @@
 	// --------------------------------------------------------------------------------
 	// 要素管理
 	// --------------------------------------------------------------------------------
-	function ElementAnalyzeManager(element,outsider){
-		var _this = this;
+	var ElementAnalyzeManager = (function(){
+		function f(element,outsider){
+			var _this = this;
+			this.releasers = [];
+			var node_info = this.node_info = node_info_dictionary.addNode(element);
+			node_info.observerRemove();
+			if(outsider) node_info.setOwnerToPageExpand();
+			node_info.setInvalid(true);
 
-		// --------------------------------------------------------------------------------
-		// 解放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			if(!_element)	return;
-
-			// リムーブ監視を破棄
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
-			}
-
-			// 解析辞書除外
-			analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
-
-			DomNodeRemove(_element);
-			_element = null;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 解析
-		// --------------------------------------------------------------------------------
-		_this.analyze = function(){
-			// 解析有効化
-			AnalyzeWorkClearInvalid(_analyze_work);
-
-			// 解析開始
-			execute_queue.attachLastForInsertDomNode(DomNodeAnalyzeRoot,_element);
-		};
-
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _element;
-		var _analyze_work;
-		var _observer_remove;
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_element = element;
-			element = null;
-
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_this.release);
-
-			// 解析ワーク
-			_analyze_work = analyze_work_dictionary.getAnalyzeWork(_element);
-			if(_analyze_work){
-			}else{
-				// 解析ワーク作成
-				_analyze_work = AnalyzeWorkCreate(_element);
-			}
-
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			if(outsider) attach_options.SetOutsider();
-
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
-
-			// 解析無効化
-			AnalyzeWorkSetInvalid(_analyze_work);
-		})();
-	}
-
-	// --------------------------------------------------------------------------------
-	// 解析ワーク作成
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkCreate(node){
-		return {
-			node:node,
-			modify:1
-		};
-	}
-
-	// --------------------------------------------------------------------------------
-	// 解析ワークから DOM オブジェクトを取得
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkGetDomNode(work){
-		return work.node;
-	}
-
-	// --------------------------------------------------------------------------------
-	// 解析ワークにアンカー要素を登録
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnchorElement(work){ ObjectDeleteProperty(work,"anchor"); }
-	function AnalyzeWorkSetAnchorElement(work,anchor){ work.anchor = anchor; }
-	function AnalyzeWorkGetAnchorElement(work){ return work.anchor; }
-
-	// --------------------------------------------------------------------------------
-	// エレメント監視初期化状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearInitializedObserverElement(work){ ObjectDeleteProperty(work,"i_obs"); }
-	function AnalyzeWorkSetInitializedObserverElement(work){ work.i_obs = true; }
-	function AnalyzeWorkGetInitializedObserverElement(work){ return Boolean(work.i_obs); }
-
-	// --------------------------------------------------------------------------------
-	// アンカーオーバーライド状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearOverrodeAnchorElement(work){ ObjectDeleteProperty(work,"o_anc"); }
-	function AnalyzeWorkSetOverrodeAnchorElement(work){ work.o_anc = true; }
-	function AnalyzeWorkGetOverrodeAnchorElement(work){ return Boolean(work.o_anc); }
-
-	// --------------------------------------------------------------------------------
-	// URL オーバーライド状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearOverrodeUrl(work){ ObjectDeleteProperty(work,"o_url"); }
-	function AnalyzeWorkSetOverrodeUrl(work){ work.o_anc = true; }
-	function AnalyzeWorkGetOverrodeUrl(work){ return Boolean(work.o_anc); }
-
-	// --------------------------------------------------------------------------------
-	// 「エレメントの置換」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedReplacementToElement(work){ ObjectDeleteProperty(work,"a_rte"); }
-	function AnalyzeWorkSetAnalyzedReplacementToElement(work){ work.a_rte = true; }
-	function AnalyzeWorkGetAnalyzedReplacementToElement(work){ return Boolean(work.a_rte); }
-
-	// --------------------------------------------------------------------------------
-	// 「テキストの置換」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedReplacementToText(work){ ObjectDeleteProperty(work,"a_rtt"); }
-	function AnalyzeWorkSetAnalyzedReplacementToText(work){ work.a_rtt = true; }
-	function AnalyzeWorkGetAnalyzedReplacementToText(work){ return Boolean(work.a_rtt); }
-
-	// --------------------------------------------------------------------------------
-	// 「アンカーの置換」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedReplacementToAnchor(work){ ObjectDeleteProperty(work,"a_rta"); }
-	function AnalyzeWorkSetAnalyzedReplacementToAnchor(work){ work.a_rta = true; }
-	function AnalyzeWorkGetAnalyzedReplacementToAnchor(work){ return Boolean(work.a_rta); }
-
-	// --------------------------------------------------------------------------------
-	// 「ハイパーリンクの置換」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedReplacementToLink(work){ ObjectDeleteProperty(work,"a_rtl"); }
-	function AnalyzeWorkSetAnalyzedReplacementToLink(work){ work.a_rtl = true; }
-	function AnalyzeWorkGetAnalyzedReplacementToLink(work){ return Boolean(work.a_rtl); }
-
-	// --------------------------------------------------------------------------------
-	// 展開 URL 先を設定
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearExpandUrl(work){ ObjectDeleteProperty(work,"expand_url"); }
-	function AnalyzeWorkSetExpandUrl(work,url){ work.expand_url = url; }
-	function AnalyzeWorkGetExpandUrl(work){ return work.expand_url; }
-
-	// --------------------------------------------------------------------------------
-	// 展開コンテンツタイプを設定
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearExpandContentType(work){ ObjectDeleteProperty(work,"expand_content_type"); }
-	function AnalyzeWorkAddContentType(work,type){ if(!(work.expand_content_type)){ work.expand_content_type = new Array(); } work.expand_content_type.push(type); }
-	function AnalyzeWorkGetContentType(work){ if(work.expand_content_type){ return work.expand_content_type; } return []; }
-
-	// --------------------------------------------------------------------------------
-	// 「ハイパーリンク化の置換」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedMakeLinkToText(work){ ObjectDeleteProperty(work,"a_mlt"); }
-	function AnalyzeWorkSetAnalyzedMakeLinkToText(work){ work.a_mlt = true; }
-	function AnalyzeWorkGetAnalyzedMakeLinkToText(work){ return Boolean(work.a_mlt); }
-
-	// --------------------------------------------------------------------------------
-	// 「短縮 URL の展開」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedExpandShortUrl(work){ ObjectDeleteProperty(work,"a_esu"); }
-	function AnalyzeWorkSetAnalyzedExpandShortUrl(work){ work.a_esu = true; }
-	function AnalyzeWorkGetAnalyzedExpandShortUrl(work){ return Boolean(work.a_esu); }
-
-	// --------------------------------------------------------------------------------
-	// 「テキストの展開」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedExpandInlineText(work){ ObjectDeleteProperty(work,"a_eit"); }
-	function AnalyzeWorkSetAnalyzedExpandInlineText(work){ work.a_eit = true; }
-	function AnalyzeWorkGetAnalyzedExpandInlineText(work){ return Boolean(work.a_eit); }
-
-	// --------------------------------------------------------------------------------
-	// 「イメージのサムネイル展開」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedExpandThumbnailImage(work){ ObjectDeleteProperty(work,"a_eti"); }
-	function AnalyzeWorkSetAnalyzedExpandThumbnailImage(work){ work.a_eti = true; }
-	function AnalyzeWorkGetAnalyzedExpandThumbnailImage(work){ return Boolean(work.a_eti); }
-
-	// --------------------------------------------------------------------------------
-	// 「イメージのポップアップ展開」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedExpandPopupImage(work){ ObjectDeleteProperty(work,"a_epi"); }
-	function AnalyzeWorkSetAnalyzedExpandPopupImage(work){ work.a_epi = true; }
-	function AnalyzeWorkGetAnalyzedExpandPopupImage(work){ return Boolean(work.a_epi); }
-
-	// --------------------------------------------------------------------------------
-	// 「ポップアップ」のワーク埋め込み
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearPopupImage(work){ ObjectDeleteProperty(work,"popup_image"); }
-	function AnalyzeWorkSetPopupImage(work,obj){ work.popup_image = obj; }
-	function AnalyzeWorkGetPopupImage(work){ return work.popup_image; }
-
-	// --------------------------------------------------------------------------------
-	// 「サウンドのインライン展開」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedExpandInlineSound(work){ ObjectDeleteProperty(work,"a_eis"); }
-	function AnalyzeWorkSetAnalyzedExpandInlineSound(work){ work.a_eis = true; }
-	function AnalyzeWorkGetAnalyzedExpandInlineSound(work){ return Boolean(work.a_eis); }
-
-	// --------------------------------------------------------------------------------
-	// 「ビデオのインライン展開」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedExpandInlineVideo(work){ ObjectDeleteProperty(work,"a_eiv"); }
-	function AnalyzeWorkSetAnalyzedExpandInlineVideo(work){ work.a_eiv = true; }
-	function AnalyzeWorkGetAnalyzedExpandInlineVideo(work){ return Boolean(work.a_eiv); }
-
-	// --------------------------------------------------------------------------------
-	// 「インラインの展開」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedExpandInlineIframe(work){ ObjectDeleteProperty(work,"a_eif"); }
-	function AnalyzeWorkSetAnalyzedExpandInlineIframe(work){ work.a_eif = true; }
-	function AnalyzeWorkGetAnalyzedExpandInlineIframe(work){ return Boolean(work.a_eif); }
-
-	// --------------------------------------------------------------------------------
-	// 「インラインフレーム内コンテンツ展開」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedExpandIframeContent(work){ ObjectDeleteProperty(work,"a_eic"); }
-	function AnalyzeWorkSetAnalyzedExpandIframeContent(work){ work.a_eic = true; }
-	function AnalyzeWorkGetAnalyzedExpandIframeContent(work){ return Boolean(work.a_eic); }
-
-	// --------------------------------------------------------------------------------
-	// 「縮小画像のポップアップ」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedPopupReducedImage(work){ ObjectDeleteProperty(work,"a_pri"); }
-	function AnalyzeWorkSetAnalyzedPopupReducedImage(work){ work.a_pri = true; }
-	function AnalyzeWorkGetAnalyzedPopupReducedImage(work){ return Boolean(work.a_pri); }
-
-	// --------------------------------------------------------------------------------
-	// 「インラインMediaPlayer」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedInlineMediaPlayer(work){ ObjectDeleteProperty(work,"a_imp"); }
-	function AnalyzeWorkSetAnalyzedInlineMediaPlayer(work){ work.a_imp = true; }
-	function AnalyzeWorkGetAnalyzedInlineMediaPlayer(work){ return Boolean(work.a_imp); }
-
-	// --------------------------------------------------------------------------------
-	// 「掲示板拡張」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearAnalyzedExpandBbs(work){ ObjectDeleteProperty(work,"a_ebb"); }
-	function AnalyzeWorkSetAnalyzedExpandBbs(work){ work.a_ebb = true; }
-	function AnalyzeWorkGetAnalyzedExpandBbs(work){ return Boolean(work.a_ebb); }
-
-	// --------------------------------------------------------------------------------
-	// 解析無効化
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearInvalid(work){ ObjectDeleteProperty(work,"a_inv"); }
-	function AnalyzeWorkSetInvalid(work){ work.a_inv = true; }
-	function AnalyzeWorkGetInvalid(work){ return Boolean(work.a_inv); }
-
-	// --------------------------------------------------------------------------------
-	// 「修正カウンタ」の解析状況
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkInitializeModifyCount(work){ work.modify = 1; }
-	function AnalyzeWorkGetModifyCount(work){ return work.modify; }
-	function AnalyzeWorkAddModifyCount(work){ work.modify += 1; }
-	function AnalyzeWorkEqualModifyCount(work,modify){ if(work.modify){ return (modify == work.modify); } return (modify == 0); }
-
-	// --------------------------------------------------------------------------------
-	// イベントディスパッチャーの管理
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearEventDispatcher(work){ ObjectDeleteProperty(work,"event_dispatcher"); }
-	function AnalyzeWorkSetEventDispatcher(work,event_dispatcher){ work.event_dispatcher = event_dispatcher; }
-	function AnalyzeWorkGetEventDispatcher(work){ return work.event_dispatcher; }
-
-	// --------------------------------------------------------------------------------
-	// アンカー監視要素の管理
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearObserverModifyAnchor(work){ ObjectDeleteProperty(work,"observer_modify_anchor"); }
-	function AnalyzeWorkSetObserverModifyAnchor(work,element){ work.observer_modify_anchor = element; }
-	function AnalyzeWorkGetObserverModifyAnchor(work){ return work.observer_modify_anchor; }
-
-	// --------------------------------------------------------------------------------
-	// 掲示板コントロールの管理
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkClearBbsControl(work){ ObjectDeleteProperty(work,"bbs_control"); }
-	function AnalyzeWorkSetBbsControl(work,obj){ work.bbs_control = obj; }
-	function AnalyzeWorkGetBbsControl(work){ return work.bbs_control; }
-
-	// --------------------------------------------------------------------------------
-	// 要素の基本的な監視化
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkObserveElement(work){
-
-		if(AnalyzeWorkGetInitializedObserverElement(work)) return;
-
-		var node = AnalyzeWorkGetDomNode(work);
-
-		// 初期化済み
-		AnalyzeWorkSetInitializedObserverElement(work);
-
-		// 解析辞書登録
-		analyze_work_dictionary.attachAnalyzeWork(work);
-
-		// イベントディスパッチャー生成
-		var event_dispatcher = new EventDispatcher();
-		AnalyzeWorkSetEventDispatcher(work,event_dispatcher);
-
-		// デストラクタ発行
-		function dispatchDestructor(){
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			if(event_dispatcher){
-				// イベント発火
-				event_dispatcher.dispatchEvent("remove",null);
-				event_dispatcher.dispatchEvent("destructor",null);
-			}
+			var event_handler = node_info.createEventHandler("release");
+			event_handler.setFunction(function(){
+				_this.release();
+			});
+			this.releasers.push(event_handler);
 		}
-
-		// リムーブ監視
-		var observer_remove = new DomNodeObserverRemoveFromDocument(node);
-		observer_remove.setFunction(dispatchDestructor);
-
-		// 開放イベント
-		var event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
-		event_handler_release.setFunction(dispatchDestructor);
-
-		// 破棄イベント
-		var event_handler = event_dispatcher.createEventHandler("destructor");
-		event_handler.setFunction(function(){
-			// 修正カウンタ加算
-			AnalyzeWorkAddModifyCount(work);
-
-			var event_dispatcher = AnalyzeWorkGetEventDispatcher(work);
-			if(event_dispatcher){
-				// イベント発火
-				event_dispatcher.dispatchEvent("release",null);
-				event_dispatcher.release();
-				AnalyzeWorkClearEventDispatcher(work);
-			}
-
-			// リムーブ監視を破棄
-			if(observer_remove){
-				observer_remove.release();
-				observer_remove = null;
-			}
-
-			// イベントを破棄
-			if(event_handler_release){
-				event_handler_release.release();
-				event_handler_release = null;
-			}
-
-			// 解析辞書除外
-			analyze_work_dictionary.removeAnalyzeWork(work);
-
-			if(!(window.addEventListener)){
-				DomNodeClearInserted(node);
-			}
-		});
-
-	}
-
-	// --------------------------------------------------------------------------------
-	// 解析辞書登録フラグ
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkDictionaryAttachOptions(){
-		var _this = this;
-
-		// --------------------------------------------------------------------------------
-		// PageExpand 生成ノード
-		// --------------------------------------------------------------------------------
-		_this.SetOutsider = function(){
-			_this._flag |= ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_OUTSIDER;
-		};
-
-		// --------------------------------------------------------------------------------
-		// PageExpand ゲストノード
-		// --------------------------------------------------------------------------------
-		_this.SetGuest = function(){
-			_this._flag |= ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_GUEST;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_this._flag = 0;
-		})();
-	}
-	var ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_OUTSIDER	= 0x00000001;
-	var ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_GUEST		= 0x00000002;
-	var ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_MAX		= 2;
-
-	// --------------------------------------------------------------------------------
-	// 解析辞書
-	// --------------------------------------------------------------------------------
-	function AnalyzeWorkDictionary(){
-		var _this = this;
-
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			for(var id in _dictionary){
-				_this.removeAnalyzeWork(_dictionary[id]);
-			}
-			_dictionary = null;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 解析ワークを登録
-		// --------------------------------------------------------------------------------
-		_this.attachAnalyzeWork = function(work,attach_options){
-			if(work.id)	return true;
-
-			var node = AnalyzeWorkGetDomNode(work);
-			if(node){
-				var flag = 0;
-				if(attach_options){
-					flag = attach_options._flag;
+		f.prototype = {
+			release:function(){
+				this.releasers.forEach(function(e){
+					e.release();
+				});
+				this.releasers.length = 0;
+				if(this.node_info){
+					DomNodeRemove(this.node_info.getNode());
+					this.node_info.release();
+					this.node_info = null;
 				}
-				var id = (_identity << ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_MAX) | flag;
-				_dictionary[id] = work;
-				_identity += 1;
-				work.id = id;
-				node._pageexpand_ = id;
-				if(node.setAttribute){
-					node.setAttribute("_pageexpand_",id);
-				}
-				return true;
-			}
-
-			return false;
+			},
+			analyze:function(){
+				this.node_info.setInvalid(false);
+				execute_queue.attachLastForInsertDomNode(DomNodeAnalyzeRoot,this.node_info.getNode());
+			},
+			node_info:null,
+			releasers:null
 		};
-
-		// --------------------------------------------------------------------------------
-		// 解析ワークを除外
-		// --------------------------------------------------------------------------------
-		_this.removeAnalyzeWork = function(work){
-			var id = work.id;
-			if(!id)	return false;
-
-			try{
-				ObjectDeleteProperty(_dictionary,id);
-				ObjectDeleteProperty(work,"id");
-			}catch(e){}
-		};
-
-		// --------------------------------------------------------------------------------
-		// エレメントからオブジェクトを取得
-		// --------------------------------------------------------------------------------
-		_this.getAnalyzeWork = function(node){
-			var id;
-			id = node._pageexpand_;
-			if(id){
-				var work = _dictionary[parseInt(id)];
-				if(work){
-					if(AnalyzeWorkGetDomNode(work) == node){
-						return work;
-					}
-				}
-			}
-			return null;
-		};
-
-		// --------------------------------------------------------------------------------
-		// クローンであるか確認する
-		// --------------------------------------------------------------------------------
-		_this.verifyClone = function(node){
-			if(node.getAttribute){
-				var id = node.getAttribute("_pageexpand_");
-				if(id){
-					var id = parseInt(id);
-					if(id & ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_OUTSIDER){
-						var work = _dictionary[id];
-						if(!work)	return true;
-						if(AnalyzeWorkGetDomNode(work) != node){
-							return true;
-						}
-					}
-				}
-			}
-
-			return false;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 解放後の要素であるか確認する
-		// --------------------------------------------------------------------------------
-		_this.verifyRemoved = function(node){
-			if(node.getAttribute){
-				var id = node.getAttribute("_pageexpand_");
-				if(id){
-					var id = parseInt(id);
-					var work = _dictionary[id];
-					if(!work)	return true;
-					if(AnalyzeWorkGetDomNode(work) != node){
-						return true;
-					}
-				}
-			}
-
-			return false;
-		};
-
-		// --------------------------------------------------------------------------------
-		// ゲスト要素であるか確認する
-		// --------------------------------------------------------------------------------
-		_this.verifyGuest = function(node){
-			if(node.getAttribute){
-				var id = node.getAttribute("_pageexpand_");
-				if(id){
-					var id = parseInt(id);
-					if(id & ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_GUEST){
-						return true;
-					}
-				}
-			}
-
-			return false;
-		};
-
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _identity;
-		var _dictionary;
-
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_identity = 1;
-			_dictionary = new Array();
-		})();
-	}
+		return f;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// 掲示板辞書
@@ -76203,7 +74276,7 @@
 		// 開放
 		// --------------------------------------------------------------------------------
 		_this.release = function(){
-			for(n in _number_dictionary){
+			for(var n in _number_dictionary){
 				_number_dictionary[n].release();
 			}
 		};
@@ -76568,17 +74641,15 @@
 				removeEventRelease();
 
 				var i;
-				var num = _elements_original_work.length;
+				var num = _elements_original_node_info.length;
 				for(i=0;i<num;i++){
-					// 解析クリア
-					AnalyzeWorkClearAnalyzedExpandBbs(_elements_original_work[i]);
-					// 解析辞書除外
-					analyze_work_dictionary.removeAnalyzeWork(_elements_original_work[i]);
+					var node_info = _elements_original_node_info[i];
+					node_info.release();
 				}
 
 				_elements_original.length = 0;
 				_elements_clone.length = 0;
-				_elements_original_work.length = 0;
+				_elements_original_node_info.length = 0;
 			};
 
 			// --------------------------------------------------------------------------------
@@ -76594,20 +74665,12 @@
 			_response.addOriginalElements = function(name,element){
 				_elements_original.push({name:name,element:element});
 
-				// 解析ワーク
-				var analyze_work = analyze_work_dictionary.getAnalyzeWork(element);
-				if(analyze_work){
-				}else{
-					// 解析ワーク作成
-					analyze_work = AnalyzeWorkCreate(element);
-				}
-				_elements_original_work.push(analyze_work);
-
-				// 解析辞書登録
-				analyze_work_dictionary.attachAnalyzeWork(analyze_work);
+				// NodeInfo取得
+				var node_info = node_info_dictionary.addNode(element);
+				_elements_original_node_info.push(node_info);
 
 				// 解析済み
-				AnalyzeWorkSetAnalyzedExpandBbs(analyze_work);
+				node_info.setExecuted("ExpandBbs");
 
 				// 複製して保有
 				_elements_clone.push({name:name,element:ElementCloneNode(element,true)});
@@ -76729,7 +74792,7 @@
 			var _analyzed;
 			var _released;
 			var _elements_original;
-			var _elements_original_work;
+			var _elements_original_node_info;
 			var _elements_clone;
 			var _follower_count;
 			var _observer_remove;
@@ -76743,7 +74806,7 @@
 				_analyzed = false;
 				_released = false;
 				_elements_original = new Array();
-				_elements_original_work = new Array();
+				_elements_original_node_info = new Array();
 				_elements_clone = new Array();
 				_follower_count = 0;
 				_response._follow = createFollow(null,null);
@@ -77387,15 +75450,9 @@
 			// ウィンドウ作成
 			_window = DocumentCreateElement("div");
 
-			// 解析ワーク作成
-			_analyze_work = AnalyzeWorkCreate(_window);
-
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			attach_options.SetOutsider();
-
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
+			_node_info = node_info_dictionary.addNode(_window);
+			_node_info.setOwnerToPageExpand();
+//			_node_info.setInvalid(true);
 
 			// スタイルをセット
 			ElementSetStyle(_window,project.getStyleSheetExpandBbsPopupResponse());
@@ -77712,10 +75769,9 @@
 				_event_handler_revise_scroll = null;
 			}
 
-			if(_analyze_work){
-				// 解析辞書除外
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
-				_analyze_work = null;
+			if(_node_info){
+				_node_info.release();
+				_node_info = null;
 			}
 
 			if(_window){
@@ -77757,7 +75813,7 @@
 		var _invalid_timestamp;
 		var _suicide;
 		var _released;
-		var _analyze_work;
+		var _node_info;
 		var _observer_remove;
 		var _event_handler_revise_scroll;
 		var _event_handler_release;
@@ -77793,11 +75849,8 @@
 	// --------------------------------------------------------------------------------
 	function BbsResponseDialogContains(node){
 		while(node){
-			var work = analyze_work_dictionary.getAnalyzeWork(node);
-			if(work){
-				if(work.id & ANALYZE_WORK_DICTIONARY_ATTACH_OPTION_OUTSIDER){
-					return true;
-				}
+			if(node.hasAttribute){
+				if(node.hasAttribute("_pageexpand_")) return true;
 			}
 			node = node.parentNode;
 		}
@@ -77884,17 +75937,10 @@
 				_event_handler_abort = null;
 			}
 
-			// リムーブ監視を破棄
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
-			}
-
-			if(_analyze_work){
-				// 解析辞書除外
-				AnalyzeWorkClearBbsControl(_analyze_work);
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
-				_analyze_work = null;
+			if(_node_info){
+				_node_info.clearData("BbsControl");
+				_node_info.release();
+				_node_info = null;
 			}
 
 			if(_element){
@@ -77916,8 +75962,7 @@
 		var _numbers;
 		var _element;
 		var _text_node;
-		var _analyze_work;
-		var _observer_remove;
+		var _node_info;
 		var _response;
 		var _event_handler_release;
 		var _event_handler_abort;
@@ -77933,24 +75978,13 @@
 				_element = DocumentCreateElement("a");
 			}
 
-			// 解析ワーク作成
-			_analyze_work = AnalyzeWorkCreate(_element);
-			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_this);
-			// 解析済み
-			AnalyzeWorkSetInvalid(_analyze_work);
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			if(outsider) attach_options.SetOutsider();
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
+			_node_info = node_info_dictionary.addNode(_element);
+			_node_info.observerRemove();
+			if(outsider) _node_info.setOwnerToPageExpand();
+			_node_info.setInvalid(true);
+			_node_info.setData("BbsControl",_this);
 
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_this.release);
-
-			// 開放イベント
-			_event_handler_abort = page_expand_event_dispatcher.createEventHandler("release");
+			_event_handler_abort = _node_info.createEventHandler("release");
 			_event_handler_abort.setFunction(function(){
 				_this.release();
 			});
@@ -77965,10 +75999,9 @@
 		var i;
 		var num = nodes.length;
 		for(i=0;i<num;i++){
-			// 解析ワーク取得
-			var work = analyze_work_dictionary.getAnalyzeWork(nodes[i]);
-			if(work){
-				var control = AnalyzeWorkGetBbsControl(work);
+			var node_info = node_info_dictionary.getNodeInfo(nodes[i]);
+			if(node_info){
+				var control = node_info.getData("BbsControl");
 				if(control){
 					if(control.getType() == "res_a"){
 						return true;
@@ -77988,10 +76021,9 @@
 		var i;
 		var num = nodes.length;
 		for(i=0;i<num;i++){
-			// 解析ワーク取得
-			var work = analyze_work_dictionary.getAnalyzeWork(nodes[i]);
-			if(work){
-				var control = AnalyzeWorkGetBbsControl(work);
+			var node_info = node_info_dictionary.getNodeInfo(nodes[i]);
+			if(node_info){
+				var control = node_info.getData("BbsControl");
 				if(control){
 					if(control.getType() == "res_a"){
 						result = func(control);
@@ -78085,17 +76117,10 @@
 				_event_handler_abort = null;
 			}
 
-			// リムーブ監視を破棄
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
-			}
-
-			if(_analyze_work){
-				// 解析辞書除外
-				AnalyzeWorkClearBbsControl(_analyze_work);
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
-				_analyze_work = null;
+			if(_node_info){
+				_node_info.clearData("BbsControl");
+				_node_info.release();
+				_node_info = null;
 			}
 
 			if(_element){
@@ -78134,8 +76159,7 @@
 		var _numbers;
 		var _element;
 		var _text_node;
-		var _analyze_work;
-		var _observer_remove;
+		var _node_info;
 		var _response;
 		var _event_handler_release;
 		var _event_handler_abort;
@@ -78157,24 +76181,13 @@
 				_element.addEventListener("click",mouseClick);
 			}
 
-			// 解析ワーク作成
-			_analyze_work = AnalyzeWorkCreate(_element);
-			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_this);
-			// 解析済み
-			AnalyzeWorkSetInvalid(_analyze_work);
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			if(outsider) attach_options.SetOutsider();
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
+			_node_info = node_info_dictionary.addNode(_element);
+			_node_info.observerRemove();
+			if(outsider) _node_info.setOwnerToPageExpand();
+			_node_info.setInvalid(true);
+			_node_info.setData("BbsControl",_this);
 
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_this.release);
-
-			// 開放イベント
-			_event_handler_abort = page_expand_event_dispatcher.createEventHandler("release");
+			_event_handler_abort = _node_info.createEventHandler("release");
 			_event_handler_abort.setFunction(function(){
 				_this.release();
 			});
@@ -78200,10 +76213,9 @@
 	// 掲示板コントロール 引用 の確認
 	// --------------------------------------------------------------------------------
 	function BbsControlQuoteEqual(element){
-		// 解析ワーク取得
-		var work = analyze_work_dictionary.getAnalyzeWork(element);
-		if(work){
-			var control = AnalyzeWorkGetBbsControl(work);
+		var node_info = node_info_dictionary.getNodeInfo(element);
+		if(node_info){
+			var control = node_info.getData("BbsControl");
 			if(control){
 				if(control.getType() == "res_q"){
 					return true;
@@ -78222,10 +76234,9 @@
 		var i;
 		var num = nodes.length;
 		for(i=0;i<num;i++){
-			// 解析ワーク取得
-			var work = analyze_work_dictionary.getAnalyzeWork(nodes[i]);
-			if(work){
-				var control = AnalyzeWorkGetBbsControl(work);
+			var node_info = node_info_dictionary.getNodeInfo(nodes[i]);
+			if(node_info){
+				var control = node_info.getData("BbsControl");
 				if(control){
 					if(control.getType() == "res_q"){
 						result = func(control);
@@ -78338,17 +76349,10 @@
 				_event_handler_abort = null;
 			}
 
-			// リムーブ監視を破棄
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
-			}
-
-			if(_analyze_work){
-				// 解析辞書除外
-				AnalyzeWorkClearBbsControl(_analyze_work);
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
-				_analyze_work = null;
+			if(_node_info){
+				_node_info.clearData("BbsControl");
+				_node_info.release();
+				_node_info = null;
 			}
 
 			if(_element){
@@ -78403,8 +76407,7 @@
 		// --------------------------------------------------------------------------------
 		var _element;
 		var _text_node;
-		var _analyze_work;
-		var _observer_remove;
+		var _node_info;
 		var _response;
 		var _id;
 		var _event_handler_update;
@@ -78430,24 +76433,13 @@
 				_element.attachEvent("onclick",mouseClick);
 			}
 
-			// 解析ワーク作成
-			_analyze_work = AnalyzeWorkCreate(_element);
-			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_this);
-			// 解析済み
-			AnalyzeWorkSetInvalid(_analyze_work);
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			if(outsider) attach_options.SetOutsider();
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
+			_node_info = node_info_dictionary.addNode(_element);
+			_node_info.observerRemove();
+			if(outsider) _node_info.setOwnerToPageExpand();
+			_node_info.setInvalid(true);
+			_node_info.setData("BbsControl",_this);
 
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_this.release);
-
-			// 開放イベント
-			_event_handler_abort = page_expand_event_dispatcher.createEventHandler("release");
+			_event_handler_abort = _node_info.createEventHandler("release");
 			_event_handler_abort.setFunction(function(){
 				_this.release();
 			});
@@ -78462,10 +76454,9 @@
 		var i;
 		var num = nodes.length;
 		for(i=0;i<num;i++){
-			// 解析ワーク取得
-			var work = analyze_work_dictionary.getAnalyzeWork(nodes[i]);
-			if(work){
-				var control = AnalyzeWorkGetBbsControl(work);
+			var node_info = node_info_dictionary.getNodeInfo(nodes[i]);
+			if(node_info){
+				var control = node_info.getData("BbsControl");
 				if(control){
 					if(control.getType() == "id"){
 						return true;
@@ -78485,10 +76476,9 @@
 		var i;
 		var num = nodes.length;
 		for(i=0;i<num;i++){
-			// 解析ワーク取得
-			var work = analyze_work_dictionary.getAnalyzeWork(nodes[i]);
-			if(work){
-				var control = AnalyzeWorkGetBbsControl(work);
+			var node_info = node_info_dictionary.getNodeInfo(nodes[i]);
+			if(node_info){
+				var control = node_info.getData("BbsControl");
 				if(control){
 					if(control.getType() == "id"){
 						result = func(control);
@@ -78601,17 +76591,10 @@
 				_event_handler_abort = null;
 			}
 
-			// リムーブ監視を破棄
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
-			}
-
-			if(_analyze_work){
-				// 解析辞書除外
-				AnalyzeWorkClearBbsControl(_analyze_work);
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
-				_analyze_work = null;
+			if(_node_info){
+				_node_info.clearData("BbsControl");
+				_node_info.release();
+				_node_info = null;
 			}
 
 			if(_element){
@@ -78666,8 +76649,7 @@
 		// --------------------------------------------------------------------------------
 		var _element;
 		var _text_node;
-		var _analyze_work;
-		var _observer_remove;
+		var _node_info;
 		var _response;
 		var _name;
 		var _event_handler_update;
@@ -78693,24 +76675,13 @@
 				_element.attachEvent("onclick",mouseClick);
 			}
 
-			// 解析ワーク作成
-			_analyze_work = AnalyzeWorkCreate(_element);
-			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_this);
-			// 解析済み
-			AnalyzeWorkSetInvalid(_analyze_work);
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			if(outsider) attach_options.SetOutsider();
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
+			_node_info = node_info_dictionary.addNode(_element);
+			_node_info.observerRemove();
+			if(outsider) _node_info.setOwnerToPageExpand();
+			_node_info.setInvalid(true);
+			_node_info.setData("BbsControl",_this);
 
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_this.release);
-
-			// 開放イベント
-			_event_handler_abort = page_expand_event_dispatcher.createEventHandler("release");
+			_event_handler_abort = _node_info.createEventHandler("release");
 			_event_handler_abort.setFunction(function(){
 				_this.release();
 			});
@@ -78725,10 +76696,9 @@
 		var i;
 		var num = nodes.length;
 		for(i=0;i<num;i++){
-			// 解析ワーク取得
-			var work = analyze_work_dictionary.getAnalyzeWork(nodes[i]);
-			if(work){
-				var control = AnalyzeWorkGetBbsControl(work);
+			var node_info = node_info_dictionary.getNodeInfo(nodes[i]);
+			if(node_info){
+				var control = node_info.getData("BbsControl");
 				if(control){
 					if(control.getType() == "name"){
 						return true;
@@ -78748,10 +76718,9 @@
 		var i;
 		var num = nodes.length;
 		for(i=0;i<num;i++){
-			// 解析ワーク取得
-			var work = analyze_work_dictionary.getAnalyzeWork(nodes[i]);
-			if(work){
-				var control = AnalyzeWorkGetBbsControl(work);
+			var node_info = node_info_dictionary.getNodeInfo(nodes[i]);
+			if(node_info){
+				var control = node_info.getData("BbsControl");
 				if(control){
 					if(control.getType() == "name"){
 						result = func(control);
@@ -78864,17 +76833,10 @@
 				_event_handler_abort = null;
 			}
 
-			// リムーブ監視を破棄
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
-			}
-
-			if(_analyze_work){
-				// 解析辞書除外
-				AnalyzeWorkClearBbsControl(_analyze_work);
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
-				_analyze_work = null;
+			if(_node_info){
+				_node_info.clearData("BbsControl");
+				_node_info.release();
+				_node_info = null;
 			}
 
 			if(_element){
@@ -78929,8 +76891,7 @@
 		// --------------------------------------------------------------------------------
 		var _element;
 		var _text_node;
-		var _analyze_work;
-		var _observer_remove;
+		var _node_info;
 		var _response;
 		var _host;
 		var _event_handler_update;
@@ -78956,24 +76917,13 @@
 				_element.attachEvent("onclick",mouseClick);
 			}
 
-			// 解析ワーク作成
-			_analyze_work = AnalyzeWorkCreate(_element);
-			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_this);
-			// 解析済み
-			AnalyzeWorkSetInvalid(_analyze_work);
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			if(outsider) attach_options.SetOutsider();
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
+			_node_info = node_info_dictionary.addNode(_element);
+			_node_info.observerRemove();
+			if(outsider) _node_info.setOwnerToPageExpand();
+			_node_info.setInvalid(true);
+			_node_info.setData("BbsControl",_this);
 
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_this.release);
-
-			// 開放イベント
-			_event_handler_abort = page_expand_event_dispatcher.createEventHandler("release");
+			_event_handler_abort = _node_info.createEventHandler("release");
 			_event_handler_abort.setFunction(function(){
 				_this.release();
 			});
@@ -78988,10 +76938,9 @@
 		var i;
 		var num = nodes.length;
 		for(i=0;i<num;i++){
-			// 解析ワーク取得
-			var work = analyze_work_dictionary.getAnalyzeWork(nodes[i]);
-			if(work){
-				var control = AnalyzeWorkGetBbsControl(work);
+			var node_info = node_info_dictionary.getNodeInfo(nodes[i]);
+			if(node_info){
+				var control = node_info.getData("BbsControl");
 				if(control){
 					if(control.getType() == "host"){
 						return true;
@@ -79011,10 +76960,9 @@
 		var i;
 		var num = nodes.length;
 		for(i=0;i<num;i++){
-			// 解析ワーク取得
-			var work = analyze_work_dictionary.getAnalyzeWork(nodes[i]);
-			if(work){
-				var control = AnalyzeWorkGetBbsControl(work);
+			var node_info = node_info_dictionary.getNodeInfo(nodes[i]);
+			if(node_info){
+				var control = node_info.getData("BbsControl");
 				if(control){
 					if(control.getType() == "host"){
 						result = func(control);
@@ -79108,17 +77056,10 @@
 				_event_handler_abort = null;
 			}
 
-			// リムーブ監視を破棄
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
-			}
-
-			if(_analyze_work){
-				// 解析辞書除外
-				AnalyzeWorkClearBbsControl(_analyze_work);
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
-				_analyze_work = null;
+			if(_node_info){
+				_node_info.clearData("BbsControl");
+				_node_info.release();
+				_node_info = null;
 			}
 
 			if(_element){
@@ -79174,8 +77115,7 @@
 		// --------------------------------------------------------------------------------
 		var _element;
 		var _text_node;
-		var _analyze_work;
-		var _observer_remove;
+		var _node_info;
 		var _response;
 		var _event_handler_update;
 		var _event_handler_release;
@@ -79200,24 +77140,13 @@
 				_element.attachEvent("onclick",mouseClick);
 			}
 
-			// 解析ワーク作成
-			_analyze_work = AnalyzeWorkCreate(_element);
-			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_this);
-			// 解析済み
-			AnalyzeWorkSetInvalid(_analyze_work);
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			if(outsider) attach_options.SetOutsider();
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
+			_node_info = node_info_dictionary.addNode(_element);
+			_node_info.observerRemove();
+			if(outsider) _node_info.setOwnerToPageExpand();
+			_node_info.setInvalid(true);
+			_node_info.setData("BbsControl",_this);
 
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_this.release);
-
-			// 開放イベント
-			_event_handler_abort = page_expand_event_dispatcher.createEventHandler("release");
+			_event_handler_abort = _node_info.createEventHandler("release");
 			_event_handler_abort.setFunction(function(){
 				_this.release();
 			});
@@ -79232,10 +77161,9 @@
 		var i;
 		var num = nodes.length;
 		for(i=0;i<num;i++){
-			// 解析ワーク取得
-			var work = analyze_work_dictionary.getAnalyzeWork(nodes[i]);
-			if(work){
-				var control = AnalyzeWorkGetBbsControl(work);
+			var node_info = node_info_dictionary.getNodeInfo(nodes[i]);
+			if(node_info){
+				var control = node_info.getData("BbsControl");
 				if(control){
 					if(control.getType() == "follower"){
 						return true;
@@ -79255,10 +77183,9 @@
 		var i;
 		var num = nodes.length;
 		for(i=0;i<num;i++){
-			// 解析ワーク取得
-			var work = analyze_work_dictionary.getAnalyzeWork(nodes[i]);
-			if(work){
-				var control = AnalyzeWorkGetBbsControl(work);
+			var node_info = node_info_dictionary.getNodeInfo(nodes[i]);
+			if(node_info){
+				var control = node_info.getData("BbsControl");
 				if(control){
 					if(control.getType() == "follower"){
 						result = func(control);
@@ -79335,17 +77262,10 @@
 				_event_handler_abort = null;
 			}
 
-			// リムーブ監視を破棄
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
-			}
-
-			if(_analyze_work){
-				// 解析辞書除外
-				AnalyzeWorkClearBbsControl(_analyze_work);
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
-				_analyze_work = null;
+			if(_node_info){
+				_node_info.clearData("BbsControl");
+				_node_info.release();
+				_node_info = null;
 			}
 
 			if(_element){
@@ -79390,8 +77310,7 @@
 		// --------------------------------------------------------------------------------
 		var _element;
 		var _text_node;
-		var _analyze_work;
-		var _observer_remove;
+		var _node_info;
 		var _response;
 		var _event_handler_release;
 		var _event_handler_abort;
@@ -79415,24 +77334,13 @@
 				_element.attachEvent("onclick",mouseClick);
 			}
 
-			// 解析ワーク作成
-			_analyze_work = AnalyzeWorkCreate(_element);
-			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_this);
-			// 解析済み
-			AnalyzeWorkSetInvalid(_analyze_work);
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			if(outsider) attach_options.SetOutsider();
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
+			_node_info = node_info_dictionary.addNode(_element);
+			_node_info.observerRemove();
+			if(outsider) _node_info.setOwnerToPageExpand();
+			_node_info.setInvalid(true);
+			_node_info.setData("BbsControl",_this);
 
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_this.release);
-
-			// 開放イベント
-			_event_handler_abort = page_expand_event_dispatcher.createEventHandler("release");
+			_event_handler_abort = _node_info.createEventHandler("release");
 			_event_handler_abort.setFunction(function(){
 				_this.release();
 			});
@@ -79458,10 +77366,9 @@
 	// 掲示板コントロール 返信 の確認
 	// --------------------------------------------------------------------------------
 	function BbsControlReplyEqual(element){
-		// 解析ワーク取得
-		var work = analyze_work_dictionary.getAnalyzeWork(element);
-		if(work){
-			var control = AnalyzeWorkGetBbsControl(work);
+		var node_info = node_info_dictionary.getNodeInfo(element);
+		if(node_info){
+			var control = node_info.getData("BbsControl");
 			if(control){
 				if(control.getType() == "reply"){
 					return true;
@@ -79480,10 +77387,9 @@
 		var i;
 		var num = nodes.length;
 		for(i=0;i<num;i++){
-			// 解析ワーク取得
-			var work = analyze_work_dictionary.getAnalyzeWork(nodes[i]);
-			if(work){
-				var control = AnalyzeWorkGetBbsControl(work);
+			var node_info = node_info_dictionary.getNodeInfo(nodes[i]);
+			if(node_info){
+				var control = node_info.getData("BbsControl");
 				if(control){
 					if(control.getType() == "reply"){
 						result = func(control);
@@ -79521,18 +77427,12 @@
 				_event_handler_abort = null;
 			}
 
-			// リムーブ監視を破棄
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
-			}
 			removeObserverScroll();
 
-			if(_analyze_work){
-				// 解析辞書除外
-				AnalyzeWorkClearBbsControl(_analyze_work);
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
-				_analyze_work = null;
+			if(_node_info){
+				_node_info.clearData("BbsControl");
+				_node_info.release();
+				_node_info = null;
 			}
 
 			if(_element){
@@ -79803,8 +77703,7 @@
 		var _button_value_old;
 		var _title_old;
 		var _add_count;
-		var _analyze_work;
-		var _observer_remove;
+		var _node_info;
 		var _event_handler_abort;
 		var _getTime;
 
@@ -79834,24 +77733,14 @@
 				_element.attachEvent("onmousedown",mouseDown);
 				_element.attachEvent("onclick",mouseClick);
 			}
-			// 解析ワーク作成
-			_analyze_work = AnalyzeWorkCreate(_element);
-			// 掲示板コントロール登録
-			AnalyzeWorkSetBbsControl(_analyze_work,_this);
-			// 解析済み
-			AnalyzeWorkSetInvalid(_analyze_work);
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			attach_options.SetOutsider();
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
 
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_this.release);
+			_node_info = node_info_dictionary.addNode(_element);
+			_node_info.observerRemove();
+			_node_info.setOwnerToPageExpand();
+			_node_info.setInvalid(true);
+			_node_info.setData("BbsControl",_this);
 
-			// 開放イベント
-			_event_handler_abort = page_expand_event_dispatcher.createEventHandler("release");
+			_event_handler_abort = _node_info.createEventHandler("release");
 			_event_handler_abort.setFunction(function(){
 				_this.release();
 			});
@@ -79910,14 +77799,9 @@
 		// 開放 0（内部用）
 		// --------------------------------------------------------------------------------
 		function release_0 (){
-			_element_iframe.src = "";
-			removeEvent();
+			_element_iframe.removeAttribute("src");
 
-			// イベント解放
-			if(_event_handler_abort){
-				_event_handler_abort.release();
-				_event_handler_abort = null;
-			}
+			removeEvent();
 
 			// マウスイベント無効化
 			_element_container.style.pointerEvents = "none";
@@ -79927,18 +77811,17 @@
 		// 開放 1（内部用）
 		// --------------------------------------------------------------------------------
 		function release_1 (){
-			DomNodeRemove(_element_container);
-
-			// リムーブ監視を破棄
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
+			// イベント解放
+			if(_event_handler_abort){
+				_event_handler_abort.release();
+				_event_handler_abort = null;
 			}
 
-			// 解析辞書除外
-			if(_analyze_work){
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
-				_analyze_work = null;
+			DomNodeRemove(_element_container);
+
+			if(_node_info){
+				_node_info.release();
+				_node_info = null;
 			}
 
 			// タスク破棄
@@ -80041,12 +77924,11 @@
 		var _element_window;
 		var _element_iframe;
 		var _button_cancel;
-		var _observer_remove;
+		var _node_info;
 		var _event_handler_abort;
 		var _parent_task;
 		var _fade_task;
 		var _fade_alpha;
-		var _analyze_work;
 		var _fitted_top;
 
 		// --------------------------------------------------------------------------------
@@ -80089,16 +77971,15 @@
 				_this.close();
 			};
 
-			// 解析ワーク作成
-			_analyze_work = AnalyzeWorkCreate(_element_container);
+			_node_info = node_info_dictionary.addNode(_element_container);
+			_node_info.observerRemove();
+			_node_info.setOwnerToPageExpand();
+			_node_info.setInvalid(true);
 
-			// 解析済み
-			AnalyzeWorkSetInvalid(_analyze_work);
-
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			attach_options.SetOutsider();
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
+			_event_handler_abort = _node_info.createEventHandler("release");
+			_event_handler_abort.setFunction(function(){
+				_this.release();
+			});
 
 			document.body.appendChild(_element_container);
 
@@ -80107,16 +77988,6 @@
 
 			// リサイズ
 			_this.setWindowSize(640,480);
-
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_element_container);
-			_observer_remove.setFunction(_this.release);
-
-			// 開放イベント
-			_event_handler_abort = page_expand_event_dispatcher.createEventHandler("release");
-			_event_handler_abort.setFunction(function(){
-				_this.release();
-			});
 
 			(function(){
 				// 親タスク
@@ -80186,17 +78057,10 @@
 				_event_handler_abort = null;
 			}
 
-			// リムーブ監視を破棄
-			if(_observer_remove){
-				_observer_remove.release();
-				_observer_remove = null;
-			}
-
-			if(_analyze_work){
-				// 解析辞書除外
-				AnalyzeWorkClearBbsControl(_analyze_work);
-				analyze_work_dictionary.removeAnalyzeWork(_analyze_work);
-				_analyze_work = null;
+			if(_node_info){
+				//_node_info.clearData("BbsControl");
+				_node_info.release();
+				_node_info = null;
 			}
 
 			if(_element){
@@ -80743,8 +78607,7 @@
 		var _expand_distance;
 		var _control_dic;
 		var _task;
-		var _analyze_work;
-		var _observer_remove;
+		var _node_info;
 		var _event_handler_abort;
 
 		// --------------------------------------------------------------------------------
@@ -80787,22 +78650,12 @@
 				_element_border.attachEvent("onmousedown",mouseDownBorder);
 			}
 
-			// 解析ワーク作成
-			_analyze_work = AnalyzeWorkCreate(_element);
-			// 解析済み
-			AnalyzeWorkSetInvalid(_analyze_work);
-			// 解析辞書登録オプション
-			var attach_options = new AnalyzeWorkDictionaryAttachOptions();
-			if(outsider) attach_options.SetOutsider();
-			// 解析辞書登録
-			analyze_work_dictionary.attachAnalyzeWork(_analyze_work,attach_options);
+			_node_info = node_info_dictionary.addNode(_element);
+			_node_info.observerRemove();
+			if(outsider) _node_info.setOwnerToPageExpand();
+			_node_info.setInvalid(true);
 
-			// リムーブ監視
-			_observer_remove = new DomNodeObserverRemoveFromDocument(_element);
-			_observer_remove.setFunction(_this.release);
-
-			// 開放イベント
-			_event_handler_abort = page_expand_event_dispatcher.createEventHandler("release");
+			_event_handler_abort = _node_info.createEventHandler("release");
 			_event_handler_abort.setFunction(function(){
 				_this.release();
 			});
@@ -80820,8 +78673,8 @@
 		var i;
 		var num = nodes.length;
 		for(i=num-1;i>=0;i--){
-			// 解析ワーク取得
-			if(analyze_work_dictionary.verifyRemoved(nodes[i])){
+//			if(analyze_work_dictionary.verifyRemoved(nodes[i])){
+			if(0){
 				result = func(nodes[i]);
 				if(result){
 					return result;
@@ -81647,7 +79500,7 @@
 				return (this.crc32 ^ 0xffffffff) >>> 0;
 			},
 			pos:0,
-			crc32:0xffffffff,
+			crc32:0xffffffff
 		};
 		return CRC32;
 	})();
@@ -82052,7 +79905,7 @@
 			var i;
 			var num = a.length;
 			for(i=0;i<num;i++){
-				var m = a[i].match(new RegExp("^(.*):[ ](.*)$","i"));
+				var m = a[i].match(new RegExp("^(.*):[ \t]*(.*)$","i"));
 				if(!m) continue;
 				_this[index] = m[1];
 				_this[m[1]] = m[2];
@@ -82107,153 +79960,6 @@
 		}
 		try{
 			if(GM_openInTab) return true;
-		}catch(e){
-		}
-		return false;
-	};
-
-	// --------------------------------------------------------------------------------
-	// GM_xmlhttpRequest ラッパー
-	// --------------------------------------------------------------------------------
-	function GMW_XMLHttpRequest(){
-			var _this = this;
-
-			// --------------------------------------------------------------------------------
-			// リクエストヘッダを設定
-			// --------------------------------------------------------------------------------
-			_this.setRequestHeader = function(name,value){
-				_param.headers[name] = value;
-			};
-
-			// --------------------------------------------------------------------------------
-			// オーバーライドコンテンツタイプを設定
-			// --------------------------------------------------------------------------------
-			_this.overrideMimeType = function(type){
-				_param.overrideMimeType = type;
-			};
-
-			// --------------------------------------------------------------------------------
-			// レスポンスヘッダを取得
-			// --------------------------------------------------------------------------------
-			_this.getResponseHeader = function(label){
-				if(!(_response_header)) return "";
-				return _response_header.getResponseHeader(label);
-			};
-
-			// --------------------------------------------------------------------------------
-			// すべてのレスポンスヘッダを取得
-			// --------------------------------------------------------------------------------
-			_this.getAllResponseHeaders = function(){
-				return _this.responseHeaders;
-			};
-
-			// --------------------------------------------------------------------------------
-			// 開く
-			// --------------------------------------------------------------------------------
-			_this.open = function(method,url){
-				_param.method = method;
-				_param.url = url;
-			};
-
-			// --------------------------------------------------------------------------------
-			// 送信開始
-			// --------------------------------------------------------------------------------
-			_this.send = function(data){
-				_param.data = data;
-				_param.onprogress = function(r){
-					if(_this.onprogress) _this.onprogress(r);
-				};
-				_param.onreadystatechange = function(r){
-					readystatechange(r);
-				};
-				_param.onerror = function(r){
-					// Tampermonkey 用
-					readystatechange(r);
-				};
-
-				if(_this.timeout){
-					_param.timeout = _this.timeout;
-				}
-				if(_this.responseType){
-					_param.responseType = _this.responseType;
-				}
-
-				try{
-					GM.xmlHttpRequest(_param);
-					return;
-				}catch(e){
-				}
-				try{
-					GM_xmlhttpRequest(_param);
-					return;
-				}catch(e){
-				}
-				readystatechange({readyState:4,status:0});
-			};
-
-			// --------------------------------------------------------------------------------
-			// 状態変更イベント
-			// --------------------------------------------------------------------------------
-			_this.onreadystatechange = function(){};
-
-			// --------------------------------------------------------------------------------
-			// 状態変更イベント呼び出し
-			// --------------------------------------------------------------------------------
-			function readystatechange(r){
-				_this.readyState = r.readyState;
-				_this.status = r.status || 0;
-				if(r.responseHeaders){
-					if(!_response_header){
-						_this.responseHeaders = r.responseHeaders;
-						_response_header = new ResponseHeadersParser(r.responseHeaders);
-					}
-				}
-				if(r.readyState == 4){
-					try{
-						_this.responseText = r.responseText;
-					}catch(e){}
-					try{
-						_this.response = r.response;
-					}catch(e){}
-					_this.responseURL = r.finalUrl;
-				}
-				if(_this.onreadystatechange){
-					_this.onreadystatechange(_this);
-				}
-				if(_this.readyState == 4){
-					_this.onreadystatechange = null;
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// 進捗イベント
-			// --------------------------------------------------------------------------------
-			_this.onprogress = function(response){};
-
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _param;
-			var _response_header;
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			_param = new Object();
-			_param.headers = new Object();
-			_this.readyState = 0;
-			_this.status = 0;
-			_this.responseHeaders = null;
-			_this.responseText = "";
-			_this.responseType = "";
-	}
-	GMW_XMLHttpRequest.isSupported = function(){
-		try{
-			if(GM.xmlHttpRequest) return true;
-		}catch(e){
-		}
-		try{
-			if(GM_xmlhttpRequest) return true;
 		}catch(e){
 		}
 		return false;
@@ -82810,6 +80516,28 @@
 	}
 
 	// --------------------------------------------------------------------------------
+	// クエリ文字列からオブジェクトに
+	// --------------------------------------------------------------------------------
+	function QueryString_To_Object(url){
+		return StringGetQuery(url);
+	}
+
+	// --------------------------------------------------------------------------------
+	// オブジェクトからクエリ文字列に
+	// --------------------------------------------------------------------------------
+	function QueryString_By_Object(obj){
+		if(!obj) return "";
+		var a = [];
+		var c = 0;
+		var n;
+		for(n in obj){
+			a.push((c ? "&":"?") + n + "=" + obj[n]);
+			c ++;
+		}
+		return a.join("");
+	}
+
+	// --------------------------------------------------------------------------------
 	// 文字列とアスタリスク付きワードとが一致するか調べる
 	// --------------------------------------------------------------------------------
 	function StringMatchAsteriskWord(src,w){
@@ -83255,6 +80983,316 @@
 		}
 		return a;
 	}
+
+	// --------------------------------------------------------------------------------
+	// 埋め込みパーサー
+	// --------------------------------------------------------------------------------
+	var PageExpandEmbed_Parser = (function(){
+		var dict = new Object();
+		[{
+			data:{
+				type:"audio",
+				site:"soundcloud",
+				height:166
+			},
+			match:["soundcloud.com"],
+			callback:(function(){
+				var re_hostname = [
+					/^soundcloud[.]com$/,
+					/^www[.]soundcloud[.]com$/
+				];
+				var re_pathname = [
+					/^[/]([^/]+)[/]([^/]+)$/,
+					/^[/]([^/]+)[/]sets[/]([^/]+)$/
+				];
+				return function(parser){
+					if(!re_hostname.find(function(re){
+						return parser.hostname.match(re);
+					})) return;
+					if(!re_pathname.some(function(re){
+						return parser.pathname.match(re);
+					})) return;
+					return "https://w.soundcloud.com/player/?url=" + encodeURIComponent("https://soundcloud.com" + parser.pathname);
+				};
+			})()
+		},{
+			data:{
+				type:"audio",
+				site:"mixcloud",
+				height:120
+			},
+			match:["mixcloud.com"],
+			callback:(function(){
+				var re_hostname = [
+					/^www[.]mixcloud[.]com$/,
+					/^mixcloud[.]com$/
+				];
+				var re_pathname = [
+					/^[/]([^/]+)([/])([^/]+)[/]$/,
+					/^[/]([^/]+)([/]playlists[/])([^/]+)[/]$/
+				];
+				var forbid_user = {home:1,live:1,genres:1,trending:1,favorites:1,history:1,"listen-later":1,playlists:1,signup:1,upload:1,pro:1,premium:1,developers:1};
+				var forbid_name = {stream:1,uploads:1,posts:1,hosts:1,reposts:1,tracks:1,listens:1,favorites:1};
+				return function(parser){
+					if(!re_hostname.find(function(re){
+						return parser.hostname.match(re);
+					})) return;
+					var m;
+					if(!re_pathname.some(function(re){
+						return m = parser.pathname.match(re);
+					})) return;
+					if(forbid_user[m[1]]) return;
+					if(forbid_name[m[3]]) return;
+					return "https://player-widget.mixcloud.com/widget/iframe/?hide_cover=1&light=1&feed=" + encodeURIComponent("/" + m[1] + m[2] + m[3] + "/");
+				};
+			})()
+		},{
+			data:{
+				type:"video",
+				site:"youtube"
+			},
+			match:["youtube.com","youtube-nocookie.com","youtu.be"],
+			callback:(function(){
+				function time_to_second(str){
+					var t = 0;
+					var m;
+					if(m = str.match(/([0-9]+)h/i)) t += parseInt(m[1]) * 60 * 60;
+					if(m = str.match(/([0-9]+)m/i)) t += parseInt(m[1]) * 60;
+					if(m = str.match(/([0-9]+)s/i)) t += parseInt(m[1]);
+					if(m = str.match(/([0-9]+)$/i)) t += parseInt(m[1]);
+					return t;
+				}
+				function valid(v){
+					if((v || "").match(/^[-_a-zA-Z0-9]{11}$/)) return v;
+					return;
+				}
+				var re_hostname = [
+					{re:/^(www|m)[.]youtube[.]com$/i,front:true,embed:true},
+					{re:/^youtube[.]com$/i,front:true,embed:true},
+					{re:/^www[.]youtube-nocookie[.]com$/i,embed:true},
+					{re:/^youtu[.]be$/i,short:true}
+				];
+				return function(parser){
+					var v;
+					var m;
+					var host;
+					host = re_hostname.find(function(o){
+						return parser.hostname.match(o.re);
+					});
+					if(!host) return;
+					var q = QueryString_To_Object(parser.search);
+					var h = QueryString_To_Object("?" + parser.hash.slice(1));
+					if(host.front){
+						v = (function(){
+							m = parser.pathname.match(/^[/](watch|v|watch_popup)([/]|$)/i);
+							if(!m) return;
+							return valid(q.v);
+						})() || (function(){
+							m = parser.pathname.match(/^[/](watch|v|live|shorts)[/]([^/]+)$/i);
+							if(!m) return;
+							return valid(m[2]);
+						})();
+					}
+					if(host.embed){
+						m = parser.pathname.match(/^[/](embed)[/]([^/]+)$/i);
+						if(m) v = valid(m[2]);
+					}
+					if(host.short){
+						m = parser.pathname.match(/^[/]([^/]+)$/i);
+						if(m) v = valid(m[1]);
+					}
+					if(!v) return;
+
+					var o = {};
+					var start = time_to_second(q.t || q.start || h.t || h.start || "");
+					var end = time_to_second(q.end || h.end || "");
+					if(start) o.start = start;
+					if(end) o.end = end;
+					return "https://www.youtube-nocookie.com/embed/" + v + QueryString_By_Object(o);
+				};
+			})()
+		},{
+			data:{
+				type:"video",
+				site:"tiktok"
+			},
+			match:["tiktok.com"],
+			callback:(function(){
+				function valid(v){
+					if((v || "").match(/^[0-9]+$/)) return v;
+					return;
+				}
+				var re_hostname = [
+					/^www[.]tiktok[.]com$/i,
+					/^tiktok[.]com$/i
+				];
+				var re_pathname = /^[/](@[^/]+)[/]video[/]([^/]+)/i;
+				return function(parser){
+					var v;
+					var m;
+					if(!re_hostname.find(function(re){
+						return parser.hostname.match(re);
+					})) return;
+					m = parser.pathname.match(re_pathname);
+					if(m) v = valid(m[2]);
+					if(!v) return;
+
+					var o = {rel:0,description:1,music_info:1};
+					return "https://www.tiktok.com/player/v1/" + v + QueryString_By_Object(o);
+				};
+			})()
+		},{
+			data:{
+				type:"video",
+				site:"nicovideo"
+			},
+			match:["nicovideo.jp","nico.ms"],
+			callback:(function(){
+				function valid(v){
+					if((v || "").match(/^(sm|nm|so)[0-9]+$/)) return v;
+					return;
+				}
+				var re_hostname = [
+					{re:/^nicovideo[.]jp$/i,front:true},
+					{re:/^(www|embed)[.]nicovideo[.]jp$/i,front:true},
+					{re:/^nico[.]ms$/i,short:true}
+				];
+				return function(parser){
+					var v;
+					var m;
+					var host;
+					host = re_hostname.find(function(o){
+						return parser.hostname.match(o.re);
+					});
+					if(!host) return;
+					if(host.front){
+						m = parser.pathname.match(/^[/]watch[/]([^/]+)/i);
+						if(m) v = valid(m[1]);
+					}
+					if(host.short){
+						m = parser.pathname.match(/^[/]([^/]+)$/i);
+						if(m) v = valid(m[1]);
+					}
+					if(!v) return;
+
+					var o = {};
+					var q = QueryString_To_Object(parser.search);
+					var from = parseFloat(q.from) || 0.0;
+					if(from) o.from = from.toFixed(4);
+					return "https://embed.nicovideo.jp/watch/" + v + QueryString_By_Object(o);
+				};
+			})()
+		},{
+			data:{
+				type:"video",
+				site:"dailymotion"
+			},
+			match:["dailymotion.com","dai.ly"],
+			callback:(function(){
+				function valid(v){
+					if((v || "").match(/^[a-zA-Z0-9]+$/)) return v;
+					return;
+				}
+				var re_hostname = [
+					{re:/^dailymotion[.]com$/i,front:true},
+					{re:/^([^.]+)[.]dailymotion[.]com$/i,front:true},
+					{re:/^dai[.]ly$/i,short:true}
+				];
+				return function(parser){
+					var v;
+					var m;
+					var host;
+					host = re_hostname.find(function(o){
+						return parser.hostname.match(o.re);
+					});
+					if(!host) return;
+					if(host.front){
+						m = parser.pathname.match(/^[/]video[/]([^/]+)$/i);
+						if(m) v = valid(m[1]);
+					}
+					if(host.short){
+						m = parser.pathname.match(/^[/]([^/]+)$/i);
+						if(m) v = valid(m[1]);
+					}
+					if(!v) return;
+
+					var o = {mute:false,video:v};
+					var q = QueryString_To_Object(parser.search);
+					var start = parseInt(q.start) || 0;
+					if(start) o.startTime = start;
+					return "https://geo.dailymotion.com/player.html" + QueryString_By_Object(o);
+				};
+			})()
+		},{
+			data:{
+				type:"video",
+				site:"vimeo"
+			},
+			match:["vimeo.com"],
+			callback:(function(){
+				var re_hostname = /^vimeo[.]com$/i;
+				var re_pathname = /^[/]([0-9]+)$/i;
+				return function(parser){
+					var m;
+					if(!parser.hostname.match(re_hostname)) return;
+					m = parser.pathname.match(re_pathname);
+					if(!m) return;
+					return "https://player.vimeo.com/video/" + m[1];
+				};
+			})()
+		}].forEach(function(o){
+			o.match.forEach(function(url){
+				var p = dict;
+				url.split(".").reverse().forEach(function(k){
+					if(!p[k]) p[k] = new Object();
+					p = p[k];
+				});
+				p["."] = o;
+			});
+		});
+
+		return function(url){
+			var parser = URL_Parser(url);
+			var data = (function(){
+				var domain = parser.hostname.split(".").reverse();
+				var o = dict;
+				var i;
+				var n = domain.length;
+				for(i=0;i<n;i++){
+					o = o[domain[i]];
+					if(!o) break;
+					if(o["."]) return o["."];
+				}
+				return null;
+			})();
+			if(!data) return {ok:false};
+
+			var embed = ObjectCopy(data.data);
+			embed.url = data.callback(parser);
+			embed.ok = Boolean(embed.url);
+
+			var deny = (function(){
+				var parser = URL_Parser(document.URL);
+				var domain = parser.hostname.split(".").reverse();
+				var o = dict;
+				var i;
+				var n = domain.length;
+				for(i=0;i<n;i++){
+					o = o[domain[i]];
+					if(!o) break;
+					if(o["."]) return o["."];
+				}
+				return null;
+			})();
+			if(deny){
+				if(deny.data.site == embed.site){
+					embed.ok = false;
+				}
+			}
+
+			return embed;
+		};
+	})();
 
 	// --------------------------------------------------------------------------------
 	// 文字列リテラルから文字列に変換
@@ -84722,6 +82760,22 @@
 	}
 
 	// --------------------------------------------------------------------------------
+	// エラー理由
+	// --------------------------------------------------------------------------------
+	function Error_to_String(e){
+		if(typeof(e) == "string") return e;
+		if((typeof(e) == "object") && e){
+			return (function(){
+				try{
+					if(e instanceof Error) return e.toString();
+				}catch(e){}
+				return "";
+			})() || e.message || "";
+		}
+		return "";
+	}
+
+	// --------------------------------------------------------------------------------
 	// クリップボードにテキストをコピー
 	// --------------------------------------------------------------------------------
 	function ClipboardSetText(str){
@@ -86123,6 +84177,7 @@
 		var overflow_hidden_x = {"hidden":1};
 		var overflow_hidden_y = {"hidden":1};
 		var display_inline = {"inline":1,"none":1,"table-column":1,"table-column-group":1};
+		var position_fixed = {"fixed":1};
 
 		while(element){
 			var r = ElementGetBoundingClientRect(element);
@@ -86142,6 +84197,7 @@
 						if(r.top    > rect.top   ) rect.top    = r.top;
 					}
 				}
+				if(position_fixed[style.position]) break;
 			}
 
 			element = element.parentNode;
@@ -86413,23 +84469,28 @@
 	// --------------------------------------------------------------------------------
 	// エレメントが見えているか調べる
 	// --------------------------------------------------------------------------------
-	function ElementGetVisibility(element){
+	var ElementGetVisibility = (function(){
 		var visibility_visible = {"visible":1};
 		var display_none = {"none":1};
-		while(element){
-			var style = ElementGetComputedStyle(element,null);
-			if(style){
-				if(!(visibility_visible[style.visibility])){
-					return false;
-				}
-				if(display_none[style.display]){
-					return false;
-				}
+		return function (element){
+			if(element.checkVisibility){
+				return element.checkVisibility();
 			}
-			element = element.parentNode;
-		}
-		return true;
-	}
+			while(element){
+				var style = ElementGetComputedStyle(element,null);
+				if(style){
+					if(!(visibility_visible[style.visibility])){
+						return false;
+					}
+					if(display_none[style.display]){
+						return false;
+					}
+				}
+				element = element.parentNode;
+			}
+			return true;
+		};
+	})();
 
 	// --------------------------------------------------------------------------------
 	// 最終的に適用されているスタイルを取得
@@ -87336,13 +85397,11 @@
 	// --------------------------------------------------------------------------------
 	function MouseEventGetChangedButtons(event_obj){
 		try{
-			if(event_obj instanceof MouseEvent){
-				var buttons = 0;
-				if(event_obj.button == 0) buttons |= 0x01;
-				if(event_obj.button == 1) buttons |= 0x04;
-				if(event_obj.button == 2) buttons |= 0x02;
-				return buttons;
-			}
+			var buttons = 0;
+			if(event_obj.button == 0) buttons |= 0x01;
+			if(event_obj.button == 1) buttons |= 0x04;
+			if(event_obj.button == 2) buttons |= 0x02;
+			return buttons;
 		}catch(e){
 		}
 		return event_obj.button;
