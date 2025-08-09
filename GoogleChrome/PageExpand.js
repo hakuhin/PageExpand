@@ -4495,7 +4495,7 @@ function PageExpand(page_expand_arguments){
 							if(_this.released) return;
 
 							if(file_reader.error){
-								dispatch_error.call(_this,file_reader.error);
+								dispatch_error.call(_this,Error_to_String(file_reader.error));
 								return;
 							}
 
@@ -4527,7 +4527,7 @@ function PageExpand(page_expand_arguments){
 						if(_this.released) return;
 
 						if(file_reader.error){
-							dispatch_error.call(_this,file_reader.error);
+							dispatch_error.call(_this,Error_to_String(file_reader.error));
 							return;
 						}
 
@@ -34947,300 +34947,27 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// PageExpand デバッグ
 	// --------------------------------------------------------------------------------
-	function PageExpandDebug(){
-		var _this = this;
-
-		// --------------------------------------------------------------------------------
-		// 解放
-		// --------------------------------------------------------------------------------
-		_this.release = function (){
-			if(_event_handler_release){
-				_event_handler_release.release();
-				_event_handler_release = null;
-			}
-			if(_task){
-				_task.release();
-				_task = null;
-			}
-			if(_window){
-				DomNodeRemove(_window);
-				_window = null;
-			}
-		};
-
-		// --------------------------------------------------------------------------------
-		// 要素生成
-		// --------------------------------------------------------------------------------
-		function createElement(){
-			// 解放
-			_this.release();
-
-			// ウィンドウ
-			var style;
-			var container = DocumentCreateElement("div");
-			ElementSetStyle(container,"width:220px;border:3px #888 outset; padding:0px; margin:0px; right:5px; bottom:5px; position:fixed; text-align:left; color:#000; font-size:12px; line-height:1.0; z-index:2147483647;");
-			_window = container;
-
-			var node_info = node_info_dictionary.addNode(_window);
-			node_info.setInvalid();
-			node_info.setOwnerToPageExpand();
-			node_info.observerRemove();
-
-			_event_handler_release = node_info.createEventHandler("release");
-			_event_handler_release.setFunction(_this.release);
-
-			var background = DocumentCreateElement("div");
-			ElementSetStyle(background,"background-color:#FFF; line-height:1.0; border:1px #ccc solid; padding:0px; margin:0px; opacity:0.8;");
-			container.appendChild(background);
-
-			// PageExpandDebug
-			var debug_msg = DocumentCreateElement("div");
-			ElementSetStyle(debug_msg,"font-weight:bold; text-align:left; color:#000; line-height:1.0; background-color:#ccc; padding:2px 5px; margin:0px 0px 2px; position:relative;");
-			ElementSetTextContent(debug_msg,"PageExpand Debug");
-			background.appendChild(debug_msg);
-
-			// 閉じるボタン
-			var close_msg = DocumentCreateElement("div");
-			ElementSetStyle(close_msg,"width:12px; position:absolute; right:1px; top:1px; bottom:1px; border:1px #888 solid; background:#ddd; line-height:1.0;");
-			ElementSetTextContent(close_msg,"");
-			debug_msg.appendChild(close_msg);
-			close_msg.onclick = function(){
-				_this.release();
-			};
-
-			var element;
-			var css_text_msg = "text-align:left; color:#000; font-size:12px; line-height:1.0;";
-
-			// 実行キュー数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
-			background.appendChild(element);
-			var execute_queue_msg = new UI_Text(element);
-
-			// 実行フェーズ
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
-			background.appendChild(element);
-			var execute_queue_phase_msg = new UI_Text(element);
-
-			// 実行キューエラー数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
-			background.appendChild(element);
-			var execute_queue_error_msg = new UI_Text(element);
-
-			// ローダーキュー数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
-			background.appendChild(element);
-			var loader_queue_msg = new UI_Text(element);
-
-			// ローダーキューエラー数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
-			background.appendChild(element);
-			var loader_queue_error_msg = new UI_Text(element);
-
-			// ローダースレッド数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
-			background.appendChild(element);
-			var loader_thread_msg = new UI_Text(element);
-
-			// ローダースレッドメーター
-			var loader_thread_meter = new UI_ProgressBar(background);
-
-			// タスク数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
-			background.appendChild(element);
-			var task_count_msg = new UI_Text(element);
-
-			// イメージ数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
-			background.appendChild(element);
-			var image_count_msg = new UI_Text(element);
-
-			// イメージスレッド数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
-			background.appendChild(element);
-			var image_thread_msg = new UI_Text(element);
-
-			// イメージスレッドメーター
-			var image_thread_meter = new UI_ProgressBar(background);
-
-			// サウンド数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
-			background.appendChild(element);
-			var sound_count_msg = new UI_Text(element);
-
-			// サウンドスレッド数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
-			background.appendChild(element);
-			var sound_thread_msg = new UI_Text(element);
-
-			// サウンドスレッドメーター
-			var sound_thread_meter = new UI_ProgressBar(background);
-
-			// ビデオ数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
-			background.appendChild(element);
-			var video_count_msg = new UI_Text(element);
-
-			// ビデオスレッド数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
-			background.appendChild(element);
-			var video_thread_msg = new UI_Text(element);
-
-			// ビデオスレッドメーター
-			var video_thread_meter = new UI_ProgressBar(background);
-
-			// ダウンローダーキュー数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 0px; " + css_text_msg);
-			background.appendChild(element);
-			var downloader_queue_msg = new UI_Text(element);
-
-			// ダウンローダーキューエラー数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
-			background.appendChild(element);
-			var downloader_queue_error_msg = new UI_Text(element);
-
-			// ダウンローダースレッド数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 1px; " + css_text_msg);
-			background.appendChild(element);
-			var downloader_thread_msg = new UI_Text(element);
-
-			// ダウンローダースレッドメーター
-			var downloader_thread_meter = new UI_ProgressBar(background);
-
-			// リムーブ監視数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
-			background.appendChild(element);
-			var observer_remove_msg = new UI_Text(element);
-
-			// 変更監視数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
-			background.appendChild(element);
-			var observer_modify_msg = new UI_Text(element);
-
-			// スクロール監視数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
-			background.appendChild(element);
-			var observer_scroll_msg = new UI_Text(element);
-
-			// アドレス数
-			element = DocumentCreateElement("div");
-			ElementSetStyle(element,"margin:0px 5px 2px; " + css_text_msg);
-			background.appendChild(element);
-			var address_count_msg = new UI_Text(element);
-
-			var execute_queue_phase_msg_list = [
-				"interrupt",
-				"remove",
-				"insert",
-				"bbs",
-				"analyze",
-				"element",
-				"text",
-				"complete",
-				""
-			]
-
-			// タスク実行
-			_task = task_container.createTask();
-			_task.setExecuteFunc(function(task){
-
-				// 表示更新
-				execute_queue_msg.setText("execute queue: " + execute_queue.getCountQueue());
-				execute_queue_phase_msg.setText("execute phase: " + execute_queue_phase_msg_list[execute_queue.getPhase()]);
-				execute_queue_error_msg.setText("execute error: " + execute_queue.getCountError());
-
-				loader_queue_msg.setText("loader queue: " + loader_queue.getCountQueue());
-				loader_queue_error_msg.setText("loader error: " + loader_queue.getCountError());
-				loader_thread_msg.setText("loader thread: " + loader_queue.getCountThread() + " / " + loader_queue.getMaxThread());
-				loader_thread_meter.setValue(loader_queue.getCountThread());
-				loader_thread_meter.setMaximum(loader_queue.getMaxThread());
-
-				task_count_msg.setText("task count: " + task_container.getCountTask());
-
-				var use_size = Math.floor(element_limitter_image.getByteSizeNow() / 1024 / 1024 * 100) / 100;
-				image_count_msg.setText("image size: " + use_size);
-				image_thread_msg.setText("image thread: " + element_limitter_image.getCountUse() + " / " + element_limitter_image.getCount());
-				image_thread_meter.setValue(element_limitter_image.getCountUse());
-				image_thread_meter.setMaximum(element_limitter_image.getCount());
-
-				sound_count_msg.setText("sound count: " + element_limitter_sound.getCount());
-				sound_thread_msg.setText("sound thread: " + element_limitter_sound.getCountUse() + " / " + element_limitter_sound.getMaxUse());
-				sound_thread_meter.setValue(element_limitter_sound.getCountUse());
-				sound_thread_meter.setMaximum(element_limitter_sound.getMaxUse());
-
-				video_count_msg.setText("video count: " + element_limitter_video.getCount());
-				video_thread_msg.setText("video thread: " + element_limitter_video.getCountUse() + " / " + element_limitter_video.getMaxUse());
-				video_thread_meter.setValue(element_limitter_video.getCountUse());
-				video_thread_meter.setMaximum(element_limitter_video.getMaxUse());
-
-				downloader_queue_msg.setText("download queue: " + downloader_queue.getCountQueue());
-				downloader_queue_error_msg.setText("download error: " + downloader_queue.getCountError());
-				downloader_thread_msg.setText("download thread: " + downloader_queue.getCountThread() + " / " + downloader_queue.getMaxThread());
-				downloader_thread_meter.setValue(downloader_queue.getCountThread());
-				downloader_thread_meter.setMaximum(downloader_queue.getMaxThread());
-
-				observer_remove_msg.setText("observer remove: " + document_observer_remove_node.getCount());
-				observer_modify_msg.setText("observer modify: " + document_observer_modify_node.getCount());
-				observer_scroll_msg.setText("observer scroll: " + document_observer_scroll.getCount());
-				address_count_msg.setText("src count: " + url_info_dictionary.getCount());
-			});
-
-			_task.execute(0xffffffff);
-
-			document.body.appendChild(_window);
-		}
-
-		// --------------------------------------------------------------------------------
-		// 表示をセット
-		// --------------------------------------------------------------------------------
-		_this.setVisible = function (type){
-			_visible = type;
-			if(_visible){
-				createElement();
-			}else{
-				_this.release();
-			}
-		};
-
-		// --------------------------------------------------------------------------------
-		// テキスト（内部用）
-		// --------------------------------------------------------------------------------
+	var PageExpandDebug = (function(){
 		var UI_Text = (function(){
 			var f = function(parent){
-				this.node = DocumentCreateText("");
-				parent.appendChild(this.node);
+				var node = DocumentCreateElement("div");
+				var t0 = DocumentCreateText("");
+				var t1 = DocumentCreateText("");
+				node.appendChild(t0);
+				node.appendChild(t1);
+				this.text = [t0,t1];
+				node.className = "ui_text";
+				parent.appendChild(node);
 			};
 			f.prototype = {
-				setText:function(v){
-					if(DomNodeGetNodeValue(this.node) == v) return;
-					DomNodeSetNodeValue(this.node,v);
+				setText:function(n,v){
+					if(DomNodeGetNodeValue(this.text[n]) == v) return;
+					DomNodeSetNodeValue(this.text[n],v);
 				},
 				node:null
 			};
 			return f;
 		})();
-
-		// --------------------------------------------------------------------------------
-		// ブログレスバー（内部用）
-		// --------------------------------------------------------------------------------
 		var UI_ProgressBar = (function(){
 			function update(){
 				var percent = 0;
@@ -35251,11 +34978,11 @@ function PageExpand(page_expand_arguments){
 			}
 			var f = function(parent){
 				var mater = DocumentCreateElement("div");
-				ElementSetStyle(mater,"height:2px; min-height:0; border:1px #888 solid; margin:0px 5px 2px; line-height:1.0;");
+				mater.className = "ui_mater";
 				parent.appendChild(mater);
 
 				this.bar = DocumentCreateElement("div");
-				ElementSetStyle(this.bar,"height:2px; min-height:0; background-color :#888; margin:0px 0px 2px; width:0%; line-height:1.0;");
+				this.bar.className = "ui_bar";
 				mater.appendChild(this.bar);
 			};
 			f.prototype = {
@@ -35276,22 +35003,229 @@ function PageExpand(page_expand_arguments){
 			return f;
 		})();
 
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _window;
-		var _task;
-		var _event_handler_release;
-		var _visible;
+		function start(){
+			var _this = this;
+			this.release();
 
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_visible = false;
-		})();
-	}
+			this.event_dispatcher = new EventDispatcher();
+			this.releasers.push(this.event_dispatcher);
 
+			var shadow_host = this.shadow_host = DocumentCreateElement("div");
+			var shadow_root = (shadow_host.attachShadow) ? shadow_host.attachShadow({mode:"closed"}) : shadow_host;
+
+			var node_info = node_info_dictionary.addNode(shadow_host);
+			node_info.setInvalid();
+			node_info.setOwnerToPageExpand();
+			node_info.observerRemove();
+
+			var handler = node_info.createEventHandler("release");
+			handler.setFunction(function(){
+				_this.release();
+			});
+			this.releasers.push(handler);
+
+			var root = DocumentCreateElement("div");
+			root.className = "root";
+			root.translate = false;
+			shadow_root.appendChild(root);
+
+			var elements = [];
+			["bg","title"].forEach(function(name){
+				var e = elements[name] = DocumentCreateElement("div");
+				e.className = name;
+				root.appendChild(e);
+			});
+
+			var dragging = null;
+			var listener = new EventListenerWrapper(elements.title);
+			listener.start("mousedown",function(e){
+				input_mouse.setMouseEvent(e);
+				var r = ElementGetBoundingClientRect(root);
+				var p = input_mouse.getPositionClient();
+				dragging = {
+					x:p.x - r.left,
+					y:p.y - r.top
+				};
+			});
+			this.releasers.push(listener);
+			ElementSetTextContent(elements.title,"PageExpand Debug");
+
+			var close = DocumentCreateElement("button");
+			close.className = "close";
+			close.title = "close";
+			var listener = new EventListenerWrapper(close);
+			listener.start("click",function(e){
+				_this.release();
+			});
+			this.releasers.push(listener);
+			var svg = new DOMParser().parseFromString('<svg width="10" height="10" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke:#000;stroke-width:2" d="M 2,8 8,2 M 2,2 8,8" /></g></svg>',"image/svg+xml").childNodes[0];
+			close.appendChild(svg);
+			root.appendChild(close);
+
+			[{
+				group:"execute",
+				item:[
+					{name:"queue",f:function(){ return execute_queue.getCountQueue(); }},
+					{name:"phase",f:(function(){
+						var list = ["interrupt","remove","insert","bbs","analyze","element","text","complete",""];
+						return function(){ return list[execute_queue.getPhase()]; };
+					})()},
+					{name:"error",f:function(){ return execute_queue.getCountError(); }}
+				]
+			},{
+				group:"loader",
+				item:[
+					{name:"queue",f:function(){ return loader_queue.getCountQueue(); }},
+					{name:"error",f:function(){ return loader_queue.getCountError(); }},
+					{name:"thread",f:function(){ return loader_queue.getCountThread() + " / " + loader_queue.getMaxThread(); }},
+					{type:"meter",f:function(){
+						this.setValue(loader_queue.getCountThread());
+						this.setMaximum(loader_queue.getMaxThread());
+					}}
+				]
+			},{
+				group:"task",
+				item:[
+					{name:"count",f:function(){ return task_container.getCountTask(); }}
+				]
+			},{
+				group:"image",
+				item:[
+					{name:"size",f:function(){ return Math.floor(element_limitter_image.getByteSizeNow() / 1024 / 1024 * 100) / 100; }},
+					{name:"thread",f:function(){ return element_limitter_image.getCountUse() + " / " + element_limitter_image.getCount(); }},
+					{type:"meter",f:function(){
+						this.setValue(element_limitter_image.getCountUse());
+						this.setMaximum(element_limitter_image.getCount());
+					}}
+				]
+			},{
+				group:"sound",
+				item:[
+					{name:"count",f:function(){ return element_limitter_sound.getCount(); }},
+					{name:"thread",f:function(){ return element_limitter_sound.getCountUse() + " / " + element_limitter_sound.getMaxUse(); }},
+					{type:"meter",f:function(){
+						this.setValue(element_limitter_sound.getCountUse());
+						this.setMaximum(element_limitter_sound.getMaxUse());
+					}}
+				]
+			},{
+				group:"video",
+				item:[
+					{name:"count",f:function(){ return element_limitter_video.getCount(); }},
+					{name:"thread",f:function(){ return element_limitter_video.getCountUse() + " / " + element_limitter_video.getMaxUse(); }},
+					{type:"meter",f:function(){
+						this.setValue(element_limitter_video.getCountUse());
+						this.setMaximum(element_limitter_video.getMaxUse());
+					}}
+				]
+			},{
+				group:"download",
+				item:[
+					{name:"queue",f:function(){ return downloader_queue.getCountQueue(); }},
+					{name:"error",f:function(){ return downloader_queue.getCountError(); }},
+					{name:"thread",f:function(){ return downloader_queue.getCountThread() + " / " + downloader_queue.getMaxThread(); }},
+					{type:"meter",f:function(){
+						this.setValue(downloader_queue.getCountThread());
+						this.setMaximum(downloader_queue.getMaxThread());
+					}}
+				]
+			},{
+				group:"observer",
+				item:[
+					{name:"remove",f:function(){ return document_observer_remove_node.getCount(); }},
+					{name:"modify",f:function(){ return document_observer_modify_node.getCount(); }},
+					{name:"scroll",f:function(){ return document_observer_scroll.getCount(); }}
+				]
+			},{
+				group:"src",
+				item:[
+					{name:"count",f:function(){ return url_info_dictionary.getCount(); }}
+				]
+			}].forEach(function(o){
+				o.item.forEach(function(item){
+					if(item.type == "meter"){
+						var meter = new UI_ProgressBar(root);
+						var handler = _this.event_dispatcher.createEventHandler("update");
+						handler.setFunction(function(){
+							item.f.call(meter);
+						});
+						_this.releasers.push(handler);
+					}else{
+						var text = new UI_Text(root);
+						text.setText(0,o.group + " " + item.name + ": ");
+						var handler = _this.event_dispatcher.createEventHandler("update");
+						handler.setFunction(function(){
+							text.setText(1,String(item.f.call(item)));
+						});
+						_this.releasers.push(handler);
+					}
+				});
+			});
+
+			var task = task_container.createTask();
+			task.setExecuteFunc(function(task){
+				if(dragging){
+					var p = input_mouse.getPositionClient();
+					var style = root.style;
+					style.left = (p.x - dragging.x) + "px";
+					style.top = (p.y - dragging.y) + "px";
+					style.right = style.bottom = "auto";
+					if(!input_mouse.getButtonLeft()){
+						dragging = null;
+					}
+				}
+
+				_this.event_dispatcher.dispatchEvent("update");
+			});
+			task.execute(0xffffffff);
+			this.releasers.push(task);
+
+			document.body.appendChild(this.shadow_host);
+
+			var style = DocumentCreateElement("style");
+			shadow_root.appendChild(style);
+			var style_sheet = ElementGetStyleSheet(style);
+			[
+				[".root","all:revert; width:200px;border:3px #888 outset; padding:0px; padding-bottom:4px; margin:0px; right:5px; bottom:5px; position:fixed; text-align:left; color:#000; font-family:system-ui; font-size:12px; line-height:1.0; z-index:2147483647;backdrop-filter:blur(2px);"],
+				[".bg","background-color:#FFF; padding:0px; margin:0px; opacity:0.8; inset:0px; position:absolute;"],
+				[".title","font-weight:bold; color:#000; background-color:#ccc; padding:2px 5px; margin:0px 0px 2px; position:relative; user-select:none; cursor:move;"],
+				[".close","width:16px; height:16px; position:absolute; right:0px; top:0px; padding:0px; text-align:center; line-height:0;"],
+				[".ui_text","margin:0px 5px 0px;position:relative;z-index:1;"],
+				[".ui_mater","height:2px; min-height:0; border:1px #888 solid; margin:2px 5px; line-height:1.0; position:relative;z-index:0;"],
+				[".ui_bar","height:2px; min-height:0; background-color :#888; margin:0px; width:0%; line-height:1.0;"]
+			].forEach(function(r,i){
+				CSSStyleSheetInsertRule(style_sheet,r[0],r[1],i);
+			});
+		}
+
+		function PageExpandDebug(){
+			this.releasers = [];
+		}
+		PageExpandDebug.prototype = {
+			release:function(){
+				this.releasers.forEach(function(e){
+					e.release();
+				});
+				this.releasers.length = 0;
+				if(this.shadow_host){
+					DomNodeRemove(this.shadow_host);
+					this.shadow_host = null;
+				}
+			},
+			setVisible:function(v){
+				if(v){
+					if(this.shadow_host) return;
+					start.call(this);
+					return;
+				}
+				this.release();
+			},
+			shadow_host:null,
+			event_dispatcher:null,
+			releasers:null
+		};
+		return PageExpandDebug;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// PageExpand バックグラウンド Chrome 用
@@ -43011,7 +42945,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.7.9");
+				new UI_Text(parent,"PageExpand ver.1.7.10");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -65350,365 +65284,74 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// イメージドラッガー
 	// --------------------------------------------------------------------------------
-	function ImageDragger(image){
-		var _this = this;
-
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			removeEvent();
-			releaseImageDropper();
-		};
-
-		// --------------------------------------------------------------------------------
-		// 元のアドレスをセット
-		// --------------------------------------------------------------------------------
-		_this.setOriginalURL = function(url){
-			_original_url = url;
-		};
-
-		// --------------------------------------------------------------------------------
-		// ドラッグ開始
-		// --------------------------------------------------------------------------------
-		function releaseImageDropper(e){
-			if(dropper){
-				dropper.release();
-				dropper = null;
+	var ImageDragger = (function(){
+		function release_droppers(){
+			if(this.dropper){
+				this.dropper.release();
+				this.dropper = null;
 			}
-			if(time_handle !== null){
-				clearTimeout(time_handle);
-				time_handle = null;
+			if(this.timer){
+				this.timer.release();
+				this.timer = null;
 			}
 		}
+		function ImageDragger(image){
+			var _this = this;
+			this.releasers = [];
 
-		// --------------------------------------------------------------------------------
-		// ドラッグ開始
-		// --------------------------------------------------------------------------------
-		function dragStart(e){
-			input_mouse.setMouseEvent(e);
-			releaseImageDropper();
+			[["dragstart",function(e){
+				input_mouse.setMouseEvent(e);
+				release_droppers.call(_this);
 
-			if(_original_url){
 				try{
+					var url = _this.original_url;
 					var data_transfer = e.dataTransfer;
-					data_transfer.setData("url" , _original_url);
-					data_transfer.setData("text" , _original_url);
+					data_transfer.setData("url" , url);
+					data_transfer.setData("text" , url);
 				}catch(e){
 				}
-			}
 
-			time_handle = setTimeout(function(){
-				time_handle = null;
-				dropper = new ImageDropper();
-			},1);
+				_this.timer = new Timer(1,1);
+				_this.timer.oncomplete = function(){
+					_this.dropper = new ImageDropper();
+				};
+				_this.timer.start();
+			}],["dragend",function(e){
+				if(e.dataTransfer.dropEffect != "none") return;
+				if(_this.dropper){
+					_this.dropper.suicide();
+					_this.dropper = null;
+				}
+			}]].forEach(function(a){
+				var listener = new EventListenerWrapper(image);
+				listener.start(a[0],a[1],false);
+				_this.releasers.push(listener);
+			});
 		}
-
-		// --------------------------------------------------------------------------------
-		// ドラッグ終了
-		// --------------------------------------------------------------------------------
-		function dragEnd(e){
-			if(e.dataTransfer.dropEffect == "none"){
-				releaseImageDropper();
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// イベントを追加（内部用）
-		// --------------------------------------------------------------------------------
-		function addEvent(){
-			removeEvent();
-
-			if(image.addEventListener){
-				image.addEventListener("dragstart",dragStart,false);
-				image.addEventListener("dragend",dragEnd,false);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// イベントを破棄（内部用）
-		// --------------------------------------------------------------------------------
-		function removeEvent(){
-			if(image.removeEventListener){
-				image.removeEventListener("dragstart",dragStart,false);
-				image.removeEventListener("dragend",dragEnd,false);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var dropper = null;
-		var time_handle = null;
-		var _original_url = null;
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			addEvent();
-		})();
-
-	}
+		ImageDragger.prototype = {
+			release:function(){
+				release_droppers.call(this);
+				this.releasers.forEach(function(e){
+					e.release();
+				});
+				this.releasers.length = 0;
+			},
+			setOriginalURL:function(url){
+				this.original_url = url;
+			},
+			original_url:null,
+			dropper:null,
+			timer:null,
+			releasers:null
+		};
+		return ImageDragger;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// イメージドロッパー
 	// --------------------------------------------------------------------------------
-	function ImageDropper(){
-		var _this = this;
-
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			release_0();
-			release_1();
-		};
-
-		// --------------------------------------------------------------------------------
-		// 自殺（内部用）
-		// --------------------------------------------------------------------------------
-		function suicide(){
-			release_0();
-
-			(function(){
-				var task = task_container.createTask();
-				task.setDestructorFunc(function(){
-					task = null;
-				});
-				task.setExecuteFunc(function(){
-					_fade_alpha -= 0.2;
-					if(_fade_alpha < 0.0){
-						_fade_alpha = 0.0;
-						task.release();
-						release_1();
-						return;
-					}
-					_window.style.opacity = _fade_alpha;
-				});
-				task.execute(0xffffffff);
-			})();
-		}
-
-		// --------------------------------------------------------------------------------
-		// 開放 0（内部用）
-		// --------------------------------------------------------------------------------
-		function release_0 (){
-			removeEvent();
-
-			// マウスイベント無効化
-			_window.style.pointerEvents = "none";
-
-			if(_parent_task){
-				_parent_task.releaseChild();
-			}
-		};
-
-		// --------------------------------------------------------------------------------
-		// 開放 1（内部用）
-		// --------------------------------------------------------------------------------
-		function release_1 (){
-			DomNodeRemove(_shadow_host);
-
-			if(_event_handler_release){
-				_event_handler_release.release();
-				_event_handler_release = null;
-			}
-			if(_node_info_shadow_host){
-				_node_info_shadow_host.release();
-				_node_info_shadow_host = null;
-			}
-
-			// タスク破棄
-			if(_parent_task){
-				_parent_task.releaseChild();
-				_parent_task.release();
-				_parent_task = null;
-			}
-		};
-
-		// --------------------------------------------------------------------------------
-		// イベントを追加（内部用）
-		// --------------------------------------------------------------------------------
-		function addEvent(){
-			removeEvent();
-
-			if(_droperea_download.addEventListener){
-				_droperea_download.addEventListener("dragenter",dragEnter,false);
-				_droperea_download.addEventListener("dragleave",dragLeave,false);
-				_droperea_download.addEventListener("dragover",dragOver,false);
-				_droperea_download.addEventListener("drop",dropDownload,false);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// イベントを破棄（内部用）
-		// --------------------------------------------------------------------------------
-		function removeEvent(){
-			if(_droperea_download.removeEventListener){
-				_droperea_download.removeEventListener("dragenter",dragEnter,false);
-				_droperea_download.removeEventListener("dragleave",dragLeave,false);
-				_droperea_download.removeEventListener("dragover",dragOver,false);
-				_droperea_download.removeEventListener("drop",dropDownload,false);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// ドラッグイベント（内部用）
-		// --------------------------------------------------------------------------------
-		function dragOver(e){
-			dragEnter(e);
-			if(e.preventDefault){
-				e.preventDefault();
-			}else{
-				return false;
-			}
-		}
-		function dragEnter(e){
-			enterDropArea(e.currentTarget);
-		}
-		function dragLeave(e){
-			leaveDropArea(e.currentTarget);
-		}
-		function enterDropArea(element){
-			var style = element.style;
-			style.backgroundImage = "linear-gradient(to top, #f0f4ff, #c8cff0)";
-			style.boxShadow = "0px 0px 6px #6070d0";
-		}
-		function leaveDropArea(element){
-			var style = element.style;
-			style.backgroundImage = "linear-gradient(to bottom, #f8f8f8, #e8e8e8)";
-			style.boxShadow = "0px 0px 2px #808080";
-		}
-
-		// --------------------------------------------------------------------------------
-		// ドロップイベント（内部用）
-		// --------------------------------------------------------------------------------
-		function dropDownload(e){
-			dragLeave(e);
-
-			var url = e.dataTransfer.getData("url");
-
-			var ui_progress = new UI_Progress(_svg_download);
-			var downloader = new Downloader();
-			downloader.setURL(url);
-			downloader.setSaveAs(false);
-			downloader.setSilent(false);
-			downloader.setAllowSameRequest(true);
-			downloader.onprogress = function(response){
-				var percent = 0.0;
-				var loaded = response.bytesLoaded;
-				var total = response.bytesTotal;
-				if(total) percent = loaded / total;
-				ui_progress.setValue(percent);
-				_droperea_download.title = "Loading... " + Math.floor(percent * 100) + "% " + loaded + "Byte";
-			};
-			downloader.oncomplete = function(response){
-				var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-				DomNode_InsertLastChild(_svg_download , path);
-
-				if(response.error){
-					path.setAttribute( "fill" , "rgba(255,128,128,0.75)" );
-					path.setAttribute( "d" ,
-						"M78,16.099c-0.174,0.404-0.346,0.75-0.519,1.037c-0.174,0.289-0.376,0.599-0.607,0.908" +
-						"c-3.543,4.736-7.181,9.417-10.564,13.982c-3.384,4.565-9.663,11.308-9.786,13.975c-0.041,0.892,1.771,3.257,2.723,4.927" +
-						"c0.95,1.669,1.967,3.428,3.047,5.271c1.081,1.844,2.24,3.786,3.479,5.832c1.237,2.046,2.641,4.252,4.017,6.57" +
-						"c0.35,0.589,0.655,1.195,0.929,1.771c0.274,0.576,0.469,1.138,0.584,1.685c-0.397-0.225-0.595-0.337-0.992-0.562" +
-						"c0.173,0.57,0.257,0.855,0.43,1.426c-0.346,0.035-0.519,0.053-0.864,0.088c0.207,0.847,0.312,1.271,0.519,2.118" +
-						"c-0.951-0.778-1.425-1.167-2.375-1.945c0.276,1.176,0.415,1.763,0.691,2.938c-0.536-0.294-0.805-0.442-1.341-0.736" +
-						"c-0.241,0.813-0.361,1.219-0.603,2.031c-0.984-0.985-1.479-1.477-2.463-2.462c0.207,1.072,0.311,1.608,0.518,2.681" +
-						"c-0.535-0.501-0.804-0.755-1.34-1.256c-0.104,0.207-0.157,0.313-0.261,0.52c-0.276-0.312-0.415-0.466-0.691-0.777" +
-						"c-0.035,0.415-0.049,0.622-0.084,1.037c-0.489-0.49-0.886-0.914-1.188-1.275c-0.302-0.36-0.584-0.763-0.845-1.189" +
-						"c-1.913-3.129-3.823-6.202-5.595-9.184c-1.771-2.982-5.085-8.793-5.121-8.794c-0.361-0.007-2.664,4.35-3.931,6.481" +
-						"c-1.268,2.133-2.544,4.338-3.825,6.613c-1.282,2.276-2.592,4.676-3.932,7.196c-1.338,2.521-2.758,5.265-4.256,8.23" +
-						"c-0.116,0.23-0.222,0.444-0.323,0.646c-0.102,0.201-0.239,0.427-0.413,0.672c-0.172,0.244-0.382,0.502-0.626,0.775" +
-						"c-0.244,0.272-0.555,0.6-0.929,0.974c-0.138-0.622-0.207-0.933-0.345-1.555c-0.881,0.881-1.322,1.321-2.204,2.202" +
-						"c0.276-1.382,0.496-2.075,0.772-3.457C28.579,86.444,28,86.921,27,87.871c0-0.674,0-1.01,0-1.684" +
-						"c-1,0.432-1.455,0.646-2.371,1.078c0.536-1.244,0.763-1.865,1.299-3.109c-0.985,0.743-1.498,1.113-2.482,1.856" +
-						"c0.242-0.812,0.352-1.217,0.594-2.029c-0.536,0.104-0.81,0.155-1.345,0.259c0.501-1.02,0.75-1.528,1.251-2.548" +
-						"c-0.777,0.483-1.167,0.727-1.944,1.21c0.085-0.345,0.194-0.706,0.323-1.08c0.129-0.375,0.335-0.756,0.54-1.123" +
-						"c3.2-5.729,6.356-12.1,9.828-17.891s10.755-14.004,10.911-17.156c0.104-2.084-4.027-7.568-5.942-11.296" +
-						"c-1.915-3.728-3.904-7.594-5.768-11.519c-0.175-0.368-0.339-0.755-0.497-1.144c-0.159-0.389-0.28-0.742-0.367-1.06" +
-						"c0.45,0.104,0.674,0.155,1.124,0.259c-0.311-0.882-0.468-1.323-0.779-2.204c0.536,0.035,0.804,0.052,1.34,0.087" +
-						"c-0.069-0.898-0.104-1.348-0.174-2.246c1.02,0.933,1.532,1.399,2.552,2.333c-0.432-1.487-0.626-2.229-1.058-3.716" +
-						"C34.812,15.702,35,15.978,36,16.531c0-0.778,0-1.167,0-1.944c1,0.968,1.429,1.452,2.396,2.42" +
-						"c-0.259-0.933-0.398-1.401-0.658-2.334c0.709,0.64,1.057,0.959,1.765,1.599c0.259-0.519,0.387-0.777,0.646-1.296" +
-						"c0.432,0.577,0.784,1.109,1.057,1.599c0.273,0.49,0.627,1.075,0.971,1.728c1.632,3.105,3.076,6.26,4.473,9.012" +
-						"c1.397,2.752,4.033,8.012,4.083,8.016c1.278,0.091,10.41-14.775,15.943-21.78c0.385-0.487,0.822-0.943,1.255-1.36" +
-						"c0.432-0.417,0.964-0.756,1.598-1.016c-0.121,0.449-0.182,0.674-0.303,1.123c0.674-0.501,1.013-0.751,1.688-1.252" +
-						"c-0.208,1.002-0.313,1.504-0.521,2.506c1.21-0.916,1.814-1.375,3.024-2.29c0.035,0.777,0.054,1.167,0.089,1.944" +
-						"c0.951-0.328,1.426-0.493,2.377-0.821c-0.605,1.175-0.907,1.764-1.513,2.938c1.072-0.743,1.606-1.115,2.679-1.858" +
-						"c-0.259,0.743-0.39,1.115-0.648,1.858c0.501-0.293,0.753-0.441,1.254-0.735c-0.501,0.899-0.753,1.348-1.254,2.247" +
-						"C77.04,16.54,77.36,16.393,78,16.099z"
-					);
-					_droperea_download.title = "Download failure ( " + response.error + " )";
-				}else{
-					path.setAttribute( "fill" , "rgba(96,255,96,0.75)" );
-					path.setAttribute( "d" ,
-						"M18.882,60.969c-0.601-0.636-1.068-1.181-1.386-1.635c-0.318-0.454-0.478-0.892-0.478-1.315" +
-						"c0-0.545,0.266-1.093,0.795-1.638c0.53-0.545,1.211-1.029,2.045-1.453c0.832-0.424,1.74-0.767,2.725-1.024" +
-						"c0.983-0.257,1.931-0.384,2.84-0.384c0.969,0,1.764,0.127,2.384,0.384c0.62,0.257,1.22,0.691,1.795,1.297" +
-						"c2.332,2.453,4.444,4.959,6.336,7.518c1.893,2.56,5.564,7.927,5.564,7.927c0.546-0.063,3.572-9.229,5.45-13.604" +
-						"c1.877-4.376,3.869-8.66,5.974-12.854c2.104-4.194,4.361-8.331,6.77-12.403c2.407-4.072,5.063-8.175,7.836-12.285" +
-						"c1.031-1.529,2.551-2.681,4.564-3.407S76.691,15,79.841,15c0.938,0,1.694,0.136,2.27,0.408s0.865,0.637,0.865,1.091" +
-						"c0,0.394-0.091,0.787-0.272,1.181s-0.461,0.85-0.818,1.363c-6.759,9.716-13.279,19.88-18.76,30.161" +
-						"c-5.623,10.548-10.722,22.024-14.673,33.254c-0.288,0.817-0.939,1.481-2,1.906C45.393,84.788,43.834,85,41.774,85" +
-						"c-0.969,0-1.786-0.03-2.451-0.091c-0.667-0.062-1.228-0.175-1.682-0.341c-0.454-0.166-0.834-0.371-1.136-0.613" +
-						"c-0.304-0.242-0.558-0.552-0.771-0.908c-1.26-2.109-2.566-4.097-3.793-5.93c-1.227-1.831-2.5-3.612-3.816-5.338" +
-						"c-1.317-1.726-2.725-3.467-4.224-5.223S20.729,62.922,18.882,60.969z"
-					);
-					_droperea_download.title = "Download success";
-				}
-				(function(){
-					var time = 60 * 3;
-					var task = task_container.createTask();
-					task.setDestructorFunc(function(){
-						task = null;
-					});
-					task.setExecuteFunc(function(){
-						time -= 1;
-						if(time < 0){
-							suicide();
-							task.release();
-							return;
-						}
-					});
-					task.execute(0xffffffff);
-				})();
-			};
-			downloader.start({order:"new"});
-
-
-			if(e.preventDefault){
-				e.preventDefault();
-			}else{
-				return false;
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// ブログレス（内部用）
-		// --------------------------------------------------------------------------------
-		function UI_Progress(svg){
-			var _this = this;
-
-			// --------------------------------------------------------------------------------
-			// 開放
-			// --------------------------------------------------------------------------------
-			_this.release = function(){
-				DomNodeRemove(_path);
-			};
-
-			// --------------------------------------------------------------------------------
-			// 値をセット
-			// --------------------------------------------------------------------------------
-			_this.setValue = function(value){
-				update(value);
-			};
-
-			// --------------------------------------------------------------------------------
-			// 更新（内部用）
-			// --------------------------------------------------------------------------------
+	var ImageDropper = (function(){
+		var UI_Progress = (function(){
 			function update(v){
 				var px = 50;
 				var py = 50;
@@ -65749,405 +65392,312 @@ function PageExpand(page_expand_arguments){
 				cmd.push(x3);
 				cmd.push(y3);
 				cmd.push("Z");
-				_path.setAttribute( "d" , cmd.join(" ") );
+				this.path.setAttribute( "d" , cmd.join(" ") );
 			}
+			function f(svg){
+				this.path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+				DomNode_InsertFirstChild(svg , this.path);
+				this.path.setAttribute( "fill" , "rgba(0,128,255,0.1)" );
+			}
+			f.prototype = {
+				release:function(){
+					DomNodeRemove(this.path);
+				},
+				setValue:function(value){
+					update.call(this,value);
+				},
+				path:null
+			};
+			return f;
+		})();
 
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _path;
+		function release_events(){
+			this.events.forEach(function(e){
+				e.release();
+			});
+			this.events.length = 0;
+		}
+		function drop_enter(){
+			var style = this.droperea.style;
+			style.backgroundImage = "linear-gradient(to top, #f0f4ff, #c8cff0)";
+			style.boxShadow = "0px 0px 6px #6070d0";
+		}
+		function drop_leave(){
+			var style = this.droperea.style;
+			style.backgroundImage = "linear-gradient(to bottom, #f8f8f8, #e8e8e8)";
+			style.boxShadow = "0px 0px 2px #808080";
+		}
+		function drop(e){
+			var _this = this;
+			release_events.call(this);
+			e.preventDefault();
 
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-				DomNode_InsertFirstChild(svg , _path);
-				_path.setAttribute( "fill" , "rgba(0,128,255,0.1)" );
-			})();
+			var style = this.droperea.style;
+			style.filter = "drop-shadow(0px 0px 2px #aaa)";
+
+			var url = e.dataTransfer.getData("url");
+			var ui_progress = new UI_Progress(this.svg);
+			var downloader = new Downloader();
+			downloader.setURL(url);
+			downloader.setSaveAs(false);
+			downloader.setSilent(false);
+			downloader.setAllowSameRequest(true);
+			downloader.onprogress = function(response){
+				if(_this.released) return;
+				var percent = 0.0;
+				var loaded = response.bytesLoaded;
+				var total = response.bytesTotal;
+				if(total) percent = loaded / total;
+				ui_progress.setValue(percent);
+				_this.droperea.title = "Loading... " + Math.floor(percent * 100) + "% " + loaded + "Byte";
+			};
+			downloader.oncomplete = function(response){
+				if(_this.released) return;
+				var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+				DomNode_InsertLastChild(_this.svg , path);
+
+				if(response.error){
+					path.setAttribute( "fill" , "rgba(255,128,128,0.75)" );
+					path.setAttribute( "d" ,
+						"M78,16.099c-0.174,0.404-0.346,0.75-0.519,1.037c-0.174,0.289-0.376,0.599-0.607,0.908" +
+						"c-3.543,4.736-7.181,9.417-10.564,13.982c-3.384,4.565-9.663,11.308-9.786,13.975c-0.041,0.892,1.771,3.257,2.723,4.927" +
+						"c0.95,1.669,1.967,3.428,3.047,5.271c1.081,1.844,2.24,3.786,3.479,5.832c1.237,2.046,2.641,4.252,4.017,6.57" +
+						"c0.35,0.589,0.655,1.195,0.929,1.771c0.274,0.576,0.469,1.138,0.584,1.685c-0.397-0.225-0.595-0.337-0.992-0.562" +
+						"c0.173,0.57,0.257,0.855,0.43,1.426c-0.346,0.035-0.519,0.053-0.864,0.088c0.207,0.847,0.312,1.271,0.519,2.118" +
+						"c-0.951-0.778-1.425-1.167-2.375-1.945c0.276,1.176,0.415,1.763,0.691,2.938c-0.536-0.294-0.805-0.442-1.341-0.736" +
+						"c-0.241,0.813-0.361,1.219-0.603,2.031c-0.984-0.985-1.479-1.477-2.463-2.462c0.207,1.072,0.311,1.608,0.518,2.681" +
+						"c-0.535-0.501-0.804-0.755-1.34-1.256c-0.104,0.207-0.157,0.313-0.261,0.52c-0.276-0.312-0.415-0.466-0.691-0.777" +
+						"c-0.035,0.415-0.049,0.622-0.084,1.037c-0.489-0.49-0.886-0.914-1.188-1.275c-0.302-0.36-0.584-0.763-0.845-1.189" +
+						"c-1.913-3.129-3.823-6.202-5.595-9.184c-1.771-2.982-5.085-8.793-5.121-8.794c-0.361-0.007-2.664,4.35-3.931,6.481" +
+						"c-1.268,2.133-2.544,4.338-3.825,6.613c-1.282,2.276-2.592,4.676-3.932,7.196c-1.338,2.521-2.758,5.265-4.256,8.23" +
+						"c-0.116,0.23-0.222,0.444-0.323,0.646c-0.102,0.201-0.239,0.427-0.413,0.672c-0.172,0.244-0.382,0.502-0.626,0.775" +
+						"c-0.244,0.272-0.555,0.6-0.929,0.974c-0.138-0.622-0.207-0.933-0.345-1.555c-0.881,0.881-1.322,1.321-2.204,2.202" +
+						"c0.276-1.382,0.496-2.075,0.772-3.457C28.579,86.444,28,86.921,27,87.871c0-0.674,0-1.01,0-1.684" +
+						"c-1,0.432-1.455,0.646-2.371,1.078c0.536-1.244,0.763-1.865,1.299-3.109c-0.985,0.743-1.498,1.113-2.482,1.856" +
+						"c0.242-0.812,0.352-1.217,0.594-2.029c-0.536,0.104-0.81,0.155-1.345,0.259c0.501-1.02,0.75-1.528,1.251-2.548" +
+						"c-0.777,0.483-1.167,0.727-1.944,1.21c0.085-0.345,0.194-0.706,0.323-1.08c0.129-0.375,0.335-0.756,0.54-1.123" +
+						"c3.2-5.729,6.356-12.1,9.828-17.891s10.755-14.004,10.911-17.156c0.104-2.084-4.027-7.568-5.942-11.296" +
+						"c-1.915-3.728-3.904-7.594-5.768-11.519c-0.175-0.368-0.339-0.755-0.497-1.144c-0.159-0.389-0.28-0.742-0.367-1.06" +
+						"c0.45,0.104,0.674,0.155,1.124,0.259c-0.311-0.882-0.468-1.323-0.779-2.204c0.536,0.035,0.804,0.052,1.34,0.087" +
+						"c-0.069-0.898-0.104-1.348-0.174-2.246c1.02,0.933,1.532,1.399,2.552,2.333c-0.432-1.487-0.626-2.229-1.058-3.716" +
+						"C34.812,15.702,35,15.978,36,16.531c0-0.778,0-1.167,0-1.944c1,0.968,1.429,1.452,2.396,2.42" +
+						"c-0.259-0.933-0.398-1.401-0.658-2.334c0.709,0.64,1.057,0.959,1.765,1.599c0.259-0.519,0.387-0.777,0.646-1.296" +
+						"c0.432,0.577,0.784,1.109,1.057,1.599c0.273,0.49,0.627,1.075,0.971,1.728c1.632,3.105,3.076,6.26,4.473,9.012" +
+						"c1.397,2.752,4.033,8.012,4.083,8.016c1.278,0.091,10.41-14.775,15.943-21.78c0.385-0.487,0.822-0.943,1.255-1.36" +
+						"c0.432-0.417,0.964-0.756,1.598-1.016c-0.121,0.449-0.182,0.674-0.303,1.123c0.674-0.501,1.013-0.751,1.688-1.252" +
+						"c-0.208,1.002-0.313,1.504-0.521,2.506c1.21-0.916,1.814-1.375,3.024-2.29c0.035,0.777,0.054,1.167,0.089,1.944" +
+						"c0.951-0.328,1.426-0.493,2.377-0.821c-0.605,1.175-0.907,1.764-1.513,2.938c1.072-0.743,1.606-1.115,2.679-1.858" +
+						"c-0.259,0.743-0.39,1.115-0.648,1.858c0.501-0.293,0.753-0.441,1.254-0.735c-0.501,0.899-0.753,1.348-1.254,2.247" +
+						"C77.04,16.54,77.36,16.393,78,16.099z"
+					);
+					_this.droperea.title = "Download failure ( " + response.error + " )";
+				}else{
+					path.setAttribute( "fill" , "rgba(96,255,96,0.75)" );
+					path.setAttribute( "d" ,
+						"M18.882,60.969c-0.601-0.636-1.068-1.181-1.386-1.635c-0.318-0.454-0.478-0.892-0.478-1.315" +
+						"c0-0.545,0.266-1.093,0.795-1.638c0.53-0.545,1.211-1.029,2.045-1.453c0.832-0.424,1.74-0.767,2.725-1.024" +
+						"c0.983-0.257,1.931-0.384,2.84-0.384c0.969,0,1.764,0.127,2.384,0.384c0.62,0.257,1.22,0.691,1.795,1.297" +
+						"c2.332,2.453,4.444,4.959,6.336,7.518c1.893,2.56,5.564,7.927,5.564,7.927c0.546-0.063,3.572-9.229,5.45-13.604" +
+						"c1.877-4.376,3.869-8.66,5.974-12.854c2.104-4.194,4.361-8.331,6.77-12.403c2.407-4.072,5.063-8.175,7.836-12.285" +
+						"c1.031-1.529,2.551-2.681,4.564-3.407S76.691,15,79.841,15c0.938,0,1.694,0.136,2.27,0.408s0.865,0.637,0.865,1.091" +
+						"c0,0.394-0.091,0.787-0.272,1.181s-0.461,0.85-0.818,1.363c-6.759,9.716-13.279,19.88-18.76,30.161" +
+						"c-5.623,10.548-10.722,22.024-14.673,33.254c-0.288,0.817-0.939,1.481-2,1.906C45.393,84.788,43.834,85,41.774,85" +
+						"c-0.969,0-1.786-0.03-2.451-0.091c-0.667-0.062-1.228-0.175-1.682-0.341c-0.454-0.166-0.834-0.371-1.136-0.613" +
+						"c-0.304-0.242-0.558-0.552-0.771-0.908c-1.26-2.109-2.566-4.097-3.793-5.93c-1.227-1.831-2.5-3.612-3.816-5.338" +
+						"c-1.317-1.726-2.725-3.467-4.224-5.223S20.729,62.922,18.882,60.969z"
+					);
+					_this.droperea.title = "Download success";
+				}
+
+				var timer = new Timer(1000*3,1);
+				timer.oncomplete = function(){
+					if(_this.released) return;
+					_this.suicide();
+				};
+				timer.start();
+				_this.releasers.push(timer);
+			};
+			downloader.start({order:"new"});
 		}
 
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _shadow_host;
-		var _window;
-		var _droperea_download;
-		var _svg_download;
-		var _parent_task;
-		var _fade_alpha;
-		var _node_info_shadow_host;
-		var _event_handler_release;
+		function fade_task_release(){
+			if(this.fade_task){
+				this.fade_task.release();
+				this.fade_task = null;
+			}
+		}
+		function fade_task_start(options){
+			var _this = this;
+			fade_task_release.call(this);
+			var task = this.fade_task = task_container.createTask();
+			task.setExecuteFunc(function(){
+				_this.alpha += options.add;
 
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_shadow_host = DocumentCreateElement("div");
+				var result = (function(){
+					if(_this.alpha <= 0.0){
+						_this.alpha = 0.0;
+						return true;
+					}
+					if(_this.alpha >= 1.0){
+						_this.alpha = 1.0;
+						return true;
+					}
+					return false;
+				})();
 
-			_node_info_shadow_host = node_info_dictionary.addNode(_shadow_host);
-			_node_info_shadow_host.observerRemove();
-			_node_info_shadow_host.setOwnerToPageExpand();
-			_node_info_shadow_host.setInvalid(true);
+				_this.root.style.opacity = _this.alpha;
 
-			_event_handler_release = _node_info_shadow_host.createEventHandler("release");
-			_event_handler_release.setFunction(function(){
+				if(!result) return;
+				fade_task_release.call(_this);
+				var f = options.callback;
+				if(f) f();
+			});
+			task.execute(0xffffffff);
+		}
+
+		var ImageDropper = function(){
+			var _this = this;
+
+			this.events = [];
+			this.releasers = [];
+
+			var shadow_host = this.shadow_host = DocumentCreateElement("div");
+			var shadow_root = (shadow_host.attachShadow) ? shadow_host.attachShadow({mode:"closed"}) : shadow_host;
+
+			var node_info = node_info_dictionary.addNode(shadow_host);
+			node_info.observerRemove();
+			node_info.setOwnerToPageExpand();
+			node_info.setInvalid(true);
+			this.releasers.push(node_info);
+
+			var handler = node_info.createEventHandler("release");
+			handler.setFunction(function(){
 				_this.release();
+			});
+			this.releasers.push(handler);
+
+			var container = this.root = DocumentCreateElement("div");
+			ElementSetStyle(container,CSSTextGetInitialDivElement());
+			ElementAddStyle(container,"background:#fcfcfc; color:#000; font-size:14px; line-height:1; position:fixed; padding:15px; z-index:2147483647; border-radius:10px; box-shadow:0px 0px 5px #c0c0c0; pointer-events:inherit;");
+			shadow_root.appendChild(container);
+
+			this.droperea = document.createElement("div");
+			ElementAddStyle(this.droperea,"margin:0px; padding:0px; background:#ffc; font-size:12px; font-weight:bold; text-align:center; width:100px; height:100px; display:inline-block; pointer-events:inherit; border-radius:10px; overflow:hidden;");
+			drop_enter.call(this);
+			container.appendChild(this.droperea);
+
+			this.svg = new DOMParser().parseFromString('<svg xmlns="http://www.w3.org/2000/svg"><rect x="10" y="80" fill="#252525" width="80" height="10"/><polygon fill="#252525" points="50,75 20,45 40,45 40,10 60,10 60,45 80,45 "/></svg>',"image/svg+xml").childNodes[0];
+			ElementSetStyle(this.svg,"pointer-events:none;");
+			this.droperea.appendChild(this.svg);
+
+			[
+				["dragover",function(e){e.preventDefault();}],
+				["drop",function(e){drop.call(_this,e);}],
+				["dragenter",function(e){drop_enter.call(_this,e);}],
+				["dragleave",function(e){drop_leave.call(_this,e);}]
+			].forEach(function(a){
+				var listener = new EventListenerWrapper(_this.droperea);
+				listener.start(a[0],a[1],false);
+				_this.events.push(listener);
 			});
 
 			if(window_manager.existWindowRoot()){
-				_node_info_shadow_host.setOwnerToGuest();
-				window_manager.getWindowRoot().document.body.appendChild(_shadow_host);
-			}else{
-				document.body.appendChild(_shadow_host);
+				node_info.setOwnerToGuest();
 			}
+			window_manager.getWindowRoot().document.body.appendChild(shadow_host);
 
-			var shadow_root;
-			if(_shadow_host.attachShadow){
-				shadow_root = _shadow_host.attachShadow({mode:"closed"});
-			}else{
-				shadow_root = _shadow_host;
-			}
-
-			_window = DocumentCreateElement("div");
-			ElementSetStyle(_window,CSSTextGetInitialDivElement());
-			ElementAddStyle(_window,"background:#fcfcfc; color:#000; font-size:14px; line-height:1; position:fixed; padding:15px; z-index:2147483647; border-radius:10px; box-shadow:0px 0px 5px #c0c0c0; pointer-events:inherit;");
-			shadow_root.appendChild(_window);
-
-			var style_droperea = "margin:0px; padding:0px; background:#ffc; font-size:12px; font-weight:bold; text-align:center; width:100px; height:100px; display:inline-block; pointer-events:inherit; border-radius:10px; overflow:hidden;";
-
-			_droperea_download = document.createElement("div");
-			ElementAddStyle(_droperea_download,style_droperea);
-			enterDropArea(_droperea_download);
-			_window.appendChild(_droperea_download);
-
-			_svg_download = document.createElementNS("http://www.w3.org/2000/svg","svg");
-			_svg_download.innerHTML = '<rect x="10" y="80" fill="#252525" width="80" height="10"/><polygon fill="#252525" points="50,75 20,45 40,45 40,10 60,10 60,45 80,45 "/>';
-			_droperea_download.appendChild(_svg_download);
-
-			addEvent();
-
-			var client_rect = ElementGetBoundingClientRect(_window);
+			var client_rect = ElementGetBoundingClientRect(container);
 			var mouse_pos = input_mouse.getPositionTop();
 			var w = client_rect.right - client_rect.left;
 			var h = client_rect.bottom - client_rect.top;
 			var x = mouse_pos.x - w * 0.5;
 			var y = mouse_pos.y - h * 0.5;
-			var style = _window.style;
+			var style = container.style;
 			style.left = (x) + "px";
 			style.top  = (y) + "px";
 
-			// 親タスク
-			_parent_task = task_container.createTask();
-			_parent_task.setDestructorFunc(function(){
-				_parent_task = null;
+			fade_task_start.call(this,{add:0.16667});
+
+			var task = task_container.createTask();
+			task.setExecuteFunc(function(task){
+				var mouse_pos = input_mouse.getPositionTop();
+				if(!ElementHitTestPosition(container,mouse_pos,true)){
+					task.release();
+					_this.suicide();
+				}
 			});
+			this.releasers.push(task);
+		}
+		ImageDropper.prototype = {
+			release:function(){
+				if(this.released) return;
+				this.released = true;
+				release_events.call(this);
+				this.releasers.forEach(function(e){
+					e.release();
+				});
+				this.releasers.length = 0;
+				DomNodeRemove(this.shadow_host);
+			},
+			suicide:function(){
+				var _this = this;
+				release_events.call(this);
+				fade_task_start.call(this,{add:-0.16667,callback:function(){
+					_this.release();
+				}});
 
-			(function(){
-				// フェードインタスク
-				_fade_alpha = 0.0;
-				var task = task_container.createTask(_parent_task);
-				task.setDestructorFunc(function(){
-					task = null;
-				});
-				task.setExecuteFunc(function(){
-					_fade_alpha += 0.2;
-					if(_fade_alpha > 1.0){
-						_fade_alpha = 1.0;
-						task.release();
-					}
-					_window.style.opacity = _fade_alpha;
-				});
-				task.execute(0xffffffff);
-			})();
-
-			(function(){
-				var task = task_container.createTask(_parent_task);
-				task.setDestructorFunc(function(){
-					task = null;
-				});
-				task.setExecuteFunc(function(){
-					var mouse_pos = input_mouse.getPositionTop();
-					if(!ElementHitTestPosition(_window,mouse_pos,true)){
-						task.release();
-						suicide();
-					}
-				});
-				task.execute(0xffffffff);
-			})();
-
-		})();
-	}
+			},
+			events:null,
+			releasers:null,
+			fade_task:null,
+			alpha:0.0,
+			shadow_host:null,
+			root:null,
+			droperea:null,
+			svg:null
+		};
+		return ImageDropper;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// メディアプレイヤー拡張 UI
 	// --------------------------------------------------------------------------------
-	function MediaPlayerExtendUI(element){
-		var _this = this;
+	var MediaPlayerExtendUI = (function(){
+		function popup_window(e){
+			var ofs_x = e.screenX - e.clientX;
+			var ofs_y = e.screenY - e.clientY;
 
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			removeEvent();
+			var r = ElementGetBoundingClientRect(this.target);
+			var w = r.right - r.left;
+			var h = r.bottom - r.top;
+			var options = "popup=true,left=" + (r.left + ofs_x) + ",top=" + (r.top + ofs_y) + ",width=" + w + ",height=" + h;
 
-			// タスク破棄
-			if(_parent_task){
-				_parent_task.releaseChild();
-				_parent_task.release();
-				_parent_task = null;
+			try{
+				window.open(this.url_info.getURL(),"_blank",options);
+			}catch(e){
 			}
-
-			if(_event_dispatcher){
-				_event_dispatcher.release();
-				_event_dispatcher = null;
-			}
-
-			if(_event_handler_release){
-				_event_handler_release.release();
-				_event_handler_release = null;
-			}
-
-			if(_node_info_container){
-				_node_info_container.release();
-				_node_info_container = null;
-			}
-
-			DomNodeRemove(_element_container);
-		};
-
-		// --------------------------------------------------------------------------------
-		// 元のアドレスをセット
-		// --------------------------------------------------------------------------------
-		_this.setOriginalURLInfo = function(url_info){
-			_original_url_info = url_info;
-		};
-
-		// --------------------------------------------------------------------------------
-		// イベントハンドラを作成
-		// --------------------------------------------------------------------------------
-		_this.createEventHandler = function(type){
-			return _event_dispatcher.createEventHandler(type);
-		};
-
-		// --------------------------------------------------------------------------------
-		// 閉じる（内部用）
-		// --------------------------------------------------------------------------------
-		function close(){
-			// イベントを発火
-			_event_dispatcher.dispatchEvent("close",_this);
-
-			DomNodeRemove(_element_target);
-
-			_this.release();
+			close.call(this,e);
+		}
+		function fullscreen(e){
+			ElementRequestFullscreen(this.target);
+		}
+		function close(e){
+			this.event_dispatcher.dispatchEvent("close",this);
+			DomNodeRemove(this.target);
+			this.release();
 		}
 
-		// --------------------------------------------------------------------------------
-		// イベントを追加（内部用）
-		// --------------------------------------------------------------------------------
-		function addEvent(){
-			removeEvent();
-			_element_target.addEventListener("mouseover",mouseOver,false);
-			_element_resize.addEventListener("mousedown",mouseDownResize,false);
-			_element_container.addEventListener("dragstart",dragStart,false);
-			window.addEventListener("selectstart",selectStart,false);
-		}
+		function hitTest(){
+			var _this = this;
+			if(this.resize_task) return true;
 
-		// --------------------------------------------------------------------------------
-		// イベントを破棄（内部用）
-		// --------------------------------------------------------------------------------
-		function removeEvent(){
-			_element_target.removeEventListener("mouseover",mouseOver,false);
-			_element_resize.removeEventListener("mousedown",mouseDownResize,false);
-			_element_container.removeEventListener("dragstart",dragStart,false);
-			window.removeEventListener("selectstart",selectStart,false);
-		}
-
-		// --------------------------------------------------------------------------------
-		// イベントハンドラ
-		// --------------------------------------------------------------------------------
-		function dragStart(e){
-			e.preventDefault();
-		}
-		function selectStart(e){
-			if(!_resize_task) return;
-			e.preventDefault();
-		}
-
-		// --------------------------------------------------------------------------------
-		// マウス移動（内部用）
-		// --------------------------------------------------------------------------------
-		function mouseOver(e){
-			// マウス入力を更新
-			input_mouse.setMouseEvent(e);
-
-			if(_player_task){
-			}else{
-				_player_task = task_container.createTask(_parent_task);
-				_player_task.setLevel(TASK_EXECUTE_LEVEL_POPUP);
-				_player_task.setDestructorFunc(function(){
-					_player_task = null;
-				});
-				_player_task.setExecuteFunc(PlayerTaskInitialize);
-				_player_task.execute(0xffffffff);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// プレイヤータスク初期化（内部用）
-		// --------------------------------------------------------------------------------
-		function PlayerTaskInitialize(task){
-			var work = task.getUserWork();
-			work.spd = 0.0;
-			document.body.appendChild(_element_container);
-			update();
-
-			task.setExecuteFunc(PlayerTaskFadeIn);
-			task.execute(0xffffffff);
-		}
-
-		// --------------------------------------------------------------------------------
-		// プレイヤータスクフェードイン（内部用）
-		// --------------------------------------------------------------------------------
-		function PlayerTaskFadeIn(task){
-			var work = task.getUserWork();
-
-			work.spd += 0.1;
-			if(work.spd > 0.5) work.spd = 0.5;
-			var fri = (1.0 - _fade_alpha) * 0.3;
-			if(work.spd > fri) work.spd = fri;
-			_fade_alpha += work.spd;
-			if(_fade_alpha < 0.0){
-				_fade_alpha = 0.0;
-			}
-			if(_fade_alpha > 0.99){
-				_fade_alpha = 1.0;
-				task.setExecuteFunc(PlayerTaskWaitInit);
-			}
-
-			if(!hitTest(input_mouse.getPositionClient())){
-				task.setExecuteFunc(PlayerTaskFadeOut);
-			}
-
-			update();
-		}
-
-		// --------------------------------------------------------------------------------
-		// プレイヤータスク待機（内部用）
-		// --------------------------------------------------------------------------------
-		function PlayerTaskWaitInit(task){
-			var work = task.getUserWork();
-			task.setExecuteFunc(PlayerTaskWaitExec);
-			task.execute(0xffffffff);
-		}
-		function PlayerTaskWaitExec(task){
-			var work = task.getUserWork();
-
-			if(!hitTest(input_mouse.getPositionClient())){
-				task.setExecuteFunc(PlayerTaskFadeOut);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// プレイヤータスクフェードアウト（内部用）
-		// --------------------------------------------------------------------------------
-		function PlayerTaskFadeOut(task){
-			var work = task.getUserWork();
-
-			work.spd -= 0.01;
-			if(work.spd < -0.5) work.spd = -0.5;
-			var fri = (0.0 - _fade_alpha) * 0.4;
-			if(work.spd < fri) work.spd = fri;
-			_fade_alpha += work.spd;
-			if(_fade_alpha > 1.0){
-				_fade_alpha = 1.0;
-			}
-			if(_fade_alpha < 0.01){
-				_fade_alpha = 0.0;
-				task.setExecuteFunc(PlayerTaskClose);
-			}
-
-			if(hitTest(input_mouse.getPositionClient())){
-				task.setExecuteFunc(PlayerTaskFadeIn);
-			}
-
-			update();
-		}
-
-		// --------------------------------------------------------------------------------
-		// 閉じる（内部用）
-		// --------------------------------------------------------------------------------
-		function PlayerTaskClose(task){
-			var work = task.getUserWork();
-			DomNodeRemove(_element_container);
-			task.release();
-		}
-
-		// --------------------------------------------------------------------------------
-		// マウスダウンリサイズ（内部用）
-		// --------------------------------------------------------------------------------
-		function mouseDownResize(e){
-			// マウス入力を更新
-			input_mouse.setMouseEvent(e);
-
-			var resize_rect = ElementGetBoundingClientRect(_element_resize);
 			var mouse_pos = input_mouse.getPositionClient();
-			var resize_offset = {
-				x:(mouse_pos.x - resize_rect.left) - 4,
-				y:(mouse_pos.y - resize_rect.top ) - 4
-			};
+			if(["menu","resize"].some(function(name){
+				return ElementHitTestPosition(_this.elements[name],mouse_pos,true);
+			})) return true;
+			if(ElementHitTestPosition(this.target,mouse_pos,true)) return true;
 
-			if(_resize_task){
-			}else if(input_mouse.getButtonLeft()){
-
-				DomNode_InsertBefore(_element_resize,_element_hitarea);
-
-				_resize_task = task_container.createTask(_parent_task);
-				_resize_task.setLevel(TASK_EXECUTE_LEVEL_POPUP);
-				_resize_task.setDestructorFunc(function(){
-					_resize_task = null;
-				});
-				_resize_task.setExecuteFunc(function(){
-
-					if(!input_mouse.getButtonLeft()){
-						DomNodeRemove(_element_hitarea);
-						_resize_task.release();
-						return;
-					}
-
-					var rect = ElementGetBoundingClientRect(_element_target);
-					var size = ComputedStyleGetSize(_element_target.style);
-					var pos = input_mouse.getPositionClient();
-					var w = (pos.x - resize_offset.x) - rect.left - (size.offsetWidth  - size.width);
-					var h = (pos.y - resize_offset.y) - rect.top  - (size.offsetHeight - size.height);
-					if(w < 46) w = 46;
-					if(h < 30) h = 30;
-
-					var style = _element_target.style;
-					style.minWidth  = (w) + "px";
-					style.minHeight = (h) + "px";
-					style.maxWidth  = (w) + "px";
-					style.maxHeight = (h) + "px";
-					style.width  = (w) + "px";
-					style.height = (h) + "px";
-
-					update();
-				});
-				_resize_task.execute(0xffffffff);
-			}
-
-		}
-
-		// --------------------------------------------------------------------------------
-		// 当たり判定（内部用）
-		// --------------------------------------------------------------------------------
-		function hitTest(mouse_pos){
-			if(_resize_task) return true;
-			if(ElementHitTestPosition(_element_menu,mouse_pos,true)) return true;
-			if(ElementHitTestPosition(_element_resize,mouse_pos,true)) return true;
-			if(ElementHitTestPosition(_element_target,mouse_pos,true)) return true;
-
-			var rect = ElementGetBoundingClientRect(_element_target);
+			var rect = ElementGetBoundingClientRect(this.target);
 			var max_x = rect.right + 16;
 			var max_y = rect.bottom + 16;
 			var min_x = max_x - 32;
@@ -66163,593 +65713,343 @@ function PageExpand(page_expand_arguments){
 			return false;
 		}
 
-		// --------------------------------------------------------------------------------
-		// 更新（内部用）
-		// --------------------------------------------------------------------------------
 		function update(){
-			// スクロール位置
-			var scroll_pos = WindowGetScrollPosition(window);
-			var target_rect = ElementGetBoundingClientRect(_element_target);
+			var target_rect = ElementGetBoundingClientRect(this.target);
 			var target_w = target_rect.right - target_rect.left;
 			var target_h = target_rect.bottom - target_rect.top;
 
-			var parent_rect = ElementGetBoundingClientRect(_element_container);
+			var parent_rect = ElementGetBoundingClientRect(this.elements.root);
 			var target_x = target_rect.left - parent_rect.left;
 			var target_y = target_rect.top - parent_rect.top;
 
-			var style = _element_header.style;
+			var style = this.elements.header.style;
 			style.width = (target_w) + "px";
 
-			var header_rect = ElementGetBoundingClientRect(_element_header);
+			var header_rect = ElementGetBoundingClientRect(this.elements.header);
 			var header_h = header_rect.bottom - header_rect.top;
 
 			var hreader_y = target_y - header_h;
 			style.left = (target_x) + "px";
 			style.top  = (hreader_y) + "px";
 
-			var style = _element_menu.style;
-			style.top = ((1.0 - _fade_alpha) * header_h) + "px";
+			var style = this.elements.menu.style;
+			style.top = ((1.0 - this.alpha) * header_h) + "px";
 
-			var style = _element_hitarea.style;
+			var style = this.elements.hitarea.style;
 			style.left = (target_x) + "px";
 			style.top  = (target_y)  + "px";
 			style.width  = (target_w)  + "px";
 			style.height = (target_h) + "px";
 
-			var style = _element_resize.style;
+			var style = this.elements.resize.style;
 			style.left = (target_x + target_w - 4) + "px";
 			style.top  = (target_y + target_h - 4) + "px";
-			style.opacity = _fade_alpha;
+			style.opacity = this.alpha;
 		}
 
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _element_container;
-		var _element_header;
-		var _element_menu;
-		var _element_resize;
-		var _element_hitarea;
-		var _element_target;
-		var _original_url_info;
-		var _event_dispatcher;
-		var _event_handler_release;
-		var _node_info_container;
-		var _parent_task;
-		var _player_task;
-		var _resize_task;
-		var _fade_alpha;
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_element_target = element;
-			element = null;
-
-			_event_dispatcher = new EventDispatcher();
-			_fade_alpha = 0.0;
-
-			var node_info_target = node_info_dictionary.addNode(_element_target);
-			node_info_target.observerRemove();
-			_event_handler_release = node_info_target.createEventHandler("release");
-			_event_handler_release.setFunction(function(){
-				_this.release();
-			});
-
-			_element_container = DocumentCreateElement("div");
-			_element_container.draggable = true;
-			ElementSetStyle(_element_container,CSSTextGetInitialDivElement());
-			ElementAddStyle(_element_container,"position:absolute; left:0px; top:0px;");
-
-			_element_header = DocumentCreateElement("div");
-			ElementSetStyle(_element_header,CSSTextGetInitialDivElement());
-			ElementAddStyle(_element_header,"position:absolute; z-index:2147483646; overflow:hidden; text-align:right;");
-
-			_element_menu = DocumentCreateElement("div");
-			ElementSetStyle(_element_menu,CSSTextGetInitialDivElement());
-			ElementAddStyle(_element_menu,"position:relative; background-color:rgba(128,128,128,0.9); display:inline-block; border-radius:10px 10px 0px 0px; border:2px solid #666; border-bottom-width:0px; top:0px;");
-
-				var _element_menu_inner = DocumentCreateElement("div");
-				ElementSetStyle(_element_menu_inner,CSSTextGetInitialDivElement());
-				ElementAddStyle(_element_menu_inner,"padding:5px 10px; text-align:right;");
-				_element_menu.appendChild(_element_menu_inner);
-
-					var style_button = "margin:0px; padding:0px; font-size:12px; font-weight:bold; text-align:center; width:24px; height:24px; display:inline-block;";
-					var style_button_image = "vertical-align:top; margin:0px -6px;";
-
-					var button_close = DocumentCreateElement("button");
-					button_close.title = "close";
-					ElementSetStyle(button_close,CSSTextGetInitialButtonElement());
-					ElementAddStyle(button_close,style_button);
-					button_close.onclick = function(){
-						close();
-					};
-					var image_close = DocumentCreateElement("img");
-					ElementSetStyle(image_close,CSSTextGetInitialImageElement());
-					ElementAddStyle(image_close,style_button_image);
-					image_close.src = "data:image/gif;base64,R0lGODlhEAAQAIAAACAgIP///yH5BAUUAAEALAAAAAAQABAAAAIgjI+py50AFQQvnrlw0Hna5jlG6HifZHGIqm7n+Iry3BQAOw==";
-					button_close.appendChild(image_close);
-
-					var button_fullscreen = DocumentCreateElement("button");
-					button_fullscreen.title = "full screen";
-					ElementSetStyle(button_fullscreen,CSSTextGetInitialButtonElement());
-					ElementAddStyle(button_fullscreen,style_button);
-					button_fullscreen.onclick = function(){
-						ElementRequestFullscreen(_element_target);
-					};
-					var image_fullscreen = DocumentCreateElement("img");
-					ElementSetStyle(image_fullscreen,CSSTextGetInitialImageElement());
-					ElementAddStyle(image_fullscreen,style_button_image);
-					image_fullscreen.src = "data:image/gif;base64,R0lGODlhEAAQAIAAACAgIP///yH5BAUUAAEALAAAAAAQABAAAAIshI9pwe2+EDwhrkftZTLWm33Q2GzPaZ4Tya3A98KVKJXZS2EWHHO3qlIIEQUAOw==";
-					button_fullscreen.appendChild(image_fullscreen);
-
-					var button_popup = DocumentCreateElement("button");
-					button_popup.title = "popup window";
-					ElementSetStyle(button_popup,CSSTextGetInitialButtonElement());
-					ElementAddStyle(button_popup,style_button);
-					button_popup.onclick = function(e){
-						if(!e) e = window.event;
-
-						var ofs_x = e.screenX - e.clientX;
-						var ofs_y = e.screenY - e.clientY;
-
-						var target_rect = ElementGetBoundingClientRect(_element_target);
-						var target_w = target_rect.right - target_rect.left;
-						var target_h = target_rect.bottom - target_rect.top;
-						var options = "popup=true,left=" + (target_rect.left + ofs_x) + ",top=" + (target_rect.top + ofs_y) + ",width=" + target_w + ",height=" + target_h;
-						var window_obj = window;
-
-						try{
-
-							window_obj = window_obj.open(_original_url_info.getURL(),"_blank",options);
-						}catch(e){
-						}
-						close();
-					};
-					var image_popup = DocumentCreateElement("img");
-					ElementSetStyle(image_popup,CSSTextGetInitialImageElement());
-					ElementAddStyle(image_popup,style_button_image);
-					image_popup.src = "data:image/gif;base64,R0lGODlhEAAQAIAAACAgIP///yH5BAUUAAEALAAAAAAQABAAAAInjI9pwO2+lALrWRYlooHr7H1cqI1fh6aSqSbUm7kpu6FwW1bXc0oFADs=";
-					button_popup.appendChild(image_popup);
-
-					_element_menu_inner.appendChild(button_popup);
-					_element_menu_inner.appendChild(button_fullscreen);
-					_element_menu_inner.appendChild(button_close);
-
-			_element_hitarea = DocumentCreateElement("div");
-			ElementSetStyle(_element_hitarea,CSSTextGetInitialDivElement());
-			ElementAddStyle(_element_hitarea,"position:absolute; z-index:2147483646; background:rgba(255,0,0,0.25);");
-
-			_element_resize = DocumentCreateElement("div");
-			ElementSetStyle(_element_resize,CSSTextGetInitialDivElement());
-			ElementAddStyle(_element_resize,"position:absolute; z-index:2147483646; cursor:se-resize; width:16px; height:16px; background:url(data:image/gif;base64,R0lGODlhEAAQAJEAACAgIP///////wAAACH5BAUUAAIALAAAAAAQABAAAAIwjI9pwO2+lAJxUYFxoNuykFXUc3XcSG6jSH4nqKav1nZdKEd0fsePzZEcTq2UUFgAADs=);");
-
-			_element_container.appendChild(_element_header);
-			_element_header.appendChild(_element_menu);
-			_element_container.appendChild(_element_resize);
-
-			_node_info_container = node_info_dictionary.addNode(_element_container);
-			_node_info_container.setOwnerToPageExpand();
-			_node_info_container.setInvalid(true);
-
-			// 親タスク
-			_parent_task = task_container.createTask();
-			_parent_task.setDestructorFunc(function(){
-				_parent_task = null;
-			});
-
-			addEvent();
-		})();
-	}
-
-	// --------------------------------------------------------------------------------
-	// ダウンロード進捗
-	// --------------------------------------------------------------------------------
-	function DownloadProgress(parent){
-		var _this = this;
-
-		// --------------------------------------------------------------------------------
-		// テキスト（内部用）
-		// --------------------------------------------------------------------------------
-		function UI_Text(parent){
+		function fade_task_start(e){
 			var _this = this;
+			input_mouse.setMouseEvent(e);
 
-			// --------------------------------------------------------------------------------
-			// 値をセット
-			// --------------------------------------------------------------------------------
-			_this.setMessage = function(value){
-				if(!value) value = "　";
-				_text_node.nodeValue = value;
-			};
+			if(!this.fade_task){
+				var task = this.fade_task = task_container.createTask();
+				task.setLevel(TASK_EXECUTE_LEVEL_POPUP);
+				var work = task.getUserWork();
+				this.alpha = work.spd = work.add = 0.0;
+				this.shadow_root.appendChild(this.elements.root);
+				update.call(this);
 
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _div;
-			var _text_node;
+				task.setExecuteFunc(function(){
+					var work = task.getUserWork();
+					var pos = _this.alpha;
+					work.spd += work.add;
+					if(work.spd > 0.5) work.spd = 0.5;
+					if(work.spd < -0.5) work.spd = -0.5;
 
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_div = DocumentCreateElement("div");
-				ElementSetStyle(_div,"width:100%; font-size:12px; text-align:left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom:5px;");
+					var fri = (1.0 - pos) * 0.3;
+					if(work.spd > fri) work.spd = fri;
+					var fri = (0.0 - pos) * 0.4;
+					if(work.spd < fri) work.spd = fri;
 
-				_text_node = DocumentCreateText("　");
-				_div.appendChild(_text_node);
+					pos += work.spd;
+					if(pos < 0.01){
+						pos = 0.0;
+						DomNodeRemove(_this.elements.root);
+						release_fade_task.call(_this);
+						return;
+					}
+					if(pos > 0.99){
+						pos = 1.0;
+					}
 
-				parent.appendChild(_div);
-			})();
+					// フェードアウトへ
+					if((function(){
+						if(_this.move_task) return false;
+						if(_this.resize_task) return false;
+						if(hitTest.call(_this)) return false;
+						return true;
+					})()){
+						work.add = -0.01;
+					}
+
+					if(_this.alpha != pos){
+						_this.alpha = pos;
+						update.call(_this);
+					}
+				});
+			}
+
+			// フェードインへ
+			var work = this.fade_task.getUserWork();
+			work.add = 0.1;
 		}
-
-		// --------------------------------------------------------------------------------
-		// ブログレスバー（内部用）
-		// --------------------------------------------------------------------------------
-		function UI_ProgressBar(parent){
+		function move_task_start(e){
 			var _this = this;
+			input_mouse.setMouseEvent(e);
+			if(e.target.tagName != "DIV") return;
+			if(!input_mouse.getButtonLeft()) return;
 
-			// --------------------------------------------------------------------------------
-			// 開放
-			// --------------------------------------------------------------------------------
-			_this.release = function(){
-				if(_progress){
-					DomNodeRemove(_progress);
-				}else{
-					DomNodeRemove(_mater);
-				}
-			};
+			var r = ElementGetBoundingClientRect(this.target);
+			var s = ComputedStyleGetSize(this.target.style);
+			var p = input_mouse.getPositionClient();
+			var ofs_x = p.x - r.left + s.marginLeft;
+			var ofs_y = p.y - r.top + s.marginTop;
 
-			// --------------------------------------------------------------------------------
-			// 値をセット
-			// --------------------------------------------------------------------------------
-			_this.setValue = function(value){
-				update(value);
-			};
+			var style = this.target.style;
+			style.position = "fixed";
+			style.right = style.bottom = "auto";
+			style.zIndex = 2147483646;
+			inert_start.call(this);
 
-			// --------------------------------------------------------------------------------
-			// 更新（内部用）
-			// --------------------------------------------------------------------------------
-			function update(v){
-				if(_progress){
-					_progress.value = v;
-				}else{
-					_bar.style.width = (v * 100) + "%";
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _progress;
-			var _mater;
-			var _bar;
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				if(window.HTMLProgressElement){
-					_progress = DocumentCreateElement("progress");
-					ElementSetStyle(_progress,"display:block; width:100%;");
-					parent.appendChild(_progress);
-				}else{
-					_mater = DocumentCreateElement("div");
-					ElementSetStyle(_mater,"height:16px; min-height:0; border:1px #888 solid; margin-bottom:5px; line-height:1.0;");
-					parent.appendChild(_mater);
-
-					_bar = DocumentCreateElement("div");
-					ElementSetStyle(_bar,"height:16px; min-height:0; background-color :#888; margin:0px; width:0%; line-height:1.0;");
-					_mater.appendChild(_bar);
-				}
-			})();
-		}
-
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			if(_task){
-				_task.release();
-			}
-
-			// イベントを破棄
-			removeEvent();
-
-			DomNodeRemove(_window);
-			DomNodeRemove(_background);
-			DomNodeRemove(_shadow_host);
-		};
-
-		// --------------------------------------------------------------------------------
-		// 幅を変更
-		// --------------------------------------------------------------------------------
-		_this.setWidth = function(v){
-			_window.style.width = v + "px";
-		};
-
-		// --------------------------------------------------------------------------------
-		// メッセージを設定
-		// --------------------------------------------------------------------------------
-		_this.setMessage = function(str,id){
-			var ui_text;
-			switch(id){
-			case 0:
-				ui_text = _text_upper;
-				break;
-			default:
-				ui_text = _text_lower;
-				break;
-			}
-			ui_text.setMessage(str);
-		};
-
-		// --------------------------------------------------------------------------------
-		// プログレス値を設定
-		// --------------------------------------------------------------------------------
-		_this.setValueProgress = function(v,id){
-			var ui_progress;
-			switch(id){
-			case 0:
-				ui_progress = _progress_upper;
-				break;
-			default:
-				ui_progress = _progress_lower;
-				break;
-			}
-			ui_progress.setValue(v);
-		};
-
-		// --------------------------------------------------------------------------------
-		// アンカーを設定
-		// --------------------------------------------------------------------------------
-		_this.setAnchor = function(options){
-			_progress_lower.release();
-			_button_cancel.value = "OK";
-
-			var anchor = DocumentCreateElement("a");
-			ElementSetTextContent(anchor,options.download);
-			anchor.href = options.href;
-			anchor.download = options.download;
-			ElementSetStyle(anchor,"width:100%; font-size:14px; text-align:left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom:5px;");
-			_container_lower.appendChild(anchor);
-		};
-
-		// --------------------------------------------------------------------------------
-		// 開く
-		// --------------------------------------------------------------------------------
-		_this.open = function(callback){
-
-			parent.appendChild(_window);
-
-			// イベントを登録
-			addEvent();
-
-			// リサイズ
-			resize();
-
-			if(_task){
-				_task.release();
-			}
-
-			var alpha = 0.0;
-			_task = task_container.createTask(null);
-			_task.setDestructorFunc(function(){
-				_task = null;
-			});
-			_task.setExecuteFunc(function(){
-				var complete = false;
-				alpha += 0.2;
-				if(alpha > 1.0){
-					alpha = 1.0;
-					complete = true;
-				}
-				_background.style.opacity = alpha * 0.5;
-
-				if(complete){
-					_task.release();
-					_this.setEnable(true);
-					callback();
-				}
-			});
-			_task.execute(0xffffffff);
-		};
-
-		// --------------------------------------------------------------------------------
-		// 有効状態をセット
-		// --------------------------------------------------------------------------------
-		_this.setEnable = function(type){
-			_button_cancel.disabled = !(type);
-		};
-
-		// --------------------------------------------------------------------------------
-		// 閉じる
-		// --------------------------------------------------------------------------------
-		_this.close = function(){
-			DomNodeRemove(_window);
-
-			// イベントを破棄
-			removeEvent();
-
-			_this.setEnable(false);
-
-			if(_task){
-				_task.release();
-			}
-
-			var alpha = 1.0;
-			_task = task_container.createTask(null);
-			_task.setDestructorFunc(function(){
-				_task = null;
-			});
-			_task.setExecuteFunc(function(){
-				var complete = false;
-				alpha -= 0.2;
-				if(alpha < 0.0){
-					alpha = 0.0;
-					complete = true;
-				}
-				_background.style.opacity = alpha * 0.5;
-
-				if(complete){
-					_this.oncomplete();
-					_task.release();
-					_this.release();
+			release_move_task.call(this);
+			var task = this.move_task = task_container.createTask();
+			task.setLevel(TASK_EXECUTE_LEVEL_POPUP);
+			task.setExecuteFunc(function(task){
+				if(!input_mouse.getButtonLeft()){
+					release_inert.call(_this);
+					release_move_task.call(_this);
 					return;
 				}
+
+				var p = input_mouse.getPositionClient();
+				var style = _this.target.style;
+				style.left = (p.x - ofs_x) + "px";
+				style.top = (p.y - ofs_y) + "px";
+				update.call(_this);
 			});
-			_task.execute(0xffffffff);
-		};
-
-		// --------------------------------------------------------------------------------
-		// エレメント取得
-		// --------------------------------------------------------------------------------
-		_this.getElement = function(){
-			return _window;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 完了イベント
-		// --------------------------------------------------------------------------------
-		_this.oncomplete = function(){};
-
-		// --------------------------------------------------------------------------------
-		// 中断イベント
-		// --------------------------------------------------------------------------------
-		_this.onclose = function(){};
-
-		// --------------------------------------------------------------------------------
-		// リサイズ（内部用 ）
-		// --------------------------------------------------------------------------------
-		function resize(){
-			var scroll_pos = WindowGetScrollPosition(window);
-			var client_size = DocumentGetClientSize(document);
-			var dialog_rect = ElementGetBoundingClientRect(_window);
-
-			var w = dialog_rect.right - dialog_rect.left;
-			var h = dialog_rect.bottom - dialog_rect.top;
-
-			_window.style.left = (client_size.width  / 2 - w / 2 + scroll_pos.x) + "px";
-			if(client_size.height > h){
-				_window.style.top  = (client_size.height / 2 - h / 2 + scroll_pos.y) + "px";
-				_fitted_top = false;
-			}else{
-				if(!_fitted_top){
-					_window.style.top  = (scroll_pos.y) + "px";
-					_fitted_top = true;
-				}
-			}
+			task.execute(0xffffffff);
 		}
+		function resize_task_start(e){
+			var _this = this;
+			input_mouse.setMouseEvent(e);
+			if(!input_mouse.getButtonLeft()) return;
 
-		// --------------------------------------------------------------------------------
-		// イベント登録（内部用 ）
-		// --------------------------------------------------------------------------------
-		function addEvent(){
-			// イベントリスナーに対応している
-			if(window.addEventListener){
+			inert_start.call(this);
 
-				window.addEventListener("scroll" ,resize);
-				window.addEventListener("resize" ,resize);
-
-			}
-
-		}
-
-		// --------------------------------------------------------------------------------
-		// イベント破棄（内部用 ）
-		// --------------------------------------------------------------------------------
-		function removeEvent(){
-			if(_event_handler_release){
-				_event_handler_release.release();
-				_event_handler_release = null;
-			}
-
-			// イベントリスナーに対応している
-			if(window.removeEventListener){
-
-				window.removeEventListener("scroll" ,resize);
-				window.removeEventListener("resize" ,resize);
-
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _shadow_host;
-		var _background;
-		var _window;
-		var _container_upper;
-		var _container_lower;
-		var _text_upper;
-		var _text_lower;
-		var _progress_upper;
-		var _progress_lower;
-		var _button_cancel;
-		var _event_handler_release;
-		var _task;
-		var _fitted_top;
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_shadow_host = DocumentCreateElement("div");
-			parent.appendChild(_shadow_host);
-			if(_shadow_host.attachShadow){
-				parent = _shadow_host.attachShadow({mode:"closed"});
-			}else{
-				parent = _shadow_host;
-			}
-
-			var css_text_progress = "display:block; width:100%;";
-
-			_background = DocumentCreateElement("div");
-			ElementSetStyle(_background,"position:fixed; top:0px; bottom:0px; left:0px; right:0px; opacity:0.0; background:#000; line-height:1.0; z-index:2147483646;");
-			parent.appendChild(_background);
-
-			_window = DocumentCreateElement("div");
-			ElementSetStyle(_window,"position:absolute; width:800px; padding:25px; background:#00F; background-color:#FFF; border-radius:5px; box-shadow:5px 5px 10px #444; z-index:2147483646;");
-
-			_container_upper = DocumentCreateElement("div");
-			ElementSetStyle(_container_upper,"min-height:50px;");
-			_window.appendChild(_container_upper);
-
-			_text_upper = new UI_Text(_container_upper);
-			_progress_upper = new UI_ProgressBar(_container_upper);
-
-			_container_lower = DocumentCreateElement("div");
-			ElementSetStyle(_container_lower,"min-height:60px;");
-			_window.appendChild(_container_lower);
-
-			_text_lower = new UI_Text(_container_lower);
-			_progress_lower = new UI_ProgressBar(_container_lower);
-
-			_button_cancel = DocumentCreateElement("input");
-			_button_cancel.type = "button";
-			_button_cancel.value = "CANCEL";
-			ElementSetStyle(_button_cancel,"width:100%; height:50px;");
-			_window.appendChild(_button_cancel);
-			_button_cancel.onclick = function(){
-				if(_this.onclose){
-					_this.onclose();
-				}
-				_this.close();
+			var resize_rect = ElementGetBoundingClientRect(_this.elements.resize);
+			var mouse_pos = input_mouse.getPositionClient();
+			var resize_offset = {
+				x:(mouse_pos.x - resize_rect.left) - 4,
+				y:(mouse_pos.y - resize_rect.top ) - 4
 			};
 
-			_this.setMessage("",0);
-			_this.setMessage("",1);
-			_this.setValueProgress(0.0,0);
-			_this.setValueProgress(0.0,1);
-			_this.setEnable(false);
+			release_resize_task.call(this);
+			var task = this.resize_task = task_container.createTask();
+			task.setLevel(TASK_EXECUTE_LEVEL_POPUP);
+			task.setExecuteFunc(function(){
 
-			// 開放イベント
-			_event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
-			_event_handler_release.setFunction(function(){
+				if(!input_mouse.getButtonLeft()){
+					release_inert.call(_this);
+					release_resize_task.call(_this);
+					return;
+				}
+
+				var rect = ElementGetBoundingClientRect(_this.target);
+				var size = ComputedStyleGetSize(_this.target.style);
+				var pos = input_mouse.getPositionClient();
+				var w = (pos.x - resize_offset.x) - rect.left - (size.offsetWidth  - size.width);
+				var h = (pos.y - resize_offset.y) - rect.top  - (size.offsetHeight - size.height);
+				if(w < 46) w = 46;
+				if(h < 30) h = 30;
+
+				var style = _this.target.style;
+				style.minWidth  = (w) + "px";
+				style.minHeight = (h) + "px";
+				style.maxWidth  = (w) + "px";
+				style.maxHeight = (h) + "px";
+				style.width  = (w) + "px";
+				style.height = (h) + "px";
+
+				update.call(_this);
+			});
+			task.execute(0xffffffff);
+		}
+		function inert_start(){
+			release_inert.call(this);
+			this.inert = new DocumentInert(document);
+			DomNode_InsertBefore(this.elements.header,this.elements.cover);
+			DomNode_InsertBefore(this.elements.header,this.elements.hitarea);
+		}
+
+		function release_fade_task(){
+			if(this.fade_task){
+				this.fade_task.release();
+				this.fade_task = null;
+			}
+		}
+		function release_move_task(){
+			if(this.move_task){
+				this.move_task.release();
+				this.move_task = null;
+			}
+		}
+		function release_resize_task(){
+			if(this.resize_task){
+				this.resize_task.release();
+				this.resize_task = null;
+			}
+		}
+		function release_inert(){
+			DomNodeRemove(this.elements.cover);
+			DomNodeRemove(this.elements.hitarea);
+			if(this.inert){
+				this.inert.release();
+				this.inert = null;
+			}
+		}
+
+		function MediaPlayerExtendUI(target){
+			var _this = this;
+
+			this.releasers = [];
+			this.event_dispatcher = new EventDispatcher();
+			this.target = target;
+			this.elements = [];
+
+			var node_info = node_info_dictionary.addNode(target);
+			node_info.observerRemove();
+
+			var handler = node_info.createEventHandler("release");
+			handler.setFunction(function(){
 				_this.release();
 			});
-		})();
-	}
+			this.releasers.push(handler);
+
+			var shadow_host = this.shadow_host = DocumentCreateElement("div");
+			var shadow_root = this.shadow_root = (shadow_host.attachShadow) ? shadow_host.attachShadow({mode:"closed"}) : shadow_host;
+
+			["root","header","menu","hitarea","cover","resize"].forEach(function(name){
+				var e = _this.elements[name] = DocumentCreateElement("div");
+				e.className = name;
+			});
+
+			[{
+				title:"Popup Window",
+				svg:'<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path style="fill:#000" d="m 2,11 v 1 h 2 v 1 h 1 v -1 h 9 V 11 H 5 V 10 H 4 v 1 z M 10,3 H 9 v 1 h 1 z m 2,0 h -1 v 1 h 1 z m 2,0 h -1 v 1 h 1 z M 0,1 V 15 H 16 V 1 Z M 1,2 H 15 V 5 H 1 Z m 0,4 h 14 v 8 H 1 Z" /></svg>',
+				f:popup_window
+			},{
+				title:"Full Screen",
+				svg:'<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:#000" d="M 14,14 V 9 l -1.5,1.5 -2,-2 -2,2 2,2 L 9,14 Z M 2,14 V 9 l 1.5,1.5 2,-2 2,2 -2,2 L 7,14 Z M 14,2 v 5 l -1.5,-1.5 -2,2 -2,-2 2,-2 L 9,2 Z M 2,2 v 5 l 1.5,-1.5 2,2 2,-2 -2,-2 L 7,2 Z M 0,16 V 0 H 16 V 16 Z M 1,15 H 15 V 1 H 1 Z" /></g></svg>',
+				f:fullscreen
+			},{
+				title:"Close",
+				svg:'<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke:#000;stroke-width:3" d="M 2,14 14,2 M 2,2 14,14" /></g></svg>',
+				f:close
+			}].forEach(function(o){
+				var button = DocumentCreateElement("button");
+				button.title = o.title;
+				_this.elements.menu.appendChild(button);
+
+				var listener = new EventListenerWrapper(button);
+				listener.start("click",(function(){
+					var f = o.f;
+					return function(e){ f.call(_this,e); };
+				})(),false);
+				_this.releasers.push(listener);
+
+				var svg = new DOMParser().parseFromString(o.svg,"image/svg+xml").childNodes[0];
+				button.appendChild(svg);
+			});
+
+			var svg = new DOMParser().parseFromString('<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:#000;stroke:#fff;stroke-width:2;paint-order:stroke markers fill" d="M 13,13 V 4 L 10,7 6,3 3,6 7,10 4,13 Z M 1,1 V 15 H 15 V 1 Z M 2,2 H 14 V 14 H 2 Z"/></g></svg>',"image/svg+xml").childNodes[0];
+			this.elements.resize.appendChild(svg);
+
+			this.elements.header.appendChild(this.elements.menu);
+			this.elements.root.appendChild(this.elements.header);
+			this.elements.root.appendChild(this.elements.resize);
+			document.body.appendChild(this.shadow_host);
+
+			[this.shadow_host,this.elements.root].forEach(function(e){
+				var node_info = node_info_dictionary.addNode(e);
+				node_info.setOwnerToPageExpand();
+				node_info.setInvalid(true);
+				_this.releasers.push(node_info);
+			});
+
+			[
+				[target,"mouseover",fade_task_start],
+				[this.elements.menu,"mousedown",move_task_start],
+				[this.elements.resize,"mousedown",resize_task_start]
+			].forEach(function(a){
+				var listener = new EventListenerWrapper(a[0]);
+				listener.start(a[1],(function(){
+					var f = a[2];
+					return function(e){ f.call(_this,e); };
+				})(),false);
+				_this.releasers.push(listener);
+			});
+
+			var style = DocumentCreateElement("style");
+			shadow_root.appendChild(style);
+			var style_sheet = ElementGetStyleSheet(style);
+			[
+				[".root","all:revert; position:absolute; left:0px; top:0px;"],
+				[".header","all:revert; position:absolute; z-index:2147483646; overflow:hidden; text-align:right;"],
+				[".menu","all:revert; position:relative; background-color:rgba(128,128,128,0.8); display:inline-block; border-radius:10px 10px 0px 0px; border:2px solid #666; border-bottom-width:0px; padding:5px 10px; top:0px; backdrop-filter:blur(2px); cursor:move;"],
+				["button","all:revert; margin:0px; padding:0px; text-align:center; line-height:0; width:24px; height:24px; display:inline-block;"],
+				[".hitarea","all:revert; position:absolute; z-index:2147483646; background:rgba(255,0,0,0.25);"],
+				[".cover","all:revert; position:fixed; z-index:2147483646; inset:0px; background:rgba(0,0,0,0.0);"],
+				[".resize","all:revert; position:absolute; z-index:2147483646; cursor:se-resize; width:16px; height:16px;"]
+			].forEach(function(r,i){
+				CSSStyleSheetInsertRule(style_sheet,r[0],r[1],i);
+			});
+		}
+		MediaPlayerExtendUI.prototype = {
+			release:function(){
+				release_fade_task.call(this);
+				release_move_task.call(this);
+				release_resize_task.call(this);
+				release_inert.call(this);
+				this.releasers.forEach(function(e){
+					e.release();
+				});
+				this.releasers.length = 0;
+				if(this.shadow_host){
+					DomNodeRemove(this.shadow_host);
+					this.shadow_host = null;
+				}
+			},
+			setOriginalURLInfo:function(url_info){
+				this.url_info = url_info;
+			},
+			createEventHandler:function(type){
+				return this.event_dispatcher.createEventHandler(type);
+			},
+			releasers:null,
+			event_dispatcher:null,
+			alpha:0.0,
+			url_info:null,
+			target:null,
+			shadow_host:null,
+			shadow_root:null,
+			elements:null,
+			fade_task:null,
+			move_task:null,
+			resize_task:null,
+			inert:null
+		};
+		return MediaPlayerExtendUI;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// インターナショナルメッセージ
@@ -74979,10 +74279,17 @@ function PageExpand(page_expand_arguments){
 				}
 			}
 
-			event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
-			event_handler_abort.setFunction(function(){
+			function failure(){
+				response.result = false;
+				response.ok = false;
+				response.status = 0;
+				response.state = DownloaderState.DOWNLOAD.FAILED;
+				dispatch_onstatechange.call(_this);
 				reply({state:"complete"});
-			});
+			}
+
+			event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
+			event_handler_abort.setFunction(failure);
 
 			function load_blob(callback){
 				loader = new Loader();
@@ -74994,14 +74301,8 @@ function PageExpand(page_expand_arguments){
 				};
 				loader.onerror = function(r){
 					if(replied) return;
-					var xhr = loader.response;
-					response.result = false;
-					response.ok = xhr.ok;
-					response.status = xhr.status;
-					response.state = DownloaderState.DOWNLOAD.FAILED;
 					response.errorText = r;
-					dispatch_onstatechange.call(_this);
-					reply({state:"complete"});
+					failure();
 				};
 				loader.setResponseType("blob");
 				loader.setURL(request.url);
@@ -75010,6 +74311,7 @@ function PageExpand(page_expand_arguments){
 
 			var data_parser = DataURL_Parser(request.url);
 			if(data_parser){
+				exec_methods.pause();
 				exec_methods.push(load_blob);
 				exec_methods.push(function(callback){
 					request.url = _this._blob_url = BlobURLCreate(_this._override_url_by_blob);
@@ -75017,30 +74319,30 @@ function PageExpand(page_expand_arguments){
 					// 短いアドレスを生成
 					short_url = new ShortURLCreater();
 					short_url.onsuccess = function(){
+						if(replied) return;
 						request.saveURL = short_url.shortURL;
 						reply({state:"next"});
 					};
 					short_url.onerror = function(reason){
-						response.result = false;
-						response.ok = false;
-						response.status = 0;
-						response.state = DownloaderState.DOWNLOAD.FAILED;
+						if(replied) return;
 						response.errorText = reason;
-						dispatch_onstatechange.call(_this);
-						reply({state:"complete"});
+						failure();
 					};
 					short_url.setUrlInfo(_this.url_info);
 					short_url.setBlob(_this._override_url_by_blob);
 					short_url.start();
 				});
+				exec_methods.play();
 				return;
 			}
 
 			if(request.url.search(new RegExp("^(blob):","i")) >= 0){
+				exec_methods.pause();
 				exec_methods.push(load_blob);
 				exec_methods.push(function(callback){
 					reply({state:"next"});
 				});
+				exec_methods.play();
 				return;
 			}
 
@@ -75259,13 +74561,7 @@ function PageExpand(page_expand_arguments){
 			}
 
 			function abort(){
-				try{
-					loader.abort();
-				}catch(e){
-				}
-				response.state = DownloaderState.DOWNLOAD.FAILED;
-				dispatch_onstatechange.call(_this);
-				reply({state:"complete"});
+				if(loader) loader.abort();
 			}
 
 			event_handler_release = _this._event_dispatcher.createEventHandler("release");
@@ -75416,7 +74712,7 @@ function PageExpand(page_expand_arguments){
 					event_handler_abort.release();
 					event_handler_abort = null;
 				}
-			};
+			}
 			function release(){
 				release_event_abort();
 				if(event_handler_release){
@@ -75429,7 +74725,7 @@ function PageExpand(page_expand_arguments){
 					queue_element = null;
 				}
 				commands = {};
-			};
+			}
 			function success(){
 				release();
 				reply();
@@ -75442,11 +74738,8 @@ function PageExpand(page_expand_arguments){
 			}
 
 			function load_init(){
-				init_response.call(_this);
 				init_progress.call(_this);
-				_this.response.state = DownloaderState.DOWNLOAD.WAITING;
-				dispatch_onstatechange.call(_this);
-				release_event_abort();
+				init_response.call(_this);
 			}
 
 			function load_exec(){
@@ -75465,6 +74758,9 @@ function PageExpand(page_expand_arguments){
 			}
 
 			load_init();
+			_this.response.state = DownloaderState.DOWNLOAD.WAITING;
+			dispatch_onstatechange.call(_this);
+
 
 			event_handler_release = _this._event_dispatcher.createEventHandler("release");
 			event_handler_release.setFunction(release);
@@ -75495,11 +74791,13 @@ function PageExpand(page_expand_arguments){
 			case "pause":
 			case "cancel":
 			case "open":
+				release_event_abort();
 				load_exec();
 				break;
 			default:
 				queue_element = downloader_queue.createElement();
 				queue_element.onstart = function(){
+					release_event_abort();
 					load_exec();
 				};
 				queue_element.onabort = function(){
@@ -77188,7 +76486,7 @@ function PageExpand(page_expand_arguments){
 		var event_type_down = {"mousedown":true,"dragstart":true};
 		var event_type_up = {"mouseup":true,"dragend":true};
 		var event_type_move = {"mousemove":true,"mouseover":true,"drag":true,"dragover":true};
-		var button_to_buttons = [0x01,0x04,0x02,0x08,0x10];
+		var button_to_buttons = [0x01,0x04,0x02,0x08,0x10,0x20];
 
 		var dict = new Object();
 		dict["mousemove"] =
@@ -87570,6 +86868,28 @@ function PageExpand(page_expand_arguments){
 			_this.setVisible(false);
 		})();
 	}
+
+	// --------------------------------------------------------------------------------
+	// ドキュメントを無効化
+	// --------------------------------------------------------------------------------
+	var DocumentInert = (function(){
+		function f(doc){
+			this.html = doc.documentElement;
+			this.original = this.html.inert;
+			this.disabled = Boolean(this.original === undefined);
+			if(this.disabled) return;
+			this.html.inert = true;
+		}
+		f.prototype = {
+			release:function(){
+				if(this.disabled) return;
+				this.html.inert = this.original;
+				this.disabled = true;
+			},
+			events:null
+		};
+		return f;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// キュー辞書
