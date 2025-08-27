@@ -158,18 +158,7 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// PageExpand コンストラクタ
 	// --------------------------------------------------------------------------------
-	function PageExpandConstructor(){
-
-		// ウィンドウ管理
-		if(!window_manager){
-			window_manager = new WindowManager(window);
-		}
-
-		// マウス入力
-		if(!input_mouse){
-			input_mouse = new InputMouse(window);
-		}
-
+	function PageExpandConstructorForBackGround(){
 		// 実行キュー
 		if(!execute_queue){
 			execute_queue = new ExecuteQueue();
@@ -181,6 +170,19 @@ function PageExpand(page_expand_arguments){
 		}
 		if(!downloader_queue){
 			downloader_queue = new LoaderQueue();
+		}
+	}
+	function PageExpandConstructorForApp(){
+		PageExpandConstructorForBackGround();
+
+		// ウィンドウ管理
+		if(!window_manager){
+			window_manager = new WindowManager(window);
+		}
+
+		// マウス入力
+		if(!input_mouse){
+			input_mouse = new InputMouse(window);
 		}
 
 		// アドレス関連
@@ -269,14 +271,17 @@ function PageExpand(page_expand_arguments){
 			element_limitter_video = new ElementLimiter();
 		}
 
-		// 掲示板辞書
-		if(!bbs_dictionary){
-			bbs_dictionary = new BbsDictionary();
-		}
-
 		// ダウンロードボード
 		if(!download_board){
 			download_board = new PageExpandDownloadBoard();
+		}
+	}
+	function PageExpandConstructorForContent(){
+		PageExpandConstructorForApp();
+
+		// 掲示板辞書
+		if(!bbs_dictionary){
+			bbs_dictionary = new BbsDictionary();
 		}
 
 		// 掲示板拡張
@@ -514,24 +519,30 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// PageExpand 実行開始
 	// --------------------------------------------------------------------------------
-	function PageExpandStart(){
-
-		if(started)	return;
-		started = true;
+	function PageExpandStartForBackGround(){
+		loader_queue.setMaxThread(project.getLoadThreadMax());
+		downloader_queue.setMaxThread(project.getDownloadThreadMax());
+		execute_queue.setOccupancyTime(project.getExecuteQueueOccupancyTime());
+		execute_queue.setSleepTime(project.getExecuteQueueSleepTime());
+	}
+	function PageExpandStartForApp(){
+		PageExpandStartForBackGround();
 
 		// --------------------------------------------------------------------------------
 		// 設定
 		// --------------------------------------------------------------------------------
-		loader_queue.setMaxThread(project.getLoadThreadMax());
-		downloader_queue.setMaxThread(project.getDownloadThreadMax());
 		element_limitter_image.setEnableUnloadByByteSize(project.getEnableUnloadExpandImage());
 		element_limitter_image.setByteSizeMax(project.getSizeMoreThenAllowUnloadExpandImage());
 		element_limitter_sound.setEnableUnloadByCount(true);
 		element_limitter_sound.setMaxUse(project.getSoundMaxInlineSound());
 		element_limitter_video.setEnableUnloadByCount(true);
 		element_limitter_video.setMaxUse(project.getVideoMaxInlineVideo());
-		execute_queue.setOccupancyTime(project.getExecuteQueueOccupancyTime());
-		execute_queue.setSleepTime(project.getExecuteQueueSleepTime());
+	}
+	function PageExpandStartForContent(){
+		if(started)	return;
+		started = true;
+
+		PageExpandStartForApp();
 
 		// --------------------------------------------------------------------------------
 		// タッチ入力
@@ -34998,7 +35009,7 @@ function PageExpand(page_expand_arguments){
 				_this.release();
 			});
 			this.releasers.push(listener);
-			var svg = new DOMParser().parseFromString('<svg width="10" height="10" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke:#000;stroke-width:2" d="M 2,8 8,2 M 2,2 8,8" /></g></svg>',"image/svg+xml").childNodes[0];
+			var svg = new DOMParser().parseFromString('<svg width="10" height="10" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke:buttontext;stroke-width:2" d="M 2,8 8,2 M 2,2 8,8" /></g></svg>',"image/svg+xml").childNodes[0];
 			close.appendChild(svg);
 			root.appendChild(close);
 
@@ -35122,17 +35133,25 @@ function PageExpand(page_expand_arguments){
 
 			document.body.appendChild(this.shadow_host);
 
-			var style = DocumentCreateElement("style");
-			shadow_root.appendChild(style);
-			var style_sheet = ElementGetStyleSheet(style);
+			var style_sheet;
+			try{
+				style_sheet = new CSSStyleSheet();
+				shadow_root.adoptedStyleSheets = [style_sheet];
+			}catch(e){
+				// Firefox で動作しない
+				var style = DocumentCreateElement("style");
+				shadow_root.appendChild(style);
+				style_sheet = ElementGetStyleSheet(style);
+			}
+
 			[
-				[".root","all:revert; width:200px;border:3px #888 outset; padding:0px; padding-bottom:4px; margin:0px; right:5px; bottom:5px; position:fixed; text-align:left; color:#000; font-family:system-ui; font-size:12px; line-height:1.0; z-index:2147483647;backdrop-filter:blur(2px);"],
-				[".bg","background-color:#FFF; padding:0px; margin:0px; opacity:0.8; inset:0px; position:absolute;"],
-				[".title","font-weight:bold; color:#000; background-color:#ccc; padding:2px 5px; margin:0px 0px 2px; position:relative; user-select:none; cursor:move;"],
-				[".close","width:16px; height:16px; position:absolute; right:0px; top:0px; padding:0px; text-align:center; line-height:0;"],
+				[".root","all:initial; color-scheme:revert; width:200px;border:3px #888 outset; padding:0px; padding-bottom:4px; margin:0px; right:5px; bottom:5px; position:fixed; text-align:left; color:canvastext; font-family:system-ui; font-size:12px; line-height:1.0; z-index:2147483647;backdrop-filter:blur(2px);"],
+				[".bg","background-color:canvas; padding:0px; margin:0px; opacity:0.8; inset:0px; position:absolute;"],
+				[".title","font-weight:bold; color:canvastext; background-color:hsl(from canvas h s calc(l + (50 - l) * 0.375)); padding:2px 5px; margin:0px 0px 2px; position:relative; user-select:none; cursor:move;"],
+				[".close","width:16px; height:16px; position:absolute; right:0px; top:0px; padding:0px; line-height:0.0; display:flex; justify-content:center; align-items:center;"],
 				[".ui_text","margin:0px 5px 0px;position:relative;z-index:1;"],
-				[".ui_mater","height:2px; min-height:0; border:1px #888 solid; margin:2px 5px; line-height:1.0; position:relative;z-index:0;"],
-				[".ui_bar","height:2px; min-height:0; background-color :#888; margin:0px; width:0%; line-height:1.0;"]
+				[".ui_mater","height:2px; min-height:0; border:1px #888 solid; margin:2px 5px; position:relative;z-index:0;"],
+				[".ui_bar","height:2px; min-height:0; background-color:#888; margin:0px; width:0%;"]
 			].forEach(function(r,i){
 				CSSStyleSheetInsertRule(style_sheet,r[0],r[1],i);
 			});
@@ -35251,11 +35270,7 @@ function PageExpand(page_expand_arguments){
 				project = new Project();
 				project.importObjectForBackground(page_expand_project.getProject(""));
 
-				// 設定更新
-				loader_queue.setMaxThread(project.getLoadThreadMax());
-				downloader_queue.setMaxThread(project.getDownloadThreadMax());
-				execute_queue.setOccupancyTime(project.getExecuteQueueOccupancyTime());
-				execute_queue.setSleepTime(project.getExecuteQueueSleepTime());
+				PageExpandStartForBackGround();
 
 				// ロケール
 				_i18n = new InternationalMessage(page_expand_project.getLanguage());
@@ -36749,6 +36764,14 @@ function PageExpand(page_expand_arguments){
 					var complete = function(){
 						release();
 						port.postMessage({state:"head",data:response});
+
+						// FirefoxAndroid用
+						if(response.errorText == "Error: Not implemented"){
+							port.postMessage({state:"unsupported"});
+							port.close();
+							return;
+						}
+
 						port.postMessage({state:"complete"});
 						port.close();
 					};
@@ -42794,7 +42817,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.7.10");
+				new UI_Text(parent,"PageExpand ver.1.7.11");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -49294,50 +49317,27 @@ function PageExpand(page_expand_arguments){
 		// UI
 		// --------------------------------------------------------------------------------
 		var UI_LineButton = (function(){
-			function mouse_normal(){
-				this.style.color = "#222";
-				this.style.background = "none";
-			}
-			function mouse_over(){
-				this.style.color = "#fff";
-				this.style.background = "#4281F4";
-			}
-			function mouse_down(){
-				this.style.color = "#fff";
-				this.style.background = "#404040";
-			}
-
 			var f = function(parent,label){
 				var _this = this;
 
 				var _item = DocumentCreateElement("a");
 				_item.href = "";
-				_this.style = _item.style;
-				ElementSetStyle(_item,"display:block; text-decoration: none; font-size:13px; color:#000; margin:0px 0px 2px; padding:5px 20px; border-radius:5px; line-height:1.0;");
-				ElementSetTextContent(_item,label);
+				_item.draggable = false;
+				_item.className = "item";
 				parent.appendChild(_item);
+
+				var span = DocumentCreateElement("span");
+				ElementSetTextContent(span,label);
+				_item.appendChild(span);
 
 				_item.addEventListener("click",function(e){
 					var f = _this.onclick;
 					if(f) f(e);
 					e.preventDefault();
 				});
-				_item.addEventListener("mouseover",function(e){
-					mouse_over.call(_this);
-				});
-				_item.addEventListener("mousedown",function(e){
-					mouse_down.call(_this);
-				});
-				_item.addEventListener("mouseup",function(e){
-					mouse_over.call(_this);
-				});
-				_item.addEventListener("mouseout",function(e){
-					mouse_normal.call(_this);
-				});
 			};
 			f.prototype = {
-				onclick : function(){},
-				style : null
+				onclick : function(){}
 			};
 			return f;
 		})();
@@ -49345,7 +49345,7 @@ function PageExpand(page_expand_arguments){
 		var UI_Separator = (function(){
 			var f = function(parent){
 				var _item = DocumentCreateElement("div");
-				ElementSetStyle(_item,"height: 0px; border-top:1px solid #ddd; margin:5px 0px;");
+				_item.className = "separator";
 				parent.appendChild(_item);
 			};
 			return f;
@@ -49353,38 +49353,37 @@ function PageExpand(page_expand_arguments){
 
 		function update_document(callback){
 			var _this = this;
-			var root = document.body;
+			var elements = [];
 
-			DomNodeRemoveChildren(root);
+			DomNodeRemoveChildren(document.body);
 
-			document.title = this.i18n.getMessage("page_expand_popup_menu");
-			ElementSetStyle(root,'background-color:#ccc; font-family:"Meiryo","sans-serif"; margin:0px; padding:0px; width:300px; border:0px solid #000; overflow-x:hidden; box-sizing:border-box;');
+			["root","head","body"].forEach(function(s){
+				var e = elements[s] = DocumentCreateElement("div");
+				e.className = s;
+			});
+			var root = elements.root;
+			root.appendChild(elements.head);
+			root.appendChild(elements.body);
+			document.body.appendChild(root);
 
-			// ヘッダ
-			var head_window = DocumentCreateElement("div");
-			ElementSetStyle(head_window,"background-color:#000; color:#fff; font-size:12px; font-weight:bold; padding:2px 5px; margin:0px;");
-			ElementSetTextContent(head_window,this.i18n.getMessage("page_expand_popup_menu"));
-			root.appendChild(head_window);
+			document.title = elements.head.textContent = this.i18n.getMessage("page_expand_popup_menu");
 
-			// ボディ
-			var body_window = DocumentCreateElement("div");
-			ElementSetStyle(body_window,"border:2px inset #f0f0f0; background-color:#fcfcfc;");
-			root.appendChild(body_window);
-
-			// 外周
-			var out_window = DocumentCreateElement("div");
-			ElementSetStyle(out_window,"margin:5px 5px 5px 5px;");
-			body_window.appendChild(out_window);
-
-			// 外周
-			var out_table = DocumentCreateElement("div");
-			ElementSetStyle(out_table,"width:100%; display:table;");
-			out_window.appendChild(out_table);
-
-			// メニュー部
-			var _menu_window = DocumentCreateElement("div");
-			ElementSetStyle(_menu_window,"display:table-cell; vertical-align:top; user-select:none; -webkit-user-select:none; -moz-user-select:none; -khtml-user-select:none; margin:0px;");
-			out_table.appendChild(_menu_window);
+			var element_style = DocumentCreateElement("style");
+			root.appendChild(element_style);
+			var style_sheet = ElementGetStyleSheet(element_style);
+			[
+				["body",'background-color:hsl(from canvas h s calc(l + (50 - l) * 0.375)); margin:0px; padding:0px; display:flex; justify-content:center;'],
+				[".root",'width:300px; font-family:"Meiryo","sans-serif"; overflow-x:hidden; box-sizing:border-box; white-space:nowrap;'],
+				[".head","background-color:hsl(from canvas h s calc((100 - l) - (50 - l) * 0.5)); color:hsl(from canvastext h s calc((100 - l) - (50 - l) * 0.0)); font-size:12px; font-weight:bold; display:flex; align-items:center; padding-left:12px; height:28px;"],
+				[".body","border:2px inset hsl(from canvas h s calc(l + (50 - l) * 0.125)); background-color:hsl(from canvas h s calc(l + (50 - l) * 0.0235)); display:flex; flex-direction:column; gap:2px; padding:5px; user-select:none;"],
+				[".item","display:flex; align-items:center; text-decoration:none; font-size:13px; color:hsl(from canvastext h s calc(l + (50 - l) * 0.25)); border-radius:5px; height:24px;"],
+				[".item:hover","background:highlight; color:highlighttext;"],
+				[".item:active","background:hsl(from canvas h s calc((100 - l) - (50 - l) * 0.5)); color:hsl(from canvastext h s calc((100 - l) - (50 - l) * 0.0));"],
+				[".item > span","margin:0px 20px;"],
+				[".separator","height: 0px; border-top:1px solid hsl(from canvas h s calc(l + (50 - l) * 0.25)); margin:5px 0px;"]
+			].forEach(function(a){
+				CSSStyleSheetInsertRule(style_sheet,a[0],a[1]);
+			});
 
 			var items = new Array();
 
@@ -49516,24 +49515,21 @@ function PageExpand(page_expand_arguments){
 			}
 			if(0 < i) items.splice(num-i,i);
 
-			num = items.length;
-			for(i=0;i<num;i++){
-				(function(){
-					var item = items[i];
-					var ui;
-					switch(item.type){
-					case "button":
-						ui = new UI_LineButton(_menu_window , _this.i18n.getMessage("context_menu_pageexpand_"+item.i18n));
-						ui.onclick = function(){
-							click.call(_this,item.id);
-						};
-						break;
-					case "separator":
-						ui = new UI_Separator(_menu_window);
-						break;
-					}
-				})();
-			}
+			items.forEach(function(item){
+				var ui;
+				switch(item.type){
+				case "button":
+					ui = new UI_LineButton(elements.body , _this.i18n.getMessage("context_menu_pageexpand_"+item.i18n));
+					ui.onclick = function(){
+						click.call(_this,item.id);
+					};
+					break;
+				case "separator":
+					ui = new UI_Separator(elements.body);
+					break;
+				}
+
+			});
 
 			callback();
 		}
@@ -54861,16 +54857,20 @@ function PageExpand(page_expand_arguments){
 	function PageExpandDownloadBoard(){
 		var _dlbd = this;
 
-		var RESIZE_STATE = {
-			NORMAL:1,
-			FULL:2
-		};
+		var RESIZE_STATE = {NORMAL:0,FULL:1,MAX:2};
+		var THEME_STATE = {AUTO:0,LIGHT:1,DARK:2,MAX:3};
 
 		var COLUMN_WIDTH_MINIMUM = 20;
 
-		var svg_close = "data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iMTUuOTk5OTk5IgpoZWlnaHQ9IjE1Ljk5OTk5OSIKdmlld0JveD0iMCAwIDQuMjMzMzMzIDQuMjMzMzMzIgp2ZXJzaW9uPSIxLjEiCmlkPSIiCnhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxkZWZzCmlkPSIiIC8+CjxnCmlkPSIiPgo8cGF0aApzdHlsZT0iZmlsbDpub25lO2ZpbGwtb3BhY2l0eTowLjAzO3N0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDowLjUyOTE2NztzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MSIKZD0iTSAwLjI2NDU4MzMzLDAuMjY0NTgzMzMgMy45Njg3NSwzLjk2ODc1IgppZD0iIiAvPgo8cGF0aApzdHlsZT0iZmlsbDpub25lO2ZpbGwtb3BhY2l0eTowLjAzO3N0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDowLjUyOTE2NztzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MSIKZD0iTSAwLjI2NDU4MzMzLDMuOTY4NzUgMy45Njg3NSwwLjI2NDU4MzMzIgppZD0iIiAvPgo8L2c+Cjwvc3ZnPg==";
-		var svg_cancel = "data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iNDQuNDkwMTg5IgpoZWlnaHQ9IjQ0LjQ5MDIwNCIKdmlld0JveD0iMCAwIDExLjc3MTM2MiAxMS43NzEzNjciCnZlcnNpb249IjEuMSIKaWQ9IiIKeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgp4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGRlZnMKaWQ9IiIgLz4KPGcKaWQ9IiIKdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTcuMzQzNDg1NSwtMC43Mjg4OTk4OCkiPgo8ZWxsaXBzZQpzdHlsZT0iZmlsbDpub25lO2ZpbGwtb3BhY2l0eTowLjA1O3N0cm9rZTojZmYwMDAwO3N0cm9rZS13aWR0aDowLjc5Mzc1O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxOS4zO3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxO3BhaW50LW9yZGVyOm1hcmtlcnMgZmlsbCBzdHJva2UiCmlkPSIiCmN4PSIxMy4yMjkxNjciCmN5PSI2LjYxNDU4MzUiCnJ4PSI1LjQ4ODgwNjciCnJ5PSI1LjQ4ODgwODYiIC8+CjxwYXRoCnN0eWxlPSJmaWxsOm5vbmU7ZmlsbC1vcGFjaXR5OjAuMDU7c3Ryb2tlOiNmZjAwMDA7c3Ryb2tlLXdpZHRoOjEuNTg3NTtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTkuMztzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MTtwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgpkPSJNIDE2LjI3MTg3NSwzLjU3MTg3NSAxMC4xODY0NTgsOS42NTcyOTE4IgppZD0iIiAvPgo8cGF0aApzdHlsZT0iZmlsbDpub25lO2ZpbGwtb3BhY2l0eTowLjA1O3N0cm9rZTojZmYwMDAwO3N0cm9rZS13aWR0aDoxLjU4NzU7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjE5LjM7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1vcGFjaXR5OjE7cGFpbnQtb3JkZXI6bWFya2VycyBmaWxsIHN0cm9rZSIKZD0ibSAxMC4xODY0NTgsMy41NzE4NzUgNi4wODU0MTcsNi4wODU0MTY4IgppZD0iIiAvPgo8L2c+Cjwvc3ZnPg==";
-
+		var hsl_red = "hsl(from canvas 0 100 calc(l / 100 * (50 - 75) + 75) / calc(l / 100 * (0.5 - 0.85) + 0.85))";
+		var svg_close = '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke:canvastext;stroke-width:3" d="M 14,14 2,2 M 14,2 2,14" /></g></svg>';
+		var svg_cancel = '<svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg"><g style="stroke:' + hsl_red + ';"><circle style="fill:none;stroke-width:3;" cx="25" cy="25" r="22" /><path style="stroke-width:8;" d="M 36,14 14,36 m 0,-22 22,22" /></g></svg>';
+		var svg_restore = '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:none;stroke:canvastext;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;" d="M 1,3 V 15 H 13 V 3 Z M 3,1 h 12 v 12" /></g></svg>';
+		var svg_maximum = '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:none;stroke:canvastext;stroke-width:1.5;stroke-linejoin:round" d="M 1,1 V 15 H 15 V 1 Z" /></g></svg>';
+		var svg_clear = '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke:canvastext;stroke-width:2" d="M 13,13 3,3 M 13,3 3,13" /></g></svg>';
+		var svg_meter = '<svg width="24" height="24" xmlns="http://www.w3.org/2000/svg"><g><path style="fill-opacity:0.03;fill:canvastext;" d="M 24,12 12,0 H 0 L 12,12 0,24 h 12 z" /></g></svg>';
+		var svg_ascend = '<svg width="10" height="20" xmlns="http://www.w3.org/2000/svg"><g fill="#ffffff"><path style="fill-opacity:0.8;" d="m 2,11 3,8 3,-8 z" /><path style="fill-opacity:0.2;" d="M 2,9 5,1 8,9 Z" /></g></svg>';
+		var svg_descend = '<svg width="10" height="20" xmlns="http://www.w3.org/2000/svg"><g fill="#ffffff"><path style="fill-opacity:0.2;" d="m 2,11 3,8 3,-8 z" /><path style="fill-opacity:0.8;" d="M 2,9 5,1 8,9 Z" /></g></svg>';
 
 		// --------------------------------------------------------------------------------
 		// 開放
@@ -54906,25 +54906,19 @@ function PageExpand(page_expand_arguments){
 			}
 		};
 		function setVisible(type){
-			if(type){
-				if(_element_style){
-					_shadow_host.style.display = "initial";
-				}else{
-					document.body.appendChild(_shadow_host);
-				}
-				switch(resize_state){
-				case RESIZE_STATE.FULL:
-					hide_scrollbar.setVisible(false);
-					break;
-				}
+			if(_elements.style){
+				_shadow_host.style.display = (type) ? "initial" : "none";
 			}else{
-				if(_element_style){
-					_shadow_host.style.display = "none";
+				if(type){
+					document.body.appendChild(_shadow_host);
 				}else{
 					DomNodeRemove(_shadow_host);
 				}
-				hide_scrollbar.setVisible(true);
 			}
+			hide_scrollbar.setVisible((function(){
+				if((type) && (resize_state == RESIZE_STATE.FULL)) return false;
+				return true;
+			})());
 		};
 		function Fade(){
 			var _this = this;
@@ -54988,13 +54982,14 @@ function PageExpand(page_expand_arguments){
 		// フィルタ
 		// --------------------------------------------------------------------------------
 		_dlbd.setFilter = function(type){
-			_select_filter.value = filter_type = type;
-			updateFilter();
+			_select_filter.setValue(type);
 		};
 		function updateFilter(){
+			var lock = lock_update_dlbl();
 			item_container.getItemsAll().forEach(function(item){
 				item.updateVisible();
 			});
+			lock.release();
 		}
 
 		// --------------------------------------------------------------------------------
@@ -55009,49 +55004,70 @@ function PageExpand(page_expand_arguments){
 			updateResize();
 		};
 		_dlbd.toggleWindow = function(){
-			if(resize_state == RESIZE_STATE.FULL){
-				resize_state = RESIZE_STATE.NORMAL;
-			}else{
-				resize_state = RESIZE_STATE.FULL;
+			resize_state ++;
+			if(resize_state >= RESIZE_STATE.MAX){
+				resize_state = 0;
 			}
 			updateResize();
 		};
 		var updateResize = (function(){
-			var list = {
-				"border-radius":"initial",
-				"border":"initial",
-				"bottom":"0px",
-				"height":"auto",
-				"left":"0px",
-				"max-height":"none",
-				"max-width":"none",
-				"min-height":"auto",
-				"min-width":"auto",
-				"right":"0px",
-				"top":"0px",
-				"width":"auto"
+			var dict = [];
+			dict[RESIZE_STATE.NORMAL] = {
+				name:"maximum",
+				class:"window",
+				scroll:true
+			};
+			dict[RESIZE_STATE.FULL] = {
+				name:"restore",
+				class:"window resize_full",
+				scroll:false
 			};
 			return function (){
-				var k;
-				var style = _element_window.style;
-				switch(resize_state){
-				case RESIZE_STATE.FULL:
-					for(k in list){
-						StyleDeclarationSetProperty(style,k,list[k]);
-					}
-					_button_resize.setTooltip(_i18n.getMessage("download_board_button_restore"));
-					_button_resize.setImageURL("data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iMTYiCmhlaWdodD0iMTYiCnZpZXdCb3g9IjAgMCA0LjIzMzMzMyA0LjIzMzMzMyIKdmVyc2lvbj0iMS4xIgppZD0iIgp4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCnhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZGVmcwppZD0iIiAvPgo8ZwppZD0iIj4KPHBhdGgKc3R5bGU9ImZpbGw6bm9uZTtmaWxsLW9wYWNpdHk6MC4wMztzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MC4yNjQ1ODM7c3Ryb2tlLWxpbmVjYXA6YnV0dDtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1kYXNob2Zmc2V0OjA7cGFpbnQtb3JkZXI6bWFya2VycyBmaWxsIHN0cm9rZSIKZD0iTSAwLjEzMjI5MTY3LDAuMTMyMjkxNjcgViA0LjEwMTA0MTYgSCA0LjEwMTA0MTYgViAwLjEzMjI5MTY3IFoiCmlkPSIiIC8+CjwvZz4KPC9zdmc+");
-					hide_scrollbar.setVisible(false);
-					break;
-				case RESIZE_STATE.NORMAL:
-					for(k in list){
-						StyleDeclarationRemoveProperty(style,k);
-					}
-					_button_resize.setTooltip(_i18n.getMessage("download_board_button_maximum"));
-					_button_resize.setImageURL("data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iMTYiCmhlaWdodD0iMTYiCnZpZXdCb3g9IjAgMCA0LjIzMzMzMyA0LjIzMzMzMyIKdmVyc2lvbj0iMS4xIgppZD0iIgp4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCnhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZGVmcwppZD0iIiAvPgo8ZwppZD0iIj4KPHBhdGgKc3R5bGU9ImZpbGw6bm9uZTtmaWxsLW9wYWNpdHk6MC4wMztzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MC4yNjQ1ODM7c3Ryb2tlLWxpbmVjYXA6YnV0dDtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1kYXNob2Zmc2V0OjA7cGFpbnQtb3JkZXI6bWFya2VycyBmaWxsIHN0cm9rZSIKZD0iTSAwLjEzMjI5MTY3LDAuNTk0Njk1MDEgViA0LjEwMTA0MTYgSCAzLjYzODYzODIgViAwLjU5NDY5NTAxIFoiCmlkPSIiIC8+CjxwYXRoCnN0eWxlPSJmaWxsOm5vbmU7ZmlsbC1vcGFjaXR5OjAuMDM7c3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjAuMjY0NTgzO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxOS4zO3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgpkPSJNIDAuNTk0Njk1MDEsMC4xMzIyOTE2NyBIIDQuMTAxMDQxNiBWIDMuNjM4NjM4MyIKaWQ9IiIgLz4KPC9nPgo8L3N2Zz4=");
-					hide_scrollbar.setVisible(true);
-					break;
-				}
+				var o = dict[resize_state];
+				_elements.window.className = o.class;
+				_buttons.resize.setTooltip(_i18n.getMessage("download_board_button_" + o.name));
+				_buttons.resize.setSVG((resize_state == RESIZE_STATE.NORMAL) ? svg_maximum : svg_restore);
+				hide_scrollbar.setVisible(o.scroll);
+				update_dlbl();
+			};
+		})();
+
+		// --------------------------------------------------------------------------------
+		// テーマ
+		// --------------------------------------------------------------------------------
+		_dlbd.toggleTheme = function(){
+			if(theme_state == THEME_STATE.AUTO){
+				theme_state = (ElementGetColorScheme(_elements.dlbd) == "dark") ? THEME_STATE.LIGHT : THEME_STATE.DARK;
+			}else{
+				theme_state ++;
+			}
+			if(theme_state >= THEME_STATE.MAX){
+				theme_state = 1;
+			}
+			updateTheme();
+		};
+		var updateTheme = (function(){
+			var dict = [];
+			dict[THEME_STATE.AUTO] = {
+				name:"auto",
+				value:"revert",
+				text:"now: Inherit Theme\nnext: Reverse Theme"
+			};
+			dict[THEME_STATE.LIGHT] = {
+				name:"light",
+				value:"light",
+				text:"now: Light Theme\nnext: Dark Theme"
+			};
+			dict[THEME_STATE.DARK] = {
+				name:"dark",
+				value:"dark",
+				text:"now: Dark Theme\nnext: Light Theme"
+			};
+
+			return function (){
+				var o = dict[theme_state];
+				_buttons.theme.setTooltip(_i18n.getMessage("download_board_button_theme") + "\n" + o.text);
+				_elements.dlbd.style.colorScheme = o.value;
 			};
 		})();
 
@@ -55064,8 +55080,8 @@ function PageExpand(page_expand_arguments){
 			_dlbd.maximizeWindow();
 			document.title = "Download Board";
 
-			_button_close.setVisible(false);
-			_button_resize.setVisible(false);
+			_buttons.close.setVisible(false);
+			_buttons.resize.setVisible(false);
 			_dlbd.collectUrlInfoAll(true);
 		};
 
@@ -55115,6 +55131,8 @@ function PageExpand(page_expand_arguments){
 
 						switch(data.type){
 						case "attach":
+							var lock_dlbl = lock_update_dlbl();
+							var lock_scroll = lock_update_sort();
 							data.data.forEach(function (u){
 								var url_info = url_info_dictionary.addURL(u.url);
 								var values = u.values;
@@ -55136,6 +55154,8 @@ function PageExpand(page_expand_arguments){
 									break;
 								}
 							});
+							lock_scroll.release();
+							lock_dlbl.release();
 							break;
 						case "modify":
 							var o = data.data;
@@ -55243,7 +55263,6 @@ function PageExpand(page_expand_arguments){
 			return UrlInfoCollector;
 		})();
 
-
 		_dlbd.collectUrlInfoAll = function (v){
 
 				if(!v){
@@ -55252,23 +55271,23 @@ function PageExpand(page_expand_arguments){
 						url_info_collector = null;
 					}
 					updateDownloadButton();
-					_info_collector.setText(0,"Collected URLs.");
-					_info_collector.setProgress(1,1.0);
+					_info.collector.setText(0,"Collected URLs.");
+					_info.collector.setProgress(1,1.0);
 					return;
 				}
 
 				var updateInfo = function(){
-					var node = _info_collector.root;
-					if(DomNodeGetFirstElementChild(_element_info) == node) return;
-					DomNodeRemoveChildren(_element_info);
-					_element_info.appendChild(node);
+					var node = _info.collector.root;
+					if(DomNodeGetFirstElementChild(_elements.info) == node) return;
+					DomNodeRemoveChildren(_elements.info);
+					_elements.info.appendChild(node);
 				};
 
 				url_info_collector = new UrlInfoCollector();
 				url_info_collector.onstatechange = function(r){
-					_info_collector.setText(0,"Collecting URLs form ALL Tabs...");
-					_info_collector.setText(1,"live:" + r.countLive + " disconnected:" + r.countDied);
-					_info_collector.setProgress(1,-1.0);
+					_info.collector.setText(0,"Collecting URLs form ALL Tabs...");
+					_info.collector.setText(1,"live:" + r.countLive + " disconnected:" + r.countDied);
+					_info.collector.setProgress(1,-1.0);
 					updateInfo();
 				};
 				updateDownloadButton();
@@ -55279,93 +55298,137 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function eraseItemsSelected(){
 			var items = item_container.getItemsErased();
+			var lock = lock_update_dlbl();
 			items.forEach(function(item){
 				item.release();
 			});
+			lock.release();
 		};
 		_dlbd.deselectItemsAll = function (){
 			var items = item_container.getItemsAll();
+			var lock = lock_update_dlbl();
 			items.forEach(function(item){
 				item.url_info.setValue("select",false);
 			});
+			lock.release();
 		};
 		function editItemsModal(){
-			new UI_UrlEditDialog(_element_dlbd);
+			new UI_UrlEditDialog(_elements.dlbd);
 		};
 		function UI_UrlEditDialog(parent){
 			var _this = this;
-			var _element_background;
-			var _element_window;
+			var _elements;
 			var _fade;
 			var _items_erase;
+			var _resize_state;
 
 			this.release = function(){
-				element_remove();
+				DomNodeRemove(_elements.window);
+				DomNodeRemove(_elements.background);
 				_items_erase.clear();
 			};
 
 			function fadeout(){
 				_fade.fadeout();
 			}
-			function element_remove(){
-				DomNodeRemove(_element_window);
-				DomNodeRemove(_element_background);
-			}
 
-			_items_erase = new Map();
-			item_container.getItemsVisibled().forEach(function(item){
-				_items_erase.set(item,item);
-			});
-
-			_element_background = DocumentCreateElement("div");
-			_element_background.style.cssText = "background:rgba(0,0,0,0.3333);bottom:0;left:0;position:fixed;right:0;top:0;z-index:2147483647;";
-			_element_background.addEventListener("click",function(e){
-				fadeout();
-			});
-
-			_element_window = DocumentCreateElement("div");
-			_element_window.style.cssText = "background:#f8f8f8;border:1px #000 solid;border-radius:10px;bottom:50px;left:50px;margin:auto;max-height:600px;max-width:800px;min-height:200px;min-width:200px;position:fixed;right:50px;top:50px;z-index:2147483647;";
-
-			var element_toolbar = DocumentCreateElement("div");
-			element_toolbar.style.cssText = "background:#fff;height:30px;left:10px;position:absolute;right:10px;top:10px;";
-			_element_window.appendChild(element_toolbar);
-
-			var element_toolbar_right = DocumentCreateElement("div");
-			element_toolbar_right.style.cssText = "display:inline-block;float:right;";
-			element_toolbar.appendChild(element_toolbar_right);
-
-			var button_close = new UI_ToolButton(element_toolbar_right);
-			button_close.setImageURL(svg_close);
-			button_close.onclick = fadeout;
-
-			var element_body = DocumentCreateElement("div");
-			element_body.style.cssText = "background:#fff;bottom:70px;left:10px;position:absolute;right:10px;top:45px;";
-			_element_window.appendChild(element_body);
-
-			var textarea = DocumentCreateElement("textarea");
-			textarea.wrap = "off";
-			textarea.style.cssText = "box-sizing:border-box;font-family:inherit;font-size:16px;height:100%;resize:none;width:100%;";
-			element_body.appendChild(textarea);
-
-			var element_foot = DocumentCreateElement("div");
-			element_foot.style.cssText = "background:#fff;bottom:10px;height:50px;left:10px;position:absolute;right:10px;";
-			_element_window.appendChild(element_foot);
-
-			var button_update = DocumentCreateElement("button");
-			ElementSetTextContent(button_update,"OK");
-			button_update.style.cssText = "height:50px;width:100%;";
-			element_foot.appendChild(button_update);
-			button_update.onclick = function(){
-				var urls = new Array();
+			var updateResize = (function(){
+				var dict = [];
+				dict[RESIZE_STATE.NORMAL] = {
+					name:"maximum",
+					class:"window edit_size"
+				};
+				dict[RESIZE_STATE.FULL] = {
+					name:"restore",
+					class:"window resize_full"
+				};
+				return function (){
+					var o = dict[_resize_state];
+					_elements.window.className = o.class;
+					_buttons.resize.setTooltip(_i18n.getMessage("download_board_button_" + o.name));
+					_buttons.resize.setSVG((_resize_state == RESIZE_STATE.NORMAL) ? svg_maximum : svg_restore);
+				};
+			})();
+			function getURLs(f){
+				var a = new Array();
 				var re = new RegExp("[^\r\n]+","g");
 				var r;
 				while(r = re.exec(textarea.value)){
 					try{
-						var url = new URL(r[0], _shadow_root.baseURI);
-						urls.push(url.href);
+						a.push(f(r[0]));
 					}catch(e){}
 				}
+				return a;
+			}
 
+			_elements = new Object();
+			_items_erase = new Map();
+			item_container.getItemsVisibled().getItems().forEach(function(item){
+				_items_erase.set(item,item);
+			});
+
+			["background","window","tool_bar","tb_l","tb_r","edit_body","foot_bar"].forEach(function(name){
+				var e = _elements[name] = DocumentCreateElement("div");
+				e.className = name;
+			});
+
+			[{
+				right:1,
+				name:"resize",
+				onclick:function(){
+					_resize_state ++;
+					if(_resize_state >= RESIZE_STATE.MAX){
+						_resize_state = 0;
+					}
+					updateResize();
+				}
+			},{
+				right:1,
+				name:"close_edit",
+				svg:svg_close,
+				onclick:fadeout
+			},{
+				name:"url_encode",
+				svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path style="fill:buttontext" d="m 16,16 h -3 v -1 h 2 V 5 H 14 L 16,0 Z M 0,0 H 3 V 1 H 1 v 10 h 1 l -2,5 z" /><path style="stroke-width:1;stroke:buttontext;" d="M 4,12 12,4" /><g style="stroke-width:1;stroke:buttontext;fill:none;"><circle cx="5" cy="5" r="1.5" /><circle cx="11" cy="11" r="1.5" /></g></svg>',
+				onclick:function(){
+					textarea.value = getURLs(function(s){ return new URL(s, _shadow_root.baseURI).href; }).join("\n");
+				}
+			},{
+				name:"url_decode",
+				svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:buttontext" d="m 16,16 v -3 h -1 v 2 H 5 V 14 L 0,16 Z M 0,0 V 3 H 1 V 1 h 10 v 1 l 5,-2 z" /><path style="fill:none;stroke:buttontext;stroke-width:1" d="m 9.4,5.7 c 0,1.8 -3,8.3 -5.2,7 C 2.6,11.8 3.5,9.3 5.2,8.1 6.3,7.3 9.7,6.4 11.5,7.6 c 1.8,1.2 1.1,3.8 0.4,4.5 -0.7,0.7 -2,0.7 -3,0.7 M 6.4,2.1 C 6.1,3.5 5.5,10.7 7.9,12.4 M 3.5,4.6 C 5.1,4.7 9.6,4.2 11.3,3.8" /></g></svg>',
+				onclick:function(){
+					textarea.value = getURLs(function(s){ return decodeURI(s); }).join("\n");
+				}
+			},{
+				name:"url_decode_all",
+				svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:buttontext" d="m 16,16 v -3 h -1 v 2 H 5 V 14 L 0,16 Z M 0,0 V 3 H 1 V 1 h 10 v 1 l 5,-2 z" /><path style="fill:none;stroke:buttontext;stroke-width:1;" d="m 1,8 c 0,2 1,3.5 3,3.5 2,0 3,-2.5 4,-3.5 1,-1 2,-3.5 4,-3.5 2,0 3,1.5 3,3.5 0,2 -1,3.5 -3,3.5 C 10,11.5 9,9 8,8 7,7 6,4.5 4,4.5 2,4.5 1,6 1,8 Z" /></g></svg>',
+				onclick:function(){
+					textarea.value = getURLs(function(s){ return decodeURIComponent(s); }).join("\n");
+				}
+			}].forEach(function(o){
+				var button = _buttons[o.name] = new UI_ToolButton(_elements["tb_" + ((o.right) ? "r" : "l")]);
+				button.setTooltip(_i18n.getMessage("download_board_button_" + o.name));
+				if(o.svg) button.setSVG(o.svg);
+				button.onclick = o.onclick;
+			});
+			_resize_state = RESIZE_STATE.NORMAL;
+			updateResize();
+
+			var textarea = DocumentCreateElement("textarea");
+			textarea.wrap = "off";
+			textarea.placeholder = _i18n.getMessage("download_board_edit_textarea_placeholder");
+			textarea.style.cssText = "box-sizing:border-box;font-family:inherit;font-size:16px;width:100%;height:100%;resize:none;padding:5px;";
+			_elements.edit_body.appendChild(textarea);
+
+			var button_update = DocumentCreateElement("button");
+			ElementSetTextContent(button_update,"OK");
+			button_update.style.cssText = "height:50px;width:100%;";
+			button_update.title = _i18n.getMessage("download_board_button_update_edit");
+			_elements.foot_bar.appendChild(button_update);
+			button_update.addEventListener("click",function(e){
+				var lock_dlbl = lock_update_dlbl();
+				var lock_scroll = lock_update_sort();
+				var urls = getURLs(function(s){ return new URL(s, _shadow_root.baseURI).href; });
 				urls.forEach(function(url){
 					// 登録済み
 					var url_info = url_info_dictionary.getUrlInfo(url);
@@ -55380,38 +55443,63 @@ function PageExpand(page_expand_arguments){
 					url_info = url_info_dictionary.addURL(url);
 					if(url_info) createItem(url_info);
 				});
+
 				// 消失したアイテムをすべて除外
 				_items_erase.forEach(function(item){
 					item.release();
 				});
-
+				lock_scroll.release();
+				lock_dlbl.release();
 				fadeout();
-			};
-
-			var a = new Array();
-			_items_erase.forEach(function(item){
-				a.push(item.url_info.url);
 			});
-			textarea.value = a.join("\n");
+
+			_elements.background.addEventListener("click",function(e){
+				fadeout();
+			});
+
+			textarea.value = (function(){
+				var a = [];
+				_items_erase.forEach(function(item){
+					a.push(item.url_info.url);
+				});
+				return a;
+			})().join("\n");
+
+			[
+				["window",["tool_bar","edit_body","foot_bar"]],
+				["tool_bar",["tb_l","tb_r"]]
+			].forEach(function(a){
+				var p = _elements[a[0]];
+				a[1].forEach(function(c){ p.appendChild(_elements[c]); });
+			});
 
 			_fade = new Fade();
 			_fade.speed = (1/60)/0.15;
 			_fade.onattach = function(v){
-				parent.appendChild(_element_background);
-				parent.appendChild(_element_window);
+				parent.appendChild(_elements.background);
+				parent.appendChild(_elements.window);
 			};
 			_fade.onremove = function(){
-				element_remove();
 				_this.release();
 			};
 			_fade.onupdate = function(v){
 				var a = v.toFixed(8);
-				_element_background.style.opacity = a;
-				_element_window.style.opacity = a;
+				_elements.background.style.opacity = a;
+				_elements.window.style.opacity = a;
 				var f = (v * 4).toFixed(8);
-				_element_background.style.backdropFilter = "blur(" + f + "px)";
+				_elements.background.style.backdropFilter = "blur(" + f + "px)";
 			};
 			_fade.fadein();
+		}
+
+		// --------------------------------------------------------------------------------
+		// 個数変動
+		// --------------------------------------------------------------------------------
+		function dispatch_modify_item_count(){
+			_hit_box.update();
+		}
+		function dispatch_modify_visible_count(){
+			_hit_box.update();
 		}
 
 		// --------------------------------------------------------------------------------
@@ -55422,28 +55510,28 @@ function PageExpand(page_expand_arguments){
 
 			if(!wait_analyze){
 				var updateInfo = function(){
-					var node = _info_wait.root;
-					if(DomNodeGetFirstElementChild(_element_info) == node) return;
-					DomNodeRemoveChildren(_element_info);
-					_element_info.appendChild(node);
+					var node = _info.wait.root;
+					if(DomNodeGetFirstElementChild(_elements.info) == node) return;
+					DomNodeRemoveChildren(_elements.info);
+					_elements.info.appendChild(node);
 				};
 
 				wait_analyze = new WaitAnalyze();
 				wait_analyze.onprogress = function(r){
-					_info_wait.setText(0,"analyzing this document...");
+					_info.wait.setText(0,"analyzing this document...");
 					var s = r.value + " / " + r.max;
-					_info_wait.setText(1,s);
+					_info.wait.setText(1,s);
 					var p = (function(){
 						var p = 1.0;
 						if(r.max) p = (r.value/r.max);
 						if(!Number.isFinite(p)) p = 0.0;
 						return p;
 					})();
-					_info_wait.setProgress(1,p);
+					_info.wait.setProgress(1,p);
 					updateInfo();
 				};
 				wait_analyze.oncomplete = function(){
-					DomNodeRemoveChildren(_element_info);
+					DomNodeRemoveChildren(_elements.info);
 					if(wait_analyze){
 						wait_analyze.release();
 						wait_analyze = null;
@@ -55534,12 +55622,12 @@ function PageExpand(page_expand_arguments){
 				}
 
 				var updateInfo = function(){
-					var node = _info_archive.root;
-					if(DomNodeGetFirstElementChild(_element_info) == node) return;
-					DomNodeRemoveChildren(_element_info);
-					_element_info.appendChild(node);
+					var node = _info.archive.root;
+					if(DomNodeGetFirstElementChild(_elements.info) == node) return;
+					DomNodeRemoveChildren(_elements.info);
+					_elements.info.appendChild(node);
 				};
-				_info_archive.attach(0,"progress");
+				_info.archive.attach(0,"progress");
 
 				archive_creator = new ArchiveCreater();
 				item_container.getItemsEnabled().forEach(function(item){
@@ -55552,8 +55640,8 @@ function PageExpand(page_expand_arguments){
 					}else{
 						var blob_url = archive_creator.blobURL;
 						if(blob_url){
-							_info_archive.attach(0,"save");
-							var anchor = _info_archive.getAnchor(0);
+							_info.archive.attach(0,"save");
+							var anchor = _info.archive.getAnchor(0);
 							anchor.href = blob_url;
 							anchor.download = archive_creator.fileName;
 							ElementSetTextContent(anchor,"[Zip File]");
@@ -55562,19 +55650,19 @@ function PageExpand(page_expand_arguments){
 					complete();
 				};
 				archive_creator.onerror = function(reason){
-					_info_archive.pause(0);
-					_info_archive.pause(1);
+					_info.archive.pause(0);
+					_info.archive.pause(1);
 				};
 				archive_creator.onprogress = function(r){
 					var s = r.loaded + " / " + r.total;
 					if(r.error) s += " (error:" + r.error + ")";
-					_info_archive.setText(1,s);
-					_info_archive.setProgress(0,r.progress_rate);
-					_info_archive.setProgress(1,r.rate);
+					_info.archive.setText(1,s);
+					_info.archive.setProgress(0,r.progress_rate);
+					_info.archive.setProgress(1,r.rate);
 					updateInfo();
 				};
 				archive_creator.onstatechange = function(state){
-					_info_archive.setText(0,list[state]);
+					_info.archive.setText(0,list[state]);
 					updateInfo();
 				};
 				archive_creator.start();
@@ -55589,29 +55677,29 @@ function PageExpand(page_expand_arguments){
 		function downloadHeader(items){
 			if(!header_downloader){
 				var updateInfo = function(){
-					var node = _info_header.root;
-					if(DomNodeGetFirstElementChild(_element_info) == node) return;
-					DomNodeRemoveChildren(_element_info);
-					_element_info.appendChild(node);
+					var node = _info.header.root;
+					if(DomNodeGetFirstElementChild(_elements.info) == node) return;
+					DomNodeRemoveChildren(_elements.info);
+					_elements.info.appendChild(node);
 				};
 
 				header_downloader = new HeaderDownloader();
 				header_downloader.onprogress = function(r){
-					_info_header.setText(0,"loading response header...");
+					_info.header.setText(0,"loading response header...");
 					var s = r.loaded + " / " + r.total;
 					if(r.error) s += " (error:" + r.error + ")";
-					_info_header.setText(1,s);
+					_info.header.setText(1,s);
 					var p = (function(){
 						var p = 1.0;
 						if(r.total) p = (r.loaded/r.total);
 						if(!Number.isFinite(p)) p = 0.0;
 						return p;
 					})();
-					_info_header.setProgress(1,p);
+					_info.header.setProgress(1,p);
 					updateInfo();
 				};
 				header_downloader.oncomplete = function(){
-					_info_header.setText(0,"load completed");
+					_info.header.setText(0,"load completed");
 					updateInfo();
 
 					if(header_downloader){
@@ -55635,30 +55723,30 @@ function PageExpand(page_expand_arguments){
 		function downloadSequential(items){
 			if(!sequential_downloader){
 				var updateInfo = function(){
-					var node = _info_sequential.root;
-					if(DomNodeGetFirstElementChild(_element_info) == node) return;
-					DomNodeRemoveChildren(_element_info);
-					_element_info.appendChild(node);
+					var node = _info.sequential.root;
+					if(DomNodeGetFirstElementChild(_elements.info) == node) return;
+					DomNodeRemoveChildren(_elements.info);
+					_elements.info.appendChild(node);
 				};
 
 				sequential_downloader = new SequentialDownloader();
 				sequential_downloader.onprogress = function(r){
 
-					_info_sequential.setText(0,"sequential downloading...");
+					_info.sequential.setText(0,"sequential downloading...");
 					var s = r.loaded + " / " + r.total;
 					if(r.error) s += " (error:" + r.error + ")";
-					_info_sequential.setText(1,s);
+					_info.sequential.setText(1,s);
 					var p = (function(){
 						var p = 1.0;
 						if(r.total) p = (r.loaded/r.total);
 						if(!Number.isFinite(p)) p = 0.0;
 						return p;
 					})();
-					_info_sequential.setProgress(1,p);
+					_info.sequential.setProgress(1,p);
 					updateInfo();
 				};
 				sequential_downloader.oncomplete = function(){
-					_info_sequential.setText(0,"download completed");
+					_info.sequential.setText(0,"download completed");
 					updateInfo();
 
 					if(sequential_downloader){
@@ -55679,16 +55767,12 @@ function PageExpand(page_expand_arguments){
 		// ツールボタン
 		// --------------------------------------------------------------------------------
 		var UI_ToolButton = (function(){
-			var f = function(parent){
+			var f = function(parent,options){
 				var _this = this;
+				options = options || {};
 				var button = this.button = DocumentCreateElement("button");
-				ElementSetStyle(button,"height:30px;padding:0;position:relative;vertical-align:top;width:30px;");
+				button.className = options.className || "ui_tool_button";
 				parent.appendChild(button);
-
-				var image = this.image = DocumentCreateElement("img");
-				ElementSetStyle(image,CSSTextGetInitialImageElement());
-				ElementAddStyle(image,"display:block;margin:0 auto;pointer-events:inherit;vertical-align:top;");
-				button.appendChild(image);
 
 				button.addEventListener("click",function(e){
 					var f = _this.onclick;
@@ -55697,14 +55781,16 @@ function PageExpand(page_expand_arguments){
 			};
 			f.prototype = {
 				setVisible : function(v){
-					this.button.style.display = (v ? "inline-block" : "none");
+					this.button.style.display = (v ? "inline-flex" : "none");
 				},
 				setDisabled : function(v){
 					this.button.disabled = v;
 					this.button.style.opacity = (v ? 0.5 : 1.0);
 				},
-				setImageURL : function(url){
-					this.image.src = url;
+				setSVG : function(str){
+					DomNodeRemoveChildren(this.button);
+					var svg = new DOMParser().parseFromString(str,"image/svg+xml").childNodes[0];
+					this.button.appendChild(svg);
 				},
 				setTooltip : function(v){
 					this.button.title = v;
@@ -55718,50 +55804,43 @@ function PageExpand(page_expand_arguments){
 		// ダウンロードボタン
 		// --------------------------------------------------------------------------------
 		function updateDownloadButton(){
-			DomNodeRemoveChildren(_element_download);
+			var a = (function(){
+				if((function(){
+					if(!archive_creator) return false;
+					if(!archive_creator.executing) return false;
+					return true;
+				})()){
+					return ["archive_cancel","archive_skip"];
+				}
+				if(header_downloader){
+					return ["header_cancel"];
+				}
+				if(sequential_downloader){
+					return ["sequential_cancel","sequential_pause"];
+				}
+				if(url_info_collector){
+					return ["collector_stop"];
+				}
+				if(wait_analyze){
+					return [];
+				}
+				return ["archive","sequential"];
+			})();
 
-			if((function(){
-				if(!archive_creator) return false;
-				if(!archive_creator.executing) return false;
-				return true;
-			})()){
-				_element_download.appendChild(_button_archive_cancel.root);
-				_element_download.appendChild(_button_archive_abort.root);
-				return;
-			}
-			if(header_downloader){
-				_element_download.appendChild(_button_header_cancel.root);
-				return;
-			}
-			if(sequential_downloader){
-				_element_download.appendChild(_button_download_cancel.root);
-				_element_download.appendChild(_button_download_pause.root);
-				return;
-			}
-			if(url_info_collector){
-				_element_download.appendChild(_button_collector_stop.root);
-				return;
-			}
-			if(wait_analyze){
-				return;
-			}
-			_element_download.appendChild(_button_archive.root);
-			_element_download.appendChild(_button_download.root);
+			var p = _elements.control;
+			DomNodeRemoveChildren(p);
+			a.forEach(function(s){
+				p.appendChild(_buttons[s].root);
+			})
 		}
 
-		var UI_DownloadButton = (function(){
+		var UI_ControlButton = (function(){
 			var f = function(){
 				var _this = this;
 				var button = this.root = this.button = DocumentCreateElement("button");
-				ElementSetStyle(button,"height:50px;padding:0;position:relative;vertical-align:top;width:200px;");
-
-				var image = this.image = DocumentCreateElement("img");
-				ElementSetStyle(image,CSSTextGetInitialImageElement());
-				ElementAddStyle(image,"bottom:0;left:0;margin:auto;opacity:0.05;position:absolute;right:0;top:0;vertical-align:top;");
-				button.appendChild(image);
+				button.className = "ui_ctrlbtn";
 
 				var span = this.span = DocumentCreateElement("span");
-				ElementAddStyle(span,"position:relative;");
 				button.appendChild(span);
 
 				var text = this.text = DocumentCreateText("");
@@ -55774,7 +55853,7 @@ function PageExpand(page_expand_arguments){
 			};
 			f.prototype = {
 				setVisible : function(v){
-					this.button.style.display = (v ? "inline-block" : "none");
+					this.button.style.display = (v ? "inline-flex" : "none");
 				},
 				setDisabled : function(v){
 					this.button.disabled = v;
@@ -55783,8 +55862,9 @@ function PageExpand(page_expand_arguments){
 				setText : function(v){
 					this.text.nodeValue = v;
 				},
-				setImageURL : function(url){
-					this.image.src = url;
+				setSVG : function(str){
+					var svg = new DOMParser().parseFromString(str,"image/svg+xml").childNodes[0];
+					DomNode_InsertFirstChild(this.button,svg);
 				},
 				setTooltip : function(v){
 					this.button.title = v;
@@ -55795,89 +55875,535 @@ function PageExpand(page_expand_arguments){
 		})();
 
 		// --------------------------------------------------------------------------------
+		// ツールアイコン
+		// --------------------------------------------------------------------------------
+		var UI_ToolIcon = (function(){
+			var f = function(parent){
+				var _this = this;
+				var box = this.box = DocumentCreateElement("div");
+				box.className = "ui_tool_icon";
+				parent.appendChild(box);
+			};
+			f.prototype = {
+				setSVG : function(str){
+					var svg = new DOMParser().parseFromString(str,"image/svg+xml").childNodes[0];
+					this.box.appendChild(svg);
+				},
+				setTooltip : function(v){
+					this.box.title = v;
+				}
+			};
+			return f;
+		})();
+
+		// --------------------------------------------------------------------------------
+		// 隙間
+		// --------------------------------------------------------------------------------
+		var UI_ToolGap = (function(){
+			var f = function(parent){
+				var box = this.box = DocumentCreateElement("div");
+				box.className = "ui_tool_gap";
+				parent.appendChild(box);
+			};
+			return f;
+		})();
+
+		// --------------------------------------------------------------------------------
+		// 検索ボックス
+		// --------------------------------------------------------------------------------
+		var UI_SelectFilter = (function(){
+			var dispatch_change = function(e){
+				var f = this.onchange;
+				if(f) f();
+			};
+			var update_select = function(){
+				this.select.classList[(this.select.selectedIndex)?"remove":"add"]("graytext");
+			};
+			var f = function(parent){
+				var _this = this;
+
+				var select = this.select = DocumentCreateElement("select");
+				select.size = 1;
+				select.className = "select_filter";
+				parent.appendChild(select);
+
+				select.addEventListener("change",function(e){
+					update_select.call(_this);
+					dispatch_change.call(_this);
+				});
+
+				[
+					{value:"all",i18n:"download_board_select_filter"},
+					{value:"all"},
+					{value:"image"},
+					{value:"audio"},
+					{value:"video"},
+					{value:"media"},
+					{value:"archive"},
+					{value:"text"},
+					{value:"application"},
+					{value:"unknown"},
+					{value:"select"}
+
+				].forEach(function(o,i){
+					var option = DocumentCreateElement("option");
+					if(i == 0) option.classList.add("graytext");
+					ElementSetTextContent(option,_i18n.getMessage(o.i18n || ("download_board_option_filter_" + o.value)));
+					option.value = o.value;
+					select.appendChild(option);
+				});
+				update_select.call(_this);
+			};
+			f.prototype = {
+				getValue : function(){
+					return this.select.value;
+				},
+				setValue : function(v){
+					this.select.value = v;
+					update_select.call(this);
+					dispatch_change.call(this);
+				},
+				clear : function(){
+					this.select.selectedIndex = 0;
+					update_select.call(this);
+				},
+				onchange : function(){}
+			};
+			return f;
+		})();
+
+		// --------------------------------------------------------------------------------
+		// 検索ボックス
+		// --------------------------------------------------------------------------------
+		var UI_SearchBox = (function(){
+			var ns = "download_board_searchbox_";
+			var dispatch_input = function(e){
+				var f = this.oninput;
+				if(f) f();
+			};
+			var update_regexp = function(){
+				var button = this.buttons.regexp;
+				button.button.style.opacity = (this.enabled_regexp) ? 1.0 : 0.333;
+				var s = (this.enabled_regexp) ? "regexp" : "normal";
+				button.setTooltip(_i18n.getMessage(ns + "button_" + s));
+				this.input.placeholder = _i18n.getMessage(ns + "input_placeholder_" + s);
+			};
+			var test_regexp = function(){
+				var error;
+				try{
+					if(this.enabled_regexp) new RegExp(this.input.value);
+				}catch(e){
+					error = e;
+				}
+				this.input.title = Error_to_String(error);
+
+				var s = this.box.style;
+				[
+//					["outline","3px solid rgba(255,0,0,0.666)"],
+//					["outline-style","ridge"],
+					["background-color","#f00"]
+				].forEach(function(a){
+					if(error) s.setProperty(a[0],a[1]);
+					else s.removeProperty(a[0]);
+				});
+			};
+			var update_value = function(){
+				var o = { enableRegexp:Boolean(this.enabled_regexp) };
+				o.value = this.input.value.toLowerCase();
+				o.regexp = (function(){
+					try{
+						return new RegExp(this.input.value,"i");
+					}catch(e){
+					}
+					return null;
+				}).call(this);
+				this.value = o;
+			};
+			var f = function(parent){
+				var _this = this;
+
+				this.buttons = [];
+				this.enabled_regexp = false;
+				var box = this.box = DocumentCreateElement("div");
+				box.className = "search_box";
+				parent.appendChild(box);
+
+				var input = this.input = DocumentCreateElement("input");
+				input.type = "text";
+				input.inputmode = "search";
+				box.appendChild(input);
+
+				input.addEventListener("focus",function(e){
+					box.classList.add("outline_auto");
+				});
+				input.addEventListener("blur",function(e){
+					box.classList.remove("outline_auto");
+				});
+				input.addEventListener("input",function(e){
+					test_regexp.call(_this);
+					update_value.call(_this);
+					dispatch_input.call(_this);
+				});
+
+				[{
+					name:"regexp",
+					svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:none;stroke:canvastext;stroke-width:2" d="m 10,0.5 v 11 M 5,9 15,3 M 15,9 5,3" /><circle style="fill:canvastext;" cx="3" cy="13" r="2" /></g></svg>',
+					f:function(){
+						_this.enabled_regexp = !_this.enabled_regexp;
+						update_regexp.call(_this);
+						test_regexp.call(_this);
+						update_value.call(_this);
+						dispatch_input.call(_this);
+					}
+				},{
+					name:"clear",
+					svg:svg_clear,
+					f:function(){
+						_this.clear();
+						dispatch_input.call(_this);
+					}
+				}].forEach(function(o){
+					var button = _this.buttons[o.name] = new UI_ToolButton(box,{className:"ui_input_button"});
+					button.setTooltip(_i18n.getMessage(ns + "button_" + o.name));
+					if(o.svg) button.setSVG(o.svg);
+					button.onclick = (function(){
+						var f = o.f;
+						return function(e){ f.call(_this,e); };
+					})();
+				});
+
+				update_regexp.call(this);
+				update_value.call(_this);
+			};
+			f.prototype = {
+				getValue : function(){
+					return this.value;
+				},
+				setSVG : function(str){
+					var svg = new DOMParser().parseFromString(str,"image/svg+xml").childNodes[0];
+					this.box.appendChild(svg);
+				},
+				setTooltip : function(v){
+					this.box.title = v;
+				},
+				clear : function(){
+					this.input.value = "";
+					test_regexp.call(this);
+					update_value.call(this);
+				},
+				oninput : function(){}
+			};
+			return f;
+		})();
+
+		// --------------------------------------------------------------------------------
+		// ヒット数ボックス
+		// --------------------------------------------------------------------------------
+		var UI_HitBox = (function(){
+			var ns = "download_board_hit_";
+			var f = function(parent){
+				var _this = this;
+
+				this.buttons = [];
+				this.enabled_regexp = false;
+				var box = this.box = DocumentCreateElement("div");
+				box.className = "hit_box";
+				parent.appendChild(box);
+
+				var input = this.input = DocumentCreateElement("span");
+				box.appendChild(input);
+
+				[{
+					name:"clear",
+					svg:svg_clear,
+					f:function(){
+						_search_box.clear();
+						_select_filter.clear();
+						updateFilter();
+					}
+				}].forEach(function(o){
+					var button = _this.buttons[o.name] = new UI_ToolButton(box,{className:"ui_input_button"});
+					button.setTooltip(_i18n.getMessage(ns + "button_" + o.name));
+					if(o.svg) button.setSVG(o.svg);
+					button.onclick = (function(){
+						var f = o.f;
+						return function(e){ f.call(_this,e); };
+					})();
+				});
+
+				this.update();
+			};
+			f.prototype = {
+				update:function(){
+					this.input.textContent = visible_count + "/" + item_count;
+				}
+			};
+			return f;
+		})();
+
+		// --------------------------------------------------------------------------------
+		// ステータス
+		// --------------------------------------------------------------------------------
+		var UI_Status = (function(){
+			var ns = "download_board_status_";
+			var UI_Meter = function(parent,options){
+				var _this = this;
+
+				["root","box","progress","text"].forEach(function(s){
+					var e = _this[s] = DocumentCreateElement("div");
+					e.className = s;
+				});
+
+				var icon = new UI_ToolIcon(this.root);
+				icon.setSVG(options.svg);
+
+				[
+					["root",["box"]],
+					["box",["progress","text"]]
+				].forEach(function(a){
+					var p = _this[a[0]];
+					a[1].forEach(function(c){ p.appendChild(_this[c]); });
+				});
+				parent.appendChild(this.root);
+
+				this.box.title = _i18n.getMessage(ns + "box_" + options.name);
+				this.progress.classList.add("meter_d");
+
+				var input = this.input = DocumentCreateElement("input");
+				input.className = "input";
+				input.type = "number";
+				input.inputmode="numeric";
+				input.min = 1;
+				input.max = 99999;
+				input.title = _i18n.getMessage(ns + "input_" + options.name);
+
+				this.text.addEventListener("click",function(e){
+					if(ElementGetVisibility(input)) return;
+					_this.box.appendChild(input);
+					input.focus({focusVisible:true,preventScroll:true});
+				});
+				input.addEventListener("blur",function(e){
+					DomNodeRemove(input);
+				});
+				input.addEventListener("input",function(e){
+					input.value = parseInt(input.value) || 1;
+					var f = _this.oninput;
+					if(f) f();
+				});
+			};
+			UI_Meter.prototype = {
+				setText : function(v){
+					this.text.textContent = v;
+				},
+				setProgress : function(v){
+					var e = this.progress;
+					var s = e.style;
+					if(v > 0.0){
+						e.classList.add("meter_play");
+						s.width = (v * 100).toFixed(8) + "%";
+					}else{
+						e.classList.remove("meter_play");
+						s.width = "0%";
+					}
+				},
+				oninput:function(){}
+			};
+			var f = function(parent){
+				var root = this.root = parent;
+
+				[{
+					target:loader_queue,
+					name:"fetch",
+					svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke-width:1;stroke:canvastext;fill:none;" d="M 2.5,12.5 C 5,11 10.9,10.9 13.4,12.4 M 2.5,3.5 C 5,5 10.9,5.1 13.4,3.6 M 11.5,8 C 11.5,11.9 9.9,15 8,15 6.1,15 4.5,11.9 4.5,8 4.5,4.1 6.1,1 8,1 9.9,1 11.5,4.1 11.5,8 Z M 8,1 V 15 M 1,8 h 14 m 0,0 A 7,7 0 0 1 8,15 7,7 0 0 1 1,8 7,7 0 0 1 8,1 7,7 0 0 1 15,8 Z" /></g></svg>'
+				},{
+					target:downloader_queue,
+					name:"download",
+					svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:canvastext;" d="M 6 1 L 6 7 L 3 7 L 8 12 L 13 7 L 10 7 L 10 1 L 6 1 z M 2 13 L 2 15 L 14 15 L 14 13 L 2 13 z " /></g></svg>'
+				}].forEach(function(o){
+					var ui = new UI_Meter(root,o);
+					var f = function(){
+						var q = o.target.getCountQueue();
+						var v = o.target.getCountThread();
+						var m = o.target.getMaxThread();
+						var p = (v / m) || 0.0;
+						if(p < 0.0) p = 0.0;
+						if(p > 1.0) p = 1.0;
+						ui.setText(v + "/" + q);
+						ui.setProgress(p);
+					};
+					f();
+					var handler = o.target.event_dispatcher.createEventHandler("modify");
+					handler.setFunction(f);
+
+					ui.input.value = o.target.getMaxThread();
+					ui.oninput = function(){
+						o.target.setMaxThread(ui.input.value);
+					};
+				});
+
+			};
+			f.prototype = {
+			};
+			return f;
+		})();
+
+		// --------------------------------------------------------------------------------
 		// 情報コンテナ
 		// --------------------------------------------------------------------------------
 		var UI_Info = (function(){
+			function meter_set_color(id,token){
+				var item = this.items[id];
+				if(item.meter_color == token) return;
+				var c = item.progress.classList;
+				if(item.meter_color) c.remove(item.meter_color);
+				c.add(token);
+				item.meter_color = token;
+			}
+			function meter_set_play(id,v){
+				var item = this.items[id];
+				if(item.meter_play == v) return;
+				this.items[id].progress.classList[v ? "add" : "remove"]("meter_play");
+				item.meter_play = v;
+			}
 			var f = function(){
 				var root = this.root = DocumentCreateElement("div");
-				ElementSetStyle(root,"line-height:0;margin:auto;max-width:500px;position:relative;text-align:center;");
+				root.className = "ui_info";
+				this.items = [];
 			};
 			f.prototype = {
 				attach : function(id,type){
-					var element;
-
 					var old = this.root.childNodes[id];
-					if(old){
-						DomNodeRemove(old);
-					}
+					if(old) DomNodeRemove(old);
+
+					var item = this.items[id] = {};
+					var element = item.element = DocumentCreateElement("div");
+					element.className = "box";
+					var span = DocumentCreateElement("span");
+					span.className = "text";
+					var text = item.text = DocumentCreateText("");
+					element.appendChild(span);
+					span.appendChild(text);
 
 					switch(type){
-					case "text":
-						element = this["element" + id] = DocumentCreateElement("div");
-						ElementSetStyle(element,"box-sizing:border-box;font-size:16px;height:24px;line-height:1;overflow:hidden;padding:4px;position:relative;text-overflow:ellipsis;vertical-align:top;white-space:nowrap;width:auto;");
-						var text = this["text" + id] = DocumentCreateText("");
-						element.appendChild(text);
-						break;
 					case "progress":
-						element = this["element" + id] = DocumentCreateElement("div");
-						ElementSetStyle(element,"background-color:#fff;border:1px solid #888;box-sizing:border-box;font-size:16px;height:24px;line-height:1;overflow:hidden;padding:4px;position:relative;text-overflow:ellipsis;vertical-align:top;white-space:nowrap;width:auto;");
-						this.root.appendChild(element);
-						var progress = this["progress" + id] = DocumentCreateElement("div");
-						progress.className = "meter_play";
-						ElementSetStyle(progress,"background-color:rgba(255,0,0,0.1);bottom:0;height:24px;left:0;position:absolute;right:0;top:0;width:0;");
-						element.appendChild(progress);
-						var text = this["text" + id] = DocumentCreateText("");
-						element.appendChild(text);
+						element.classList.add("meter_box");
+						var progress = item.progress = DocumentCreateElement("div");
+						progress.className = "meter";
+						DomNode_InsertFirstChild(element,progress);
 						break;
 					case "save":
-						element = this["element" + id] = DocumentCreateElement("div");
-						ElementSetStyle(element,"box-sizing:border-box;font-size:16px;height:24px;line-height:1;overflow:hidden;padding:4px;position:relative;text-overflow:ellipsis;vertical-align:top;white-space:nowrap;width:auto;");
-						this.root.appendChild(element);
-						var text = this["text" + id] = DocumentCreateText("Save as : ");
-						element.appendChild(text);
-						var anchor = this["anchor" + id] = DocumentCreateElement("a");
+						element.classList.add("text_box");
+						var anchor = item.anchor = DocumentCreateElement("a");
 						element.appendChild(anchor);
 						break;
 					}
 					if(id == 0){
 						DomNode_InsertFirstChild(this.root,element);
 					}else{
-						ElementAddStyle(element,"margin-top:2px;");
 						DomNode_InsertLastChild(this.root,element);
 					}
 				},
 				setText : function(id,v){
-					this["text"+id].nodeValue = v;
+					var e = this.items[id].text;
+					if(e) e.nodeValue = v;
 				},
 				setProgress : function(id,v){
-					var e = this["progress"+id];
+					var e = this.items[id].progress;
 					var s = e.style;
 					if(v >= 1.0){
-						s.backgroundColor = "rgba(0,0,255,0.1)";
-						e.classList.remove("meter_play");
+						meter_set_color.call(this,id,"meter_b");
+						meter_set_play.call(this,id,false);
 						s.width = "100%";
 					}else if(v >= 0.0){
-						s.backgroundColor = "rgba(255,0,0,0.1)";
-						e.classList.add("meter_play");
+						meter_set_color.call(this,id,"meter_r");
+						meter_set_play.call(this,id,true);
 						s.width = (v * 100).toFixed(8) + "%";
 					}else{
-						s.backgroundColor = "rgba(0,0,0,0.1)";
-						e.classList.add("meter_play");
+						meter_set_color.call(this,id,"meter_d");
+						meter_set_play.call(this,id,true);
 						s.width = "100%";
 					}
 				},
 				pause : function(id){
-					var e = this["progress"+id];
-					var s = e.style;
-					s.backgroundColor = "rgba(0,0,0,0.1)";
-					e.classList.remove("meter_play");
+					meter_set_color.call(this,id,"meter_d");
+					meter_set_play.call(this,id,false);
 				},
 				getAnchor : function(id,v){
-					return this["anchor"+id];
-				},
+					return this.items[id].anchor;
+				}
 			};
 			return f;
 		})();
+
+		// --------------------------------------------------------------------------------
+		// リストのクリッピング範囲を更新
+		// --------------------------------------------------------------------------------
+		var disabled_update_dlbl = 0;
+		var disabled_update_sort = 0;
+		function update_dlbl(){
+			if(disabled_update_dlbl) return;
+
+			var active = _shadow_root.activeElement;
+			var item_height = 24;
+			var list_height = visible_count * item_height;
+			var scroll_y = _elements.dlbl_body.scrollTop;
+			var rect = ElementGetBoundingClientRect(_elements.dlbl_body);
+			var clip = item_height * 5;
+			var min_y = Math.floor((scroll_y - clip) / item_height);
+			var max_y = Math.floor((scroll_y + (rect.bottom - rect.top) + clip) / item_height);
+
+			if(min_y % 2) min_y --;
+			if(min_y < 0) min_y = 0;
+			if(max_y < 0) min_y = 0;
+			if(min_y > visible_count) min_y = visible_count;
+			if(max_y > visible_count) max_y = visible_count;
+
+			var style = _elements.dlbl_items.style;
+			style.paddingTop = (min_y * item_height) + "px";
+			style.paddingBottom = (list_height - (max_y * item_height)) + "px";
+
+			var items = item_container.getItemsVisibled().getItems();
+			var prev = null;
+			var p = min_y;
+			for(;p<max_y;p++){
+				var item = items[p];
+				if(prev){
+					if(DomNodeGetNextElementSibling(prev) != item.root){
+						DomNode_InsertAfter(prev,item.root);
+					}
+				}else{
+					if(DomNodeGetFirstElementChild(_elements.dlbl_items) != item.root){
+						DomNode_InsertFirstChild(_elements.dlbl_items,item.root);
+					}
+				}
+				prev = item.root;
+			}
+			if(prev){
+				while(prev.nextSibling){
+					DomNodeRemove(prev.nextSibling);
+				}
+			}else{
+				DomNodeRemoveChildren(_elements.dlbl_items);
+			}
+
+			if(!_shadow_root.activeElement){
+				if(active) active.focus({focusVisible:true,preventScroll:true});
+			}
+		}
+		function lock_update_dlbl(){
+			disabled_update_dlbl ++;
+			return {release:function(){
+				disabled_update_dlbl --;
+				update_dlbl();
+			}};
+		}
+		function lock_update_sort(){
+			disabled_update_sort ++;
+			return {release:function(){
+				disabled_update_sort --;
+				item_container.mergeSort();
+			}};
+		}
 
 		// --------------------------------------------------------------------------------
 		// ColumnContainer
@@ -55901,7 +56427,7 @@ function PageExpand(page_expand_arguments){
 				{name:"total",label:"Total",width:90,sort:-1},
 				{name:"url",label:"URL",width:1000,sort:1},
 				{name:"lastModified",label:"Last Modified",width:240,sort:-1},
-				{name:"id",label:"Id",width:50,sort:1}
+				{name:"id",label:"Id",width:70,sort:1}
 			].forEach(function(param){
 				_this.createColumn(param);
 			});
@@ -55924,7 +56450,7 @@ function PageExpand(page_expand_arguments){
 				var pos_x = e.clientX;
 				var rects = (function(){
 					var a = new Array();
-					_element_list_head.childNodes.forEach(function(node){
+					_elements.dlbl_head.childNodes.forEach(function(node){
 						a.push(ElementGetBoundingClientRect(node));
 					});
 					return a;
@@ -55973,7 +56499,7 @@ function PageExpand(page_expand_arguments){
 					drag_type = DRAG_TYPE.RESIZE;
 				}
 
-				_element_list_head.style.cursor = (function(){
+				_elements.dlbl_head.style.cursor = (function(){
 					if(drag_task) return "ew-resize";
 					if(drag_type == DRAG_TYPE.RESIZE) return "col-resize";
 					return "pointer";
@@ -56162,59 +56688,18 @@ function PageExpand(page_expand_arguments){
 			this.name = param.name;
 			this.sort_order = param.sort;
 			this._initial_width = param.width;
-			ElementSetTextContent(element_column,param.label);
-			_element_list_head.appendChild(element_column);
+			var span = DocumentCreateElement("span");
+			ElementSetTextContent(span,param.label);
+			element_column.appendChild(span);
+			_elements.dlbl_head.appendChild(element_column);
 		}
 		Column.prototype = {
 			release : function(){
 			},
 			sort_order:1,
 			updateSort:function(){
-				var a = new Array();
-				var o = item_container;
-				var prev;
-				var next;
-
-				prev = o.prev;
-				while(prev != o){
-					a.push(prev);
-					prev = prev.prev;
-				}
-
-				var i;
-				var num = a.length;
-				for(i=0;i<num;i++){
-					var item = a[i];
-					next = item.next;
-					while(next != o){
-						var c = compareValue(item.getValue(sort_type),next.getValue(sort_type))
-						c *= this.sort_order;
-						if(c <= 0){
-							break;
-						}
-						next = next.next;
-					}
-					(function(){
-						var prev = item.prev;
-						var next = item.next;
-						prev.next = next;
-						next.prev = prev;
-					})();
-					prev = next.prev;
-					next.prev = item;
-					prev.next = item;
-					item.prev = prev;
-					item.next = next;
-				}
-
-				// リストを一新
-				next = o.next;
-				while(next != o){
-					if(next.visible){
-						DomNode_InsertLastChild(_element_list_items,next.root);
-					}
-					next = next.next;
-				}
+				item_container.mergeSort();
+				update_dlbl();
 
 				// ソートアイコン
 				column_container.getColumnList().forEach(function(column){
@@ -56243,8 +56728,8 @@ function PageExpand(page_expand_arguments){
 						var node = item.root;
 						node = node.childNodes[_this.index];
 						node = node.cloneNode(true);
-						node.className = "cell_container";
-						_element_list_items.appendChild(node);
+						node.style.width = "auto";
+						_elements.dlbl_draw.appendChild(node);
 						var rect = ElementGetBoundingClientRect(node);
 						DomNodeRemove(node);
 						var w = (rect.right - rect.left) + 2;
@@ -56268,6 +56753,25 @@ function PageExpand(page_expand_arguments){
 		// ItemContainer
 		// --------------------------------------------------------------------------------
 		var ItemContainer = (function(){
+			function ItemsVisibled(){
+				this.items = [];
+				this.index = new WeakMap();
+				this.nodes = new WeakMap();
+			}
+			ItemsVisibled.prototype = {
+				getItems:function(){
+					return this.items;
+				},
+				getIndexByItem:function(item){
+					return this.index.get(item);
+				},
+				hasItem:function(item){
+					return this.index.has(item);
+				},
+				getItemByNode:function(node){
+					return this.nodes.get(node);
+				}
+			};
 			var f = function(){
 				this.prev = this.next = this;
 				this.items = new Array();
@@ -56283,13 +56787,23 @@ function PageExpand(page_expand_arguments){
 					return items;
 				},
 				getItemsVisibled : function(){
-					var items = new Array();
+					if(this.lastItemsVisibled) return this.lastItemsVisibled;
+					var o = new ItemsVisibled();
+					var i = 0;
 					var item = this.next;
 					while(item != this){
-						if(item.visible) items.push(item);
+						if(item.visible){
+							o.items[i] = item;
+							o.index.set(item,i);
+							o.nodes.set(item.root,item);
+							i++;
+						}
 						item = item.next;
 					}
-					return items;
+					return this.lastItemsVisibled = o;
+				},
+				releaseItemsVisibled : function(){
+					delete this.lastItemsVisibled;
 				},
 				getItemsErased : function(){
 					var items = new Array();
@@ -56315,6 +56829,97 @@ function PageExpand(page_expand_arguments){
 					}
 					if(items1.length) return items1;
 					return items0;
+				},
+				mergeSort : function(){
+					if(this.prev == this) return;
+					if(this.next == this) return;
+
+					var column = column_container.getColumnByName(sort_type);
+					var compare = function(a,b){
+						var c = compareValue(a.getValue(sort_type),b.getValue(sort_type));
+						c *= column.sort_order;
+						return (c < 0);
+					}
+					var merge = function(a,b){
+						var s;
+						var h;
+						if(compare(a,b)){
+							s = a;
+							if(a.next){
+								h = a;
+								a = a.next;
+							}else{
+								a.next = b;
+								return s;
+							}
+						}else{
+							s = b;
+							if(b.next){
+								h = b;
+								b = b.next;
+							}else{
+								b.next = a;
+								return s;
+							}
+						}
+						while(true){
+							if(compare(a,b)){
+								h = h.next = a;
+								a = a.next;
+								if(!a){
+									h.next = b;
+									return s;
+								}
+							}else{
+								h = h.next = b;
+								b = b.next;
+								if(!b){
+									h.next = a;
+									return s;
+								}
+							}
+						}
+					}
+
+					// 分割と単方向リスト化
+					var heap = [];
+					var node = this.next;
+					while(node != this){
+						heap.push(node);
+						var next = node.next;
+						node.next = null;
+						node = next;
+					}
+
+					// マージ
+					var n = heap.length;
+					while(n >= 2){
+						var a = [];
+						if(n % 2){
+							a.push(heap.pop());
+						}
+						var i;
+						var num = Math.floor(n/2);
+						for(i=0;i<num;i++){
+							a.push(merge(heap.pop(),heap.pop()));
+						}
+						heap = a;
+						n = Math.ceil(n/2);
+					}
+
+					// 双方向リストに戻す
+					node = this.next = heap[0];
+					var prev = this;
+					while(true){
+						node.prev = prev;
+						prev = node;
+						if(!node.next) break;
+						node = node.next;
+					}
+					node.next = this;
+					this.prev = node;
+
+					item_container.releaseItemsVisibled();
 				}
 			};
 			return f;
@@ -56325,6 +56930,8 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function Item(url_info){
 			var _this = this;
+			item_count += 1;
+			dispatch_modify_item_count();
 			this.url_info = url_info;
 			this.elements = new Object();
 			this.textnodes = new Object();
@@ -56364,44 +56971,47 @@ function PageExpand(page_expand_arguments){
 				downloadSequential([_this]);
 			});
 
+			var dict = {
+				"select":{tag:"input"},
+				"icon":{tag:"img"},
+				"url":{tag:"a"}
+			}
 			var columns = column_container.getColumnList();
 			columns.forEach(function(column){
 				var element_cell = _this.elements[column.name] = DocumentCreateElement("div");
-				element_cell.className = "cell_container width_" + (column.name);
+				var class_list = element_cell.classList;
+				class_list.add("cell","cell_" + column.name,"width_" + (column.name));
 				element_item.appendChild(element_cell);
 
-				var element = DocumentCreateElement((function(){
-					switch(column.name){
-					case "select":
-						return "input";
-					case "icon":
-						return "img";
-					case "url":
-						return "a";
-					default:
-						return "div";
+				var o = dict[column.name];
+				if(o){
+					if(o.tag){
+						var element = DocumentCreateElement(o.tag);
+						switch(column.name){
+						case "select":
+							element.type = "checkbox";
+							break;
+						case "url":
+							element.classList.add("cell_label");
+							var text = _this.textnodes[column.name] = document.createTextNode("");
+							element.appendChild(text);
+							break;
+						}
+						element_cell.appendChild(element);
 					}
-				})());
-
-				switch(column.name){
-				case "select":
-					element.type = "checkbox";
-					element.className = "cell cell_" + column.name;
-					break;
-				case "icon":
-					element.className = "cell cell_" + column.name;
-					break;
-				default:
-					element.className = "cell cell_label cell_" + column.name;
-					var text = _this.textnodes[column.name] = document.createTextNode("");
-					element.appendChild(text);
-					break;
+					return;
 				}
+
+				var element = DocumentCreateElement("span");
+				element.className = "cell_label";
 				element_cell.appendChild(element);
+
+				var text = _this.textnodes[column.name] = document.createTextNode("");
+				element.appendChild(text);
 			});
 
 			var element = DocumentCreateElement("div");
-			element.className = "cell cell_progress";
+			element.className = "cell_progress";
 			DomNode_InsertFirstChild(this.elements["loaded"],element);
 			this.element_progress = element;
 
@@ -56416,7 +57026,7 @@ function PageExpand(page_expand_arguments){
 			this.prev = prev;
 			next.prev = this;
 			prev.next = this;
-			_element_list_items.appendChild(element_item);
+			item_container.releaseItemsVisibled();
 			this.updateSort();
 			this.updateVisible();
 		}
@@ -56428,10 +57038,17 @@ function PageExpand(page_expand_arguments){
 				prev.next = next;
 				next.prev = prev;
 				this.prev = this.next = this;
-				this.visible = false;
-				DomNodeRemove(this.root);
+				if(this.visible){
+					this.visible = false;
+					visible_count --;
+					dispatch_modify_visible_count();
+					item_container.releaseItemsVisibled();
+					update_dlbl();
+				}
 				delete item_container.items[this.url_info.getId()];
 				this.released = true;
+				item_count -= 1;
+				dispatch_modify_item_count();
 			},
 			getValue : (function(){
 				var commands = {
@@ -56541,21 +57158,28 @@ function PageExpand(page_expand_arguments){
 						}
 						s.width = (p * 100).toFixed(8) + "%";
 
-						var n = "backgroundColor";
-						StyleDeclarationRemoveProperty(s,n);
+						var c = e.classList;
+						var token;
 						if(isLoad[state]){
-							s[n] = "rgba(255,0,0,0.1)";
+							token = "meter_r";
 						}else if(isCalc[state]){
-							s[n] = "rgba(0,255,0,0.1)";
+							token = "meter_g";
 						}else if((loaded >= total) && (total > 0)){
-							s[n] = "rgba(0,0,255,0.1)";
+							token = "meter_b";
 						}else{
-							s[n] = "rgba(0,0,0,0.1)";
+							token = "meter_d";
 						}
 
-						e.classList.remove("meter_play");
-						if(isLoad[state] || isCalc[state]){
-							e.classList.add("meter_play");
+						if(this.meter_color != token){
+							if(this.meter_color) c.remove(this.meter_color);
+							c.add(token);
+							this.meter_color = token;
+						}
+
+						var meter_play = (isLoad[state] || isCalc[state]);
+						if(this.meter_play != meter_play){
+							c[(meter_play) ? "add":"remove"]("meter_play");
+							this.meter_play = meter_play;
 						}
 					};
 				})();
@@ -56675,31 +57299,18 @@ function PageExpand(page_expand_arguments){
 			})(),
 			updateVisible : (function(){
 				function setVisible(v){
+					if(this.visible == v) return;
 					this.visible = v;
-					if(!v){
-						DomNodeRemove(this.root);
-						return;
-					}
-					var next = this.next;
-					var o = item_container;
-					while(next != o){
-						if(next.visible) break;
-						next = next.next;
-					}
-					if(next.root){
-						if(DomNodeGetPreviousElementSibling(next.root) != this.root){
-							DomNode_InsertBefore(next.root,this.root);
-						}
-					}else{
-						if(DomNodeGetLastElementChild(_element_list_items) != this.root){
-							DomNode_InsertLastChild(_element_list_items,this.root);
-						}
-					}
+					if(v) visible_count ++;
+					else visible_count --;
+					dispatch_modify_visible_count();
+					item_container.releaseItemsVisibled();
+					update_dlbl();
 				}
 
 				var commands = new Object();
 				commands["all"] = function(){
-					setVisible.call(this,true);
+					return true;
 				};
 				commands["image"] =
 				commands["audio"] =
@@ -56707,34 +57318,70 @@ function PageExpand(page_expand_arguments){
 				commands["text"] =
 				commands["application"] = function(){
 					var type = this.getValue("type") || "";
-					var v = Boolean(type.match(new RegExp("^" + filter_type + "(/|$)","i")));
-					setVisible.call(this,v);
+					var v = Boolean(type.match(new RegExp("^" + _select_filter.getValue() + "(/|$)","i")));
+					return v;
 				};
 				commands["media"] = function(){
 					var type = this.getValue("type") || "";
 					var v = Boolean(type.match(new RegExp("^(image|audio|video)(/|$)","i")));
-					setVisible.call(this,v);
+					return v;
 				};
 				commands["archive"] = function(){
 					var ext = this.getValue("ext") || "";
 					var v = MIMEType_is_Archive(ext);
-					setVisible.call(this,v);
+					return v;
 				};
 				commands["unknown"] = function(){
 					var type = this.getValue("type");
 					var v = !Boolean(type);
-					setVisible.call(this,v);
+					return v;
 				};
 				commands["select"] = function(){
 					var v = this.getValue("select");
-					setVisible.call(this,v);
+					return v;
 				};
 				return function(){
-					var f = commands[filter_type] || commands["all"];
-					f.call(this);
+					var _this = this;
+					var visible = (function(){
+						// フィルタ
+						var f = commands[_select_filter.getValue()] || commands["all"];
+						if(!f.call(_this)) return false;
+
+						// 検索
+						var v = _search_box.getValue();
+						var f = (function(){
+							if(!v.enableRegexp){
+								return function(url){
+									return (url.indexOf(v.value) >= 0);
+								};
+							}
+							return function(url){
+								try{
+									return (url.match(v.regexp));
+								}catch(e){
+								}
+								return false;
+							};
+						})();
+						if(!(function(){
+							try{
+								var o = { v:_this.url_info.getURL().toLowerCase() };
+								if(f(o.v)) return true;
+								if(f(decodeURIComponent(o.v))) return true;
+							}catch(e){
+							}
+							return false;
+						})()) return false;
+
+						return true;
+					})();
+
+					setVisible.call(this,visible);
 				};
 			})(),
 			updateSort : function(){
+				if(disabled_update_sort) return;
+
 				var column = column_container.getColumnByName(sort_type);
 				var item = this;
 				var prev = item.prev;
@@ -56779,6 +57426,8 @@ function PageExpand(page_expand_arguments){
 					prev.next = item;
 					item.prev = prev;
 					item.next = next;
+					item_container.releaseItemsVisibled();
+					update_dlbl();
 				}else if(c > 0){
 					// 下に順番に調べる
 					var next = item.next;
@@ -56801,8 +57450,10 @@ function PageExpand(page_expand_arguments){
 					prev.next = item;
 					item.prev = prev;
 					item.next = next;
+					item_container.releaseItemsVisibled();
+					update_dlbl();
 				}
-				item.updateVisible();
+
 			},
 			url_info : null,
 			elements : null,
@@ -56819,6 +57470,13 @@ function PageExpand(page_expand_arguments){
 			if(item_container.items[id]) return;
 			var item = new Item(url_info);
 			item_container.items[id] = item;
+		};
+		function createItems(a){
+			var lock_dlbl = lock_update_dlbl();
+			var lock_scroll = lock_update_sort();
+			a.forEach(createItem);
+			lock_scroll.release();
+			lock_dlbl.release();
 		};
 
 		// --------------------------------------------------------------------------------
@@ -56847,7 +57505,11 @@ function PageExpand(page_expand_arguments){
 			hide_scrollbar = new DocumentHideScrollbar(document);
 
 			_shadow_host = DocumentCreateElement("div");
-			ElementSetStyle(_shadow_host,"all:initial; user-select:none;");
+
+			var node_info = node_info_dictionary.addNode(_shadow_host);
+			node_info.setOwnerToPageExpand();
+			node_info.setInvalid(true);
+
 			document.body.appendChild(_shadow_host);
 
 			// シャドウルート
@@ -56857,131 +57519,97 @@ function PageExpand(page_expand_arguments){
 				_shadow_root = _shadow_host;
 			}
 
-			_element_dlbd = DocumentCreateElement("div");
-			_element_dlbd.className = "dlbd";
-			_shadow_root.appendChild(_element_dlbd);
+			["dlbd","background","window","tool_bar","tb_l","tb_r","search_bar","dlbl","dlbl_head","dlbl_body","dlbl_items","dlbl_draw","foot_bar","status","info","control"].forEach(function(name){
+				var e = _elements[name] = DocumentCreateElement("div");
+				e.className = name;
+			});
 
-			_element_background = DocumentCreateElement("div");
-			_element_background.className = "background";
-			_element_background.addEventListener("click",function(){
+			_shadow_root.appendChild(_elements.dlbd);
+			[
+				["dlbd",["background","window"]],
+				["window",["tool_bar","search_bar","dlbl","foot_bar"]],
+				["tool_bar",["tb_l","tb_r"]],
+				["dlbl",["dlbl_head","dlbl_body"]],
+				["dlbl_body",["dlbl_items","dlbl_draw"]],
+				["foot_bar",["status","info","control"]],
+			].forEach(function(a){
+				var p = _elements[a[0]];
+				a[1].forEach(function(c){ p.appendChild(_elements[c]); });
+			});
+
+			_elements.background.addEventListener("click",function(){
 				_dlbd.setVisible(false);
 			});
-			_element_dlbd.appendChild(_element_background);
 
-			_element_window = DocumentCreateElement("div");
-			_element_window.className = "window";
-			_element_dlbd.appendChild(_element_window);
+			[{
+				right:1,
+				name:"theme",
+				svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><circle style="fill:canvastext;" cx="8" cy="8" r="5" /><path style="stroke-linecap:square;stroke-width:1.5;stroke:canvastext" d="M 3.7,3.7 3,3 M 12.3,12.3 13,13 M 12.3,3.7 13,3 M 3.7,12.3 3,13 M 1,8 h 1 m 6,7 V 14 M 8,1 V 2 m 7,6 h -1" /><path style="fill:canvas;" d="M 8 12 A 4 4 0 0 1 4 8 A 4 4 0 0 1 8 4 " /></g></svg>',
+				onclick:_dlbd.toggleTheme
+			},{
+				right:1,
+				name:"resize",
+				onclick:_dlbd.toggleWindow
+			},{
+				right:1,
+				name:"close",
+				svg:svg_close,
+				onclick:function(e){
+					_dlbd.setVisible(false);
+				}
+			},{
+				name:"edit",
+				svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke:canvastext;stroke-width:3" d="M 1,8 H 15 M 8,1 v 14" /></g></svg>',
+				onclick:editItemsModal
+			},{
+				name:"erase",
+				svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke:canvastext;stroke-width:3" d="M 1,8 H 15" /></g></svg>',
+				onclick:eraseItemsSelected
+			},{
+				name:"deselect",
+				svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><rect style="fill:field;stroke:buttonborder;stroke-width:1.0" width="14" height="14" x="1" y="1" ry="2" /><path style="stroke:#f00;stroke-width:2" d="m 5,11 6,-6 m -6,0 6,6" /></g></svg>',
+				onclick:_dlbd.deselectItemsAll
+			},{
+				name:"header",
+				svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:none;stroke:canvastext;stroke-width:1.5;stroke-linecap:round" d="m 0.75,9.75 a 5,5 0 0 1 5,5 m -5,-8 a 8,8 0 0 1 8,8 m -8,-11 a 11,11 0 0 1 11,11 m -11,-14 a 14,14 0 0 1 14,14" /></g></svg>',
+				onclick:function(){
+					var items = item_container.getItemsEnabled();
+					downloadHeader(items);
+				}
+			}].forEach(function(o){
+				var button = _buttons[o.name] = new UI_ToolButton(_elements["tb_" + ((o.right) ? "r" : "l")]);
+				button.setTooltip(_i18n.getMessage("download_board_button_" + o.name));
+				if(o.svg) button.setSVG(o.svg);
+				button.onclick = o.onclick;
+			});
 
-			_element_toolbar = DocumentCreateElement("div");
-			_element_toolbar.className = "toolbar";
-			_element_window.appendChild(_element_toolbar);
+			var icon_filter = new UI_ToolIcon(_elements.search_bar);
+			icon_filter.setSVG('<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke-linejoin:round;stroke-width:1;stroke:canvastext;fill:none;" d="m 2,2 5,5 v 7 L 9,12 V 7 l 5,-5 z" /></g></svg>');
 
-			var _element_toolbar_left = DocumentCreateElement("div");
-			_element_toolbar_left.style.cssText = "display:inline-block;float:left;";
-			_element_toolbar.appendChild(_element_toolbar_left);
-
-			var _element_toolbar_right = DocumentCreateElement("div");
-			_element_toolbar_right.style.cssText = "display:inline-block;float:right;";
-			_element_toolbar.appendChild(_element_toolbar_right);
-
-			_button_resize = new UI_ToolButton(_element_toolbar_right);
-			_button_resize.onclick = function(e){
-				_dlbd.toggleWindow();
-			};
-			_dlbd.restoreWindow();
-
-			_button_close = new UI_ToolButton(_element_toolbar_right);
-			_button_close.setTooltip(_i18n.getMessage("download_board_button_close"));
-			_button_close.setImageURL(svg_close);
-			_button_close.onclick = function(e){
-				_dlbd.setVisible(false);
-			};
-
-			var button_edit = new UI_ToolButton(_element_toolbar_left);
-			button_edit.setTooltip(_i18n.getMessage("download_board_button_edit"));
-			button_edit.setImageURL("data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iMTYiCmhlaWdodD0iMTYiCnZpZXdCb3g9IjAgMCA0LjIzMzMzMyA0LjIzMzMzMyIKdmVyc2lvbj0iMS4xIgppZD0iIgp4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCnhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZGVmcwppZD0iIiAvPgo8ZwppZD0iIj4KPHBhdGgKc3R5bGU9ImZpbGw6bm9uZTtmaWxsLW9wYWNpdHk6MC4wMztzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MC44MjAyMDg7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1vcGFjaXR5OjEiCmQ9Ik0gMC4yNjQ1ODMzMywyLjExNjY2NjcgSCAzLjk2ODc1IgppZD0iIiAvPgo8cGF0aApzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDowLjc5Mzc1O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjE5LjM7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1vcGFjaXR5OjE7cGFpbnQtb3JkZXI6bWFya2VycyBmaWxsIHN0cm9rZSIKZD0iTSAyLjExNjY2NjcsMC4yNjQ1ODMzMyBWIDMuOTY4NzUiCmlkPSIiIC8+CjwvZz4KPC9zdmc+");
-			button_edit.onclick = editItemsModal;
-
-			var button_erase = new UI_ToolButton(_element_toolbar_left);
-			button_erase.setTooltip(_i18n.getMessage("download_board_button_erase"));
-			button_erase.setImageURL("data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iMTYiCmhlaWdodD0iMTYiCnZpZXdCb3g9IjAgMCA0LjIzMzMzMyA0LjIzMzMzMyIKdmVyc2lvbj0iMS4xIgppZD0iIgp4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCnhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZGVmcwppZD0iIiAvPgo8ZwppZD0iIj4KPHBhdGgKc3R5bGU9ImZpbGw6bm9uZTtmaWxsLW9wYWNpdHk6MC4wMztzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MC43OTM3NTtzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MSIKZD0iTSAwLjI2NDU4MzMzLDIuMTE2NjY2NyBIIDMuOTY4NzUiCmlkPSIiIC8+CjwvZz4KPC9zdmc+");
-			button_erase.onclick = eraseItemsSelected;
-
-			var button_eselect = new UI_ToolButton(_element_toolbar_left);
-			button_eselect.setTooltip(_i18n.getMessage("download_board_button_deselect"));
-			button_eselect.setImageURL("data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2Zwp3aWR0aD0iMTYiCmhlaWdodD0iMTYiCnZpZXdCb3g9IjAgMCA0LjIzMzMzMyA0LjIzMzMzMyIKdmVyc2lvbj0iMS4xIgppZD0iIgp4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCnhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZGVmcwppZD0iIiAvPgo8ZwppZD0iIj4KPHJlY3QKc3R5bGU9ImZpbGw6I2ZmZmZmZjtmaWxsLW9wYWNpdHk6MTtzdHJva2U6IzA0MDQwNDtzdHJva2Utd2lkdGg6MC4yMjUzMTY7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjE5LjM7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1kYXNob2Zmc2V0OjA7c3Ryb2tlLW9wYWNpdHk6MTtwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgppZD0iIgp3aWR0aD0iNC4wMDgwMTgiCmhlaWdodD0iNC4wMDgwMTc1Igp4PSIwLjExMjY1NzczIgp5PSIwLjExMjY1NzczIgpyeT0iMC42MTU0MzY3OSIgLz4KPGcKaWQ9IiIKc3R5bGU9Im9wYWNpdHk6MC4yNSI+CjxwYXRoCnN0eWxlPSJmaWxsOiNmZmZmZmY7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOiNmZjAwMDA7c3Ryb2tlLXdpZHRoOjAuNTI5MTY3O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTkuMztzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLWRhc2hvZmZzZXQ6MDtzdHJva2Utb3BhY2l0eToxO3BhaW50LW9yZGVyOm1hcmtlcnMgZmlsbCBzdHJva2UiCmQ9Ik0gMS4wNTgzMzMzLDEuMDU4MzMzMyAzLjE3NSwzLjE3NSIKaWQ9IiIgLz4KPHBhdGgKc3R5bGU9Im9wYWNpdHk6MTtmaWxsOiNmZmZmZmY7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOiNmZjAwMDA7c3Ryb2tlLXdpZHRoOjAuNTI5MTY3O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6MTkuMztzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLWRhc2hvZmZzZXQ6MDtzdHJva2Utb3BhY2l0eToxO3BhaW50LW9yZGVyOm1hcmtlcnMgZmlsbCBzdHJva2UiCmQ9Ik0gMy4xNzUsMS4wNTgzMzMzIDEuMDU4MzMzMywzLjE3NSIKaWQ9IiIgLz4KPC9nPgo8L2c+Cjwvc3ZnPg==");
-			button_eselect.onclick = _dlbd.deselectItemsAll;
-
-			var button_header = new UI_ToolButton(_element_toolbar_left);
-			button_header.setTooltip(_i18n.getMessage("download_board_button_header"));
-			button_header.setImageURL("data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iMTYiCmhlaWdodD0iMTYiCnZpZXdCb3g9IjAgMCA0LjIzMzMzMyA0LjIzMzMzMyIKdmVyc2lvbj0iMS4xIgppZD0iIgp4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCnhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZGVmcwppZD0iIiAvPgo8ZwppZD0iIj4KPGcKaWQ9IiIKdHJhbnNmb3JtPSJtYXRyaXgoMS42OTQ2NjAzLDAsMCwxLjY5NDY2MDMsLTMuMTUxNzg1LDAuMjExMDU2NTkpIj4KPGcKaWQ9IiI+CjxwYXRoCmlkPSIiCnN0eWxlPSJmaWxsOm5vbmU7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOiMwMDAwMDA7c3Ryb2tlLXdpZHRoOjAuMjY0NTgzO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxOS4zO3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxO3BhaW50LW9yZGVyOm1hcmtlcnMgZmlsbCBzdHJva2UiCmQ9Ik0gMi4xMTY2NjY2LDAuMTMyMjkxNTYgQSAxLjk4NDM3NSwxLjk4NDM3NSAwIDAgMSA0LjEwMTA0MTYsMi4xMTY2NjY2IiAvPgo8cGF0aAppZD0iIgpzdHlsZT0iZmlsbDpub25lO2ZpbGwtb3BhY2l0eToxO3N0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDowLjI2NDU4MztzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTkuMztzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MTtwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgpkPSJNIDIuMTE2NjY2NiwwLjY2MTQ1ODI1IEEgMS40NTUyMDgzLDEuNDU1MjA4MyAwIDAgMSAzLjU3MTg3NDksMi4xMTY2NjY2IiAvPgo8cGF0aAppZD0iIgpzdHlsZT0iZmlsbDpub25lO2ZpbGwtb3BhY2l0eToxO3N0cm9rZTojMDAwMDAwO3N0cm9rZS13aWR0aDowLjI2NDU4MztzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTkuMztzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MTtwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgpkPSJNIDIuMTE2NjY2NiwxLjE5MDYyNDkgQSAwLjkyNjA0MTY2LDAuOTI2MDQxNjYgMCAwIDEgMy4wNDI3MDgyLDIuMTE2NjY2NiIgLz4KPHBhdGgKaWQ9IiIKc3R5bGU9ImZpbGw6bm9uZTtmaWxsLW9wYWNpdHk6MTtzdHJva2U6IzAwMDAwMDtzdHJva2Utd2lkdGg6MC4yNjQ1ODM7c3Ryb2tlLWxpbmVjYXA6cm91bmQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjE5LjM7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1vcGFjaXR5OjE7cGFpbnQtb3JkZXI6bWFya2VycyBmaWxsIHN0cm9rZSIKZD0ibSAyLjExNjY2NjYsMS43MTk3OTE2IGEgMC4zOTY4NzQ5OSwwLjM5Njg3NDk5IDAgMCAxIDAuMzk2ODc0OSwwLjM5Njg3NSB2IDAiIC8+CjwvZz4KPC9nPgo8L2c+Cjwvc3ZnPg==");
-			button_header.onclick = function(){
-				var items = item_container.getItemsEnabled();
-				downloadHeader(items);
+			_select_filter = new UI_SelectFilter(_elements.search_bar);
+			_select_filter.onchange = function(e){
+				updateFilter();
 			};
 
-			_element_search = DocumentCreateElement("div");
-			ElementAddStyle(_element_search,"border:0px #F00 solid; top:45px; left:10px; right:10px; height:30px; position:absolute;");
-			_element_window.appendChild(_element_search);
+			new UI_ToolGap(_elements.search_bar);
 
-			// フィルター
-			(function(){
-				_select_filter = DocumentCreateElement("select");
-				_select_filter.size = 1;
-				ElementSetStyle(_select_filter,"box-sizing:border-box;font-family:inherit;font-size:16px;height:30px;vertical-align:top;");
-				_element_search.appendChild(_select_filter);
+			var icon_search = new UI_ToolIcon(_elements.search_bar);
+			icon_search.setSVG('<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke-width:1;stroke:canvastext;" d="M 9.5,9.5 11,11" /><path style="stroke-linecap:round;stroke-width:2;stroke:canvastext" d="M 14.5,14.5 11,11" /><circle style="stroke-width:1.5;stroke:canvastext;fill:none;" cx="6" cy="6" r="5" /></g></svg>');
 
-				_select_filter.addEventListener("change",function(e){
-					filter_type = _select_filter.value;
-					updateFilter();
-				});
+			_search_box = new UI_SearchBox(_elements.search_bar);
+			_search_box.oninput = function(){
+				updateFilter();
+			};
 
-				[
-					{value:"all",i18n:"download_board_select_filter",cssText:"color:#aaa;"},
-					{value:"all"},
-					{value:"image"},
-					{value:"audio"},
-					{value:"video"},
-					{value:"media"},
-					{value:"archive"},
-					{value:"text"},
-					{value:"application"},
-					{value:"unknown"},
-					{value:"select"}
+			new UI_ToolGap(_elements.search_bar);
 
-				].forEach(function(param){
-					var option = DocumentCreateElement("option");
-					if(param.cssText) ElementSetStyle(option,param.cssText);
-					ElementSetTextContent(option,_i18n.getMessage(param.i18n || ("download_board_option_filter_" + param.value)));
-					option.value = param.value;
-					_select_filter.appendChild(option);
-				});
+			var icon_hit = new UI_ToolIcon(_elements.search_bar);
+			icon_hit.setSVG('<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><circle style="paint-order:stroke fill;stroke-width:4;stroke:canvastext;fill:canvas;" cx="8" cy="8" r="5" /><circle style="stroke-width:1.5;stroke:canvastext;fill:none;" cx="8" cy="8" r="2.5" /><circle style="fill:canvastext;stroke-width:2;" cx="8" cy="8" r="1" /><path style="paint-order:stroke fill;stroke-linejoin:round;stroke-width:1;stroke:canvas;fill:canvastext;" d="M 11.6,4 8.5,7.1 8.2,7.8 8.9,7.5 12,4.4 h 1 l 2,-2 -1.2,-0.2 -0.2,-1.2 -2,2 z" /></g></svg>');
 
-			})();
+			_hit_box = new UI_HitBox(_elements.search_bar);
 
-			_element_list = DocumentCreateElement("div");
-			ElementAddStyle(_element_list,"border:1px #444 solid; bottom:65px; box-sizing:border-box; left:10px; position:absolute; right:10px; top:80px;");
-			_element_window.appendChild(_element_list);
-
-			_element_list_head = DocumentCreateElement("div");
-			_element_list_head.className = "download_board_list_head";
-			_element_list.appendChild(_element_list_head);
-
-			column_container = new ColumnContainer(_element_list_head);
-			column_container.getColumnByName(sort_type).updateSort();
-
-			_element_list_body = DocumentCreateElement("div");
-			_element_list_body.className = "download_board_list_body";
-			_element_list.appendChild(_element_list_body);
-
-			_element_list_items = DocumentCreateElement("div");
-			_element_list_items.tabIndex = 0;
-			_element_list_items.className = "download_board_list_items";
-			_element_list_body.appendChild(_element_list_items);
-
-			_element_list_draw = DocumentCreateElement("div");
-			_element_list_draw.className = "download_board_list_draw";
-			_element_list_body.appendChild(_element_list_draw);
+			column_container = new ColumnContainer(_elements.dlbl_head);
+			_elements.dlbl_items.tabIndex = 0;
 
 			// アイテムの選択、ドラッグ選択
 			(function(){
@@ -56993,7 +57621,7 @@ function PageExpand(page_expand_arguments){
 				var key_event = {};
 
 				var draw = DocumentCreateElement("div");
-				draw.style.cssText = "position:absolute;background-color:rgba(0,0,0,0.05);";
+				draw.className = "drag_rect"
 
 				function release_drag_task(){
 					if(drag_task){
@@ -57013,23 +57641,10 @@ function PageExpand(page_expand_arguments){
 					return null;
 				}
 
-				function select_item_single(y,checked){
-					var items_all = item_container.getItemsAll()
-					var items_visibled = item_container.getItemsVisibled();
-					var index_map = (function(){
-						var map = new Map();
-						var i = 0;
-						items_all.forEach(function(item){
-							map.set(item,i);
-							i++;
-						});
-						return map;
-					})();
-
-					var index = Math.floor(y / ITEM_HEIGHT);
-					var item_now = items_visibled[index];
-					if(!item_now) return;
-
+				function select_item_single(index,checked){
+					var o = item_container.getItemsVisibled();
+					var items = o.getItems();
+					var item_now = items[index];
 					if(checked === undefined){
 						checked = !(item_now.getValue("select"));
 					}
@@ -57037,11 +57652,10 @@ function PageExpand(page_expand_arguments){
 					// 範囲選択
 					if((function(){
 						if(!key_event.shiftKey) return false;
-						if(!index_map.has(item_old)) return false;
-						if(!index_map.has(item_now)) return false;
-
-						var index_old = index_map.get(item_old);
-						var index_now = index_map.get(item_now);
+						if(!o.hasItem(item_old)) return false;
+						if(!o.hasItem(item_now)) return false;
+						var index_old = o.getIndexByItem(item_old);
+						var index_now = o.getIndexByItem(item_now);
 						if(index_old > index_now){
 							var t = index_old;
 							index_old = index_now;
@@ -57051,12 +57665,14 @@ function PageExpand(page_expand_arguments){
 						var a = new Array();
 						var i;
 						for(i=index_old;i<=index_now;i++){
-							var item = items_all[i];
-							if(item.visible) a.push(item);
+							var item = items[i];
+							if(item) a.push(item);
 						}
+						var lock = lock_update_dlbl();
 						a.forEach(function(item){
 							item.url_info.setValue("select",checked);
 						});
+						lock.release();
 
 						return true;
 					})()){
@@ -57071,39 +57687,37 @@ function PageExpand(page_expand_arguments){
 					item_focus = item_old = item_now;
 				}
 
-				_element_list_items.addEventListener("mouseup",function(e){
+				_elements.dlbl_items.addEventListener("mouseup",function(e){
 					// 高精度の要素取得を試みる
 					element_when_mouseup = event_get_element_item(e);
 				});
-				_element_list_items.addEventListener("mousedown",function(e){
+				_elements.dlbl_items.addEventListener("mousedown",function(e){
 					if(drag_task) return;
 					if(!input_mouse.getButtonLeft()) return;
 
-					var r0 = ElementGetBoundingClientRect(_element_list_body);
+					var r0 = ElementGetBoundingClientRect(_elements.dlbl_body);
 					var old_x = e.clientX;
 					var old_y = e.clientY;
 					old_x -= r0.left;
-					old_x += _element_list_body.scrollLeft;
+					old_x += _elements.dlbl_body.scrollLeft;
 					old_y -= r0.top;
-					old_y += _element_list_body.scrollTop;
+					old_y += _elements.dlbl_body.scrollTop;
 					element_when_mouseup = null;
 
 					var index_old = (function(){
-						var y;
 						var element = event_get_element_item(e);
 						if(element){
-							var r1 = ElementGetBoundingClientRect(element);
-							y = (r1.bottom - r1.top) / 2 + r1.top;
-						}else{
-							// 誤差あり
-							y = e.clientY;
+							var o = item_container.getItemsVisibled();
+							var item = o.getItemByNode(element);
+							return o.getIndexByItem(item);
 						}
-						y -= r0.top;
-						y += _element_list_body.scrollTop;
+
+						// 誤差あり
+						var y = e.clientY - r0.top + _elements.dlbl_body.scrollTop;
 						return Math.floor(y / ITEM_HEIGHT);
 					})();
 
-					_element_list_draw.appendChild(draw);
+					_elements.dlbl_draw.appendChild(draw);
 
 					drag_task = task_container.createTask();
 					drag_task.setDestructorFunc(function(){
@@ -57111,14 +57725,14 @@ function PageExpand(page_expand_arguments){
 						drag_task = null;
 					});
 					drag_task.setExecuteFunc(function(){
-						var r0 = ElementGetBoundingClientRect(_element_list_body);
+						var r0 = ElementGetBoundingClientRect(_elements.dlbl_body);
 						var pos = input_mouse.getPositionClient();
 						var now_x = pos.x;
 						var now_y = pos.y;
 						now_x -= r0.left;
-						now_x += _element_list_body.scrollLeft;
+						now_x += _elements.dlbl_body.scrollLeft;
 						now_y -= r0.top;
-						now_y += _element_list_body.scrollTop;
+						now_y += _elements.dlbl_body.scrollTop;
 
 						var min_x = (old_x < now_x) ? old_x : now_x;
 						var min_y = (old_y < now_y) ? old_y : now_y;
@@ -57133,31 +57747,20 @@ function PageExpand(page_expand_arguments){
 						s.height = (h).toFixed(8) + "px";
 
 						if(!input_mouse.getButtonLeft()){
-							var items_visibled = item_container.getItemsVisibled();
-							var items_visibled_length = items_visibled.length;
-
+							var o = item_container.getItemsVisibled();
+							var items = o.getItems();
 							var index_now = (function(){
-								var y;
 								if(element_when_mouseup){
-									var r1 = ElementGetBoundingClientRect(element_when_mouseup);
-									y = (r1.bottom - r1.top) / 2 + r1.top;
-								}else{
-									// 誤差あり
-									y = pos.y;
+									var item = o.getItemByNode(element_when_mouseup);
+									return o.getIndexByItem(item);
 								}
-								var r0 = ElementGetBoundingClientRect(_element_list_body);
-								y -= r0.top;
-								y += _element_list_body.scrollTop;
+
+								// 誤差あり
+								var y = pos.y - r0.top + _elements.dlbl_body.scrollTop;
 								return Math.floor(y / ITEM_HEIGHT);
 							})();
 
-							if(index_now > items_visibled_length - 1){
-								index_now = items_visibled_length - 1;
-							}
-							if(index_now < 0){
-								index_now = 0;
-							}
-							var item_now = items_visibled[index_now];
+							var item_now = items[index_now];
 							if(item_now){
 								var checked = !(item_now.getValue("select"));
 
@@ -57169,19 +57772,21 @@ function PageExpand(page_expand_arguments){
 								var a = new Array();
 								var i;
 								for(i=index_old;i<=index_now;i++){
-									var item = items_visibled[i];
+									var item = items[i];
 									if(item) a.push(item);
 								}
 
 								if(a.length == 1){
 									// 単一選択
-									select_item_single(index_now * ITEM_HEIGHT + ITEM_HEIGHT * 0.5,checked);
+									select_item_single(index_now,checked);
 
 								}else{
 									// 範囲選択
+									var lock = lock_update_dlbl();
 									a.forEach(function(item){
 										item.url_info.setValue("select",checked);
 									});
+									lock.release();
 									item_focus = item_old = item_now;
 								}
 							}
@@ -57194,18 +57799,19 @@ function PageExpand(page_expand_arguments){
 
 				});
 
+				_elements.dlbl_items.addEventListener("focusin",function(e){
+					var o = item_container.getItemsVisibled();
+					item_focus = o.getItemByNode(event_get_element_item(e));
+				});
+
 				// チェックボックスの更新
-				_element_list_body.addEventListener("change",function(e){
+				_elements.dlbl_body.addEventListener("change",function(e){
 					release_drag_task();
 
 					var input = e.target;
-					var r = ElementGetBoundingClientRect(input);
-					var y = (r.bottom - r.top) / 2 + r.top;
-					r = ElementGetBoundingClientRect(_element_list_body);
-					y -= r.top;
-					y += _element_list_body.scrollTop;
-
-					select_item_single(y,input.checked);
+					var o = item_container.getItemsVisibled();
+					var item = o.getItemByNode(event_get_element_item(e));
+					select_item_single(o.getIndexByItem(item),input.checked);
 				});
 
 				// 最新の装飾キーを取得
@@ -57217,7 +57823,7 @@ function PageExpand(page_expand_arguments){
 				});
 
 				// ショートカット
-				_element_list_items.addEventListener("keydown",(function(){
+				_elements.dlbl_items.addEventListener("keydown",(function(){
 					var dic = new Object();
 
 					function focus_item(e,item){
@@ -57230,27 +57836,19 @@ function PageExpand(page_expand_arguments){
 
 					dic["ArrowUp"] = function(e){
 						if(!item_focus) return;
-						var item = item_focus.prev;
-						if(item.released) return;
-						while(item != item_container){
-							if(item.visible){
-								focus_item(e,item);
-								break;
-							}
-							item = item.prev;
-						}
+						var o = item_container.getItemsVisibled();
+						var items = o.getItems();
+						var index = o.getIndexByItem(item_focus) - 1;
+						var item = items[index];
+						if(item) focus_item(e,item);
 					};
 					dic["ArrowDown"] = function(e){
 						if(!item_focus) return;
-						var item = item_focus.next;
-						if(item.released) return;
-						while(item != item_container){
-							if(item.visible){
-								focus_item(e,item);
-								break;
-							}
-							item = item.next;
-						}
+						var o = item_container.getItemsVisibled();
+						var items = o.getItems();
+						var index = o.getIndexByItem(item_focus) + 1;
+						var item = items[index];
+						if(item) focus_item(e,item);
 					};
 					dic["Escape"] = function(e){
 						release_drag_task();
@@ -57261,9 +57859,11 @@ function PageExpand(page_expand_arguments){
 					dic["a"] = 
 					dic["A"] = function(e){
 						if(!e.ctrlKey) return;
-						item_container.getItemsVisibled().forEach(function(item){
+						var lock = lock_update_dlbl();
+						item_container.getItemsVisibled().getItems().forEach(function(item){
 							item.url_info.setValue("select",true);
 						});
+						lock.release();
 						e.preventDefault();
 					};
 
@@ -57275,7 +57875,6 @@ function PageExpand(page_expand_arguments){
 
 			})();
 
-
 			var right = (function(){
 				var div = DocumentCreateElement("div");
 				ElementSetStyle(div,"position:absolute; left:0px; top:0px; width:100px; overflow-y:scroll;");
@@ -57284,252 +57883,209 @@ function PageExpand(page_expand_arguments){
 				DomNodeRemove(div);
 				return right;
 			})();
-			_element_list_head.style.right = (right) + "px";
+			_elements.dlbl_head.style.right = (right) + "px";
 
-			_element_list_body.addEventListener("scroll",function(e){
-				_element_list_head.scrollLeft = _element_list_body.scrollLeft;
+			_elements.dlbl_body.addEventListener("scroll",function(e){
+				_elements.dlbl_head.scrollLeft = _elements.dlbl_body.scrollLeft;
 			},true);
 
-			_element_info = DocumentCreateElement("div");
-			ElementAddStyle(_element_info,"height:50px; left:10px; right:230px; bottom:10px; position:absolute; box-sizing:border-box;");
-			_element_window.appendChild(_element_info);
+			new UI_Status(_elements.status);
 
-			_element_download = DocumentCreateElement("div");
-			ElementAddStyle(_element_download,"display:flex; flex-wrap: nowrap;height:50px; width:200px; right:10px; bottom:10px; position:absolute; box-sizing:border-box;");
-			_element_window.appendChild(_element_download);
+			[
+				{n:"wait",a:["t","p"]},
+				{n:"header",a:["t","p"]},
+				{n:"archive",a:["p","p"]},
+				{n:"sequential",a:["t","p"]},
+				{n:"collector",a:["t","p"]}
+			].forEach(function(o){
+				var info = _info[o.n] = new UI_Info();
+				o.a.forEach(function(t,i){ info.attach(i,(t == "t") ? "text" : "progress"); });
+			});
 
-			_info_wait = new UI_Info();
-			_info_wait.attach(0,"text");
-			_info_wait.attach(1,"progress");
-
-			_info_header = new UI_Info();
-			_info_header.attach(0,"text");
-			_info_header.attach(1,"progress");
-
-			_info_archive = new UI_Info();
-			_info_archive.attach(0,"progress");
-			_info_archive.attach(1,"progress");
-
-			_info_sequential = new UI_Info();
-			_info_sequential.attach(0,"text");
-			_info_sequential.attach(1,"progress");
-
-			_info_collector = new UI_Info();
-			_info_collector.attach(0,"text");
-			_info_collector.attach(1,"progress");
-
-			_button_archive = new UI_DownloadButton();
-			_button_archive.setTooltip(_i18n.getMessage("download_board_button_archive"));
-			_button_archive.setImageURL("data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iNTEuOTk5OTk2IgpoZWlnaHQ9IjQzIgp2aWV3Qm94PSIwIDAgMTMuNzU4MzMyIDExLjM3NzA4NCIKdmVyc2lvbj0iMS4xIgppZD0iIgp4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCnhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZGVmcwppZD0iIiAvPgo8ZwppZD0iIgp0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNi4zNDk5OTc2LC0xLjA1ODMzMzQpIj4KPGNpcmNsZQpzdHlsZT0iZmlsbDojMDAwMDAwO2ZpbGwtb3BhY2l0eToxO3N0cm9rZS13aWR0aDowLjc2NzU0NTtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTkuMztwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgppZD0iIgpjeD0iOC40NjY2NjQzIgpjeT0iMy4xNzUwMDAyIgpyPSIyLjExNjY2NjgiIC8+CjxjaXJjbGUKc3R5bGU9ImZpbGw6IzAwMDAwMDtmaWxsLW9wYWNpdHk6MTtzdHJva2Utd2lkdGg6MC43Njc1NDU7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjE5LjM7cGFpbnQtb3JkZXI6bWFya2VycyBmaWxsIHN0cm9rZSIKaWQ9IiIKY3g9IjE3Ljk5MTY2MyIKY3k9IjMuMTc1MDAwMiIKcj0iMi4xMTY2NjY4IiAvPgo8Y2lyY2xlCnN0eWxlPSJmaWxsOiMwMDAwMDA7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlLXdpZHRoOjAuNzY3NTQ1O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxOS4zO3BhaW50LW9yZGVyOm1hcmtlcnMgZmlsbCBzdHJva2UiCmlkPSIiCmN4PSIxMy4yMjkxNjciCmN5PSIzLjE3NTAwMDIiCnI9IjIuMTE2NjY2OCIgLz4KPHBhdGgKc3R5bGU9ImZpbGw6IzAwMDAwMDtmaWxsLW9wYWNpdHk6MTtzdHJva2Utd2lkdGg6MC41MjkxNjc7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjE5LjM7cGFpbnQtb3JkZXI6bWFya2VycyBmaWxsIHN0cm9rZSIKZD0ibSAxMC44NDc5MTYsNS44MjA4MzM0IGggNC43NjI1MDEgViA5Ljc4OTU4NCBoIDIuOTEwNDE2IEwgMTMuMjI5MTY3LDEyLjQzNTQxNyA3LjkzNzQ5OTYsOS43ODk1ODQgaCAyLjkxMDQxNjQgeiIKaWQ9IiIgLz4KPC9nPgo8L3N2Zz4K");
-			_button_archive.setText("ZIP");
-			_button_archive.onclick = function(){
-				_dlbd.archive();
-			};
-
-			_button_download = new UI_DownloadButton();
-			_button_download.setTooltip(_i18n.getMessage("download_board_button_sequential"));
-			_button_download.setImageURL("data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iNzYiCmhlaWdodD0iNDMiCnZpZXdCb3g9IjAgMCAyMC4xMDgzMzMgMTEuMzc3MDg0Igp2ZXJzaW9uPSIxLjEiCmlkPSIiCnhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxkZWZzCmlkPSIiIC8+CjxnCmlkPSIiCnRyYW5zZm9ybT0idHJhbnNsYXRlKC0zLjE3NDk5OTUsLTEuMDU4MzMzNCkiPgo8Y2lyY2xlCnN0eWxlPSJmaWxsOiMwMDAwMDA7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlLXdpZHRoOjAuNzY3NTQ1O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxOS4zO3BhaW50LW9yZGVyOm1hcmtlcnMgZmlsbCBzdHJva2UiCmlkPSIiCmN4PSI1LjgyMDgzMjciCmN5PSIzLjE3NTAwMDIiCnI9IjIuMTE2NjY2OCIgLz4KPGNpcmNsZQpzdHlsZT0iZmlsbDojMDAwMDAwO2ZpbGwtb3BhY2l0eToxO3N0cm9rZS13aWR0aDowLjc2NzU0NTtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTkuMztwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgppZD0iIgpjeD0iMjAuNjM3NDk5IgpjeT0iMy4xNzUwMDAyIgpyPSIyLjExNjY2NjgiIC8+CjxjaXJjbGUKc3R5bGU9ImZpbGw6IzAwMDAwMDtmaWxsLW9wYWNpdHk6MTtzdHJva2Utd2lkdGg6MC43Njc1NDU7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjE5LjM7cGFpbnQtb3JkZXI6bWFya2VycyBmaWxsIHN0cm9rZSIKaWQ9IiIKY3g9IjEzLjIyOTE2NyIKY3k9IjMuMTc1MDAwMiIKcj0iMi4xMTY2NjY4IiAvPgo8cGF0aApzdHlsZT0iZmlsbDojMDAwMDAwO2ZpbGwtb3BhY2l0eToxO3N0cm9rZS13aWR0aDowLjUyOTE2NztzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTkuMztwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgpkPSJNIDEyLjE3MDgzMyw1LjgyMDgzMzQgSCAxNC4yODc1IFYgOS43ODk1ODQgaCAxLjU4NzUgbCAtMi42NDU4MzMsMi42NDU4MzMgLTIuNjQ1ODM0LC0yLjY0NTgzMyBoIDEuNTg3NSB6IgppZD0iIiAvPgo8cGF0aApzdHlsZT0iZmlsbDojMDAwMDAwO2ZpbGwtb3BhY2l0eToxO3N0cm9rZS13aWR0aDowLjUyOTE2NztzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTkuMztwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgpkPSJtIDE5LjU3OTE2Niw1LjgyMDgzMzQgaCAyLjExNjY2NyB2IDMuOTY4NzUwNSBoIDEuNTg3NSBMIDIwLjYzNzUsMTIuNDM1NDE3IDE3Ljk5MTY2Niw5Ljc4OTU4MzkgaCAxLjU4NzUgeiIKaWQ9IiIgLz4KPHBhdGgKc3R5bGU9ImZpbGw6IzAwMDAwMDtmaWxsLW9wYWNpdHk6MTtzdHJva2Utd2lkdGg6MC41MjkxNjc7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjE5LjM7cGFpbnQtb3JkZXI6bWFya2VycyBmaWxsIHN0cm9rZSIKZD0iTSA0Ljc2MjQ5OTYsNS44MjA4MzM0IEggNi44NzkxNjY5IFYgOS43ODk1ODQgSCA4LjQ2NjY2NzMgTCA1LjgyMDgzNCwxMi40MzU0MTcgMy4xNzQ5OTk2LDkuNzg5NTg0IGggMS41ODc1IHoiCmlkPSIiIC8+CjwvZz4KPC9zdmc+");
-			_button_download.setText("DOWNLOAD");
-			_button_download.onclick = function(){
-				var items = item_container.getItemsEnabled();
-				downloadSequential(items);
-			};
-
-			_button_header_cancel = new UI_DownloadButton();
-			_button_header_cancel.setTooltip(_i18n.getMessage("download_board_button_header_cancel"));
-			_button_header_cancel.setImageURL(svg_cancel);
-			_button_header_cancel.setText("CANCEL");
-			_button_header_cancel.onclick = function(){
-				header_downloader.abort();
-			};
-
-			_button_archive_cancel = new UI_DownloadButton();
-			_button_archive_cancel.setTooltip(_i18n.getMessage("download_board_button_archive_cancel"));
-			_button_archive_cancel.setImageURL(svg_cancel);
-			_button_archive_cancel.setText("CANCEL");
-			_button_archive_cancel.onclick = function(){
-				archive_creator.abort();
-				updateDownloadButton();
-			};
-
-			_button_archive_abort = new UI_DownloadButton();
-			_button_archive_abort.setTooltip(_i18n.getMessage("download_board_button_archive_skip"));
-			_button_archive_abort.setImageURL("data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iNjEiCmhlaWdodD0iMzYiCnZpZXdCb3g9IjAgMCAxNi4xMzk1NDkgOS41MjQ5OTkyIgp2ZXJzaW9uPSIxLjEiCmlkPSJzdmc4MzgxIgp4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCnhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZGVmcwppZD0iIiAvPgo8ZwppZD0iIgp0cmFuc2Zvcm09InRyYW5zbGF0ZSgtNS4yOTE2NjYxLC0xLjg1MjA4MzUpIj4KPHBhdGgKc3R5bGU9ImZpbGw6bm9uZTtzdHJva2U6I2ZmMDAwMDtzdHJva2Utd2lkdGg6MS41ODc1O3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxOS4zO3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgpkPSJtIDExLjM3NzA4MywyLjY0NTgzMzYgMy45Njg3NSwzLjk2ODc1IC0zLjk2ODc1LDMuOTY4NzQ5NCIKaWQ9IiIgLz4KPHBhdGgKc3R5bGU9ImZpbGw6bm9uZTtzdHJva2U6I2ZmMDAwMDtzdHJva2Utd2lkdGg6MS41ODc1O3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDoxOS4zO3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgpkPSJtIDYuMDg1NDE2MywyLjY0NTgzMzYgMy45Njg3NTA3LDMuOTY4NzUgLTMuOTY4NzUwNywzLjk2ODc0OTQiCmlkPSIiIC8+CjxwYXRoCnN0eWxlPSJmaWxsOm5vbmU7c3Ryb2tlOiNmZjAwMDA7c3Ryb2tlLXdpZHRoOjEuNTg3NTtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MTkuMztzdHJva2UtZGFzaGFycmF5Om5vbmU7cGFpbnQtb3JkZXI6bWFya2VycyBmaWxsIHN0cm9rZSIKZD0ibSAxNi42Njg3NDksMi42NDU4MzM2IDMuOTY4NzUsMy45Njg3NSAtMy45Njg3NSwzLjk2ODc0OTQiCmlkPSIiIC8+CjwvZz4KPC9zdmc+");
-			_button_archive_abort.setText("SKIP");
-			_button_archive_abort.onclick = function(){
-				archive_creator.abortLoader();
-			};
-
-			_button_download_cancel = new UI_DownloadButton();
-			_button_download_cancel.setTooltip(_i18n.getMessage("download_board_button_sequential_cancel"));
-			_button_download_cancel.setImageURL(svg_cancel);
-			_button_download_cancel.setText("CANCEL");
-			_button_download_cancel.onclick = function(){
-				sequential_downloader.cancel();
-			};
-
-			_button_download_pause = new UI_DownloadButton();
-			_button_download_pause.setTooltip(_i18n.getMessage("download_board_button_sequential_pause"));
-			_button_download_pause.setImageURL("data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iMzAiCmhlaWdodD0iMzAiCnZpZXdCb3g9IjAgMCA3LjkzNzQ5NTQgNy45Mzc1MDA3Igp2ZXJzaW9uPSIxLjEiCmlkPSIiCnhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxkZWZzCmlkPSIiIC8+CjxnCmlkPSIiCnRyYW5zZm9ybT0idHJhbnNsYXRlKC05LjI2MDQxOTEsLTIuNjQ1ODMzNCkiPgo8cGF0aApzdHlsZT0iZmlsbDpub25lO3N0cm9rZTojZmYwMDAwO3N0cm9rZS13aWR0aDoyLjY0NTgzO3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjE5LjM7c3Ryb2tlLWRhc2hhcnJheTpub25lO3BhaW50LW9yZGVyOm1hcmtlcnMgZmlsbCBzdHJva2UiCmQ9Ik0gMTUuODc1LDIuNjQ1ODMzMyBWIDEwLjU4MzMzMyBNIDEwLjU4MzMzNCwyLjY0NTgzMzMgdiA3LjkzNzQ5OTciCmlkPSIiIC8+CjwvZz4KPC9zdmc+");
-			_button_download_pause.setText("PAUSE");
-			_button_download_pause.onclick = function(){
-				sequential_downloader.pause();
-			};
-
-			_button_collector_stop = new UI_DownloadButton();
-			_button_collector_stop.setTooltip(_i18n.getMessage("download_board_button_collector_stop"));
-			_button_collector_stop.setImageURL(svg_cancel);
-			_button_collector_stop.setText("STOP");
-			_button_collector_stop.onclick = function(){
-				_dlbd.collectUrlInfoAll(false);
-			};
-
+			var hsl_d = "hsl(from canvastext 0 0 l / calc(l / 100 * (0.2 - 0.18) + 0.18))";
+			[{
+				name:"archive",
+				svg:'<svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg"><g style="fill:' + hsl_d + ';"><circle cx="13" cy="41" r="5" /><circle cx="25" cy="41" r="5" /><circle cx="37" cy="41" r="5" /></g><g style="fill:none; stroke:' + hsl_d + ';"><path style="stroke-width:6;stroke-linecap:round;stroke-linejoin:round;" d="M 36,22 25,30 14,22 M 25,6 v 24" /><path style="stroke-width:2" d="m 42,34 h 6 V 48 H 42 M 8,34 H 2 v 14 h 6" /></g></svg>',
+				label:"ZIP",
+				onclick:function(){
+					_dlbd.archive();
+				}
+			},{
+				name:"sequential",
+				svg:'<svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg"><g style="fill:' + hsl_d + ';"><circle cx="12" cy="41" r="5" /><circle cx="38" cy="41" r="5" /></g><g style="fill:none; stroke:' + hsl_d + ';"><path style="stroke-width:6;stroke-linecap:round;stroke-linejoin:round;" d="M 38,5 V 30 M 19,25 12,30 5,25 M 12,5 v 25 m 33,-5 -7,5 -7,-5" /></g></svg>',
+				label:"DOWNLOAD",
+				onclick:function(){
+					var items = item_container.getItemsEnabled();
+					downloadSequential(items);
+				}
+			},{
+				name:"header_cancel",
+				svg:svg_cancel,
+				label:"CANCEL",
+				onclick:function(){
+					header_downloader.abort();
+				}
+			},{
+				name:"archive_cancel",
+				svg:svg_cancel,
+				label:"CANCEL",
+				onclick:function(){
+					archive_creator.abort();
+					updateDownloadButton();
+				}
+			},{
+				name:"archive_skip",
+				svg:'<svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:none;stroke:' + hsl_red + ';stroke-width:8;stroke-linecap:round;stroke-linejoin:round" d="M 7,9 23,25 7,41 M 27,9 43,25 27,41" /></g></svg>',
+				label:"SKIP",
+				onclick:function(){
+					archive_creator.abortLoader();
+				}
+			},{
+				name:"sequential_cancel",
+				svg:svg_cancel,
+				label:"CANCEL",
+				onclick:function(){
+					sequential_downloader.cancel();
+				}
+			},{
+				name:"sequential_pause",
+				svg:'<svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:none;stroke:' + hsl_red + ';stroke-width:15" d="M 37,5 V 45 M 13,5 v 40" /></g></svg>',
+				label:"PAUSE",
+				onclick:function(){
+					sequential_downloader.pause();
+				}
+			},{
+				name:"collector_stop",
+				svg:svg_cancel,
+				label:"STOP",
+				onclick:function(){
+					_dlbd.collectUrlInfoAll(false);
+				}
+			}].forEach(function(o){
+				var button = _buttons[o.name] = new UI_ControlButton();
+				button.setTooltip(_i18n.getMessage("download_board_button_" + o.name));
+				if(o.svg) button.setSVG(o.svg);
+				button.setText(o.label);
+				button.onclick = o.onclick;
+			});
 			updateDownloadButton();
 
 			// スタイル
 			var style_sheet;
-			// Firefox で動作しない
-			//if(_shadow_root.adoptedStyleSheets){
-			if(0){
+			try{
 				style_sheet = new CSSStyleSheet();
 				_shadow_root.adoptedStyleSheets = [style_sheet];
-			}else{
-				_element_style = DocumentCreateElement("style");
-				_shadow_root.appendChild(_element_style);
-				style_sheet = ElementGetStyleSheet(_element_style);
+			}catch(e){
+				// Firefox で動作しない
+				_elements.style = DocumentCreateElement("style");
+				_shadow_root.appendChild(_elements.style);
+				style_sheet = ElementGetStyleSheet(_elements.style);
 			}
 
-			(function(){
-				var rules = CSSStyleSheetGetCSSRuleList(style_sheet);
-				var index = 0;
-				[
-					{
-						selector:".dlbd",
-						style:"font-family:Consolas,'Courier New',monospace;"
-					},{
-						selector:".background",
-						style:"background:rgba(0,0,0,0.3333);bottom:0;left:0;position:fixed;right:0;top:0;z-index:2147483647;"
-					},{
-						selector:".window",
-						style:"background:#f8f8f8;border:1px #000 solid;border-radius:10px;bottom:50px;left:50px;margin:auto;max-height:800px;max-width:1000px;min-height:200px;min-width:200px;position:fixed;right:50px;top:50px;z-index:2147483647;"
-					},{
-						selector:".toolbar",
-						style:"background:#fff;border:0 red solid;height:30px;left:10px;position:absolute;right:10px;top:10px;"
-					},{
-						selector:".download_board_list_head",
-						style:"background:#888; color:#fff; cursor:pointer; display:block; font-size:0; height:24px; left:0; right:0; overflow:hidden; position:absolute; top:0; white-space:nowrap;"
-					},{
-						selector:".download_board_list_body",
-						style:"bottom:0; height:auto; left:0; overflow:scroll; position:absolute; right:0; top:24px;"
-					},{
-						selector:".download_board_list_items",
-						style:"outline:none;position:absolute;"
-					},{
-						selector:".download_board_list_draw",
-						style:"position:absolute;pointer-events:none;"
-					},{
-						selector:".column",
-						style:"background-color:#646464; background-position:right center; background-repeat:no-repeat; border-right:1px solid #ccc; box-sizing:border-box; display:inline-block; font-size:16px; height:24px; inset:0; overflow:hidden; padding-left:4px; padding-right:4px; padding-top:4px; position:relative; text-align:center; text-overflow:ellipsis; user-select:none; vertical-align:top; white-space:nowrap; line-height:1;"
-					},{
-						selector:".column:hover",
-						style:"background-color:#4281F4;"
-					},{
-						selector:".ascend",
-						style:"background-image:url(\"data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2Zwp3aWR0aD0iMTAiCmhlaWdodD0iMjAiCnZpZXdCb3g9IjAgMCAyLjY0NTgzMzIgNS4yOTE2NjY1Igp2ZXJzaW9uPSIxLjEiCmlkPSIiCnhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxkZWZzCmlkPSIiIC8+CjxnCmlkPSIiPgo8cGF0aApzdHlsZT0iZmlsbDojZmZmZmZmO2ZpbGwtb3BhY2l0eTowLjgwNDc0OTtzdHJva2U6bm9uZTtzdHJva2Utd2lkdGg6Mi42NDU4MztzdHJva2UtbWl0ZXJsaW1pdDoxOS4zO3BhaW50LW9yZGVyOm1hcmtlcnMgZmlsbCBzdHJva2UiCmQ9Ik0gMC41MjkxNjY2NCwyLjkxMDQxNjUgMS4zMjI5MTY2LDUuMjkxNjY2NCAyLjExNjY2NjUsMi45MTA0MTY1IFoiCmlkPSIiIC8+CjxwYXRoCmlkPSIiCnN0eWxlPSJmaWxsOiNmZmZmZmY7ZmlsbC1vcGFjaXR5OjAuMjtzdHJva2U6bm9uZTtzdHJva2Utd2lkdGg6Mi42NDU4MztzdHJva2UtbWl0ZXJsaW1pdDoxOS4zO3BhaW50LW9yZGVyOm1hcmtlcnMgZmlsbCBzdHJva2UiCmQ9Ik0gMC41MjkxNjY2NSwyLjM4MTI0OTcgMS4zMjI5MTY3LDAgMi4xMTY2NjY2LDIuMzgxMjQ5NyBaIiAvPgo8L2c+Cjwvc3ZnPgo=\"); padding-right:10px;"
-					},{
-						selector:".descend",
-						style:"background-image:url(\"data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2Zwp3aWR0aD0iMTAiCmhlaWdodD0iMjAiCnZpZXdCb3g9IjAgMCAyLjY0NTgzMzIgNS4yOTE2NjY1Igp2ZXJzaW9uPSIxLjEiCmlkPSIiCnhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxkZWZzCmlkPSIiIC8+CjxnCmlkPSIiPgo8cGF0aApzdHlsZT0iZmlsbDojZmZmZmZmO2ZpbGwtb3BhY2l0eTowLjI7c3Ryb2tlOm5vbmU7c3Ryb2tlLXdpZHRoOjIuNjQ1ODM7c3Ryb2tlLW1pdGVybGltaXQ6MTkuMztwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgpkPSJNIDAuNTI5MTY2NjQsMi45MTA0MTY1IDEuMzIyOTE2Niw1LjI5MTY2NjQgMi4xMTY2NjY1LDIuOTEwNDE2NSBaIgppZD0iIiAvPgo8cGF0aAppZD0iIgpzdHlsZT0iZmlsbDojZmZmZmZmO2ZpbGwtb3BhY2l0eTowLjg7c3Ryb2tlOm5vbmU7c3Ryb2tlLXdpZHRoOjIuNjQ1ODM7c3Ryb2tlLW1pdGVybGltaXQ6MTkuMztwYWludC1vcmRlcjptYXJrZXJzIGZpbGwgc3Ryb2tlIgpkPSJNIDAuNTI5MTY2NjUsMi4zODEyNDk3IDEuMzIyOTE2NywwIDIuMTE2NjY2NiwyLjM4MTI0OTcgWiIgLz4KPC9nPgo8L3N2Zz4K\"); padding-right:10px;"
-					},{
-						selector:".item",
-						style:"font-size:0; white-space:nowrap; display:table-row;"
-					},{
-						selector:".item:nth-child(2n+1)",
-						style:"background-color: rgb(255, 255, 255);"
-					},{
-						selector:".item:nth-child(2n)",
-						style:"background-color: rgb(250, 250, 250);"
-					},{
-						selector:".item:hover",
-						style:"background-color:rgba(192,255,160,1.0);"
-					},{
-						selector:".select:nth-child(2n+1)",
-						style:"background-color: rgb(225, 245, 255);"
-					},{
-						selector:".select:nth-child(2n)",
-						style:"background-color: rgb(220, 240, 250);"
-					},{
-						selector:".select:hover",
-						style:"background-color:rgba(192,255,160,1.0);"
-					},{
-						selector:".cell_container",
-						style:"border-bottom:1px solid #eee;border-right:1px solid #aaa;box-sizing:border-box;display:inline-block;font-size:16px;height:24px;line-height:1.0;margin:0;position:relative;vertical-align:top;"
-					},{
-						selector:".cell",
-						style:"bottom:0;left:0;position:relative;right:0;top:0;"
-					},{
-						selector:".cell_label",
-						style:"display:block; overflow:hidden; padding:4px; text-overflow:ellipsis; white-space:nowrap;"
-					},{
-						selector:".cell_state",
-						style:"text-align:center;"
-					},{
-						selector:".cell_select",
-						style:"width:16px;height:16px;top:4px;left:4px;margin:0;"
-					},{
-						selector:".cell_icon",
-						style:"width:16px; height:16px; top:4px; left:4px;"
-					},{
-						selector:".cell_name",
-						style:"text-align:left;"
-					},{
-						selector:".cell_ext",
-						style:"text-align:center;"
-					},{
-						selector:".cell_type",
-						style:"text-align:center;"
-					},{
-						selector:".cell_status",
-						style:"text-align:center;"
-					},{
-						selector:".cell_progress",
-						style:"bottom:1px;top:1px;width:0;position:absolute;"
-					},{
-						selector:".cell_loaded",
-						style:"text-align:right;"
-					},{
-						selector:".cell_total",
-						style:"text-align:right;"
-					},{
-						selector:".cell_url",
-						style:"text-align:left;text-decoration:initial;"
-					},{
-						selector:".cell_lastModified",
-						style:"text-align:center;"
-					},{
-						selector:".cell_id",
-						style:"text-align:center;"
-					},{
-						selector:".meter_play",
-						style:'animation:meter_play 1.0s linear infinite normal forwards running;background-image:url("data:image/svg+xml;base64,PHN2Zwp3aWR0aD0iMjQiCmhlaWdodD0iMjQiCnZpZXdCb3g9IjAgMCA2LjM0OTk5OTkgNi4zNDk5OTk5Igp2ZXJzaW9uPSIxLjEiCmlkPSJzdmczODEiCnhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxkZWZzCmlkPSIiIC8+CjxnCmlkPSIiPgo8cGF0aApzdHlsZT0iZmlsbDojMDAwMDAwO2ZpbGwtb3BhY2l0eTowLjAzO3N0cm9rZTpub25lO3N0cm9rZS13aWR0aDowLjI2NDU4MztzdHJva2UtZGFzaGFycmF5Om5vbmUiCmQ9Ik0gNi4zNDk5OTk5LDMuMTc1IDMuMTc1LDAgSCAwIEwgMy4xNzUsMy4xNzUgMCw2LjM0OTk5OTkgaCAzLjE3NSB6IgppZD0iIiAvPgo8L2c+Cjwvc3ZnPg==");'
-					},{
-						selector:"@keyframes meter_play",
-						style:"0%{background-position:center left 0px;}100%{background-position:center left 24px;}"
-					}
-				].forEach(function(param){
-					CSSStyleSheetInsertRule(style_sheet,param.selector,param.style,index);
-					index ++;
-				});
+			[
+				[".dlbd","all:initial; color-scheme:revert; user-select:none; font-family:Consolas,'Courier New',monospace;color:canvastext;"],
+				[".background","background:rgba(0,0,0,0.3333);bottom:0;left:0;position:fixed;right:0;top:0;z-index:2147483647;"],
+				[".window","background-color:hsl(from canvas h s calc(l + (50 - l) * 0.06));border:1px hsl(from canvas h s calc((100 - l) - (50 - l) * 0.0)) solid;border-radius:10px;inset:2px;margin:auto;max-height:800px;max-width:1000px;min-height:200px;min-width:200px;min-width:0px;position:fixed;z-index:2147483647;"],
+				[".resize_full","border-radius:initial; border:initial; inset:0; max-height:none; max-width:none;"],
 
-				column_container.getColumnList().forEach(function(column){
-					CSSStyleSheetInsertRule(style_sheet,".width_" + (column.name) ,"width:0px;",index);
-					column.setWidthStyle(rules[index]);
-					index ++;
-				});
+				[".tool_bar","background-color:canvas;height:30px;left:10px;position:absolute;right:10px;top:10px;display:flex;justify-content:space-between;gap:2px;"],
+				[".tool_bar > div"," min-width:0px;display:inline-flex;gap:1px;"],
+				[".ui_tool_button","width:45px; min-width:0px; height:30px; padding:0; vertical-align:top; display:inline-flex; justify-content:center; align-items:center;"],
+				[".ui_tool_button > svg","max-width:16px;"],
+				[".ui_input_button","width:20px; min-width:0px; height:20px; padding:0; display:inline-flex; justify-content:center; align-items:center; pointer-events:all;"],
+				[".ui_input_button > svg","max-width:12px;"],
+				[".ui_tool_icon","width:16px; min-width:0px; height:100%; padding:0; display:inline-flex; justify-content:center; align-items:center;"],
+				[".ui_tool_icon > svg","max-width:16px;"],
+				[".ui_tool_gap","width:0px; min-width:0px;"],
 
-			})();
+				[".search_bar","top:45px; left:10px; right:10px; height:30px; position:absolute;display:flex; gap:5px;"],
+				[".select_filter","box-sizing:border-box;font-family:inherit;font-size:16px;height:30px;vertical-align:top;min-width:0px;"],
+				["option","color:fieldtext;"],
+				[".graytext","color:graytext;"],
+				[".search_box","box-sizing:border-box; min-width:0px; flex-grow:1; border:1px solid graytext; border-radius:4px; background:field; display:inline-flex; align-items:center; justify-content:space-between; gap:2px; padding-right:4px;"],
+				[".search_box > input","width:300px; min-width:0px; height:100%; flex-grow:1; box-sizing:border-box; font-size:16px; border:none; outline-style:none; background:none; padding-left:4px;"],
+				[".outline_auto","outline-style:auto;"],
 
-			url_info_dictionary.getUrlInfoAll().forEach(function(url_info){
-				createItem(url_info);
+				[".hit_box","box-sizing:border-box; min-width:0px; border:1px solid graytext; border-radius:4px; background:field; display:inline-flex; align-items:center; justify-content:space-between; gap:2px; padding-right:4px;"],
+				[".hit_box > span","width:120px; min-width:0px; flex-grow:1; box-sizing:border-box; font-size:16px; text-align:center; white-space:nowrap; overflow:hidden;"],
+
+				[".foot_bar","height:50px; left:10px; right:10px; bottom:10px; position:absolute; box-sizing:border-box;position:absolute;display:flex; justify-content:space-between; gap:5px;"],
+				[".status","display:flex; width:100px; min-width:0px; height:100%; flex-direction: column; gap:2px;"],
+				[".status .root","display:flex; width:100%; min-width:0px; height:24px; gap:5px;"],
+				[".status .box","display:inline-flex; width:50px; min-width:0px; flex-grow:1; height:24px; background:field; border:1px solid graytext; border-radius:2px; box-sizing:border-box; position:relative;"],
+				[".status .progress","display:block; width:0%; height:100%; position:absolute;"],
+				[".status .text","display:flex; justify-content:center; align-items:center; width:100%; height:100%; position:absolute; overflow:hidden; white-space:nowrap; cursor:pointer;"],
+				[".status .text:hover","background:highlight; color:highlighttext;"],
+				[".status .input","text-align:center; width:100%; height:100%; position:absolute; box-sizing:border-box;"],
+
+				[".info","flex-grow:1; display:flex; justify-content:center; min-width:0px; height:50px; box-sizing:border-box;"],
+				[".ui_info","display:flex; width:500px; min-width:0px; flex-direction:column; gap:2px;"],
+				[".ui_info .box","display:flex; justify-content:center; align-items:center; box-sizing:border-box; height:24px; position:relative;"],
+				[".ui_info .meter_box","background:field; border:1px solid graytext; border-radius:2px;"],
+				[".ui_info .meter","position:absolute; inset:0px;"],
+				[".ui_info .text","position: absolute; font-size:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:0px 4px; text-box-trim:trim-both;"],
+
+				[".control","display:inline-flex; flex-grow:0; width:200px; min-width:0px; box-sizing:border-box; gap:1px;"],
+				[".ui_ctrlbtn","display:inline-flex;flex-direction:column; justify-content:center; align-items:center; width:200px; min-width:0px; padding:0; vertical-align:top; overflow:hidden;"],
+				[".ui_ctrlbtn span","font-size:12px;"],
+				[".ui_ctrlbtn svg","max-width:24px;"],
+
+				[".edit_size","max-height:600px;max-width:800px;"],
+				[".edit_body","border:1px hsl(from canvas h s calc((100 - l) - (50 - l) * 0.5)) solid; inset: 45px 10px 65px; bottom:65px; box-sizing:border-box; position:absolute;"],
+
+				[".dlbl","border:1px hsl(from canvas h s calc((100 - l) - (50 - l) * 0.5)) solid; bottom:65px; box-sizing:border-box; left:10px; position:absolute; right:10px; top:80px;"],
+				[".dlbl_head","background:#888; color:#fff; cursor:pointer; display:block; height:24px; left:0; right:0; overflow:hidden; position:absolute; top:0; white-space:nowrap;"],
+				[".dlbl_body","bottom:0; height:auto; left:0; overflow:scroll; position:absolute; right:0; top:24px;"],
+				[".dlbl_items","display:flex;flex-direction:column;outline:none;position:absolute;"],
+				[".dlbl_draw","position:absolute;pointer-events:none;"],
+				[".column","background-color:#646464; background-position:right center; background-repeat:no-repeat; border-right:1px solid hsl(from canvas 0 0 calc((100 - l) / 100 * (75 - 25) + 25)); box-sizing:border-box; display:inline-flex; justify-content:center; align-items:center; height:100%;"],
+				[".column:hover","background-color:#4281F4;"],
+				[".column > span","font-size:16px; margin:0px 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; user-select:none;"],
+				[".ascend","background-image:url(\"data:image/svg+xml;," + encodeURIComponent(svg_ascend) + "\"); padding-right:10px;"],
+				[".descend","background-image:url(\"data:image/svg+xml;," + encodeURIComponent(svg_descend) + "\"); padding-right:10px;"],
+				[".item","display:flex; height:24px;"],
+				[".item:nth-child(2n+1)","background-color: hsl(from canvas 0 0 calc(l / 100 * (100 - 6) + 6));"],
+				[".item:nth-child(2n)","background-color: hsl(from canvas 0 0 calc(l / 100 * (98 - 0) + 0));"],
+				[".select:nth-child(2n+1)","background-color: hsl(from canvas 200 100 calc(l / 100 * (94 - 14) + 14));"],
+				[".select:nth-child(2n)","background-color: hsl(from canvas 200 100 calc(l / 100 * (92 - 12) + 12));"],
+				[".item:hover,.select:hover","background-color: hsl(from canvas 90 100 calc(l / 100 * (75 - 20) + 20));"],
+
+				[".cell","display:inline-flex; justify-content:center; align-items:center; border-bottom:1px solid hsl(from canvas 0 0 calc(l / 100 * (90 - 16) + 16)); border-right:1px solid hsl(from canvas 0 0 calc(l / 100 * (75 - 25) + 25)); box-sizing:border-box; margin:0; position:relative;"],
+				[".cell_label","overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin:0px 4px; font-size:16px; text-box-trim:trim-both;"],
+				[".cell_state","justify-content:center;"],
+				[".cell_select","justify-content:center;"],
+				[".cell_select input","width:16px; min-width:0px; height:16px; margin:0px;"],
+				[".cell_icon","justify-content:center;"],
+				[".cell_icon img","width:16px; min-width:0px; height:16px; margin:0px;"],
+				[".cell_name","justify-content:left;"],
+				[".cell_ext","justify-content:center;"],
+				[".cell_type","justify-content:center;"],
+				[".cell_status","justify-content:center;"],
+				[".cell_loaded","justify-content:right;"],
+				[".cell_progress","top:1px; bottom:1px; left:0px; width:0; position:absolute;"],
+				[".cell_loaded .cell_label"," position:relative;"],
+				[".cell_total","justify-content:right;"],
+				[".cell_url","justify-content:left;"],
+				[".cell_url a","text-decoration:initial;"],
+				[".cell_lastModified","justify-content:center;"],
+				[".cell_id","justify-content:center;"],
+
+				[".meter_play",'animation:meter_play 1.0s linear infinite normal forwards running;background-image:url("data:image/svg+xml;,' + encodeURIComponent(svg_meter) + '");'],
+				[".meter_r",'background-color: hsl(from canvas 0 100 50 / calc(l / 100 * (0.1 - 0.25) + 0.25));'],
+				[".meter_g",'background-color: hsl(from canvas 120 100 50 / calc(l / 100 * (0.1 - 0.25) + 0.25));'],
+				[".meter_b",'background-color: hsl(from canvas 240 100 50 / calc(l / 100 * (0.1 - 0.25) + 0.25));'],
+				[".meter_d",'background-color: hsl(from canvas 0 0 calc(100 - l) / calc(l / 100 * (0.1 - 0.333) + 0.333));'],
+				["@keyframes meter_play","0%{background-position:center left 0px;}100%{background-position:center left 24px;}"],
+				[".drag_rect","position:absolute; background-color:hsl(from canvas h s calc((100 - l) - (50 - l) * 0.0)); opacity:0.1;"]
+
+			].forEach(function(a){
+				CSSStyleSheetInsertRule(style_sheet,a[0],a[1]);
+			});
+
+			var rules = CSSStyleSheetGetCSSRuleList(style_sheet);
+			column_container.getColumnList().forEach(function(column){
+				var index = CSSStyleSheetInsertRule(style_sheet,".width_" + (column.name) ,"width:0px;",index);
+				column.setWidthStyle(rules[index]);
 			});
 
 			var event_handler_attach = url_info_dictionary.event_dispatcher.createEventHandler("attach");
@@ -57570,10 +58126,10 @@ function PageExpand(page_expand_arguments){
 			};
 			fade_main_window.onupdate = function(v){
 				var a = v.toFixed(8);
-				_element_background.style.opacity = a;
-				_element_window.style.opacity = a;
+				_elements.background.style.opacity = a;
+				_elements.window.style.opacity = a;
 				var f = (v * 4).toFixed(8);
-				_element_background.style.backdropFilter = "blur(" + f + "px)";
+				_elements.background.style.backdropFilter = "blur(" + f + "px)";
 			};
 
 			download_history_monitor = new DownloadHistoryMonitor();
@@ -57594,6 +58150,16 @@ function PageExpand(page_expand_arguments){
 				}
 			});
 
+			_elements.dlbl_body.addEventListener('scroll',update_dlbl);
+			window.addEventListener("resize",update_dlbl);
+
+			theme_state = THEME_STATE.AUTO;
+			updateTheme();
+			column_container.getColumnByName(sort_type).updateSort();
+			_dlbd.restoreWindow();
+
+			createItems(url_info_dictionary.getUrlInfoAll());
+
 			_dlbd.waitAnalyze();
 		}
 
@@ -57604,39 +58170,19 @@ function PageExpand(page_expand_arguments){
 		var _i18n;
 		var _shadow_root;
 		var _shadow_host;
-		var _element_style;
-		var _element_dlbd;
-		var _element_background;
-		var _element_window;
-		var _element_toolbar;
-		var _element_search;
-		var _element_list;
-		var _element_list_head;
-		var _element_list_body;
-		var _element_list_items;
-		var _element_list_draw;
-		var _element_info;
-		var _element_download;
+		var _elements;
 		var _select_filter;
-		var _button_close;
-		var _button_resize;
-		var _button_archive;
-		var _button_download;
-		var _button_header_cancel;
-		var _button_download_cancel;
-		var _button_download_pause;
-		var _button_archive_cancel;
-		var _button_archive_abort;
-		var _button_collector_stop;
-		var _info_wait;
-		var _info_header;
-		var _info_archive;
-		var _info_sequential;
-		var _info_collector;
+		var _search_box;
+		var _hit_box;
+		var _buttons;
+		var _info;
 
-		var filter_type = "all";
 		var sort_type = "id";
 		var resize_state;
+		var theme_state;
+
+		var item_count = 0;
+		var visible_count = 0;
 
 		var column_container;
 		var item_container;
@@ -57654,6 +58200,9 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		(function(){
 			item_container = new ItemContainer();
+			_elements = [];
+			_buttons = [];
+			_info = [];
 		})();
 	}
 
@@ -57664,11 +58213,11 @@ function PageExpand(page_expand_arguments){
 		var _this = this;
 
 		_this.release = function(){
-			event_dispatcher.dispatchEvent("release",null);
+			event_dispatcher.dispatchEvent({type:"release",reverse:true},null);
 			map.clear();
 		};
 		_this.abort = function(){
-			event_dispatcher.dispatchEvent("abort",null);
+			event_dispatcher.dispatchEvent({type:"abort",reverse:true},null);
 		};
 		_this.attachUrlInfo = function(url_info){
 			if(url_info.isFixedMimeType()) return;
@@ -57782,14 +58331,14 @@ function PageExpand(page_expand_arguments){
 		var _this = this;
 
 		_this.release = function(){
-			event_dispatcher.dispatchEvent("release",null);
+			event_dispatcher.dispatchEvent({type:"release",reverse:true},null);
 			map.clear();
 		};
 		_this.cancel = function(){
-			event_dispatcher.dispatchEvent("cancel",null);
+			event_dispatcher.dispatchEvent({type:"cancel",reverse:true},null);
 		};
 		_this.pause = function(){
-			event_dispatcher.dispatchEvent("pause",null);
+			event_dispatcher.dispatchEvent({type:"pause",reverse:true},null);
 		};
 		_this.attachUrlInfo = function(url_info){
 			if(map.has(url_info)) return;
@@ -58037,12 +58586,13 @@ function PageExpand(page_expand_arguments){
 					_this.failed = true;
 					p.progress.error++;
 					_this.setState(a.FAILED);
+					_this.url_info.setValue("reason",reason);
 					complete();
 				}
 
 				var blob = this.blobFile;
 				if(!blob){
-					failure("");
+					failure("no Blob.");
 					return;
 				}
 
@@ -58090,14 +58640,15 @@ function PageExpand(page_expand_arguments){
 				function success(blob){
 					if(p.released) return;
 					_this.blobFilename = blob;
-					callback();
+					complete();
 				}
 				function failure(reason){
 					if(p.released) return;
 					_this.failed = true;
 					p.progress.error++;
 					_this.setState(a.FAILED);
-					callback();
+					_this.url_info.setValue("reason",reason);
+					complete();
 				}
 				function determine_filename(url){
 					var optional = {
@@ -58432,13 +58983,10 @@ function PageExpand(page_expand_arguments){
 				this.released = true;
 				this.executing = false;
 
-				var items = this.items;
-				var i;
-				var num = this.items.length;
-				for(i=0;i<num;i++){
-					items[i].release();
-				}
-				items.length = 0;
+				Array.from(this.items).reverse().forEach(function(item){
+					item.release();
+				});
+				this.items.length = 0;
 
 				if(this.exec_methods){
 					this.exec_methods.release();
@@ -58462,12 +59010,9 @@ function PageExpand(page_expand_arguments){
 					this.item_executer.release();
 					this.item_executer = null;
 				}
-				var items = this.items;
-				var i;
-				var num = this.items.length;
-				for(i=0;i<num;i++){
-					items[i].abort();
-				}
+				Array.from(this.items).reverse().forEach(function(item){
+					item.abort();
+				});
 				if(this.downloader){
 					this.downloader.cancel();
 				}else{
@@ -58478,12 +59023,9 @@ function PageExpand(page_expand_arguments){
 				this.executing = false;
 			},
 			abortLoader : function(){
-				var items = this.items;
-				var i;
-				var num = this.items.length;
-				for(i=0;i<num;i++){
-					items[i].abortLoader();
-				}
+				Array.from(this.items).reverse().forEach(function(item){
+					item.abortLoader();
+				});
 				if(this.downloader){
 					this.downloader.cancel();
 				}
@@ -65770,19 +66312,26 @@ function PageExpand(page_expand_arguments){
 				e.className = name;
 			});
 
-			[{
+			[null,{
 				title:"Popup Window",
-				svg:'<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg"><path style="fill:#000" d="m 2,11 v 1 h 2 v 1 h 1 v -1 h 9 V 11 H 5 V 10 H 4 v 1 z M 10,3 H 9 v 1 h 1 z m 2,0 h -1 v 1 h 1 z m 2,0 h -1 v 1 h 1 z M 0,1 V 15 H 16 V 1 Z M 1,2 H 15 V 5 H 1 Z m 0,4 h 14 v 8 H 1 Z" /></svg>',
+				svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path style="fill:buttontext" d="m 2,11 v 1 h 2 v 1 h 1 v -1 h 9 V 11 H 5 V 10 H 4 v 1 z M 10,3 H 9 v 1 h 1 z m 2,0 h -1 v 1 h 1 z m 2,0 h -1 v 1 h 1 z M 0,1 V 15 H 16 V 1 Z M 1,2 H 15 V 5 H 1 Z m 0,4 h 14 v 8 H 1 Z" /></svg>',
 				f:popup_window
 			},{
 				title:"Full Screen",
-				svg:'<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:#000" d="M 14,14 V 9 l -1.5,1.5 -2,-2 -2,2 2,2 L 9,14 Z M 2,14 V 9 l 1.5,1.5 2,-2 2,2 -2,2 L 7,14 Z M 14,2 v 5 l -1.5,-1.5 -2,2 -2,-2 2,-2 L 9,2 Z M 2,2 v 5 l 1.5,-1.5 2,2 2,-2 -2,-2 L 7,2 Z M 0,16 V 0 H 16 V 16 Z M 1,15 H 15 V 1 H 1 Z" /></g></svg>',
+				svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:buttontext" d="M 14,14 V 9 l -1.5,1.5 -2,-2 -2,2 2,2 L 9,14 Z M 2,14 V 9 l 1.5,1.5 2,-2 2,2 -2,2 L 7,14 Z M 14,2 v 5 l -1.5,-1.5 -2,2 -2,-2 2,-2 L 9,2 Z M 2,2 v 5 l 1.5,-1.5 2,2 2,-2 -2,-2 L 7,2 Z M 0,16 V 0 H 16 V 16 Z M 1,15 H 15 V 1 H 1 Z" /></g></svg>',
 				f:fullscreen
 			},{
 				title:"Close",
-				svg:'<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke:#000;stroke-width:3" d="M 2,14 14,2 M 2,2 14,14" /></g></svg>',
+				svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke:buttontext;stroke-width:3" d="M 2,14 14,2 M 2,2 14,14" /></g></svg>',
 				f:close
-			}].forEach(function(o){
+			},null].forEach(function(o){
+				if(!o){
+					var div = DocumentCreateElement("div");
+					div.className = "padding";
+					_this.elements.menu.appendChild(div);
+					return;
+				}
+
 				var button = DocumentCreateElement("button");
 				button.title = o.title;
 				_this.elements.menu.appendChild(button);
@@ -65830,13 +66379,15 @@ function PageExpand(page_expand_arguments){
 			shadow_root.appendChild(style);
 			var style_sheet = ElementGetStyleSheet(style);
 			[
-				[".root","all:revert; position:absolute; left:0px; top:0px;"],
-				[".header","all:revert; position:absolute; z-index:2147483646; overflow:hidden; text-align:right;"],
-				[".menu","all:revert; position:relative; background-color:rgba(128,128,128,0.8); display:inline-block; border-radius:10px 10px 0px 0px; border:2px solid #666; border-bottom-width:0px; padding:5px 10px; top:0px; backdrop-filter:blur(2px); cursor:move;"],
-				["button","all:revert; margin:0px; padding:0px; text-align:center; line-height:0; width:24px; height:24px; display:inline-block;"],
-				[".hitarea","all:revert; position:absolute; z-index:2147483646; background:rgba(255,0,0,0.25);"],
-				[".cover","all:revert; position:fixed; z-index:2147483646; inset:0px; background:rgba(0,0,0,0.0);"],
-				[".resize","all:revert; position:absolute; z-index:2147483646; cursor:se-resize; width:16px; height:16px;"]
+				[".root","all:initial; color-scheme:revert; line-height:0; position:absolute; left:0px; top:0px;"],
+				[".header","position:absolute; min-width:0px; height:36px; z-index:2147483646; overflow:hidden; display:flex; justify-content:flex-end;"],
+				[".menu","position:relative; width:96px; min-width:0px; background-color:hsl(from canvas 0 0 calc(l / 100 * (48 - 92) + 92) / 80%); display:inline-flex; align-items:flex-end; gap:1px; border-radius:10px 10px 0px 0px; border:2px solid hsl(from canvas 0 0 calc(l / 100 * (32 - 80) + 80) / 80%); border-bottom-width:0px; padding:5px 0px; top:0px; backdrop-filter:blur(2px); cursor:move;"],
+				[".hitarea","position:absolute; z-index:2147483646; background:rgba(255,0,0,0.25);"],
+				[".cover","position:fixed; z-index:2147483646; inset:0px; background:rgba(0,0,0,0.0);"],
+				[".resize","position:absolute; z-index:2147483646; cursor:se-resize; width:16px; height:16px;"],
+				[".padding","min-width:0px; flex-grow:1;"],
+				["button","padding:0px; width:24px; min-width:0px; height:24px; display:inline-flex; justify-content:center; align-items:center;"],
+				["svg","max-width:16px;"]
 			].forEach(function(r,i){
 				CSSStyleSheetInsertRule(style_sheet,r[0],r[1],i);
 			});
@@ -66171,7 +66722,6 @@ function PageExpand(page_expand_arguments){
 			menu_setting_standard_reset_alert_failure: {
 				message: "設定の初期化に失敗しました。"
 			},
-
 			menu_setting_download: {
 				message: "ダウンロード設定"
 			},
@@ -67388,17 +67938,35 @@ function PageExpand(page_expand_arguments){
 			download_board_button_deselect: {
 				message: "すべてのアイテムを非選択状態にします。"
 			},
+			download_board_button_theme: {
+				message: "ダークテーマを切り替えます。"
+			},
 			download_board_button_restore: {
-				message: "ウィンドウのサイズを元に戻します"
+				message: "ウィンドウのサイズを元に戻します。"
 			},
 			download_board_button_maximum: {
-				message: "ウィンドウのサイズを最大化します"
+				message: "ウィンドウのサイズを最大化します。"
 			},
 			download_board_button_close: {
 				message: "ダウンロードボードを非表示にします。\nダウンロード作業は続行されます。\n終了するにはこのページを閉じるか、右下の中止ボタンを押します。"
 			},
 			download_board_button_header: {
 				message: "不足している情報をサーバーに問い合わせます。\n拡張子が無いアドレスのコンテンツタイプを知りたい場合に使用します。\n必ずしも正しい情報が得られるとは限りません。"
+			},
+			download_board_button_close_edit: {
+				message: "このダイアログを閉じます。作業内容は失われます。"
+			},
+			download_board_button_url_encode: {
+				message: "URLエンコード変換します。URL.parse() を使用します。\n現在のテキストは上書きされ失われます。（不可逆変換）\n多言語ドメインは、Punycodeに変換されます。\n相対パスは絶対パスに変換されます。\nこの変換は内部で必ず行われます。\n確認用のオマケ機能です。"
+			},
+			download_board_button_url_decode: {
+				message: "URLデコード変換します。decodeURI() を使用します。\n現在のテキストは上書きされ失われます。（不可逆変換）\nURL構文は維持されます。（URI予約文字は変換されない）"
+			},
+			download_board_button_url_decode_all: {
+				message: "URLデコード変換します。decodeURIComponent() を使用します。\n現在のテキストは上書きされ失われます。（不可逆変換）\nURL構文は破壊されます。（URI予約文字も変換）\n確認用のオマケ機能です。"
+			},
+			download_board_button_update_edit: {
+				message: "編集したテキストエリアの内容を、ダウンロードリストに反映します。\n予めテキストエリアに出力されていたURLを変更した場合、ダウンロードリストから削除されます。\n新しいURLを加筆した場合、ダウンロードリストに新しいアイテムが追加されます。"
 			},
 			download_board_button_header_cancel: {
 				message: "すべてのロードを中止します。"
@@ -67456,6 +68024,39 @@ function PageExpand(page_expand_arguments){
 			},
 			download_board_option_filter_select: {
 				message: "選択中のファイル"
+			},
+			download_board_searchbox_input_placeholder_normal: {
+				message: "...更に検索ワードで絞り込む"
+			},
+			download_board_searchbox_input_placeholder_regexp: {
+				message: "...更に正規表現で絞り込む"
+			},
+			download_board_searchbox_button_normal: {
+				message: "正規表現を有効にします"
+			},
+			download_board_searchbox_button_regexp: {
+				message: "単純検索に戻します"
+			},
+			download_board_searchbox_button_clear: {
+				message: "検索ボックスをクリアする"
+			},
+			download_board_status_box_fetch: {
+				message: "クリックすると、最大同時フェッチ数を一時的に変更できます。"
+			},
+			download_board_status_box_download: {
+				message: "クリックすると、最大同時ダウンロード数を一時的に変更できます。"
+			},
+			download_board_status_input_fetch: {
+				message: "最大同時フェッチ数を指定"
+			},
+			download_board_status_input_download: {
+				message: "最大同時ダウンロード数を指定"
+			},
+			download_board_hit_button_clear: {
+				message: "すべての絞り込みをクリアする"
+			},
+			download_board_edit_textarea_placeholder: {
+				message: "このテキストエリアに、ダウンロードしたいURLを１行ずつ入力します。\r\n作業内容をダウンロードリストに反映するには、下部のボタンを押します。"
 			},
 			downloader_state_header_waiting: {
 				message: "順番待ちです。\n他のロードが終わるのを待っています。"
@@ -67774,7 +68375,6 @@ function PageExpand(page_expand_arguments){
 			menu_setting_standard_reset_alert_failure: {
 				message: "Failed to initialize the configuration."
 			},
-
 			menu_setting_download: {
 				message: "Download Setting"
 			},
@@ -68991,6 +69591,9 @@ function PageExpand(page_expand_arguments){
 			download_board_button_deselect: {
 				message: "Deselect all items."
 			},
+			download_board_button_theme: {
+				message: "Toggle dark theme."
+			},
 			download_board_button_restore: {
 				message: "Restore size the window."
 			},
@@ -69002,6 +69605,21 @@ function PageExpand(page_expand_arguments){
 			},
 			download_board_button_header: {
 				message: "Ask the server for the missing information.\nIt is used when you want to get the ContentType of a URL that does not have an ext.\nYou don't always get the correct information."
+			},
+			download_board_button_close_edit: {
+				message: "Close this dialog, Your work will be lost."
+			},
+			download_board_button_url_encode: {
+				message: "Performs URL encoding using URL.parse()\nThe current text will be replaced. (Lossy Conversion)\nInternationalized Domain Names are converted to Punycode.\nRelative paths are converted to absolute paths.\nThis conversion is done once internally.\nThis is extra for quick checks."
+			},
+			download_board_button_url_decode: {
+				message: "Performs URL decoding using decodeURI()\nThe current text will be replaced. (Lossy Conversion)\nThe URL syntax is preserved (URI reserved characters are not decoded)."
+			},
+			download_board_button_url_decode_all: {
+				message: "Performs URL decoding using decodeURIComponent()\nThe current text will be replaced. (Lossy Conversion)\nURL syntax may be broken, as URI reserved characters are also decoded.\nThis is extra for quick checks."
+			},
+			download_board_button_update_edit: {
+				message: "Changes will be reflected in the Download List.\nIf you change the URL shown in the text area, its associated item will be removed from the Download List.\nIf you add a new URL, a new item will be added to the Download List."
 			},
 			download_board_button_header_cancel: {
 				message: "Abort all loads."
@@ -69059,6 +69677,39 @@ function PageExpand(page_expand_arguments){
 			},
 			download_board_option_filter_select: {
 				message: "Selected item"
+			},
+			download_board_searchbox_input_placeholder_normal: {
+				message: "Narrow down with keywords..."
+			},
+			download_board_searchbox_input_placeholder_regexp: {
+				message: "Narrow down with regexp..."
+			},
+			download_board_searchbox_button_normal: {
+				message: "Enable regular expressions."
+			},
+			download_board_searchbox_button_regexp: {
+				message: "Return to simple search."
+			},
+			download_board_searchbox_button_clear: {
+				message: "Clear the search box."
+			},
+			download_board_status_box_fetch: {
+				message: "Click to open settings for the maximum number of concurrent fetches."
+			},
+			download_board_status_box_download: {
+				message: "Click to open settings for the maximum number of concurrent downloads."
+			},
+			download_board_status_input_fetch: {
+				message: "Maximum concurrent fetch settings."
+			},
+			download_board_status_input_download: {
+				message: "Maximum concurrent download settings."
+			},
+			download_board_hit_button_clear: {
+				message: "Clear all filters."
+			},
+			download_board_edit_textarea_placeholder: {
+				message: "Please enter the URLs you want to download, one per line, in the text area.\r\nClick the button below to reflect your input in the download list."
 			},
 			downloader_state_header_waiting: {
 				message: "Waiting my turn.\nWaiting for another load to finish."
@@ -70593,6 +71244,9 @@ function PageExpand(page_expand_arguments){
 			download_board_button_deselect: {
 				message: "Deselect all items."
 			},
+			download_board_button_theme: {
+				message: "Toggle dark theme."
+			},
 			download_board_button_restore: {
 				message: "Restore size the window."
 			},
@@ -70604,6 +71258,21 @@ function PageExpand(page_expand_arguments){
 			},
 			download_board_button_header: {
 				message: "Ask the server for the missing information.\nIt is used when you want to get the ContentType of a URL that does not have an ext.\nYou don't always get the correct information."
+			},
+			download_board_button_close_edit: {
+				message: "Close this dialog, Your work will be lost."
+			},
+			download_board_button_url_encode: {
+				message: "Performs URL encoding using URL.parse()\nThe current text will be replaced. (Lossy Conversion)\nInternationalized Domain Names are converted to Punycode.\nRelative paths are converted to absolute paths.\nThis conversion is done once internally.\nThis is extra for quick checks."
+			},
+			download_board_button_url_decode: {
+				message: "Performs URL decoding using decodeURI()\nThe current text will be replaced. (Lossy Conversion)\nThe URL syntax is preserved (URI reserved characters are not decoded)."
+			},
+			download_board_button_url_decode_all: {
+				message: "Performs URL decoding using decodeURIComponent()\nThe current text will be replaced. (Lossy Conversion)\nURL syntax may be broken, as URI reserved characters are also decoded.\nThis is extra for quick checks."
+			},
+			download_board_button_update_edit: {
+				message: "Changes will be reflected in the Download List.\nIf you change the URL shown in the text area, its associated item will be removed from the Download List.\nIf you add a new URL, a new item will be added to the Download List."
 			},
 			download_board_button_header_cancel: {
 				message: "Abort all loads."
@@ -70661,6 +71330,39 @@ function PageExpand(page_expand_arguments){
 			},
 			download_board_option_filter_select: {
 				message: "Selected item"
+			},
+			download_board_searchbox_input_placeholder_normal: {
+				message: "Narrow down with keywords..."
+			},
+			download_board_searchbox_input_placeholder_regexp: {
+				message: "Narrow down with regexp..."
+			},
+			download_board_searchbox_button_normal: {
+				message: "Enable regular expressions."
+			},
+			download_board_searchbox_button_regexp: {
+				message: "Return to simple search."
+			},
+			download_board_searchbox_button_clear: {
+				message: "Clear the search box."
+			},
+			download_board_status_box_fetch: {
+				message: "Click to open settings for the maximum number of concurrent fetches."
+			},
+			download_board_status_box_download: {
+				message: "Click to open settings for the maximum number of concurrent downloads."
+			},
+			download_board_status_input_fetch: {
+				message: "Maximum concurrent fetch settings."
+			},
+			download_board_status_input_download: {
+				message: "Maximum concurrent download settings."
+			},
+			download_board_hit_button_clear: {
+				message: "Clear all filters."
+			},
+			download_board_edit_textarea_placeholder: {
+				message: "Please enter the URLs you want to download, one per line, in the text area.\r\nClick the button below to reflect your input in the download list."
 			},
 			downloader_state_header_waiting: {
 				message: "Waiting my turn.\nWaiting for another load to finish."
@@ -70848,6 +71550,43 @@ function PageExpand(page_expand_arguments){
 	}
 
 	// --------------------------------------------------------------------------------
+	// setTimeout ラッパー
+	// --------------------------------------------------------------------------------
+	var TimeoutWrapper = (function(){
+		function f(handler,delay){
+			this.id = setTimeout(handler,delay);
+		}
+		f.prototype = {
+			release:function(){
+				if(this.id === null) return;
+				clearTimeout(this.id);
+				delete this.id;
+			},
+			id:null
+		};
+		return f;
+	})();
+
+	// --------------------------------------------------------------------------------
+	// setInterval ラッパー
+	// --------------------------------------------------------------------------------
+	var IntervalWrapper = (function(){
+		function f(handler,delay){
+			this.id = setInterval(handler,delay);
+		}
+		f.prototype = {
+			release:function(){
+				if(this.id === null) return;
+				clearInterval(this.id);
+				delete this.id;
+			},
+			id:null
+		};
+		return f;
+	})();
+
+
+	// --------------------------------------------------------------------------------
 	// 実行
 	// --------------------------------------------------------------------------------
 	var ExecuteMethods = (function(){
@@ -70921,7 +71660,7 @@ function PageExpand(page_expand_arguments){
 			this.id = _unique_id;
 			this.alone = new Object();
 			this.values = new Object();
-			this.cached = new Object();
+			Object.defineProperty(this,"cached",{value:new Object()});
 			_unique_id += 1;
 			_url_count += 1;
 		}
@@ -71073,14 +71812,17 @@ function PageExpand(page_expand_arguments){
 			getValue : function(k){
 				return this.values[k];
 			},
-			setValue : function(k,v){
-				if(this.values[k] !== v){
-					this.values[k] = v;
-					if(!this.private){
-						_this.event_dispatcher.dispatchEvent("modify",{urlInfo:this,key:k,value:v});
+			setValue : (function(){
+				var ignore = {"reason":1};
+				return function(k,v){
+					if(ignore[k] || (this.values[k] !== v)){
+						this.values[k] = v;
+						if(!this.private){
+							_this.event_dispatcher.dispatchEvent("modify",{urlInfo:this,key:k,value:v});
+						}
 					}
-				}
-			},
+				};
+			})(),
 			attachAlone : function(v){
 				this.alone[v] = true;
 			},
@@ -71814,375 +72556,174 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// ローダーキュー
 	// --------------------------------------------------------------------------------
-	function LoaderQueue(){
-		var _this = this;
-
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			if(_released) return;
-			_released = true;
-
-			var queue = _this.queue;
-			while(queue != queue._next){
-				element_release(queue._next);
-			}
-
-			var i;
-			var num = _rules.length;
-			for(i=0;i<num;i++){
-				var rule = _rules[i];
-				rule.release();
-			}
-		};
-
-		// --------------------------------------------------------------------------------
-		// 要素を作成
-		// --------------------------------------------------------------------------------
-		_this.createElement = function (){
-			return new Element(0);
-		};
-
-		// --------------------------------------------------------------------------------
-		// 要素
-		// --------------------------------------------------------------------------------
-		function Element(rule_id){
-			this._prev = this;
-			this._next = this;
-			this._released = false;
-			this._waiting = false;
-			this._loading = false;
-			this._rule = _rules[rule_id];
-
-			_elements[_unique] = this;
-			this._unique = _unique;
-			_unique += 1;
-			_queue_count += 1;
+	var LoaderQueue = (function(){
+		function element_remove(){
+			var _prev = this._prev;
+			var _next = this._next;
+			_prev._next = _next;
+			_next._prev = _prev;
+			this._prev = this._next = this;
+		}
+		function Element(parent){
+			this.parent = parent;
+			this._prev = this._next = this;
+			parent.queue_count ++;
+			dispatch_modify.call(parent);
 		}
 		Element.prototype = {
-			// --------------------------------------------------------------------------------
-			// 開始イベント
-			// --------------------------------------------------------------------------------
-			onstart : function(){},
+			release:function(){
+				if(this.released) return;
+				this.released = true;
 
-			// --------------------------------------------------------------------------------
-			// 中止イベント
-			// --------------------------------------------------------------------------------
-			onabort : function(){},
-
-			// --------------------------------------------------------------------------------
-			// 完了を通知
-			// --------------------------------------------------------------------------------
-			complete : function(){
-				element_remove(this);
-				element_loadend(this);
-				dequeue();
+				var parent = this.parent;
+				element_remove.call(this);
+				if(this.loading){
+					this.loading = false;
+					parent.thread_count --;
+				}
+				parent.queue_count --;
+				dispatch_modify.call(parent);
 			},
-
-			// --------------------------------------------------------------------------------
-			// 識別番号を取得
-			// --------------------------------------------------------------------------------
-			getId : function(){
-				return this._unique;
+			onstart:function(){},
+			complete:function(){
+				if(this.released) return;
+				this.release();
+				dequeue.call(this.parent);
 			},
+			_queue_wait:null,
+			_queue_live:null,
 
-			// --------------------------------------------------------------------------------
-			// 要素を破棄（中止の発火なし、デキューあり）
-			// --------------------------------------------------------------------------------
-			release : function(){
-				element_release(this);
-				dequeue();
-			},
-
-			// --------------------------------------------------------------------------------
-			// 中止
-			// --------------------------------------------------------------------------------
-			abort : function(){
-				element_abort(this);
-				dequeue();
-			},
-
-			// --------------------------------------------------------------------------------
-			// 通常最前列に処理を追加
-			// --------------------------------------------------------------------------------
-			attachFirst : function(){
-				element_abort(this);
-
-				var _prev = _this.queue;
+			attachFirst:function(){
+				if(this.released) return;
+				element_remove.call(this);
+				var _prev = this.parent._queue_wait;
 				var _next = _prev._next;
 				_prev._next = this;
 				_next._prev = this;
 				this._prev = _prev;
 				this._next = _next;
-				this._waiting = true;
-
-				dequeue();
+				dequeue.call(this.parent);
 			},
-
-			// --------------------------------------------------------------------------------
-			// 通常最後尾に追加
-			// --------------------------------------------------------------------------------
-			attachLast : function(){
-				element_abort(this);
-
-				var _next = _this.queue;
+			attachLast:function(){
+				if(this.released) return;
+				element_remove.call(this);
+				var _next = this.parent._queue_wait;
 				var _prev = _next._prev;
 				_prev._next = this;
 				_next._prev = this;
 				this._prev = _prev;
 				this._next = _next;
-				this._waiting = true;
-
-				dequeue();
+				dequeue.call(this.parent);
 			}
 		};
 
-		// --------------------------------------------------------------------------------
-		// ルールを作成
-		// --------------------------------------------------------------------------------
-		_this.createRule = function (){
-			return new Rule();
-		};
-
-		// --------------------------------------------------------------------------------
-		// 要素
-		// --------------------------------------------------------------------------------
-		var Rule = (function(){
-			function Rule(){
-				this._thread_count = 0
-				this._thread_max = 0;
-				this._cooltime = 0;
-				this._time_handler = null;
-			}
-			Rule.prototype = {
-
-				// --------------------------------------------------------------------------------
-				// 開放
-				// --------------------------------------------------------------------------------
-				release : function(){
-					Rule_clear_timer(this);
-				},
-
-				// --------------------------------------------------------------------------------
-				// 最大数をセット
-				// --------------------------------------------------------------------------------
-				setMaxThread : function(v){
-					this._thread_max = v;
-				},
-
-				// --------------------------------------------------------------------------------
-				// 待機時間をセット
-				// --------------------------------------------------------------------------------
-				setCoolTime : function(v){
-					this._cooltime = v;
-				}
-
-			};
-
-			return Rule;
-		})();
-		function Rule_loadstart(rule){
-			rule._thread_count += 1;
-		}
-		function Rule_loadend(rule){
-			var full = Boolean(rule._thread_count >= rule._thread_max);
-			rule._thread_count -= 1;
-
-			if(!full) return;
-			if(!rule._cooltime) return;
-
-			// クールダウン
-			Rule_clear_timer(rule);
-			rule._time_handler = setTimeout(function(){
-				Rule_clear_timer(rule);
-				dequeue();
-			},rule._cooltime);
-		}
-		function Rule_clear_timer(rule){
-			if(rule._time_handler !== null){
-				clearTimeout(rule._time_handler);
-				rule._time_handler = null;
+		function release_timer(){
+			if(this._timer){
+				this._timer.release();
+				this._timer = null;
 			}
 		}
-		function Rule_can_generated(rule){
-			if(rule._thread_count >= rule._thread_max) return false;
-			if(Rule_is_freezing(rule)) return false;
-			return true;
-		}
-		function Rule_is_freezing(rule){
-			return Boolean(rule._time_handler !== null);
-		}
-
-		// --------------------------------------------------------------------------------
-		// 要素のロード開始（内部用）
-		// --------------------------------------------------------------------------------
-		function element_loadstart(element){
-			if(element._loading) return;
-			element._loading = true;
-			element_remove(element);
-			_thread_count += 1;
-			Rule_loadstart(element._rule);
-			element.onstart();
-		}
-
-		// --------------------------------------------------------------------------------
-		// 要素のロード終了（内部用）
-		// --------------------------------------------------------------------------------
-		function element_loadend(element){
-			if(!(element._loading)) return;
-			element._loading = false;
-			_thread_count -= 1;
-			Rule_loadend(element._rule);
-		}
-
-		// --------------------------------------------------------------------------------
-		// 要素を外す（内部用）
-		// --------------------------------------------------------------------------------
-		function element_remove(element){
-			var _prev = element._prev;
-			var _next = element._next;
-			_prev._next = _next;
-			_next._prev = _prev;
-			element._prev = element;
-			element._next = element;
-			element._waiting = false;
-		}
-
-		// --------------------------------------------------------------------------------
-		// 要素を中止（内部用）
-		// --------------------------------------------------------------------------------
-		function element_abort(element){
-			if((element._loading) || (element._waiting)){
-				var f = element.onabort;
-				if(f) f();
-			}
-			element_remove(element);
-			element_loadend(element);
-		}
-
-		// --------------------------------------------------------------------------------
-		// 要素を破棄（内部用）
-		// --------------------------------------------------------------------------------
-		function element_release(element){
-			if(element._released) return;
-			element._released = true;
-
-			element_remove(element);
-			element_loadend(element);
-
-			delete _elements[element._unique];
-			_queue_count -= 1;
-		}
-
-		// --------------------------------------------------------------------------------
-		// デキュー（内部用）
-		// --------------------------------------------------------------------------------
 		function dequeue(){
-			if(_released) return;
+			if(this.thread_count >= this.thread_max) return;
+			if(this._timer) return;
 
-			var left = _this.queue;
-			var element = left._next;
-			while(true){
-				if(element == _this.queue) break;
-				if(_thread_count >= _thread_max) break;
+			if(this._cooled){
+				var element = this._queue_wait._next;
+				if(element == this._queue_wait) return;
 
-				if(Rule_can_generated(element._rule)){
-					element_loadstart(element);
-					element = left._next;
-				}else{
-					left = element;
-					element = element._next;
-				}
+				if(this.cool_time) this._cooled = false;
+				this.thread_count ++;
+				dispatch_modify.call(this);
+				element.loading = true;
+				element_remove.call(element);
+				var _next = this._queue_live;
+				var _prev = _next._prev;
+				_prev._next = element;
+				_next._prev = element;
+				element._prev = _prev;
+				element._next = _next;
+				element.onstart();
+
+				dequeue.call(this);
+				return;
 			}
+
+			release_timer.call(this);
+			var _this = this;
+			this._timer = new TimeoutWrapper(function(){
+				_this._cooled = true;
+				release_timer.call(_this);
+				dequeue.call(_this);
+			},this.cool_time);
+		}
+		function dispatch_modify(){
+			this.event_dispatcher.dispatchEvent("modify",this);
 		}
 
-		// --------------------------------------------------------------------------------
-		// 要素を取得
-		// --------------------------------------------------------------------------------
-		_this.getElementById = function(id){
-			return _elements[id];
+		function LoaderQueue(){
+			this.event_dispatcher = new EventDispatcher();
+			var o;
+			o = {};
+			this._queue_wait = o._prev = o._next = o;
+			o = {};
+			this._queue_live = o._prev = o._next = o;
+		}
+		LoaderQueue.prototype = {
+			release:function(){
+				release_timer.call(this);
+				if(this.event_dispatcher){
+					this.event_dispatcher.release();
+					this.event_dispatcher = null;
+				}
+				var _queue = this._queue_wait;
+				while(_queue != _queue._next){
+					_queue._next.release();
+				}
+				var _queue = this._queue_live;
+				while(_queue != _queue._next){
+					_queue._next.release();
+				}
+			},
+			createElement:function(){
+				return new Element(this);
+			},
+			getCountQueue:function(){
+				return this.queue_count;
+			},
+			getCountThread:function(){
+				return this.thread_count;
+			},
+			getCountError:function(){
+				return this.error_count;
+			},
+			addCountError:function(){
+				this.error_count += 1;
+				dispatch_modify.call(this);
+			},
+			getMaxThread:function(){
+				return this.thread_max;
+			},
+			setMaxThread:function(v){
+				this.thread_max = v;
+				dispatch_modify.call(this);
+				dequeue.call(this);
+			},
+			setCoolTime:function(v){
+				this.cool_time = v;
+			},
+			event_dispatcher:null,
+			queue_count:0,
+			thread_count:0,
+			thread_max:10,
+			error_count:0,
+			cool_time:0,
+			_queue_wait:null,
+			_queue_live:null,
+			_timer:null,
+			_cooled:true
 		};
-
-		// --------------------------------------------------------------------------------
-		// キューの数を取得
-		// --------------------------------------------------------------------------------
-		_this.getCountQueue = function(){
-			return _queue_count;
-		};
-
-		// --------------------------------------------------------------------------------
-		// スレッドの数を取得
-		// --------------------------------------------------------------------------------
-		_this.getCountThread = function(){
-			return _thread_count;
-		};
-
-		// --------------------------------------------------------------------------------
-		// エラー数を取得
-		// --------------------------------------------------------------------------------
-		_this.getCountError = function(){
-			return _error_count;
-		};
-
-		// --------------------------------------------------------------------------------
-		// エラー数を加算
-		// --------------------------------------------------------------------------------
-		_this.addCountError = function(){
-			_error_count += 1;
-		};
-
-		// --------------------------------------------------------------------------------
-		// スレッドの最大数を取得
-		// --------------------------------------------------------------------------------
-		_this.getMaxThread = function(){
-			return _thread_max;
-		};
-
-		// --------------------------------------------------------------------------------
-		// ロードスレッドの最大数をセット
-		// --------------------------------------------------------------------------------
-		_this.setMaxThread = function(v){
-			_thread_max = v;
-		};
-
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _queue_count;
-		var _thread_count;
-		var _thread_max;
-		var _error_count;
-		var _released;
-		var _unique;
-		var _elements;
-		var _rules;
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_queue_count = 0;
-			_thread_count = 0;
-			_this.setMaxThread(10);
-			_error_count = 0;
-			_released = false;
-			_unique = 1;
-			_elements = new Object();
-			_rules = new Array();
-
-			var queue = new Object();
-			queue._prev = queue;
-			queue._next = queue;
-			_this.queue = queue;
-
-			// デフォルトのルール
-			var rule = _this.createRule();
-			rule.setCoolTime(100);
-			rule.setMaxThread(0x7FFFFFFF);
-			_rules.push(rule);
-		})();
-	}
+		return LoaderQueue;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// ローダー
@@ -72917,6 +73458,7 @@ function PageExpand(page_expand_arguments){
 
 			port = extension_message.connectToBackground();
 			if(!port){
+				response.errorText = "Port connect failed.";
 				reply({state:"complete"});
 				return;
 			}
@@ -72924,7 +73466,10 @@ function PageExpand(page_expand_arguments){
 				var f = commands[receive.state];
 				if(f) f(receive.data);
 			};
-			port.ondisconnect = function (){
+			port.ondisconnect = function (reason){
+				if(replied) return;
+				response.ok = false;
+				response.errorText = reason;
 				reply({state:"complete"});
 			};
 			var r = ObjectCopy(request);
@@ -73242,10 +73787,6 @@ function PageExpand(page_expand_arguments){
 				}
 			};
 
-			queue_element.onabort = function(){
-				_this.abort();
-			};
-
 			var url_parser = URL_Parser(param.url);
 			if(url_parser.protocol.match(/^(blob|data):/)){
 				_this._queue_attch_type = QUEUE_ATTACH_TYPE.FIRST;
@@ -73290,12 +73831,13 @@ function PageExpand(page_expand_arguments){
 					_this.url_info.setValue("total",total_new);
 				}
 
-				var time = _this.response.headers.getResponseHeader("Last-Modified");
+				var headers = _this.response.headers;
+				var time = headers.getResponseHeader("Last-Modified") || headers.getResponseHeader("Date");
 				if(time){
 					_this.url_info.setValue("lastModified",(new Date(time)).getTime());
 				}
 
-				var content_type = _this.response.headers.getResponseHeader("Content-Type");
+				var content_type = headers.getResponseHeader("Content-Type");
 				var m = content_type.match(/^([^;]+)/);
 				if(m) content_type = m[1];
 				if(_this.response.status == 0){
@@ -73399,9 +73941,6 @@ function PageExpand(page_expand_arguments){
 			queue_element.onstart = function(){
 				release_event_abort();
 				load_exec();
-			};
-			queue_element.onabort = function(){
-				_this.abort();
 			};
 
 			switch(_this._queue_attch_type){
@@ -74169,7 +74708,7 @@ function PageExpand(page_expand_arguments){
 			}
 			var commands = {
 				"unsupported":function(){
-					reply({state:"unsupported"});
+					reply({state:"next"});
 				},
 				"progress":function(r){
 					merge(progress,r);
@@ -74204,7 +74743,10 @@ function PageExpand(page_expand_arguments){
 				var f = commands[receive.state];
 				if(f) f(receive.data);
 			};
-			port.ondisconnect = function (){
+			port.ondisconnect = function (reason){
+				response.state = DownloaderState.DOWNLOAD.FAILED;
+				dispatch_onstatechange.call(_this);
+				response.errorText = reason;
 				reply({state:"complete"});
 			};
 			port.start(function(){
@@ -74545,9 +75087,6 @@ function PageExpand(page_expand_arguments){
 				queue_element.onstart = function(){
 					release_event_abort();
 					load_exec();
-				};
-				queue_element.onabort = function(){
-					_this.cancel();
 				};
 				queue_element.attachLast();
 				break;
@@ -75991,7 +76530,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// イベントハンドラ生成
 		// --------------------------------------------------------------------------------
-		_this.createEventHandler = function(name){
+		_this.createEventHandler = function(type){
 			var _event_handler = new Object();
 
 			// --------------------------------------------------------------------------------
@@ -76006,10 +76545,10 @@ function PageExpand(page_expand_arguments){
 				_event_handler._next = _event_handler;
 				_event_handler._func = null;
 
-				var list = _dictionary[name];
+				var list = _dictionary[type];
 				if(list){
 					if(list == list._next){
-						ObjectDeleteProperty(_dictionary,name);
+						ObjectDeleteProperty(_dictionary,type);
 					}
 				}
 			};
@@ -76029,12 +76568,12 @@ function PageExpand(page_expand_arguments){
 				_event_handler._prev = _event_handler;
 				_event_handler._next = _event_handler;
 
-				var list = _dictionary[name];
+				var list = _dictionary[type];
 				if(!list){
 					list = new Object();
 					list._prev = list;
 					list._next = list;
-					_dictionary[name] = list;
+					_dictionary[type] = list;
 				}
 
 				var _next = list;
@@ -76051,8 +76590,9 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// 発火
 		// --------------------------------------------------------------------------------
-		_this.dispatchEvent = function(name,param){
-			var list = _dictionary[name];
+		_this.dispatchEvent = function(type,param){
+			var options = (typeof(type) == "object") ? type : {type:type};
+			var list = _dictionary[options.type];
 			if(!list)	return;
 
 			var a = new Array();
@@ -76061,15 +76601,13 @@ function PageExpand(page_expand_arguments){
 				a.push(handler);
 				handler = handler._next;
 			}
+			if(options.reverse) a.reverse();
 
-			var i;
-			var num = a.length;
-			for(i=0;i<num;i++){
-				var handler = a[i];
+			a.forEach(function(handler){
 				if(handler._func){
 					handler._func(param);
 				}
-			}
+			});
 		};
 
 		// --------------------------------------------------------------------------------
@@ -76104,7 +76642,7 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	var EventListenerWrapper = (function(){
 		function f(target){
-				this.target = target;
+			this.target = target;
 		}
 		f.prototype = {
 			start:function(type,callback,options){
@@ -76120,6 +76658,29 @@ function PageExpand(page_expand_arguments){
 				delete this.type;
 				delete this.callback;
 				delete this.options;
+				delete this.target;
+			}
+		};
+		return f;
+	})();
+
+	// --------------------------------------------------------------------------------
+	// リスナーの解放支援
+	// --------------------------------------------------------------------------------
+	var ListenerWrapper = (function(){
+		function f(target){
+			this.target = target;
+		}
+		f.prototype = {
+			start:function(callback){
+				if(this.callback) return;
+				this.callback = callback || function(){};
+				this.target.addListener(this.callback);
+			},
+			release:function(){
+				if(!(this.callback)) return;
+				this.target.removeListener(this.callback);
+				delete this.callback;
 				delete this.target;
 			}
 		};
@@ -76960,8 +77521,7 @@ function PageExpand(page_expand_arguments){
 			if(!this._readied_send) return;
 			if(!this._readied_recv) return;
 
-			this._port.onMessage.removeListener(this._message_handler);
-			this._message_handler = function(p){
+			var message_handler = function(p){
 				switch(p.state){
 				case 2:
 					_this.terminate();
@@ -76971,13 +77531,15 @@ function PageExpand(page_expand_arguments){
 					break;
 				}
 			};
-			this._port.onMessage.addListener(this._message_handler);
 
-			var i;
-			var num = this._recv_queue.length;
-			for(i=0;i<num;i++){
-				this._message_handler(this._recv_queue[i]);
-			}
+			release_onmessage.call(this);
+			this._recv_queue.forEach(function(q){
+				message_handler(q);
+			});
+			delete this._recv_queue;
+
+			this._message = new ListenerWrapper(this._port.onMessage);
+			this._message.start(message_handler);
 
 			if(this._onstart){
 				this._onstart();
@@ -76987,21 +77549,31 @@ function PageExpand(page_expand_arguments){
 		function dispatch_onmessage(p){
 			if(this.onmessage) this.onmessage(p.data);
 		}
-		function dispatch_ondisconnect(){
-			if(this.ondisconnect) this.ondisconnect();
+		function dispatch_ondisconnect(reason){
+			if(this.ondisconnect) this.ondisconnect(reason);
 			this.ondisconnect = null;
 		}
-		function remove_onmessage(){
-			if(this._message_handler){
-				this._port.onMessage.removeListener(this._message_handler);
-				this._message_handler = null;
+		function release_onmessage(){
+			if(this._message){
+				this._message.release();
+				this._message = null;
 			}
 		}
-		function remove_ondisconnect(){
-			if(this._disconnect_handler){
-				this._port.onDisconnect.removeListener(this._disconnect_handler);
-				this._disconnect_handler = null;
+		function release_ondisconnect(){
+			if(this._disconnect){
+				this._disconnect.release();
+				this._disconnect = null;
 			}
+		}
+		function release_timer(){
+			if(this._timer){
+				this._timer.release();
+				this._timer = null;
+			}
+		}
+		function failure(reason){
+			dispatch_ondisconnect.call(this,reason);
+			this.release();
 		}
 
 		var Port = function(port){
@@ -77010,7 +77582,9 @@ function PageExpand(page_expand_arguments){
 			if(!port) return;
 
 			this._recv_queue = new Array();
-			this._message_handler = function (p){
+
+			this._message = new ListenerWrapper(this._port.onMessage);
+			this._message.start(function (p){
 				switch(p.state){
 				case 1:
 					_this._readied_recv = true;
@@ -77020,41 +77594,37 @@ function PageExpand(page_expand_arguments){
 					_this._recv_queue.push(p);
 					break;
 				}
-			};
-			this._port.onMessage.addListener(this._message_handler);
+			});
 
-			this._disconnect_handler = function(){
-				// 受け取らないと Unchecked エラーがコンソールに出力される
-				var error = chrome.runtime.lastError;
-				dispatch_ondisconnect.call(_this);
-				_this.terminate();
-			};
-			this._port.onDisconnect.addListener(this._disconnect_handler);
+			this._disconnect = new ListenerWrapper(this._port.onDisconnect);
+			this._disconnect.start(function(){
+				// 受け取らないと Unchecked エラーがコンソールに出力される || Forefox 用
+				var error = chrome.runtime.lastError || _this._port.error;
+				failure.call(_this,Error_to_String(error) || "Port disconnected.");
+			});
 		};
 		Port.prototype = {
 			release : function(){
 				this.terminate();
 			},
 			start : function(callback){
-				if(!this._port){
-					dispatch_ondisconnect.call(this);
-					return;
-				}
+				var _this = this;
 
 				this._readied_send = true;
 				this._onstart = callback;
 				try{
 					this._port.postMessage({state:1});
 				}catch(e){
-					this.release();
+					failure.call(this,Error_to_String(e));
 					return;
 				}
 				dispatch_onstart.call(this);
 			},
 			close : function(){
 				if(!this._port) return;
-				remove_onmessage.call(this);
-				remove_ondisconnect.call(this);
+				release_timer.call(this);
+				release_onmessage.call(this);
+				release_ondisconnect.call(this);
 				try{
 					this._port.postMessage({state:2});
 				}catch(e){
@@ -77063,8 +77633,9 @@ function PageExpand(page_expand_arguments){
 			},
 			terminate : function(){
 				if(!this._port) return;
-				remove_onmessage.call(this);
-				remove_ondisconnect.call(this);
+				release_timer.call(this);
+				release_onmessage.call(this);
+				release_ondisconnect.call(this);
 				try{
 					this._port.disconnect();
 				}catch(e){
@@ -77075,7 +77646,8 @@ function PageExpand(page_expand_arguments){
 				try{
 					this._port.postMessage({data:data});
 				}catch(e){
-					this.release();
+					failure.call(this,Error_to_String(e));
+					return;
 				}
 			},
 			onmessage : function(data){},
@@ -82886,7 +83458,7 @@ function PageExpand(page_expand_arguments){
 			var i;
 			var num = a.length;
 			for(i=0;i<num;i++){
-				var m = a[i].match(new RegExp("^(.*):[ \t]*(.*)$","i"));
+				var m = a[i].match(new RegExp("^([^:]+):[ \t]*(.*)$","i"));
 				if(!m) continue;
 				_this[index] = m[1];
 				_this[m[1]] = m[2];
@@ -87316,6 +87888,34 @@ function PageExpand(page_expand_arguments){
 	})();
 
 	// --------------------------------------------------------------------------------
+	// エレメントのcolor-schemeを取得
+	// --------------------------------------------------------------------------------
+	var ElementGetColorScheme = (function(){
+		function get_lightness(s){
+			var min = 255;
+			var max = 0;
+			var re = new RegExp( "[0-9.]+" , "g" );
+			var m = s.match(re) || [];
+			m.some(function(v,i){
+				v = parseFloat(v);
+				if(max < v) max = v;
+				if(min > v) min = v;
+				return (i >= 2);
+			});
+			return (max - min) * 0.5 + min;
+		}
+		return function (element){
+			var e = document.createElement("div");
+			e.style.cssText = "color:canvastext;background-color:canvas";
+			element.appendChild(e);
+			var style = window.getComputedStyle(e);
+			var color = (get_lightness(style["color"]) < get_lightness(style["background-color"])) ? "light":"dark";
+			element.removeChild(e);
+			return color;
+		};
+	})();
+
+	// --------------------------------------------------------------------------------
 	// 最終的に適用されているスタイルを取得
 	// --------------------------------------------------------------------------------
 	function ElementGetComputedStyle(element,pseudo_element){
@@ -88127,6 +88727,7 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function CSSStyleSheetInsertRule(style_sheet,selector,style,index){
 		if(style_sheet.insertRule !== undefined){
+			index = index || style_sheet.cssRules.length;
 			style_sheet.insertRule(selector + "{" + style + "}",index);
 		}else if(style_sheet.addRule !== undefined){
 			style_sheet.addRule(selector,style,index);
@@ -88467,13 +89068,13 @@ function PageExpand(page_expand_arguments){
 			if(project.getEnable()){
 
 				// PageExpand コンストラクタ
-				PageExpandConstructor();
+				PageExpandConstructorForContent();
 
 				// バックグラウンドとの通信
 				extension_message.onconnect = (function(){
 					var commands = {
 						"startPageExpand":function(port,data){
-							PageExpandStart();
+							PageExpandStartForContent();
 						},
 						"abortPageExpand":function(port,data){
 							PageExpandRelease();
@@ -88589,12 +89190,38 @@ function PageExpand(page_expand_arguments){
 
 				if((page_expand_arguments.page_expand_parent) || project.getEnableStartup()){
 					// 実行開始
-					PageExpandStart();
+					PageExpandStartForContent();
 				}
 
-				var promise = chrome.runtime.sendMessage({command:"ready"});
-				// 受け取らないと Unchecked エラーがコンソールに出力される
-				if(promise) promise.catch(function(e){});
+				(function(){
+					var releasers = [];
+					function release(){
+						releasers.forEach(function(e){
+							e.release();
+						});
+						releasers.length = 0;
+					}
+					function send_ready(){
+						var promise = chrome.runtime.sendMessage({command:"ready"});
+						// 受け取らないと Unchecked エラーがコンソールに出力される
+						if(promise) promise.catch(function(e){});
+					}
+
+					var handler = page_expand_event_dispatcher.createEventHandler("release");
+					handler.setFunction(release);
+					releasers.push(handler);
+
+					// BFCache 保存時にポートが切断されるので復帰時に再通知
+					var listener = new EventListenerWrapper(window);
+					listener.start("pageshow",function(e){
+						if(e.persisted) send_ready();
+					},false);
+					releasers.push(listener);
+
+					// 初回通知
+					send_ready();
+				})();
+
 			}else{
 				PageExpandRelease();
 			}
@@ -88618,7 +89245,7 @@ function PageExpand(page_expand_arguments){
 		extension_message.start();
 
 		// PageExpand コンストラクタ
-		PageExpandConstructor();
+		PageExpandConstructorForApp();
 
 		var config = new PageExpandConfig();
 		config.initialize(function(result){
@@ -88645,18 +89272,7 @@ function PageExpand(page_expand_arguments){
 	// GoogleChrome のバックグラウンドとして動作
 	// --------------------------------------------------------------------------------
 	case "ChromeExtensionBackGround":
-		// --------------------------------------------------------------------------------
-		// バックグラウンド用初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			// 実行キュー
-			execute_queue = new ExecuteQueue();
-			// ローダーキュー
-			loader_queue = new LoaderQueue();
-			// ダウンローダーキュー
-			downloader_queue = new LoaderQueue();
-		})();
-
+		PageExpandConstructorForBackGround();
 		PageExpandBackGroundForChrome();
 		break;
 
@@ -88685,7 +89301,7 @@ function PageExpand(page_expand_arguments){
 		extension_message.start();
 
 		// PageExpand コンストラクタ
-		PageExpandConstructor();
+		PageExpandConstructorForApp();
 
 		var bbs_board = new PageExpandBbsBoard();
 		bbs_board.initialize(function(info){
@@ -88712,7 +89328,7 @@ function PageExpand(page_expand_arguments){
 		extension_message.start();
 
 		// PageExpand コンストラクタ
-		PageExpandConstructor();
+		PageExpandConstructorForApp();
 
 		// プロジェクトをロード
 		var proj = new PageExpandProject();
@@ -88722,7 +89338,7 @@ function PageExpand(page_expand_arguments){
 			page_expand_project = proj;
 			project = new Project();
 			project.importObjectForBackground(page_expand_project.getProject());
-
+			PageExpandStartForApp();
 			download_board.applicationMode();
 		});
 		break;
@@ -88740,7 +89356,7 @@ function PageExpand(page_expand_arguments){
 		extension_message.start();
 
 		// PageExpand コンストラクタ
-		PageExpandConstructor();
+		PageExpandConstructorForApp();
 
 		var bbs_board = new PageExpandBbsBoard();
 		bbs_board.initialize(function(info){
