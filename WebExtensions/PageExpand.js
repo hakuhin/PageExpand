@@ -547,78 +547,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		// タッチ入力
 		// --------------------------------------------------------------------------------
-		(function(){
-			if(project.enableInputTouch()){
-				var virtual_mouse_pointer;
-				var touch_assist;
-
-				// 開放イベント
-				var event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
-				event_handler_release.setFunction(function(){
-					if(virtual_mouse_pointer){
-						virtual_mouse_pointer.release();
-						virtual_mouse_pointer = null;
-					}
-					if(touch_assist){
-						touch_assist.release();
-						touch_assist = null;
-					}
-				});
-
-				// タッチ入力
-				input_touch = new InputTouch();
-
-				// 仮想マウスポインタ
-				virtual_mouse_pointer = new VirtualMousePointer(document);
-
-				// タッチ補助
-				if(project.enableDoubleTouchAssist()){
-					touch_assist = new DoubleTouchAssist();
-				}
-
-				var enable_old = false;
-				var touch_max = 0;
-
-				// タッチ入力更新
-				var event_update = input_touch.createEventHandler("update");
-				event_update.setFunction(function (e){
-					var enable_now = e.getEnableTouch();
-					if(enable_now){
-						var touch_list = e.getTouchList();
-						var touch_num = touch_list.length;
-						if(touch_max <= 1){
-							if(touch_num == 1){
-								input_mouse.setInputTouch(e);
-								virtual_mouse_pointer.setPosition(input_touch.getPositionAverage());
-							}else if(touch_num == 2){
-								var touch0 = touch_list[0];
-								var touch1 = touch_list[1];
-								if(touch0 && touch1){
-									var pos = {
-										x:touch0.clientX,
-										y:touch0.clientY
-									};
-									var vec = {
-										x:touch1.clientX - touch0.clientX,
-										y:touch1.clientY - touch0.clientY
-									};
-									virtual_mouse_pointer.setPosition(pos);
-									virtual_mouse_pointer.addVector(vec);
-
-									if(touch_assist){
-										touch_assist.setShow(pos,vec);
-									}
-								}
-							}
-							touch_max = touch_num;
-						}
-					}else{
-						touch_max = 0;
-					}
-					enable_old = enable_now;
-				});
-			}
-		})();
+		new PseudoMouseOver();
 
 		// --------------------------------------------------------------------------------
 		// 変更オブザーバー未対応
@@ -2133,11 +2062,17 @@ function PageExpand(page_expand_arguments){
 		};
 
 		// --------------------------------------------------------------------------------
-		// タッチ入力を使用するか
+		// タッチムーブ操作を使用するか
 		// --------------------------------------------------------------------------------
-		_this.enableInputTouch = function(){
-			if(!(window.TouchEvent)) return false;
-			return _proj_ins.standard.enable_input_touch;
+		_this.enableTouchMove = function(){
+			return _proj_ins.standard.enable_touch_move;
+		};
+
+		// --------------------------------------------------------------------------------
+		// タブルタッチ操作を使用するか
+		// --------------------------------------------------------------------------------
+		_this.enableDoubleTouch = function(){
+			return _proj_ins.standard.enable_double_touch;
 		};
 
 		// --------------------------------------------------------------------------------
@@ -11912,6 +11847,54 @@ function PageExpand(page_expand_arguments){
 				}
 			};
 
+		}
+		if(exit())	return proj;
+
+		if(proj.version < 56){
+			proj.version = 56;
+
+			delete proj.standard.enable_input_touch;
+			proj.standard.enable_touch_move = true;
+			proj.standard.enable_double_touch = true;
+
+			var obj = addPreset(proj.urlmap,"youtube","default");
+			obj.preset = {
+				name:{
+					standard:"YouTube",
+					locales:{
+						ja:"YouTube",
+						en:"YouTube"
+					}
+				},
+				enable:true,
+				filter:{
+					type:"asterisk",
+					asterisk:{
+						filter:["https://*.youtube.com/*"]
+					},
+					regexp:{
+						filter:[]
+					}
+				},
+                mixed_passive_content:"unsafe",
+                mixed_active_content:"safe",
+				access_block:{enable:false,id:[]},
+				replacement_to_element:{enable:false,id:[]},
+				replacement_to_text:{enable:false,id:[]},
+				replacement_to_anchor:{enable:false,id:[]},
+				replacement_to_link:{enable:false,id:[]},
+				replacement_to_referer:{enable:false,id:[]},
+				replacement_to_useragent:{enable:false,id:""},
+				make_link_to_text:{enable:false,id:""},
+				expand_short_url:{enable:false,id:""},
+				expand_text:{enable:false,id:""},
+				expand_image:{enable:false,id:""},
+				expand_sound:{enable:false,id:""},
+				expand_video:{enable:false,id:""},
+				expand_iframe:{enable:false,id:""},
+				style_sheet:{enable:false,id:""},
+				experimental:{enable:false,id:""}
+			};
 		}
 		if(exit())	return proj;
 
@@ -34989,8 +34972,10 @@ function PageExpand(page_expand_arguments){
 
 			var dragging = null;
 			var listener = new EventListenerWrapper(elements.title);
-			listener.start("mousedown",function(e){
-				input_mouse.setMouseEvent(e);
+			listener.start("pointerdown",function(e){
+				if(!e.isPrimary) return;
+				input_mouse.setPointerEvent(e);
+				e.target.setPointerCapture(e.pointerId);
 				var r = ElementGetBoundingClientRect(root);
 				var p = input_mouse.getPositionClient();
 				dragging = {
@@ -35121,7 +35106,7 @@ function PageExpand(page_expand_arguments){
 					style.left = (p.x - dragging.x) + "px";
 					style.top = (p.y - dragging.y) + "px";
 					style.right = style.bottom = "auto";
-					if(!input_mouse.getButtonLeft()){
+					if(!input_mouse.getButtonPointer()){
 						dragging = null;
 					}
 				}
@@ -35147,7 +35132,7 @@ function PageExpand(page_expand_arguments){
 			[
 				[".root","all:initial; color-scheme:revert; width:200px;border:3px #888 outset; padding:0px; padding-bottom:4px; margin:0px; right:5px; bottom:5px; position:fixed; text-align:left; color:canvastext; font-family:system-ui; font-size:12px; line-height:1.0; z-index:2147483647;backdrop-filter:blur(2px);"],
 				[".bg","background-color:canvas; padding:0px; margin:0px; opacity:0.8; inset:0px; position:absolute;"],
-				[".title","font-weight:bold; color:canvastext; background-color:hsl(from canvas h s calc(l + (50 - l) * 0.375)); padding:2px 5px; margin:0px 0px 2px; position:relative; user-select:none; cursor:move;"],
+				[".title","font-weight:bold; color:canvastext; background-color:hsl(from canvas h s calc(l + (50 - l) * 0.375)); padding:2px 5px; margin:0px 0px 2px; position:relative; user-select:none; touch-action:none; cursor:move;"],
 				[".close","width:16px; height:16px; position:absolute; right:0px; top:0px; padding:0px; line-height:0.0; display:flex; justify-content:center; align-items:center;"],
 				[".ui_text","margin:0px 5px 0px;position:relative;z-index:1;"],
 				[".ui_mater","height:2px; min-height:0; border:1px #888 solid; margin:2px 5px; position:relative;z-index:0;"],
@@ -37913,7 +37898,8 @@ function PageExpand(page_expand_arguments){
 			var _check_box_enable_startup;
 			var _check_box_enable_debug_mode;
 			var _check_box_enable_output_log;
-			var _check_box_enable_input_touch;
+			var _check_box_enable_touch_move;
+			var _check_box_enable_double_touch;
 			var _check_box_enable_double_touch_assist;
 			var _stepper_execute_queue_time_occupancy;
 			var _stepper_execute_queue_sleep_time;
@@ -38004,10 +37990,17 @@ function PageExpand(page_expand_arguments){
 				container.setWidth(400);
 				var parent = container.getElement();
 
-				// タッチ操作を有効
-				_check_box_enable_input_touch = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_input_touch"));
-				_check_box_enable_input_touch.onchange = function(v){
-					standard.enable_input_touch = v;
+				// タッチムーブ操作を有効
+				_check_box_enable_touch_move = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_touch_move"));
+				_check_box_enable_touch_move.onchange = function(v){
+					standard.enable_touch_move = v;
+					projectModify();
+				};
+
+				// タブルタッチ操作を有効
+				_check_box_enable_double_touch = new UI_CheckBox(parent,_i18n.getMessage("menu_setting_standard_enable_double_touch"));
+				_check_box_enable_double_touch.onchange = function(v){
+					standard.enable_double_touch = v;
 					projectModify();
 				};
 
@@ -38017,6 +38010,8 @@ function PageExpand(page_expand_arguments){
 					standard.enable_double_touch_assist = v;
 					projectModify();
 				};
+
+				new UI_TextHint(parent,_i18n.getMessage("menu_setting_standard_input_touch_hint"));
 
 				// 実行キュー設定
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_setting_standard_execute_queue"));
@@ -38581,8 +38576,11 @@ function PageExpand(page_expand_arguments){
 				// ログ出力が有効であるか
 				_check_box_enable_output_log.setValue(standard.enable_output_log);
 
-				// タッチ操作が有効であるか
-				_check_box_enable_input_touch.setValue(standard.enable_input_touch);
+				// タッチムーブ操作を有効
+				_check_box_enable_touch_move.setValue(standard.enable_touch_move);
+
+				// タブルタッチ操作を有効
+				_check_box_enable_double_touch.setValue(standard.enable_double_touch);
 
 				// ダブルタッチ操作補助線を表示するか
 				_check_box_enable_double_touch_assist.setValue(standard.enable_double_touch_assist);
@@ -42817,7 +42815,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.7.11");
+				new UI_Text(parent,"PageExpand ver.1.7.12");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -61178,16 +61176,23 @@ function PageExpand(page_expand_arguments){
 				}
 				if(notify_element){
 					notify_element.setElementHitArea(element);
-					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_LOADING);
+					notify_element.setNotify(notify_progress.NOTIFY_TYPE.WAIT);
 				}
 
 				loader = new Loader();
 				loader.onload = callback;
 				loader.onerror = function(){
 					if(notify_element){
-						notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_ERROR);
+						notify_element.setNotify(notify_progress.NOTIFY_TYPE.ERROR);
 					}
 					release_limitter_thumbnail();
+				};
+				loader.onprogress = function(e){
+					if(!notify_element) return;
+					var v = -1;
+					if(e.bytesTotal > 0) v = e.bytesLoaded / e.bytesTotal;
+					if(v > 1.0) v = 1.0;
+					notify_element.setProgress(v);
 				};
 				loader.setMethod("GET");
 				loader.setURL(url_info_thumbnail.getURL());
@@ -61242,25 +61247,34 @@ function PageExpand(page_expand_arguments){
 
 				// ドラッガー
 				var image_dragger = new ImageDragger(thumbnail_image);
-				image_dragger.setOriginalURL(url_info_thumbnail.getURL());
+				image_dragger.setOriginalURLInfo(url_info_thumbnail);
 				releasers.push(image_dragger);
 
 				var listener = new EventListenerWrapper(thumbnail_image);
-				listener.start("click",function click_func(e){
+				listener.start("click",function(e){
 					if(e.ctrlKey){
 						// Ctrl + クリックで等倍配置
 						var style = thumbnail_image.style;
 						style.width  = image_size.width  + "px";
 						style.height = image_size.height + "px";
-					}else{
-						suicide();
+						return;
 					}
+
+					// マウスに限定
+					if((e.pointerType) && (e.pointerType != "mouse")) return;
+					suicide();
+				});
+				releasers.push(listener);
+
+				var listener = new EventListenerWrapper(thumbnail_image);
+				listener.start("dblclick",function(e){
+					suicide();
 				});
 				releasers.push(listener);
 
 				// 成功通知
 				if(notify_element){
-					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_COMPLETE);
+					notify_element.setNotify(notify_progress.NOTIFY_TYPE.COMPLETE);
 				}
 				release_notify_element();
 
@@ -61332,16 +61346,23 @@ function PageExpand(page_expand_arguments){
 				}
 				if(notify_element){
 					notify_element.setElementHitArea(thumbnail_image);
-					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_LOADING);
+					notify_element.setNotify(notify_progress.NOTIFY_TYPE.WAIT);
 				}
 
 				loader = new Loader();
 				loader.onload = callback;
 				loader.onerror = function(){
 					if(notify_element){
-						notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_ERROR);
+						notify_element.setNotify(notify_progress.NOTIFY_TYPE.ERROR);
 					}
 					release_limitter_popup();
+				};
+				loader.onprogress = function(e){
+					if(!notify_element) return;
+					var v = -1;
+					if(e.bytesTotal > 0) v = e.bytesLoaded / e.bytesTotal;
+					if(v > 1.0) v = 1.0;
+					notify_element.setProgress(v);
 				};
 				loader.setMethod("GET");
 				loader.setURL(url_info_thumbnail.getURL());
@@ -61354,11 +61375,12 @@ function PageExpand(page_expand_arguments){
 				release_loader();
 
 				popup_image = new PopupImage(image_clone);
-				popup_image.setElementParent(document.body);
+				popup_image.setThumbnail(thumbnail_image);
 				popup_image.setElementAnchor(thumbnail_image);
 				popup_image.setElementHitArea(thumbnail_image);
 				popup_image.setElementBeginArea(thumbnail_image);
-				popup_image.setOriginalURL(url_info_thumbnail.getURL());
+				popup_image.setOriginalURLInfo(url_info_thumbnail);
+				popup_image.start();
 
 				var event_listener = popup_image.createEventHandler("close");
 				event_listener.setFunction(function(){
@@ -61369,7 +61391,7 @@ function PageExpand(page_expand_arguments){
 
 				// 成功通知
 				if(notify_element){
-					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_COMPLETE);
+					notify_element.setNotify(notify_progress.NOTIFY_TYPE.COMPLETE);
 				}
 				release_notify_element();
 
@@ -61519,16 +61541,23 @@ function PageExpand(page_expand_arguments){
 				}
 				if(notify_element){
 					notify_element.setElementHitArea(element);
-					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_LOADING);
+					notify_element.setNotify(notify_progress.NOTIFY_TYPE.WAIT);
 				}
 
 				loader = new Loader();
 				loader.onload = callback;
 				loader.onerror = function(){
 					if(notify_element){
-						notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_ERROR);
+						notify_element.setNotify(notify_progress.NOTIFY_TYPE.ERROR);
 					}
 					release_limitter();
+				};
+				loader.onprogress = function(e){
+					if(!notify_element) return;
+					var v = -1;
+					if(e.bytesTotal > 0) v = e.bytesLoaded / e.bytesTotal;
+					if(v > 1.0) v = 1.0;
+					notify_element.setProgress(v);
 				};
 				loader.setMethod("GET");
 				loader.setURL(url_info_image.getURL());
@@ -61595,11 +61624,11 @@ function PageExpand(page_expand_arguments){
 
 				// ポップアップイメージを作成
 				popup_image = new PopupImage(image);
-				popup_image.setElementParent(document.body);
 				popup_image.setElementAnchor(element);
 				popup_image.setElementHitArea(element);
 				popup_image.setElementBeginArea(begin_area);
-				popup_image.setOriginalURL(url_info_image.getURL());
+				popup_image.setOriginalURLInfo(url_info_image);
+				popup_image.start();
 				node_info.setData("PopupImage",popup_image);
 
 				var event_listener = popup_image.createEventHandler("close");
@@ -61608,7 +61637,7 @@ function PageExpand(page_expand_arguments){
 
 				// 成功通知
 				if(notify_element){
-					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_COMPLETE);
+					notify_element.setNotify(notify_progress.NOTIFY_TYPE.COMPLETE);
 				}
 				release_notify_element();
 
@@ -62008,16 +62037,23 @@ function PageExpand(page_expand_arguments){
 					}
 					if(notify_element){
 						notify_element.setElementHitArea(element);
-						notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_LOADING);
+						notify_element.setNotify(notify_progress.NOTIFY_TYPE.WAIT);
 					}
 
 					loader = new Loader();
 					loader.onload = callback;
 					loader.onerror = function(){
 						if(notify_element){
-							notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_ERROR);
+							notify_element.setNotify(notify_progress.NOTIFY_TYPE.ERROR);
 						}
 						release_limitter();
+					};
+					loader.onprogress = function(e){
+						if(!notify_element) return;
+						var v = -1;
+						if(e.bytesTotal > 0) v = e.bytesLoaded / e.bytesTotal;
+						if(v > 1.0) v = 1.0;
+						notify_element.setProgress(v);
 					};
 					loader.setMethod("GET");
 					loader.setURL(url_info_media.getURL());
@@ -62075,7 +62111,7 @@ function PageExpand(page_expand_arguments){
 
 					// 成功通知
 					if(notify_element){
-						notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_COMPLETE);
+						notify_element.setNotify(notify_progress.NOTIFY_TYPE.COMPLETE);
 					}
 					release_notify_element();
 
@@ -62354,7 +62390,7 @@ function PageExpand(page_expand_arguments){
 		releasers.push(event_handler);
 
 		node_info.observerRemove();
-		if(0){
+		if(1){
 			var observer_modify = node_info.observerModify("src",function (){
 				node_info.addRevision();
 				node_info.dispatchEvent("release",null);
@@ -62478,16 +62514,23 @@ function PageExpand(page_expand_arguments){
 				}
 				if(notify_element){
 					notify_element.setElementHitArea(element);
-					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_LOADING);
+					notify_element.setNotify(notify_progress.NOTIFY_TYPE.WAIT);
 				}
 
 				loader = new Loader();
 				loader.onload = callback;
 				loader.onerror = function(){
 					if(notify_element){
-						notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_ERROR);
+						notify_element.setNotify(notify_progress.NOTIFY_TYPE.ERROR);
 					}
 					release_limitter();
+				};
+				loader.onprogress = function(e){
+					if(!notify_element) return;
+					var v = -1;
+					if(e.bytesTotal > 0) v = e.bytesLoaded / e.bytesTotal;
+					if(v > 1.0) v = 1.0;
+					notify_element.setProgress(v);
 				};
 				loader.setMethod("GET");
 				loader.setURL(url_info_image.getURL());
@@ -62505,11 +62548,10 @@ function PageExpand(page_expand_arguments){
 				element_limitter_image.removeExcessElements();
 
 				popup_image = new PopupImage(image);
-				popup_image.setElementParent(document.body);
 				popup_image.setElementAnchor(element);
 				popup_image.setElementHitArea(element);
 				popup_image.setElementBeginArea(element);
-				popup_image.setOriginalURL(url_info_image.getURL());
+				popup_image.setOriginalURLInfo(url_info_image);
 				popup_image.ontrim = function (){
 					if(!popup_image) return;
 
@@ -62573,6 +62615,7 @@ function PageExpand(page_expand_arguments){
 					}
 				};
 				popup_image.ontrim();
+				popup_image.start();
 
 				var event_listener = popup_image.createEventHandler("close");
 				event_listener.setFunction(suicide);
@@ -62580,7 +62623,7 @@ function PageExpand(page_expand_arguments){
 
 				// 成功通知
 				if(notify_element){
-					notify_element.setNotify(NotifyProgress.NOTIFY_TYPE_COMPLETE);
+					notify_element.setNotify(notify_progress.NOTIFY_TYPE.COMPLETE);
 				}
 				release_notify_element();
 
@@ -62901,375 +62944,38 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// ポップアップイメージ
 	// --------------------------------------------------------------------------------
-	function PopupImage(image){
-		var _this = this;
+	var PopupImage = (function(){
+		var FROM_TYPE = {ANY:0,THUMBNAIL:1};
 
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			if(!_image)	return;
-
-			if(_event_handler_release){
-				_event_handler_release.release();
-				_event_handler_release = null;
+		function pointer_over(e){
+			if(this.from_type == FROM_TYPE.ANY){
+				// マウスに限定
+				if((e.pointerType) && (e.pointerType != "mouse")) return;
 			}
-
-			// クリックイベントを外す
-			removeEventClick();
-
-			// ホイールイベントを外す
-			removeEventWheel();
-
-			// マウスイベントを外す
-			removeEventMouseOver();
-
-			// タッチイベントを外す
-			removeEventTouchStart();
-
-			// リリースイベントを外す
-			removeEventRelease();
-
-			// タスクを破棄
-			if(_task){
-				_task.release();
-				_task = null;
-			}
-
-			if(_event_dispatcher){
-				_event_dispatcher.release();
-				_event_dispatcher = null;
-			}
-
-			// コンテナから除外
-			popup_image_container.remove(_this);
-
-			if(_image){
-				_image.removeAttribute("src");
-				_image = null;
-			}
-		};
-
-		// --------------------------------------------------------------------------------
-		// 自殺
-		// --------------------------------------------------------------------------------
-		_this.suicide = function(){
-			if(_task){
-				_this.setElementHitArea(null);
-				_suicide = true;
-			}else{
-				_this.release();
-			}
-		};
-
-		// --------------------------------------------------------------------------------
-		// 親をセット
-		// --------------------------------------------------------------------------------
-		_this.setElementParent = function(element){
-			if(window_manager.existWindowRoot()){
-				_element_parent = window_manager.getWindowRoot().document.body;
-			}else{
-				_element_parent = element;
-			}
-		};
-
-		// --------------------------------------------------------------------------------
-		// リンクをセット
-		// --------------------------------------------------------------------------------
-		_this.setElementAnchor = function(element){
-			_this._element_anchor = element;
-
-			// コンテナに登録
-			popup_image_container.attach(_this);
-		};
-
-		// --------------------------------------------------------------------------------
-		// リンクを取得
-		// --------------------------------------------------------------------------------
-		_this.getElementAnchor = function(){
-			return _this._element_anchor;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 当たり判定用エレメントをセット
-		// --------------------------------------------------------------------------------
-		_this.setElementHitArea = function(element){
-			// マウスイベントを外す
-			removeEventMouseOver();
-			// タッチイベントを外す
-			removeEventTouchStart();
-			// リリースイベントを外す
-			removeEventRelease();
-
-			_element_hit_area = element;
-
-			// マウスイベントを開始
-			addEventMouseOver();
-			// タッチイベントを開始
-			addEventTouchStart();
-			// リリースイベントを開始
-			addEventRelease();
-		};
-
-		// --------------------------------------------------------------------------------
-		// 開始範囲用エレメントをセット
-		// --------------------------------------------------------------------------------
-		_this.setElementBeginArea = function(element){
-			_element_begin_area = element;
-		};
-
-		// --------------------------------------------------------------------------------
-		// トリミング範囲をセット
-		// --------------------------------------------------------------------------------
-		_this.setTrimRect = function(rect){
-			if(!_trim_rect){
-				// イベントを外す
-				removeEventClick();
-				removeEventWheel();
-
-				var div = DocumentCreateElement("div");
-				// スタイルをセット
-				ElementSetStyle(div,
-					"overflow:hidden;"
-				);
-				// スタイルを追加
-				ElementAddStyle(_element_current,project.getStyleSheetExpandImagePopup(_original_url));
-				div.appendChild(_image);
-				_element_current = div;
-
-				var node_info = node_info_dictionary.addNode(_element_current);
-				node_info.setInvalid(true);
-
-				// イベント
-				addEventClick();
-				addEventWheel();
-			}
-
-			_trim_rect = ObjectCopy(rect);
-			_trim_rect.width  = _trim_rect.right - _trim_rect.left;
-			_trim_rect.height = _trim_rect.bottom - _trim_rect.top;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 元のアドレスをセット
-		// --------------------------------------------------------------------------------
-		_this.setOriginalURL = function(url){
-			_original_url = url;
-			if(_image_dragger) _image_dragger.setOriginalURL(url);
-		};
-
-		// --------------------------------------------------------------------------------
-		// 元のアドレスを取得
-		// --------------------------------------------------------------------------------
-		_this.getOriginalURL = function(url){
-			return _original_url;
-		};
-
-		// --------------------------------------------------------------------------------
-		// イメージを取得
-		// --------------------------------------------------------------------------------
-		_this.getImage = function(){
-			return _image;
-		};
-
-		// --------------------------------------------------------------------------------
-		// ポップアップ
-		// --------------------------------------------------------------------------------
-		_this.popup = function(element){
-			createTask();
-		};
-
-		// --------------------------------------------------------------------------------
-		// イベントハンドラを作成
-		// --------------------------------------------------------------------------------
-		_this.createEventHandler = function(type){
-			return _event_dispatcher.createEventHandler(type);
-		};
-
-		// --------------------------------------------------------------------------------
-		// マウスオーバーイベントを追加（内部用）
-		// --------------------------------------------------------------------------------
-		function addEventMouseOver(){
-			if(!_element_hit_area) return;
-
-			removeEventMouseOver();
-
-			if(_element_hit_area.addEventListener){
-				_element_hit_area.addEventListener("mouseover",mouseOver,false);
-			}
+			createTask.call(this);
 		}
-
-		// --------------------------------------------------------------------------------
-		// マウスオーバーイベントを外す（内部用）
-		// --------------------------------------------------------------------------------
-		function removeEventMouseOver(){
-			if(!_element_hit_area) return;
-
-			if(_element_hit_area.removeEventListener){
-				_element_hit_area.removeEventListener("mouseover",mouseOver,false);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// タッチスタートイベントを追加（内部用）
-		// --------------------------------------------------------------------------------
-		function addEventTouchStart(){
-			if(!_element_hit_area) return;
-
-			removeEventTouchStart();
-
-			if(_element_hit_area.addEventListener){
-				//_element_hit_area.addEventListener("touchstart",touchStart,false);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// タッチスタートイベントを外す（内部用）
-		// --------------------------------------------------------------------------------
-		function removeEventTouchStart(){
-			if(!_element_hit_area) return;
-
-			if(_element_hit_area.removeEventListener){
-				//_element_hit_area.removeEventListener("touchstart",touchStart,false);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// クリックイベントを追加（内部用）
-		// --------------------------------------------------------------------------------
-		function addEventClick(){
-			removeEventClick();
-
-			if(_element_current.addEventListener){
-				_element_current.addEventListener("mousedown",mouseDown,false);
-				_element_current.addEventListener("click",mouseClick,false);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// クリックイベントを外す（内部用）
-		// --------------------------------------------------------------------------------
-		function removeEventClick(){
-			if(_element_current.removeEventListener){
-				_element_current.removeEventListener("mousedown",mouseDown,false);
-				_element_current.removeEventListener("click",mouseClick,false);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// ホイールイベントを追加（内部用）
-		// --------------------------------------------------------------------------------
-		function addEventWheel(){
-			removeEventWheel();
-
-			if(_element_current.addEventListener){
-				if(window.WheelEvent){
-					_element_current.addEventListener("wheel",wheel,false);
-				}else if(window.MouseScrollEvent){
-					_element_current.addEventListener("DOMMouseScroll",mouseScroll,false);
-				}else{
-					_element_current.addEventListener("mousewheel",mouseWheel,false);
-				}
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// ホイールイベントを外す（内部用）
-		// --------------------------------------------------------------------------------
-		function removeEventWheel(){
-			if(_element_current.removeEventListener){
-				if(window.WheelEvent){
-					_element_current.removeEventListener("wheel",wheel,false);
-				}else if(window.MouseScrollEvent){
-					_element_current.removeEventListener("DOMMouseScroll",mouseScroll,false);
-				}else{
-					_element_current.removeEventListener("mousewheel",mouseWheel,false);
-				}
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// リリースイベントを追加（内部用）
-		// --------------------------------------------------------------------------------
-		function addEventRelease(){
-			if(!_element_hit_area) return;
-
-			removeEventRelease();
-
-			if(!_observer_remove){
-				// リムーブ監視
-				_observer_remove = new DomNodeObserverRemoveFromDocument(_element_hit_area);
-				_observer_remove.setFunction(_this.suicide);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// リリースイベントを外す（内部用）
-		// --------------------------------------------------------------------------------
-		function removeEventRelease(){
-			if(_observer_remove){
-				// 監視を破棄
-				_observer_remove.release();
-				_observer_remove = null;
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// マウスオーバーイベント（内部用）
-		// --------------------------------------------------------------------------------
-		function mouseOver(e){
-			// マウス入力を更新
-			input_mouse.setMouseEvent(e);
-
-			createTask();
-		}
-
-		// --------------------------------------------------------------------------------
-		// タッチスタートイベント（内部用）
-		// --------------------------------------------------------------------------------
-		function touchStart(e){
-			// タッチ入力を更新
-			input_touch.setTouchEvent(e);
-
-			createTask();
-		}
-
-		// --------------------------------------------------------------------------------
-		// マウスダウンイベント（内部用）
-		// --------------------------------------------------------------------------------
-		function mouseDown(e){
-			input_mouse.setMouseEvent(e);
-
+		function mouse_down(e){
+		//	input_mouse.setMouseEvent(e);
 			if(
 				(input_mouse.getButtonCenter()) ||
 				(input_mouse.getButtonLeft() && input_mouse.getButtonRight())
 			){
-				var image_viewer = new ImageViewer(_this);
-			}
-
-			// スクロールを無効化
-			if(MouseEventGetChangedButtons(e) & 0x04){
-				if(e.preventDefault){
-					e.preventDefault();
-				}else{
-					return false;
-				}
+				var image_viewer = new ImageViewer(this);
+				e.preventDefault();
 			}
 		}
-
-		// --------------------------------------------------------------------------------
-		// マウスクリックイベント（内部用）
-		// --------------------------------------------------------------------------------
-		function mouseClick(e){
-			_event_dispatcher.dispatchEvent("close");
-			_this.release();
+		function click(e){
+			// マウスに限定
+			if((e.pointerType) && (e.pointerType != "mouse")) return;
+			this.event_dispatcher.dispatchEvent("close");
+			this.release();
 		}
-
-		// --------------------------------------------------------------------------------
-		// ホイールイベント（内部用）
-		// --------------------------------------------------------------------------------
+		function dblclick(e){
+			this.event_dispatcher.dispatchEvent("close");
+			this.release();
+		}
 		function wheel(e){
-			var vec = {x:0,y:0};
+			var vec = {};
 			switch(e.deltaMode){
 			case 0:
 				vec.x = e.deltaX;
@@ -63286,82 +62992,190 @@ function PageExpand(page_expand_arguments){
 			}
 
 			// 擬似スクロール
-			wheelScroll(e,vec);
+			var p = WheelScrollFromElement(vec,this.element_begin_area,this.shadow_host);
+			if(!p.result) return;
+
+			if(project.getStylePositionPopupImage() == "absolute"){
+				move.call(this,{x:-p.vector.x,y:-p.vector.y});
+			}
+			e.preventDefault();
 		}
 
-		// --------------------------------------------------------------------------------
-		// マウススクロールイベント（内部用）
-		// --------------------------------------------------------------------------------
-		function mouseScroll(e){
-			// 擬似スクロール
-			wheelScroll(e,{
-				x:0,
-				y:(e.detail / 3 * 50)
-			});
-		}
+		function hittest(){
+			if(!this.task)	return;
+			var work = this.task.getUserWork();
+			var mouse_pos = input_mouse.getPositionClient();
 
-		// --------------------------------------------------------------------------------
-		// マウスホイールイベント（内部用）
-		// --------------------------------------------------------------------------------
-		function mouseWheel(e){
-			// 擬似スクロール
-			wheelScroll(e,{
-				x:0,
-				y:-(e.wheelDelta / 40 * 50)
-			});
-		}
+			var hit = ElementHitTestPosition(this.element_hit_area,mouse_pos,true);
+			if(!hit){
+				if(work.element_rects_tree){
+					if(this.element_hit_area){
+						if(DomNodeGetAttachedDocument(this.element_hit_area)){
+							var scroll_pos = getScrollPositionTotal(this.element_hit_area);
+							work.scroll_pos_offset.x += scroll_pos.x - work.scroll_pos_begin.x;
+							work.scroll_pos_offset.y += scroll_pos.y - work.scroll_pos_begin.y;
+							work.scroll_pos_begin = scroll_pos;
+						}
+					}
 
-		// --------------------------------------------------------------------------------
-		// 擬似スクロール（内部用）
-		// --------------------------------------------------------------------------------
-		function wheelScroll(e,vector){
-			// 擬似スクロール
-			var p = WheelScrollFromElement(vector,_element_begin_area,_element_current);
-			if(p.result){
-
-				// 絶対座標系
-				if(project.getStylePositionPopupImage() == "absolute"){
-					// 移動
-					move({
-						x:-p.vector.x,
-						y:-p.vector.y
-					});
+					mouse_pos.x += work.scroll_pos_offset.x;
+					mouse_pos.y += work.scroll_pos_offset.y;
+					hit = work.element_rects_tree.hitTestPosition(mouse_pos,true);
+					if(!hit) work.element_rects_tree = null;
 				}
+			}
+			if(this.touch_revision){
+				if(!this.touch_revision.isUpdated()) hit = true;
+			}
+			if(this.dbltouch_revision){
+				if(!this.dbltouch_revision.isUpdated()) hit = true;
+			}
+			return hit;
+		}
 
-				if(e.preventDefault){
-					e.preventDefault();
+		function mouseMove(){
+			if(!this.task)	return;
+			var work = this.task.getUserWork();
+			var hit = hittest.call(this);
+			var f;
+
+			// アニメーション
+			if(project.getEnableAnimationPopupImage()){
+				if(hit){
+					switch(work.type){
+					case "wait_before_close":
+						// 表示へ
+						f = PopupImageShowInit;
+						break;
+					case "fade_out":
+						// 開く
+						f = PopupImageBeforeOpenInit;
+						break;
+					}
 				}else{
-					return false;
+					switch(work.type){
+					case "wait_before_open":
+						// 閉じる
+						f = PopupImageClose;
+						break;
+					case "fade_in":
+						// フェードアウトへ
+						f = PopupImageFadeOut;
+						break;
+					case "show":
+						// フェードアウト待機へ
+						f = PopupImageWaitBeforeClose;
+						break;
+					}
+				}
+			}else{
+				if(hit){
+					switch(work.type){
+					case "wait_before_close":
+						// 表示へ
+						f = PopupImageShowInit;
+						break;
+					}
+				}else{
+					switch(work.type){
+					case "wait_before_open":
+						// 閉じる
+						f = PopupImageClose;
+						break;
+					case "show":
+						// フェードアウト待機へ
+						f = PopupImageWaitBeforeClose;
+						break;
+					}
 				}
 			}
+
+			if(!f) return;
+			this.task.setExecuteFunc(f);
+			this.task.execute(0xffffffff);
 		}
 
 		// --------------------------------------------------------------------------------
-		// スクロール合計位置を取得（内部用）
+		// 移動（内部用）
 		// --------------------------------------------------------------------------------
-		function getScrollPositionTotal(node){
-			var pos = {x:0,y:0};
-			node = node.parentNode;
-			while(node){
-				if(node.scrollLeft) pos.x += node.scrollLeft;
-				if(node.scrollTop ) pos.y += node.scrollTop;
-				node = node.parentNode;
+		function move(vec){
+			if(!this.task) return;
+			var work = this.task.getUserWork();
+			var begin_rect = work.begin_rect;
+			var end_rect = work.end_rect;
+
+			begin_rect.left   += vec.x;
+			begin_rect.right  += vec.x;
+			begin_rect.top    += vec.y;
+			begin_rect.bottom += vec.y;
+			end_rect.left   += vec.x;
+			end_rect.right  += vec.x;
+			end_rect.top    += vec.y;
+			end_rect.bottom += vec.y;
+
+			PopupImageSizeUpdate.call(this,this.task);
+		}
+
+		// --------------------------------------------------------------------------------
+		// サイズ更新（内部用）
+		// --------------------------------------------------------------------------------
+		function PopupImageSizeUpdate(task){
+			var work = task.getUserWork();
+			var begin_rect = work.begin_rect;
+			var end_rect = work.end_rect;
+
+			var d = work.anime_pos;
+			var l = (end_rect.left   - begin_rect.left  ) * d + begin_rect.left;
+			var r = (end_rect.right  - begin_rect.right ) * d + begin_rect.right;
+			var t = (end_rect.top    - begin_rect.top   ) * d + begin_rect.top;
+			var b = (end_rect.bottom - begin_rect.bottom) * d + begin_rect.bottom;
+			var w = r - l;
+			var h = b - t;
+
+			var style = this.root.style;
+			style.left = (l) + "px";
+			style.top  = (t) + "px";
+			style.width  = (w) + "px";
+			style.height = (h) + "px";
+
+			if(this.trim_rect){
+				var style = this.image.style;
+				var natural_size = ImageGetNaturalSize(this.image);
+				var computed_style = ElementGetComputedStyle(this.root,null);
+				var padding_rect = ComputedStyleGetPaddingWidth(computed_style);
+				var sx = w / this.trim_rect.width;
+				var sy = h / this.trim_rect.height;
+				l = this.trim_rect.left * sx;
+				t = this.trim_rect.top  * sy;
+				r = l + w;
+				b = t + h;
+				style.left = (-l + padding_rect.left) + "px";
+				style.top  = (-t + padding_rect.top ) + "px";
+				style.width  = (natural_size.width  * sx) + "px";
+				style.height = (natural_size.height * sy) + "px";
+				style.clip = "rect(" + (t) + "px " + (r) + "px " + (b) + "px " + (l) + "px)";
 			}
-			return pos;
 		}
 
+		// --------------------------------------------------------------------------------
+		// 透明度セット（内部用）
+		// --------------------------------------------------------------------------------
+		function PopupImageSetAlpha(task,v){
+			var work = task.getUserWork();
+			this.root.style.opacity = v;
+		}
 
 		// --------------------------------------------------------------------------------
 		// タスク生成（内部用）
 		// --------------------------------------------------------------------------------
 		function createTask(){
 			// 再構築
-			if(_task){
-				var work = _task.getUserWork();
+			if(this.task){
+				var work = this.task.getUserWork();
 				switch(work.type){
 				case "fade_out":
-					_task.setExecuteFunc(PopupImageClose);
-					_task.execute(0xffffffff);
+					this.task.setExecuteFunc(PopupImageClose);
+					this.task.execute(0xffffffff);
 					break;
 				}
 			}
@@ -63374,158 +63188,16 @@ function PageExpand(page_expand_arguments){
 			if(input_mouse.getButtonLeft())	return;
 
 			// タスクを生成
-			if(!_task){
+			if(!this.task){
 				// タッチイベントを外す
-				removeEventTouchStart();
+//				removeEventTouchStart();
 
-				_task = task_container.createTask();
-				_task.setLevel(TASK_EXECUTE_LEVEL_POPUP);
-				_task.setDestructorFunc(PopupImageDestructor);
-				_task.setExecuteFunc(PopupImageInitialize);
-				_task.execute(0xffffffff);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// マウスムーブ（内部用）
-		// --------------------------------------------------------------------------------
-		function mouseMove(){
-			if(!_task)	return;
-
-			var work = _task.getUserWork();
-			var mouse_pos = ObjectCopy(input_mouse.getPositionClient());
-
-			var hit = ElementHitTestPosition(_element_hit_area,mouse_pos,true);
-			if(!hit){
-				if(_element_rects_tree){
-					if(_element_hit_area){
-						if(DomNodeGetAttachedDocument(_element_hit_area)){
-							var scroll_pos = getScrollPositionTotal(_element_hit_area);
-							_scroll_pos_offset.x += scroll_pos.x - _scroll_pos_begin.x;
-							_scroll_pos_offset.y += scroll_pos.y - _scroll_pos_begin.y;
-							_scroll_pos_begin = scroll_pos;
-						}
-					}
-
-					mouse_pos.x += _scroll_pos_offset.x;
-					mouse_pos.y += _scroll_pos_offset.y;
-					hit = _element_rects_tree.hitTestPosition(mouse_pos,true);
-					if(!hit) _element_rects_tree = null;
-				}
-			}
-			if(!input_mouse.getEnableMouse()){
-				hit = false;
-			}
-
-			// アニメーション
-			if(project.getEnableAnimationPopupImage()){
-				if(hit){
-					switch(work.type){
-					case "wait_before_close":
-						// 表示へ
-						_task.setExecuteFunc(PopupImageShowInit);
-						_task.execute(0xffffffff);
-						break;
-					case "fade_out":
-						// 開く
-						_task.setExecuteFunc(PopupImageBeforeOpenInit);
-						_task.execute(0xffffffff);
-						break;
-					}
-				}else{
-					switch(work.type){
-					case "wait_before_open":
-						// 閉じる
-						_task.setExecuteFunc(PopupImageClose);
-						_task.execute(0xffffffff);
-						break;
-					case "fade_in":
-						// フェードアウトへ
-						_task.setExecuteFunc(PopupImageFadeOut);
-						_task.execute(0xffffffff);
-						break;
-					case "show":
-						// フェードアウト待機へ
-						_task.setExecuteFunc(PopupImageWaitBeforeClose);
-						_task.execute(0xffffffff);
-						break;
-					}
-				}
-			}else{
-				if(hit){
-					switch(work.type){
-					case "wait_before_close":
-						// 表示へ
-						_task.setExecuteFunc(PopupImageShowInit);
-						_task.execute(0xffffffff);
-						break;
-					}
-				}else{
-					switch(work.type){
-					case "wait_before_open":
-						// 閉じる
-						_task.setExecuteFunc(PopupImageClose);
-						_task.execute(0xffffffff);
-						break;
-					case "show":
-						// フェードアウト待機へ
-						_task.setExecuteFunc(PopupImageWaitBeforeClose);
-						_task.execute(0xffffffff);
-						break;
-					}
-				}
-			}
-
-			if(!hit){
-				// タッチイベントを開始
-				addEventTouchStart();
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// スクロール補正（内部用）
-		// --------------------------------------------------------------------------------
-		function reviseScroll(vec){
-			if(_task){
-				var work = _task.getUserWork();
-				var begin_rect = work.begin_rect;
-				var end_rect = work.end_rect;
-
-				begin_rect.left   += vec.x;
-				begin_rect.right  += vec.x;
-				begin_rect.top    += vec.y;
-				begin_rect.bottom += vec.y;
-				end_rect.left   += vec.x;
-				end_rect.right  += vec.x;
-				end_rect.top    += vec.y;
-				end_rect.bottom += vec.y;
-
-				_scroll_pos_begin.x += vec.x;
-				_scroll_pos_begin.y += vec.y;
-
-				PopupImageSizeUpdate(_task);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// 移動（内部用）
-		// --------------------------------------------------------------------------------
-		function move(vec){
-			if(_task){
-				var work = _task.getUserWork();
-				var begin_rect = work.begin_rect;
-				var end_rect = work.end_rect;
-
-				begin_rect.left   += vec.x;
-				begin_rect.right  += vec.x;
-				begin_rect.top    += vec.y;
-				begin_rect.bottom += vec.y;
-				end_rect.left   += vec.x;
-				end_rect.right  += vec.x;
-				end_rect.top    += vec.y;
-				end_rect.bottom += vec.y;
-
-				PopupImageSizeUpdate(_task);
+				this.task = task_container.createTask();
+				this.task.setThis(this);
+				this.task.setLevel(TASK_EXECUTE_LEVEL_POPUP);
+				this.task.setDestructorFunc(PopupImageDestructor);
+				this.task.setExecuteFunc(PopupImageInitialize);
+				this.task.execute(0xffffffff);
 			}
 		}
 
@@ -63539,11 +63211,11 @@ function PageExpand(page_expand_arguments){
 			work.anime_pos = 0.0;
 			work.anime_spd = 0.0;
 
-			_element_rects_tree = null;
-			if(_element_hit_area){
-				_element_rects_tree = new ElementClientRectsTree(_element_hit_area);
-				_scroll_pos_begin = getScrollPositionTotal(_element_hit_area);
-				_scroll_pos_offset = {x:0,y:0};
+			work.element_rects_tree = null;
+			if(this.element_hit_area){
+				work.element_rects_tree = new ElementClientRectsTree(this.element_hit_area);
+				work.scroll_pos_begin = getScrollPositionTotal(this.element_hit_area);
+				work.scroll_pos_offset = {x:0,y:0};
 			}
 
 			task.setExecuteFunc(PopupImageBeforeOpenInit);
@@ -63567,7 +63239,7 @@ function PageExpand(page_expand_arguments){
 			var work = task.getUserWork();
 
 			// マウスムーブ
-			mouseMove();
+			mouseMove.call(this);
 
 			work.frame -= 1;
 			if(work.frame < 0){
@@ -63581,32 +63253,34 @@ function PageExpand(page_expand_arguments){
 		// ポップアップイメージを開く（内部用）
 		// --------------------------------------------------------------------------------
 		function PopupImageOpen(task){
+			var _this = this;
 			var work = task.getUserWork();
 
 			work.type = "open";
 
 			// デフォルトのスタイル
-			ElementSetStyle(_image,CSSTextGetInitialImageElement());
+//			ElementSetStyle(_image,CSSTextGetInitialImageElement());
 
 			// スタイルを追加
-			ElementAddStyle(_element_current,project.getStyleSheetExpandImagePopup(_original_url));
-			_element_current.style.willChange = "left,top,width,height,opacity";
+//			ElementAddStyle(this.root,project.getStyleSheetExpandImagePopup(this.url_info.getURL()));
+			this.root.style.willChange = "left,top,width,height,opacity";
 
 			// 最前面
-			_element_current.style.zIndex = 0x7FFFFFFF - 1;
-			_element_current.style.position = project.getStylePositionPopupImage();
+			this.root.style.zIndex = 0x7FFFFFFF - 1;
+			this.root.style.position = project.getStylePositionPopupImage();
 
-			_element_current.style.left   = "0px";
-			_element_current.style.top    = "0px";
-			_element_current.style.width  = "0px";
-			_element_current.style.height = "0px";
+			this.root.style.left   = "0px";
+			this.root.style.top    = "0px";
+			this.root.style.width  = "0px";
+			this.root.style.height = "0px";
 
-			if(_this.ontrim){
-				_this.ontrim();
+			if(this.ontrim){
+				this.ontrim();
 			}
 
-			if(_trim_rect){
-				_image.style.position = "absolute";
+			if(this.trim_rect){
+				this.root.style.overflow = "clip";
+				this.image.style.position = "absolute";
 			}
 
 
@@ -63620,27 +63294,28 @@ function PageExpand(page_expand_arguments){
 				bottom:client_size.height - 1
 			};
 
+			this.parent.appendChild(this.shadow_host);
+
 			// スタイルのサイズを取得
-			_element_parent.appendChild(_element_current);
-			var bounding_size = ElementGetBoundingClientRect(_element_current);
+			var bounding_size = ElementGetBoundingClientRect(this.root);
 			work.style_w = bounding_size.right  - bounding_size.left;
 			work.style_h = bounding_size.bottom - bounding_size.top;
 
 			// ネイティブサイズ
-			var natural_size = ImageGetNaturalSize(_image);
-			if(_trim_rect){
-				natural_size.width  = _trim_rect.width;
-				natural_size.height = _trim_rect.height;
+			var natural_size = ImageGetNaturalSize(this.image);
+			if(this.trim_rect){
+				natural_size.width  = this.trim_rect.width;
+				natural_size.height = this.trim_rect.height;
 			}
 
 			// 開始矩形
 			var begin_rect;
-			if(_element_begin_area){
-				if(DomNodeGetAttachedDocument(_element_begin_area)){
-					if(_trim_rect){
-						begin_rect = ElementGetViewClientRect(_element_begin_area);
+			if(this.element_begin_area){
+				if(DomNodeGetAttachedDocument(this.element_begin_area)){
+					if(this.trim_rect){
+						begin_rect = ElementGetViewClientRect(this.element_begin_area);
 					}else{
-						begin_rect = DomTreeGetContentClientRect(_element_begin_area);
+						begin_rect = DomTreeGetContentClientRect(this.element_begin_area);
 					}
 				}
 			}
@@ -63671,8 +63346,8 @@ function PageExpand(page_expand_arguments){
 			var scale = project.getScalePercentPopupImage() / 100 * pixel_ratio;
 			var end_w = natural_size.width  * scale;
 			var end_h = natural_size.height * scale;
-			_element_current.style.width  = (end_w) + "px";
-			_element_current.style.height = (end_h) + "px";
+			this.root.style.width  = (end_w) + "px";
+			this.root.style.height = (end_h) + "px";
 
 			var statusbar_h = 22;
 
@@ -63825,24 +63500,28 @@ function PageExpand(page_expand_arguments){
 
 				if(!(window_manager.existWindowRoot())){
 					// イベントハンドラを作成
-					_event_handler_revise_scroll = page_expand_event_dispatcher.createEventHandler("revise_scroll");
-					_event_handler_revise_scroll.setFunction(reviseScroll);
+					work.event_handler_revise_scroll = page_expand_event_dispatcher.createEventHandler("revise_scroll");
+					work.event_handler_revise_scroll.setFunction(function(vec){
+						work.scroll_pos_begin.x += vec.x;
+						work.scroll_pos_begin.y += vec.y;
+						move.call(_this,vec);
+					});
 				}
 			}
 
 			// スケール未対応
 			if(!project.getEnableScaleAnimationPopupImage()){
 				work.begin_rect = end_rect;
-				PopupImageSizeUpdate(task);
+				PopupImageSizeUpdate.call(this,task);
 			}
 
 			// アルファ未対応
 			if(!project.getEnableAlphaAnimationPopupImage()){
-				PopupImageSetAlpha(task,1.0);
+				PopupImageSetAlpha.call(this,task,1.0);
 			}
 
 			// マウスイベント有効化
-			_element_current.style.pointerEvents = "auto";
+			this.root.style.pointerEvents = "auto";
 
 
 			if(project.getEnableAnimationPopupImage()){
@@ -63862,7 +63541,7 @@ function PageExpand(page_expand_arguments){
 			work.type = "fade_in";
 
 			// マウスムーブ
-			mouseMove();
+			mouseMove.call(this);
 
 			var sub = 1.0 - work.anime_pos;
 			sub *= 0.4;
@@ -63880,11 +63559,11 @@ function PageExpand(page_expand_arguments){
 			}
 
 			if(project.getEnableAlphaAnimationPopupImage()){
-				PopupImageSetAlpha(task,work.anime_pos);
+				PopupImageSetAlpha.call(this,task,work.anime_pos);
 			}
 
 			if(project.getEnableScaleAnimationPopupImage()){
-				PopupImageSizeUpdate(task);
+				PopupImageSizeUpdate.call(this,task);
 			}
 		}
 
@@ -63899,10 +63578,10 @@ function PageExpand(page_expand_arguments){
 			work.anime_spd = 0.0;
 			work.frame = project.getTimeWaitClosePopupImage() / 1000 * 60;
 			if(project.getEnableAlphaAnimationPopupImage()){
-				PopupImageSetAlpha(task,work.anime_pos);
+				PopupImageSetAlpha.call(this,task,work.anime_pos);
 			}
 			if(project.getEnableScaleAnimationPopupImage()){
-				PopupImageSizeUpdate(task);
+				PopupImageSizeUpdate.call(this,task);
 			}
 
 			task.setExecuteFunc(PopupImageShowExec);
@@ -63912,7 +63591,7 @@ function PageExpand(page_expand_arguments){
 			var work = task.getUserWork();
 
 			// マウスムーブ
-			mouseMove();
+			mouseMove.call(this);
 		}
 
 		// --------------------------------------------------------------------------------
@@ -63924,14 +63603,14 @@ function PageExpand(page_expand_arguments){
 			work.type = "wait_before_close";
 
 			// マウスムーブ
-			mouseMove();
+			mouseMove.call(this);
 
 			work.frame -= 1;
 			if(work.frame < 0){
 				// アニメーション
 				if(project.getEnableAnimationPopupImage()){
 					// マウスイベント無効化
-					_element_current.style.pointerEvents = "none";
+					this.root.style.pointerEvents = "none";
 					task.setExecuteFunc(PopupImageFadeOut);
 				}else{
 					task.setExecuteFunc(PopupImageClose);
@@ -63948,7 +63627,7 @@ function PageExpand(page_expand_arguments){
 			work.type = "fade_out";
 
 			// マウスムーブ
-			mouseMove();
+			mouseMove.call(this);
 
 			var sub = 0.0 - work.anime_pos;
 			sub *= 0.4;
@@ -63963,10 +63642,10 @@ function PageExpand(page_expand_arguments){
 				task.setExecuteFunc(PopupImageClose);
 			}
 			if(project.getEnableAlphaAnimationPopupImage()){
-				PopupImageSetAlpha(task,work.anime_pos);
+				PopupImageSetAlpha.call(this,task,work.anime_pos);
 			}
 			if(project.getEnableScaleAnimationPopupImage()){
-				PopupImageSizeUpdate(task);
+				PopupImageSizeUpdate.call(this,task);
 			}
 		}
 
@@ -63975,7 +63654,6 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function PopupImageClose(task){
 			var work = task.getUserWork();
-			StyleDeclarationRemoveProperty(_element_current.style,"will-change");
 			task.release();
 		}
 
@@ -63983,139 +63661,200 @@ function PageExpand(page_expand_arguments){
 		// デストラクタ（内部用）
 		// --------------------------------------------------------------------------------
 		function PopupImageDestructor(task){
-			// 解放
-			if(_event_handler_revise_scroll){
-				_event_handler_revise_scroll.release();
-				_event_handler_revise_scroll = null;
+			var work = this.task.getUserWork();
+			if(work.event_handler_revise_scroll){
+				work.event_handler_revise_scroll.release();
+				work.event_handler_revise_scroll = null;
 			}
+			StyleDeclarationRemoveProperty(this.root.style,"will-change");
+			DomNodeRemove(this.shadow_host);
+			this.task = null;
 
-			DomNodeRemove(_element_current);
-			_task = null;
-
-			// 自殺
-			if(_suicide){
-				_this.release();
-			}
+			if(work.suicide) this.release();
 		}
 
 		// --------------------------------------------------------------------------------
-		// サイズ更新（内部用）
+		// スクロール合計位置を取得（内部用）
 		// --------------------------------------------------------------------------------
-		function PopupImageSizeUpdate(task){
-			var work = task.getUserWork();
-			var begin_rect = work.begin_rect;
-			var end_rect = work.end_rect;
-
-			var d = work.anime_pos;
-			var l = (end_rect.left   - begin_rect.left  ) * d + begin_rect.left;
-			var r = (end_rect.right  - begin_rect.right ) * d + begin_rect.right;
-			var t = (end_rect.top    - begin_rect.top   ) * d + begin_rect.top;
-			var b = (end_rect.bottom - begin_rect.bottom) * d + begin_rect.bottom;
-			var w = r - l;
-			var h = b - t;
-
-			var style = _element_current.style;
-			style.left = (l) + "px";
-			style.top  = (t) + "px";
-			style.width  = (w) + "px";
-			style.height = (h) + "px";
-
-			if(_trim_rect){
-				var style = _image.style;
-				var natural_size = ImageGetNaturalSize(_image);
-				var computed_style = ElementGetComputedStyle(_element_current,null);
-				var padding_rect = ComputedStyleGetPaddingWidth(computed_style);
-				var sx = w / _trim_rect.width;
-				var sy = h / _trim_rect.height;
-				l = _trim_rect.left * sx;
-				t = _trim_rect.top  * sy;
-				r = l + w;
-				b = t + h;
-				style.left = (-l + padding_rect.left) + "px";
-				style.top  = (-t + padding_rect.top ) + "px";
-				style.width  = (natural_size.width  * sx) + "px";
-				style.height = (natural_size.height * sy) + "px";
-				style.clip = "rect(" + (t) + "px " + (r) + "px " + (b) + "px " + (l) + "px)";
+		function getScrollPositionTotal(node){
+			var pos = {x:0,y:0};
+			node = node.parentNode;
+			while(node){
+				if(node.scrollLeft) pos.x += node.scrollLeft;
+				if(node.scrollTop ) pos.y += node.scrollTop;
+				node = node.parentNode;
 			}
+			return pos;
 		}
 
-		// --------------------------------------------------------------------------------
-		// 透明度セット（内部用）
-		// --------------------------------------------------------------------------------
-		function PopupImageSetAlpha(task,v){
-			var work = task.getUserWork();
-			_element_current.style.opacity = v;
-		}
+		function PopupImage(image){
+			var _this = this;
 
-		// --------------------------------------------------------------------------------
-		// トリミング要求イベント
-		// --------------------------------------------------------------------------------
-		_this.ontrim = function(){};
+			this.releasers = [];
+			this.image = image;
 
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _element_parent;
-		var _element_hit_area;
-		var _element_begin_area;
-		var _element_current;
-		var _task;
-		var _trim_rect;
-		var _image;
-		var _suicide;
-		var _element_rects_tree;
-		var _scroll_pos_begin;
-		var _scroll_pos_offset;
-		var _observer_remove;
-		var _event_handler_revise_scroll;
-		var _event_handler_release;
-		var _original_url;
-		var _image_dragger;
-		var _event_dispatcher;
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_element_hit_area = null;
-			_element_begin_area = null;
-			_task = null;
-			_image = image;
-			_element_current = _image;
-			_suicide = false;
-			_element_rects_tree = null;
-			_original_url = "";
-			image = null;
-
-			// リスト
 			popup_image_container.initializePopupImage(_this);
 
-			var node_info = node_info_dictionary.addNode(_element_current);
-			node_info.setInvalid(true);
-			if(window_manager.existWindowRoot()){
-				node_info.setOwnerToGuest();
-				try{
-					window_manager.getWindowRoot().document.adoptNode(_element_current);
-				}catch(e){}
-			}else{
-				node_info.setOwnerToPageExpand();
-			}
+			this.event_dispatcher = new EventDispatcher();
+			this.releasers.push(this.event_dispatcher);
 
-			// イベント
-			addEventClick();
-			addEventWheel();
-
-			_event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
-			_event_handler_release.setFunction(function(){
+			var handler = page_expand_event_dispatcher.createEventHandler("release");
+			handler.setFunction(function(){
 				_this.release();
 			});
+			this.releasers.push(handler);
+		}
+		PopupImage.prototype = {
+			release:function(){
+				if(this.released) return;
+				this.released = true;
 
-			// ドラッガー
-			_image_dragger = new ImageDragger(_image);
+				// タスクを破棄
+				if(this.task){
+					this.task.release();
+					this.task = null;
+				}
 
-			_event_dispatcher = new EventDispatcher();
-		})();
-	}
+				// コンテナから除外
+				popup_image_container.remove(this);
+
+				if(this.image){
+					this.image.removeAttribute("src");
+					this.image = null;
+				}
+
+				this.releasers.forEach(function(e){
+					e.release();
+				});
+				this.releasers.length = 0;
+			},
+			suicide:function(){
+				if(this.task){
+					var work = this.task.getUserWork();
+					work.suicide = true;
+				}else{
+					this.release();
+				}
+			},
+			createEventHandler:function(type){
+				return this.event_dispatcher.createEventHandler(type);
+			},
+			setOriginalURLInfo:function(url_info){
+				this.url_info = url_info;
+			},
+			getOriginalURL:function(){
+				return this.url_info.getURL();
+			},
+			setElementAnchor:function(element){
+				this.element_anchor = element;
+
+				// コンテナに登録
+				popup_image_container.attach(this);
+			},
+			getElementAnchor:function(){
+				return this.element_anchor;
+			},
+			setElementHitArea:function(element){
+				this.element_hit_area = element;
+			},
+			setElementBeginArea:function(element){
+				this.element_begin_area = element;
+			},
+			setTrimRect:function(rect){
+				this.trim_rect = ObjectCopy(rect);
+				this.trim_rect.width  = this.trim_rect.right - this.trim_rect.left;
+				this.trim_rect.height = this.trim_rect.bottom - this.trim_rect.top;
+			},
+			setThumbnail:function(v){
+				this.from_type = FROM_TYPE.THUMBNAIL;
+			},
+			getImage:function(){
+				return this.image;
+			},
+			start:function(){
+				var _this = this;
+
+				var shadow_host = this.shadow_host = DocumentCreateElement("div");
+				var shadow_root = this.shadow_root = (shadow_host.attachShadow) ? shadow_host.attachShadow({mode:"closed"}) : shadow_host;
+
+				var root = this.root = DocumentCreateElement("div");
+				root.className = "root";
+				root.appendChild(this.image);
+				shadow_root.appendChild(this.root);
+
+				var style = this.style = DocumentCreateElement("style");
+				[
+					[".root","all:initial;" + project.getStyleSheetExpandImagePopup(this.getOriginalURL())],
+					[".root > img","width:100%; height:100%;"],
+				].forEach(function(r,i){
+					style.appendChild(DocumentCreateText(r[0] + "{" + r[1] + "}"));	
+				});
+				shadow_root.appendChild(style);
+
+				var node_info = node_info_dictionary.addNode(shadow_host);
+				node_info.setInvalid(true);
+				if(window_manager.existWindowRoot()){
+					this.parent = window_manager.getWindowRoot().document.body;
+					node_info.setOwnerToGuest();
+					try{
+						window_manager.getWindowRoot().document.adoptNode(shadow_host);
+					}catch(e){}
+				}else{
+					this.parent = document.body;
+					node_info.setOwnerToPageExpand();
+				}
+
+				[
+					[this.root,"mousedown",mouse_down,false],
+					[this.root,"click",click,false],
+					[this.root,"dblclick",dblclick,false],
+					[this.root,"wheel",wheel,{passive:false}],
+					[this.element_hit_area,"pointerover",pointer_over,false],
+				].forEach(function(a){
+					var listener = new EventListenerWrapper(a[0]);
+					listener.start(a[1],(function(){
+						var f = a[2];
+						return function(e){ f.call(_this,e); };
+					})(),a[3]);
+					_this.releasers.push(listener);
+				});
+
+				var node_info = node_info_dictionary.addNode(this.element_hit_area);
+				var observer = node_info.observerPseudoMouseOver(function(o){
+					if(o.type == "dbltouch"){
+						_this.dbltouch_revision = o.revision;
+					}else{
+						_this.touch_revision = o.revision;
+					}
+					createTask.call(_this);
+				});
+				this.releasers.push(observer);
+
+				// リムーブ監視
+				var observer_remove = new DomNodeObserverRemoveFromDocument(this.element_hit_area);
+				observer_remove.setFunction(function(){
+					_this.suicide();
+				});
+				this.releasers.push(observer_remove);
+
+				this.image_dragger = new ImageDragger(this.image);
+				this.image_dragger.setOriginalURLInfo(this.url_info);
+				this.releasers.push(this.image_dragger);
+			},
+			popup:function(){
+				createTask.call(this);
+			},
+			ontrim:function(){},
+			image:null,
+			task:null,
+			url_info:null,
+			from_type:FROM_TYPE.ANY,
+			event_dispatcher:null,
+			image_dragger:null,
+			releasers:null
+		};
+		return PopupImage;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// ポップアップイメージコンテナ
@@ -64138,12 +63877,12 @@ function PageExpand(page_expand_arguments){
 		_this.attach = function(popup_image){
 			_this.remove(popup_image);
 
-			var element = popup_image._element_anchor;
+			var element = popup_image.getElementAnchor();
 			var list = _this._prev;
 
 			if(element.compareDocumentPosition){
 				while(list != _this){
-					var doc_pos = element.compareDocumentPosition(list._element_anchor);
+					var doc_pos = element.compareDocumentPosition(list.getElementAnchor());
 					if(doc_pos & document.DOCUMENT_POSITION_PRECEDING){
 						break;
 					}
@@ -65673,7 +65412,7 @@ function PageExpand(page_expand_arguments){
 				release_droppers.call(_this);
 
 				try{
-					var url = _this.original_url;
+					var url = _this.url_info.getURL();
 					var data_transfer = e.dataTransfer;
 					data_transfer.setData("url" , url);
 					data_transfer.setData("text" , url);
@@ -65705,10 +65444,10 @@ function PageExpand(page_expand_arguments){
 				});
 				this.releasers.length = 0;
 			},
-			setOriginalURL:function(url){
-				this.original_url = url;
+			setOriginalURLInfo:function(url_info){
+				this.url_info = url_info;
 			},
-			original_url:null,
+			url_info:null,
 			dropper:null,
 			timer:null,
 			releasers:null
@@ -66056,6 +65795,17 @@ function PageExpand(page_expand_arguments){
 			this.release();
 		}
 
+		function resize_ui(large){
+			var _this = this;
+			var c = large ? "add":"remove";
+			["header","menu","resize"].forEach(function(name){
+				var e = _this.elements[name];
+				e.classList[c](name+"_large");
+			});
+			this.styles.button.style.cssText = (large) ? "width:30px; height:30px;":"";
+			this.styles.icon.style.cssText = (large) ? "max-width:20px;":"";
+			update.call(this);
+		}
 		function hitTest(){
 			var _this = this;
 			if(this.resize_task) return true;
@@ -66065,6 +65815,10 @@ function PageExpand(page_expand_arguments){
 				return ElementHitTestPosition(_this.elements[name],mouse_pos,true);
 			})) return true;
 			if(ElementHitTestPosition(this.target,mouse_pos,true)) return true;
+
+			if(this.touch_revision){
+				if(!this.touch_revision.isUpdated()) return true;
+			}
 
 			var rect = ElementGetBoundingClientRect(this.target);
 			var max_x = rect.right + 16;
@@ -66116,9 +65870,19 @@ function PageExpand(page_expand_arguments){
 			style.opacity = this.alpha;
 		}
 
+		function fade_task_start_from_pointer(e){
+			if(!e.isPrimary) return;
+//			input_mouse.setPointerEvent(e);
+			resize_ui.call(this,(e.pointerType != "mouse"));
+			fade_task_start.call(this,e);
+		}
+		function fade_task_start_from_touch(e){
+			if(e.touches.length != 1) return;
+			//input_mouse.setTouchEvent(e);
+			fade_task_start.call(this,e);
+		}
 		function fade_task_start(e){
 			var _this = this;
-			input_mouse.setMouseEvent(e);
 
 			if(!this.fade_task){
 				var task = this.fade_task = task_container.createTask();
@@ -66174,9 +65938,11 @@ function PageExpand(page_expand_arguments){
 		}
 		function move_task_start(e){
 			var _this = this;
-			input_mouse.setMouseEvent(e);
 			if(e.target.tagName != "DIV") return;
-			if(!input_mouse.getButtonLeft()) return;
+			if(!e.isPrimary) return;
+
+			input_mouse.setPointerEvent(e);
+			e.target.setPointerCapture(e.pointerId);
 
 			var r = ElementGetBoundingClientRect(this.target);
 			var s = ComputedStyleGetSize(this.target.style);
@@ -66194,7 +65960,7 @@ function PageExpand(page_expand_arguments){
 			var task = this.move_task = task_container.createTask();
 			task.setLevel(TASK_EXECUTE_LEVEL_POPUP);
 			task.setExecuteFunc(function(task){
-				if(!input_mouse.getButtonLeft()){
+				if(!input_mouse.getButtonPointer()){
 					release_inert.call(_this);
 					release_move_task.call(_this);
 					return;
@@ -66210,8 +65976,10 @@ function PageExpand(page_expand_arguments){
 		}
 		function resize_task_start(e){
 			var _this = this;
-			input_mouse.setMouseEvent(e);
-			if(!input_mouse.getButtonLeft()) return;
+			if(!e.isPrimary) return;
+
+			input_mouse.setPointerEvent(e);
+			e.target.setPointerCapture(e.pointerId);
 
 			inert_start.call(this);
 
@@ -66227,7 +65995,7 @@ function PageExpand(page_expand_arguments){
 			task.setLevel(TASK_EXECUTE_LEVEL_POPUP);
 			task.setExecuteFunc(function(){
 
-				if(!input_mouse.getButtonLeft()){
+				if(!input_mouse.getButtonPointer()){
 					release_inert.call(_this);
 					release_resize_task.call(_this);
 					return;
@@ -66256,7 +66024,6 @@ function PageExpand(page_expand_arguments){
 		function inert_start(){
 			release_inert.call(this);
 			this.inert = new DocumentInert(document);
-			DomNode_InsertBefore(this.elements.header,this.elements.cover);
 			DomNode_InsertBefore(this.elements.header,this.elements.hitarea);
 		}
 
@@ -66279,7 +66046,6 @@ function PageExpand(page_expand_arguments){
 			}
 		}
 		function release_inert(){
-			DomNodeRemove(this.elements.cover);
 			DomNodeRemove(this.elements.hitarea);
 			if(this.inert){
 				this.inert.release();
@@ -66293,10 +66059,18 @@ function PageExpand(page_expand_arguments){
 			this.releasers = [];
 			this.event_dispatcher = new EventDispatcher();
 			this.target = target;
-			this.elements = [];
+			this.elements = {};
+			this.styles = {};
 
 			var node_info = node_info_dictionary.addNode(target);
 			node_info.observerRemove();
+
+			var observer = node_info.observerPseudoMouseOver(function(o){
+				_this.touch_revision = o.revision;
+				resize_ui.call(_this,true);
+				fade_task_start.call(_this);
+			});
+			this.releasers.push(observer);
 
 			var handler = node_info.createEventHandler("release");
 			handler.setFunction(function(){
@@ -66307,7 +66081,7 @@ function PageExpand(page_expand_arguments){
 			var shadow_host = this.shadow_host = DocumentCreateElement("div");
 			var shadow_root = this.shadow_root = (shadow_host.attachShadow) ? shadow_host.attachShadow({mode:"closed"}) : shadow_host;
 
-			["root","header","menu","hitarea","cover","resize"].forEach(function(name){
+			["root","header","menu","hitarea","resize"].forEach(function(name){
 				var e = _this.elements[name] = DocumentCreateElement("div");
 				e.className = name;
 			});
@@ -66333,6 +66107,7 @@ function PageExpand(page_expand_arguments){
 				}
 
 				var button = DocumentCreateElement("button");
+				button.className = "button button_size";
 				button.title = o.title;
 				_this.elements.menu.appendChild(button);
 
@@ -66344,10 +66119,11 @@ function PageExpand(page_expand_arguments){
 				_this.releasers.push(listener);
 
 				var svg = new DOMParser().parseFromString(o.svg,"image/svg+xml").childNodes[0];
+				svg.classList.add("icon","icon_size");
 				button.appendChild(svg);
 			});
 
-			var svg = new DOMParser().parseFromString('<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:#000;stroke:#fff;stroke-width:2;paint-order:stroke markers fill" d="M 13,13 V 4 L 10,7 6,3 3,6 7,10 4,13 Z M 1,1 V 15 H 15 V 1 Z M 2,2 H 14 V 14 H 2 Z"/></g></svg>',"image/svg+xml").childNodes[0];
+			var svg = new DOMParser().parseFromString('<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:#000;stroke:#fff;stroke-width:2;paint-order:stroke markers fill" d="M 13,13 V 4 L 10,7 6,3 3,6 7,10 4,13 Z M 1,1 V 15 H 15 V 1 Z M 2,2 H 14 V 14 H 2 Z"/></g></svg>',"image/svg+xml").childNodes[0];
 			this.elements.resize.appendChild(svg);
 
 			this.elements.header.appendChild(this.elements.menu);
@@ -66363,9 +66139,10 @@ function PageExpand(page_expand_arguments){
 			});
 
 			[
-				[target,"mouseover",fade_task_start],
-				[this.elements.menu,"mousedown",move_task_start],
-				[this.elements.resize,"mousedown",resize_task_start]
+				[target,"pointerover",fade_task_start_from_pointer],
+//				[target,"touchmove",fade_task_start_from_touch],
+				[this.elements.menu,"pointerdown",move_task_start],
+				[this.elements.resize,"pointerdown",resize_task_start]
 			].forEach(function(a){
 				var listener = new EventListenerWrapper(a[0]);
 				listener.start(a[1],(function(){
@@ -66375,21 +66152,39 @@ function PageExpand(page_expand_arguments){
 				_this.releasers.push(listener);
 			});
 
-			var style = DocumentCreateElement("style");
-			shadow_root.appendChild(style);
-			var style_sheet = ElementGetStyleSheet(style);
+			var style_sheet;
+			try{
+				style_sheet = new CSSStyleSheet();
+				shadow_root.adoptedStyleSheets = [style_sheet];
+			}catch(e){
+				// Firefox で動作しない
+				var style = DocumentCreateElement("style");
+				shadow_root.appendChild(style);
+				style_sheet = ElementGetStyleSheet(style);
+			}
 			[
 				[".root","all:initial; color-scheme:revert; line-height:0; position:absolute; left:0px; top:0px;"],
 				[".header","position:absolute; min-width:0px; height:36px; z-index:2147483646; overflow:hidden; display:flex; justify-content:flex-end;"],
-				[".menu","position:relative; width:96px; min-width:0px; background-color:hsl(from canvas 0 0 calc(l / 100 * (48 - 92) + 92) / 80%); display:inline-flex; align-items:flex-end; gap:1px; border-radius:10px 10px 0px 0px; border:2px solid hsl(from canvas 0 0 calc(l / 100 * (32 - 80) + 80) / 80%); border-bottom-width:0px; padding:5px 0px; top:0px; backdrop-filter:blur(2px); cursor:move;"],
+				[".header_large","height:42px;"],
+				[".menu","position:relative; width:96px; min-width:0px; background-color:hsl(from canvas 0 0 calc(l / 100 * (48 - 92) + 92) / 80%); display:inline-flex; align-items:flex-end; gap:1px; border-radius:10px 10px 0px 0px; border:2px solid hsl(from canvas 0 0 calc(l / 100 * (32 - 80) + 80) / 80%); border-bottom-width:0px; padding:5px 0px; top:0px; backdrop-filter:blur(2px); touch-action:none; cursor:move;"],
+				[".menu_large","width:126px;"],
 				[".hitarea","position:absolute; z-index:2147483646; background:rgba(255,0,0,0.25);"],
-				[".cover","position:fixed; z-index:2147483646; inset:0px; background:rgba(0,0,0,0.0);"],
-				[".resize","position:absolute; z-index:2147483646; cursor:se-resize; width:16px; height:16px;"],
+				[".resize","position:absolute; z-index:2147483646; touch-action:none; cursor:se-resize; width:16px; height:16px;"],
+				[".resize_large","width:30px; height:30px;"],
 				[".padding","min-width:0px; flex-grow:1;"],
-				["button","padding:0px; width:24px; min-width:0px; height:24px; display:inline-flex; justify-content:center; align-items:center;"],
-				["svg","max-width:16px;"]
+				[".button","padding:0px; width:24px; min-width:0px; height:24px; display:inline-flex; justify-content:center; align-items:center;"],
+				[".icon","max-width:16px;"]
 			].forEach(function(r,i){
 				CSSStyleSheetInsertRule(style_sheet,r[0],r[1],i);
+			});
+
+			var rules = CSSStyleSheetGetCSSRuleList(style_sheet);
+			[
+				{n:"button",q:".button_size"},
+				{n:"icon",q:".icon_size"}
+			].forEach(function(o){
+				var index = CSSStyleSheetInsertRule(style_sheet,o.q,"");
+				_this.styles[o.n] = rules[index];
 			});
 		}
 		MediaPlayerExtendUI.prototype = {
@@ -66421,6 +66216,7 @@ function PageExpand(page_expand_arguments){
 			shadow_host:null,
 			shadow_root:null,
 			elements:null,
+			styles:null,
 			fade_task:null,
 			move_task:null,
 			resize_task:null,
@@ -66530,11 +66326,17 @@ function PageExpand(page_expand_arguments){
 			menu_setting_standard_touch: {
 				message: "タッチ操作設定"
 			},
-			menu_setting_standard_enable_input_touch: {
-				message: "タッチ操作を有効"
+			menu_setting_standard_enable_touch_move: {
+				message: "タッチムーブ操作を有効"
+			},
+			menu_setting_standard_enable_double_touch: {
+				message: "タブルタッチ操作を有効"
 			},
 			menu_setting_standard_enable_double_touch_assist: {
 				message: "ダブルタッチ補助線を表示"
+			},
+			menu_setting_standard_input_touch_hint: {
+				message: "タッチ操作をマウス移動させたかのように変換します。現状は、特に画像のポップアップ開始に関与します。ブラウザのデフォルトのタッチ操作と常に競合するため、必ずしも便利ではありません。お好みでオフにして下さい。"
 			},
 			menu_setting_standard_command: {
 				message: "メニューの実行（モバイル用）"
@@ -68183,11 +67985,20 @@ function PageExpand(page_expand_arguments){
 			menu_setting_standard_touch: {
 				message: "Touch Operation Setting"
 			},
+			menu_setting_standard_enable_touch_move: {
+				message: "Enable touch move."
+			},
+			menu_setting_standard_enable_double_touch: {
+				message: "Enable double touch."
+			},
 			menu_setting_standard_enable_input_touch: {
 				message: "Enable touch operation."
 			},
 			menu_setting_standard_enable_double_touch_assist: {
 				message: "Display the double touch assist."
+			},
+			menu_setting_standard_input_touch_hint: {
+				message: "Touch gestures are interpreted as mouse movements. This is especially involved in initiating image popups. It consistently conflicts with your browser’s default touch gestures. Disable it if you prefer."
 			},
 			menu_setting_standard_command: {
 				message: "Execute Menu (for mobile)"
@@ -69836,11 +69647,20 @@ function PageExpand(page_expand_arguments){
 			menu_setting_standard_touch: {
 				message: "触摸操作设置"
 			},
+			menu_setting_standard_enable_touch_move: {
+				message: "Enable touch move."
+			},
+			menu_setting_standard_enable_double_touch: {
+				message: "Enable double touch."
+			},
 			menu_setting_standard_enable_input_touch: {
 				message: "启用触摸操作。"
 			},
 			menu_setting_standard_enable_double_touch_assist: {
 				message: "显示双触摸协助。"
+			},
+			menu_setting_standard_input_touch_hint: {
+				message: "Touch gestures are interpreted as mouse movements. This is especially involved in initiating image popups. It consistently conflicts with your browser’s default touch gestures. Disable it if you prefer."
 			},
 			menu_setting_standard_command: {
 				message: "执行菜单 (移动)"
@@ -72111,7 +71931,6 @@ function PageExpand(page_expand_arguments){
 					if(!(this.event_dispatcher)) return;
 					this.event_dispatcher.dispatchEvent(name,param);
 				},
-
 				observerRemove : function(){
 					var _this = this;
 					if(this.getExecuted("ObserverRemove")) return;
@@ -72137,6 +71956,31 @@ function PageExpand(page_expand_arguments){
 					this.releasers.push(observer_modify_element);
 
 					return observer_modify_element;
+				},
+				observerPseudoMouseOver : function(callback){
+					var _this = this;
+					var type = "PseudoMouseOver";
+					var o = this.getData(type);
+					if(!o){
+						o = {counter:0};
+						this.setData(type,o);
+					}
+					o.counter += 1;
+
+					var event_handler = this.createEventHandler(type);
+					event_handler.setFunction(callback);
+
+					return {
+						release:function(){
+							if(!event_handler) return;
+							if(_this.released) return;
+							event_handler.release();
+							event_handler = null;
+							var o = _this.getData(type);
+							o.counter -= 1;
+							if(!o.counter) _this.clearData(type);
+						}
+					};
 				},
 				setOwnerToPageExpand : function(){
 					this.node.setAttribute("_pageexpand_","");
@@ -73307,8 +73151,7 @@ function PageExpand(page_expand_arguments){
 			var receive_body_init;
 			var receive_body_exec;
 
-			var event_handler_release;
-			var event_handler_abort;
+			var releasers = [];
 			var port;
 
 			var replied = false;
@@ -73320,28 +73163,36 @@ function PageExpand(page_expand_arguments){
 			}
 
 			function release(){
-				if(event_handler_release){
-					event_handler_release.release();
-					event_handler_release = null;
-				}
-				if(event_handler_abort){
-					event_handler_abort.release();
-					event_handler_abort = null;
-				}
+				releasers.forEach(function(e){
+					e.release();
+				});
+				releasers.length = 0;
 				if(port){
 					port.terminate();
 					port = null;
 				}
 			}
 
-			event_handler_release = _this._event_dispatcher.createEventHandler("release");
-			event_handler_release.setFunction(function(){
+			var handler = _this._event_dispatcher.createEventHandler("release");
+			handler.setFunction(function(){
 				release();
 			});
-			event_handler_abort = _this._event_dispatcher.createEventHandler("abort");
-			event_handler_abort.setFunction(function(){
+			releasers.push(handler);
+
+			var handler = _this._event_dispatcher.createEventHandler("abort");
+			handler.setFunction(function(){
 				port.postMessage({state:"abort"});
 			});
+			releasers.push(handler);
+
+			// BFCache 保存時にポートが切断されるので復帰時にリトライ（onDisconnect は発行されない）
+			var listener = new EventListenerWrapper(window);
+			listener.start("pageshow",function(e){
+				if(!e.persisted) return;
+				port.postMessage({state:"abort"});
+				reply({state:"retry"});
+			},false);
+			releasers.push(listener);
 
 			var commands = {
 				"unsupported":function(){
@@ -75227,7 +75078,7 @@ function PageExpand(page_expand_arguments){
 				if(_task._execute_func){
 					if(level & _task._level){
 						try{
-							_task._execute_func(_task);
+							_task._execute_func.call(_task._this,_task);
 						}catch(e){
 							if(project.getEnableDebugMode()){
 								ConsoleError(e.stack);
@@ -75440,6 +75291,13 @@ function PageExpand(page_expand_arguments){
 			};
 
 			// --------------------------------------------------------------------------------
+			// this をセット
+			// --------------------------------------------------------------------------------
+			_task.setThis = function(thisArg){
+				_task._this = thisArg;
+			};
+
+			// --------------------------------------------------------------------------------
 			// ユーザーワークを取得
 			// --------------------------------------------------------------------------------
 			_task.getUserWork = function(){
@@ -75588,7 +75446,7 @@ function PageExpand(page_expand_arguments){
 				task._alive = false;
 
 				if(task._destructor_func){
-					task._destructor_func(task);
+					task._destructor_func.call(task._this,task);
 				}
 
 				task.removeParent();
@@ -75643,263 +75501,161 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// ローダー進捗通知
 	// --------------------------------------------------------------------------------
-	function NotifyProgress(){
-		var _this = this;
+	var NotifyProgress = (function(){
+		var NOTIFY_TYPE = {WAIT:1,UNKNOWN:2,LOADING:3,COMPLETE:4,ERROR:5};
 
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			if(_task){
-				_task.release();
-				_task = null;
+		function pointer_over(e){
+			// マウスに限定
+			if((e.pointerType) && (e.pointerType != "mouse")) return;
+			element_create_task(this);
+		}
+
+		function element_create_task(element){
+			if(element.task) return;
+
+			element_focus(element);
+			element_update_notify(element);
+			element_update_progress(element);
+
+			element.task = task_container.createTask();
+			element.task.setDestructorFunc(function(){
+				element_blur(element);
+				element.task = null;
+			});
+			element.task.setExecuteFunc(function(){
+				var hit = element_hittest(element);
+				if(hit) return;
+				element_release_task(element);
+			});
+			element.task.execute(0xffffffff);
+		}
+		function element_release_task(element){
+			if(element.task){
+				element.task.release();
+				element.task = null;
 			}
+		}
+		function element_is_active(element){
+			return (element == element.parent.active);
+		}
+		function element_hittest(element){
+			if(element.touch_revision){
+				if(!element.touch_revision.isUpdated()) return true;
+			}
+			return ElementHitTestPosition(element.element_hit_area,input_mouse.getPositionClient(),true);
+		}
+		function element_focus(element){
+			var p = element.parent;
+			p.active = element;
+
+			if(p.task){
+				p.task.setExecuteFunc(NotifyIconFadeIn);
+				return;
+			}
+
+			p.task = task_container.createTask();
+			p.task.setThis(p);
+			p.task.setDestructorFunc(NotifyIconDestructor);
+			p.task.setExecuteFunc(NotifyIconInitialize);
+			p.task.execute(0xffffffff);
+		}
+		function element_blur(element){
+			var p = element.parent;
+			if(!element_is_active(element)) return;
+
+			if(!p.task) return;
+			p.task.setExecuteFunc(NotifyIconFadeOut);
+		}
+		var element_update_notify = (function(){
+			var n = NOTIFY_TYPE;
+			var dict = [];
+			dict[n.UNKNOWN] = "unknown";
+			dict[n.WAIT] = "wait";
+			dict[n.LOADING] = "loading";
+			dict[n.COMPLETE] = "complete";
+			dict[n.ERROR] = "error";
+			return function (element){
+				if(!element_is_active(element)) return;
+				var p = element.parent;
+
+				var old = p.root.childNodes[0];
+				var now = p.svgs[dict[element.notify]];
+				if(old == now) return;
+
+				p.notify = element.notify;
+				DomNodeRemoveChildren(p.root);
+				if(now) p.root.appendChild(now);
+			}
+		})();
+		function element_update_progress(element){
+			if(!element_is_active(element)) return;
+			var p = element.parent;
+			p.meter.style.strokeDasharray = (element.progress * 37.68).toFixed(8) + " 99";
+		}
+
+		function Element(parent){
+			this.parent = parent;
+			this.releasers = [];
+		}
+		Element.prototype = {
+			release:function(){
+				element_release_task(this);
+				this.releasers.forEach(function(e){
+					e.release();
+				});
+				this.releasers.length = 0;
+			},
+			setElementHitArea:function(element){
+				var _this = this;
+				this.element_hit_area = element;
+
+				var listener = new EventListenerWrapper(this.element_hit_area);
+				listener.start("pointerover",function(e){
+					pointer_over.call(_this,e);
+				},false);
+				this.releasers.push(listener);
+
+				var node_info = node_info_dictionary.addNode(this.element_hit_area);
+				var observer = node_info.observerPseudoMouseOver(function(o){
+					if(o.type == "dbltouch"){
+						var p = ObjectCopy(o.position);
+						//var c = input_mouse.getContactGeometry();
+						//p.y -= c.height * 0.5;
+						p.x -= 12.0;
+						p.y -= 12.0;
+						_this.touch_position = p;
+						_this.touch_revision = o.revision;
+					}
+					element_create_task(_this);
+				});
+				this.releasers.push(observer);
+
+				if(element_hittest(this)){
+					element_create_task(this);
+				}
+			},
+			setNotify:function(type){
+				this.notify = type;
+				element_update_notify(this);
+			},
+			setProgress:function(v){
+				var n = NOTIFY_TYPE;
+				var type = (function(){
+					if(v < 0) return n.UNKNOWN;
+//					if(v >= 1.0) return n.COMPLETE;
+					return n.LOADING;
+				})();
+				if(v < 0.0) v = 0.0;
+				if(v > 1.0) v = 1.0;
+				this.progress = v;
+				this.setNotify(type);
+				element_update_progress(this);
+			},
+			element_hit_area:null,
+			notify:0,
+			task:null,
+			releasers:null
 		};
-
-		// --------------------------------------------------------------------------------
-		// 要素生成
-		// --------------------------------------------------------------------------------
-		_this.createElement = function(){
-			var _element = new Object();
-
-			// --------------------------------------------------------------------------------
-			// 開放
-			// --------------------------------------------------------------------------------
-			_element.release = function(){
-				// マウスイベントを外す
-				removeEventMouseOver();
-				// タッチイベントを外す
-				removeEventTouchStart();
-				// タスクを破棄
-				releaseTask();
-			};
-
-			// --------------------------------------------------------------------------------
-			// 当たり判定用エレメントをセット
-			// --------------------------------------------------------------------------------
-			_element.setElementHitArea = function(element){
-				_element_hit_area = element;
-
-				// マウスイベントを開始
-				addEventMouseOver();
-				// タッチイベントを開始
-				addEventTouchStart();
-
-				// マウスとの当たり判定
-				if(ElementHitTestMousePosition(element,input_mouse.getPositionClient(),true)){
-					createTask();
-				}
-			};
-
-			// --------------------------------------------------------------------------------
-			// 通知をセット
-			// --------------------------------------------------------------------------------
-			_element.setNotify = function(type){
-				_notify = type;
-				ElementSetNotify(_element,_notify);
-			};
-
-			// --------------------------------------------------------------------------------
-			// 通知をセット
-			// --------------------------------------------------------------------------------
-			_element.hitTest = function(){
-				return _hittest;
-			};
-
-			// --------------------------------------------------------------------------------
-			// マウスオーバーイベントを追加（内部用）
-			// --------------------------------------------------------------------------------
-			function addEventMouseOver(){
-				removeEventMouseOver();
-
-				if(_element_hit_area.addEventListener){
-					_element_hit_area.addEventListener("mouseover",mouseOver,false);
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// マウスオーバーイベントを外す（内部用）
-			// --------------------------------------------------------------------------------
-			function removeEventMouseOver(){
-				if(_element_hit_area.removeEventListener){
-					_element_hit_area.removeEventListener("mouseover",mouseOver,false);
-				}
-			}
-
-
-			// --------------------------------------------------------------------------------
-			// タッチスタートイベントを追加（内部用）
-			// --------------------------------------------------------------------------------
-			function addEventTouchStart(){
-				removeEventTouchStart();
-
-				if(_element_hit_area.addEventListener){
-					//_element_hit_area.addEventListener("touchstart",touchStart,false);
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// タッチスタートイベントを外す（内部用）
-			// --------------------------------------------------------------------------------
-			function removeEventTouchStart(){
-				if(_element_hit_area.removeEventListener){
-					//_element_hit_area.removeEventListener("touchstart",touchStart,false);
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// マウスオーバーイベント（内部用）
-			// --------------------------------------------------------------------------------
-			function mouseOver(e){
-				// マウス入力を更新
-				input_mouse.setMouseEvent(e);
-
-				// タスクを生成
-				createTask();
-			}
-
-			// --------------------------------------------------------------------------------
-			// タッチスタートイベント（内部用）
-			// --------------------------------------------------------------------------------
-			function touchStart(e){
-				// タッチ入力を更新
-				input_touch.setTouchEvent(e);
-
-				// タスクを生成
-				createTask();
-			}
-
-			// --------------------------------------------------------------------------------
-			// マウスムーブ（内部用）
-			// --------------------------------------------------------------------------------
-			function mouseMove(){
-				if(!_task)	return;
-
-				var work = _task.getUserWork();
-				var hit = ElementHitTestPosition(_element_hit_area,input_mouse.getPositionClient(),true);
-				if(!input_mouse.getEnableMouse()){
-					hit = false;
-				}
-				if(!hit){
-					releaseTask();
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// タスク生成（内部用）
-			// --------------------------------------------------------------------------------
-			function createTask(){
-				if(!_task){
-					_hittest = true;
-
-					ElementFocus(_element);
-					ElementSetNotify(_element,_notify);
-
-					_task = task_container.createTask();
-					_task.setDestructorFunc(function(){
-						_hittest = false;
-						ElementBlur(_element);
-						_task = null;
-					});
-					_task.setExecuteFunc(function(){
-						mouseMove();
-					});
-					_task.execute(0xffffffff);
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// タスク破棄（内部用）
-			// --------------------------------------------------------------------------------
-			function releaseTask(){
-				if(_task){
-					_task.release();
-					_task = null;
-				}
-			}
-
-			// --------------------------------------------------------------------------------
-			// プライベート変数
-			// --------------------------------------------------------------------------------
-			var _element_hit_area;
-			var _notify;
-			var _task;
-			var _hittest;
-
-			// --------------------------------------------------------------------------------
-			// 初期化
-			// --------------------------------------------------------------------------------
-			(function(){
-				_element_hit_area = null;
-				_notify = NotifyProgress.NOTIFY_TYPE_UNKNOWN;
-				_task = null;
-				_hittest = false;
-			})();
-
-			return _element;
-		};
-
-		// --------------------------------------------------------------------------------
-		// アクティブ
-		// --------------------------------------------------------------------------------
-		function ElementFocus(element){
-			_active = element;
-
-			if(!_task){
-				// タスクを生成
-				_task = task_container.createTask();
-				_task.setDestructorFunc(NotifyIconDestructor);
-				_task.setExecuteFunc(NotifyIconInitialize);
-				_task.execute(0xffffffff);
-			}else{
-				_task.setExecuteFunc(NotifyIconFadeIn);
-			}
-
-		}
-
-		// --------------------------------------------------------------------------------
-		// 非アクティブ
-		// --------------------------------------------------------------------------------
-		function ElementBlur(element){
-			if(element != _active)	return;
-
-			if(_task){
-				_task.setExecuteFunc(NotifyIconFadeOut);
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// 通知をセット
-		// --------------------------------------------------------------------------------
-		function ElementSetNotify(element,type){
-			if(element != _active)	return;
-			if(_notify == type)	return;
-
-			switch(type){
-			case NotifyProgress.NOTIFY_TYPE_LOADING:
-				_icon.src = "data:image/gif;base64,R0lGODlhGAAYALMAAP//3vf31sXFtYyMjHuEjGNrc0pSY0JKUv///wAAAAAAAAAAAAAAAAAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQJCAAIACwAAAAAGAAYAAAEexDJSZExNetpQsBbRVQHABwhNQgFVZ6pRAhA0EovGiNFUN+dz07Sq4Euw0lRl6wYmM2o5nk4gFJUq8VnEoY6JiO4e51yjZaqNpYtS7FQlzuzzJRsoaIXuf1p9EAeIIAiNHg4JkxFAiMqLC6JFAUCAxqNEzkiSUFzTXwhEQAh+QQJCAAIACwAAAAAFgAYAAAEfxDJSZExNWsbAt4TUR0AcFQiNQgFRZpUIQyhAASt9J5SEQCCFMJ3yxk6HyKuovxcJMeihshzSTeG6ugD6mayhwPXC/2VPORJ9Dwmg8XpuByqdbVjvzqCtMw0oU4/fRNKRkg9gjkIBDaDO4Q/QRMrinslWjI0FEI6lyhuh3OAIBEAIfkECQgACAAsAAAAABgAGAAABHoQyUmRMTXraULAW0VUBwAcojYIBVWeVCEMogAErfSiUhEAglHsh5N0Pj1iruK7gS5GZajJc92WG0OVBAp5vdrDoRsKjy0/E7KcdnZMTnAbaSZnxeevXqPdb6h+TERPdlNSaGteBDZFOiZbIStYO35CE5SBFEeFgVBeEQAh+QQJCAAIACwAAAAAGAAWAAAEexDJSZExNetpQsBbRVQHAByiNggFVZ5UIQyiAASt9KJSEQCCUeyHk3Q+PWKu4ruBLkZlqMlz3ZYbQ5UECnm92sOhGwqPLT8Tspx2dkxOcBtpJmfF569eo93kpz9bOleAcRVvRRlNiYpSFAQ2jBpNQRUrWBsyNBlCep0IEQAh+QQJCAAIACwAAAAAGAAYAAAEeRDJSZExNetpQsBbRVQHAByiNggFVZ5UIQyiAASt9KJSEQCCUeyHk3Q+PWKu4ruBLkZlqMlz3ZYbQ5UECnm92sOhGwqPLT8Tspx2dkxOcBtpJmfF569+77LzdVd/Fk9Se0cgTUV6OxNNQYsmWzI0kDAUQnqHghVQXhEAIfkECQgACAAsAgAAABYAGAAABH0QyTmNoThTE8LVFIEdAHBgIjUIBUWaVCEMEyEAQSu9p1QEAEEK8cPpOB4fMIcpJhEWCceoKfZcVJDhOvqAvuDw5kD2iqHA0vM8VZvF2/J5vgUd3jEgd5dtLj9RaH1KWUgfTjoINn08E0VCEyuJCI2OMygjJXtDX4ZzGIFfEQAh+QQJCAAIACwAAAAAGAAYAAAEfBDJSZExNetpQsBbKB0AcFSESJEmVQiDOpanVASAkKrdZ+OBgkxyIQKFwwopmNQcQM2k4UCFhqZVC67ku24Bn04JbM2IuRjsU6YuR0XTzVp0aynBSE29W9Ti9UdGXXt5EgQCfzN2CHU6FQMChSw1NjAaOxOTKFIebk19IREAIfkECQgACAAsAAACABgAFgAABHgQSUSmvbLiIQrGhTBchAAE3icVASBoE3umYIt+cmBghk3XgAPmMFNNDMLPYWdsOpGHpRMBlfYAWF3zmjVwT0zVV1sNG8vTNC85NONa7AnxpsoxvZIr/ZJL9bQIfSQme0RBMS0vFxw/hnEhIxgwEo4kan9uanmZFxEAOw==";
-				break;
-			case NotifyProgress.NOTIFY_TYPE_COMPLETE:
-				_icon.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAMAAADXqc3KAAAAA3NCSVQICAjb4U/gAAAAwFBMVEX///+A/4CA/4D///+A/4CA/4CA/4CA/4Dn5+eA/4CA/4CA/4CA/4CA/4CSkpIqWyr5+fng4OB9fX0REREAAAAgSiAxajH6+vrz8/Pw8PDq6urX19fHx8fExMSqqqqnp6ejo6Oenp6ZmZmWlpYtLS0lJSUeHh6Mx4yu564IHAg0RTQ5TTk4STgqNioLIAtxd3FwfXBcdVyP+Y9Ci0ImUibT09O7u7uJiYmCgoJ6enpsbGxgYGBHR0c+Pj42NjYnJyeRSLVtAAAAQHRSTlMA7iL/iFUzRP8Rd6rdzP/u///////M7v////////////////////8iM3eZqqq7u8zd3e7u7v//////////////aE0y2QAAAAlwSFlzAAALEgAACxIB0t1+/AAAABx0RVh0U29mdHdhcmUAQWRvYmUgRmlyZXdvcmtzIENTNui8sowAAAAWdEVYdENyZWF0aW9uIFRpbWUAMDEvMDcvMTOlb7SWAAAA4UlEQVQokZ3R1xKCMBAFUNJIKFawF6zYe+///1dmJaA4vOh9PDczm9nVtH9jYBUj7ljnnMlwruO4M5O+YjJ9GHNq2UjGtig7ea3721NI5Vgn5OAGcz/dKxORd4MfYG5aocvnIu1yrApqK6+BO4WwYFR57uVFyr4K8I5fRFGxXEldowZ4L4OiolVrdGWzJ4S0waNisSuVyqIpvXoFt2k4/JHLEoi4bGGUZarCGN8q0Ii8A56iTFcrxtNzBdwNPVownnSz1bSzCZb4uXg8a7b7BbX2+EH8/jzpUJo2GCWf9oc8AZktDpWygbAkAAAAAElFTkSuQmCC";
-				break;
-			case NotifyProgress.NOTIFY_TYPE_ERROR:
-				_icon.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAMAAADXqc3KAAAAA3NCSVQICAjb4U/gAAAAwFBMVEX/////VVX3UlJNbGyULi4mDw86GhoMERHoTEzPRET/pqb/ZmZ0MTGZMzN0JCQYIiIMERH/xcWfqqrDWVnUS0u+T0+SPz9sQkJ6OTkRGBj84ODzZmboWVl3YmJhIiJMIiJBIiIGCAgRGBiIv79okpIuQUEGCAjk///N9va66enW3Ny11tb/trbqkpKOm5u7hYWGfHyycXFZfHzgVFSsX1+cTk6xQUF3SEhTTExSOzt5JCRiKysXCAh/srIRGBgpOTlzKqofAAAAQHRSTlMA///////////////////M3f//////////3f////////+ZzN3d3d3/////////////////////////////mZnMlM/YUAAAAAlwSFlzAAALEgAACxIB0t1+/AAAABx0RVh0U29mdHdhcmUAQWRvYmUgRmlyZXdvcmtzIENTNui8sowAAAAWdEVYdENyZWF0aW9uIFRpbWUAMDEvMDcvMTOlb7SWAAABLElEQVQokV2SZ2OCMBCG7yCJQAEBqWKdbUVbtzg6tPX//6teBiK9T8n75HYAjNmTwpYGdXtdzOOl53mrzSC/199n8QNq6x2+Kv3tqZSl7f2a7gw558J3LbTSs4mj3g+f1UW0ibhjlXem4hgAzQzRYl06LWIV2R39anI90oVcfubkkNKrNGtq8tlDK7RhQg6nqQgodEl2iEEExRJRAIxORPwXBbYEGmB7iJxu50cK58uksK4B6EjSliRBZBoIqEh+AytEMwNJ8FhACzGMwN5Q2doFPkiivmk+gsY/oLIzXQ4MWnqOTGbND7Ic08Ja6Y6Yqk77MqnZQir174sJTQT7u+06SVpK5+VCOnur2pMT3nQaCHMNchi/3C+9Ow5ZwBgLBZ/++yd21CCLbt/nD9ghFMIF8V9xAAAAAElFTkSuQmCC";
-				break;
-			}
-
-			_notify = type;
-		}
-
-		// --------------------------------------------------------------------------------
-		// マウスムーブ（内部用）
-		// --------------------------------------------------------------------------------
-		function mouseMove(){
-			if(!_task)	return;
-			var work = _task.getUserWork();
-			var mouse_pos = input_mouse.getPositionClient();
-			_icon.style.left = (mouse_pos.x - 24.0/2.0) + "px";
-			_icon.style.top  = (mouse_pos.y - 24.0-2.0) + "px";
-		}
 
 		// --------------------------------------------------------------------------------
 		// 初期化（内部用）
@@ -75909,12 +75665,7 @@ function PageExpand(page_expand_arguments){
 
 			work.anime_pos = 0.0;
 			work.anime_spd = 0.0;
-
-			// 最前面に配置
-			_icon.style.zIndex = 0x7FFFFFFF;
-			_icon.style.position = "fixed";
-			_icon.style.pointerEvents = "none";
-			document.body.appendChild(_icon);
+			document.body.appendChild(this.shadow_host);
 
 			task.setExecuteFunc(NotifyIconFadeIn);
 			task.execute(0xffffffff);
@@ -75924,8 +75675,8 @@ function PageExpand(page_expand_arguments){
 		// デストラクタ（内部用）
 		// --------------------------------------------------------------------------------
 		function NotifyIconDestructor(task){
-			DomNodeRemove(_icon);
-			_task = null;
+			DomNodeRemove(this.shadow_host);
+			this.task = null;
 		}
 
 		// --------------------------------------------------------------------------------
@@ -75934,8 +75685,7 @@ function PageExpand(page_expand_arguments){
 		function NotifyIconFadeIn(task){
 			var work = task.getUserWork();
 
-			// マウスムーブ
-			mouseMove();
+			update_move.call(this);
 
 			var sub = 1.0 - work.anime_pos;
 			sub *= 0.4;
@@ -75951,7 +75701,7 @@ function PageExpand(page_expand_arguments){
 				work.anime_pos = 1.0;
 				task.setExecuteFunc(NotifyIconShowInit);
 			}
-			_icon.style.opacity = work.anime_pos;
+			update_alpha.call(this,work.anime_pos);
 		}
 
 		// --------------------------------------------------------------------------------
@@ -75962,16 +75712,14 @@ function PageExpand(page_expand_arguments){
 
 			work.anime_pos = 1.0;
 			work.anime_spd = 0.0;
-			_icon.style.opacity = work.anime_pos;
+			var s = this.root.style;
+			s.opacity = work.anime_pos;
 
 			task.setExecuteFunc( NotifyIconShowExec);
 			task.execute(0xffffffff);
 		}
 		function NotifyIconShowExec(task){
-			var work = task.getUserWork();
-
-			// マウスムーブ
-			mouseMove();
+			update_move.call(this);
 		}
 
 		// --------------------------------------------------------------------------------
@@ -75980,8 +75728,7 @@ function PageExpand(page_expand_arguments){
 		function NotifyIconFadeOut(task){
 			var work = task.getUserWork();
 
-			// マウスムーブ
-			mouseMove();
+			update_move.call(this);
 
 			var sub = 0.0 - work.anime_pos;
 			sub *= 0.4;
@@ -75995,192 +75742,301 @@ function PageExpand(page_expand_arguments){
 				work.anime_pos = 0.0;
 				task.setExecuteFunc(NotifyIconClose);
 			}
-			_icon.style.opacity = work.anime_pos;
+			update_alpha.call(this,work.anime_pos);
 		}
 
 		// --------------------------------------------------------------------------------
 		// 閉じる（内部用）
 		// --------------------------------------------------------------------------------
 		function NotifyIconClose(task){
-			var work = task.getUserWork();
 			task.release();
 		}
 
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _icon;
-		var _active;
-		var _notify;
+		function update_move(){
+			var p = (function(){
+				var e = this.active || {};
+				if(e.touch_revision){
+					if(!e.touch_revision.isUpdated()) return e.touch_position;
+				}
+				var p = input_mouse.getPositionClient();
+				var c = input_mouse.getContactGeometry();
+				p.x = p.x - (24.0 * 0.5);
+				p.y = p.y - (24.0 - 1.0) - (c.height * 0.5);
+				return p;
+			}).call(this);
 
-		var _task;
+			var s = this.root.style;
+			s.left = (p.x) + "px";
+			s.top  = (p.y) + "px";
+		}
+		function update_alpha(v){
+			var s = this.root.style;
+			s.opacity = v;	
+		}
 
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_icon = DocumentCreateElement("img");
-			ElementSetStyle(_icon,CSSTextGetInitialImageElement());
-			_notify = NotifyProgress.NOTIFY_TYPE_UNKNOWN;
-		})();
-	}
-	NotifyProgress.NOTIFY_TYPE_UNKNOWN = 0;
-	NotifyProgress.NOTIFY_TYPE_LOADING = 1;
-	NotifyProgress.NOTIFY_TYPE_COMPLETE = 2;
-	NotifyProgress.NOTIFY_TYPE_ERROR = 3;
-	NotifyProgress.NOTIFY_TYPE_RELEASE = 4;
+		function NotifyProgress(){
+			var _this = this;
 
+			this.notify = this.NOTIFY_TYPE.UNKNOWN;
+			this.svgs = {};
+
+			var shadow_host = this.shadow_host = DocumentCreateElement("div");
+			var shadow_root = (shadow_host.attachShadow) ? shadow_host.attachShadow({mode:"closed"}) : shadow_host;
+
+			var node_info = node_info_dictionary.addNode(shadow_host);
+			node_info.setInvalid();
+			node_info.setOwnerToPageExpand();
+
+			var root = this.root = DocumentCreateElement("div");
+			root.className = "root";
+			shadow_root.appendChild(root);
+
+			var svg_load = '<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke-width:3;stroke:#222;fill:none;" d="M 8,2 A 6,6 0 0 1 14,8 6,6 0 0 1 8,14 6,6 0 0 1 2,8 6,6 0 0 1 8,2 Z" /><path class="meter" style="stroke-width:2;fill:none;transform-origin:center;" d="M 8,2 A 6,6 0 0 1 14,8 6,6 0 0 1 8,14 6,6 0 0 1 2,8 6,6 0 0 1 8,2 Z" /></g></svg>';
+			[{
+				name:"error",
+				svg:'<svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><g><path style="paint-order:stroke fill;stroke:#722222;fill:#ff5555;" d="M 8 1 A 7 7 0 0 0 1 8 A 7 7 0 0 0 8 15 A 7 7 0 0 0 15 8 A 7 7 0 0 0 8 1 z M 8 2.5 A 5.5 5.5 0 0 1 13.5 8 A 5.5 5.5 0 0 1 12.3 11.3 L 4.7 3.7 A 5.5 5.5 0 0 1 8 2.5 z M 3.7 4.7 L 11.3 12.3 A 5.5 5.5 0 0 1 8 13.5 A 5.5 5.5 0 0 1 2.5 8 A 5.5 5.5 0 0 1 3.7 4.7 z" /></g></svg>'
+			},{
+				name:"wait",
+				svg:svg_load
+			},{
+				name:"loading",
+				svg:svg_load
+			},{
+				name:"complete",
+				svg:svg_load
+			},{
+				name:"unknown",
+				svg:svg_load
+			}].forEach(function(o){
+				var svg = new DOMParser().parseFromString(o.svg,"image/svg+xml").childNodes[0];
+				svg.classList.add("icon",o.name);
+				_this.svgs[o.name] = svg;
+			});
+			this.meter = this.svgs.loading.getElementsByClassName("meter")[0];
+
+			var style = DocumentCreateElement("style");
+			shadow_root.appendChild(style);
+			[
+				[".root","all:initial; color-scheme:revert; width:24px; height:24px; left:5px; top:5px; position:fixed; z-index:2147483647; pointer-events:none;"],
+				[".icon","width:100%;"],
+
+				[".wait .meter",'stroke:#fff; animation:wait0 3.0s linear infinite normal forwards running , wait1 12.0s linear infinite normal forwards running;'],
+				["@keyframes wait0","0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}"],
+				["@keyframes wait1","0%{stroke-dasharray:0 999 0;}50%{stroke-dasharray:37.68 999 0;}50.00001%{stroke-dasharray:0 0 999;}100%{stroke-dasharray:0 37.68 999;}"],
+
+				[".complete .meter",'stroke:#4e4;'],
+
+				[".loading .meter",'stroke:#f84; animation:loading 0.5s linear infinite normal forwards running;'],
+				["@keyframes loading","0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}"],
+
+				[".unknown .meter",'stroke:#fff; animation:unknown0 0.5s linear infinite normal forwards running , unknown1 3.0s linear infinite normal forwards running;'],
+				["@keyframes unknown0","0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}"],
+				["@keyframes unknown1","0%{stroke-dasharray:0 999 0;}50%{stroke-dasharray:37.68 999 0;}50.00001%{stroke-dasharray:0 0 999;}100%{stroke-dasharray:0 37.68 999;}"]
+
+			].forEach(function(r,i){
+				style.appendChild(DocumentCreateText(r[0] + "{" + r[1] + "}"));				
+			});
+		}
+		NotifyProgress.prototype = {
+			release:function(){
+				if(this.task){
+					this.task.release();
+					this.task = null;
+				}
+			},
+			createElement:function(){
+				var element = new Element(this);
+				return element;
+			},
+			active:null,
+			notify:null,
+			root:null,
+			svgs:null,
+			meter:null,
+			task:null,
+			NOTIFY_TYPE:NOTIFY_TYPE
+		};
+		return NotifyProgress;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// ダブルタッチ補助
 	// --------------------------------------------------------------------------------
-	function DoubleTouchAssist(){
-		var _this = this;
+	var DoubleTouchAssist = (function(){
+		var arrows = ["dash","solid"];
 
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function (){
-			if(_task){
-				_task.release();
-			}
-			_line = null;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 表示開始
-		// --------------------------------------------------------------------------------
-		_this.setShow = function (pos,vec){
-			if(_task){
-				_task.release();
-				_task = null;
-			}
-
-			_task = task_container.createTask();
-			_task.setDestructorFunc(AssistLineDestructor);
-			_task.setExecuteFunc(AssistLineInitialize);
-
-			var work = _task.getUserWork();
-			work.pos = pos;
-			work.vec = vec;
-
-			_task.execute(0xffffffff);
-		};
-
-		// --------------------------------------------------------------------------------
-		// 初期化（内部用）
-		// --------------------------------------------------------------------------------
-		function AssistLineInitialize(task){
+		function task_exec(task){
 			var work = task.getUserWork();
-
-			var style = _line.style;
-			style.left   = "0px";
-			style.top    = "0px";
-			style.width  = "0px";
-			document.body.appendChild(_line);
-
-			var pos = work.pos;
-			var vec = work.vec;
-			var bounding_size = ElementGetBoundingClientRect(_line);
-			var x = vec.x * 0.5;
-			var y = vec.y * 0.5;
-			var r = Math.atan2(vec.y,vec.x);
-			var w = Math.sqrt(vec.x * vec.x + vec.y * vec.y);
-
-			style.left  = (pos.x - bounding_size.left - x - (w * 0.5)) + "px";
-			style.top   = (pos.y - bounding_size.top  - 0 - y) + "px";
-			style.width = (w) + "px";
-			style.transform = style.MozTransform = style.webkitTransform = "rotate(" + (r) + "rad)";
-			style.opacity = 0.5;
-
-			work.anime_pos = 0.0;
-			work.anime_spd = 0.0;
-
-			task.setExecuteFunc(AssistLineShowInit);
-			task.execute(0xffffffff);
-		}
-
-		// --------------------------------------------------------------------------------
-		// デストラクタ（内部用）
-		// --------------------------------------------------------------------------------
-		function AssistLineDestructor(task){
-			DomNodeRemove(_line);
-			_task = null;
-		}
-
-		// --------------------------------------------------------------------------------
-		// 表示（内部用）
-		// --------------------------------------------------------------------------------
-		function AssistLineShowInit(task){
-			var work = task.getUserWork();
-			work.frame = 30;
-			task.setExecuteFunc( AssistLineShowExec);
-			task.execute(0xffffffff);
-		}
-		function AssistLineShowExec(task){
-			var work = task.getUserWork();
-
 			work.frame -= 1;
 			if(work.frame < 0){
-				task.setExecuteFunc(AssistLineFadeOutInit);
+				work.anime_add = -0.25;
 			}
-		}
 
-		// --------------------------------------------------------------------------------
-		// フェードアウト（内部用）
-		// --------------------------------------------------------------------------------
-		function AssistLineFadeOutInit(task){
-			var work = task.getUserWork();
-
-			work.anime_pos = 1.0;
-			work.anime_spd = 0.0;
-
-			task.setExecuteFunc( AssistLineFadeOutExec);
-			task.execute(0xffffffff);
-		}
-		function AssistLineFadeOutExec(task){
-			var work = task.getUserWork();
-
-			var sub = 0.0 - work.anime_pos;
-			sub *= 0.5;
+			var sub;
+			if(work.anime_add < 0.0){
+				sub = 0.0 - work.anime_pos;
+				sub *= 0.5;
+			}
 			if(sub < 0.0){
-				work.anime_spd -= 0.25;
+				work.anime_spd += work.anime_add;
 				if(work.anime_spd < sub)	work.anime_spd = sub;
 			}
 			work.anime_pos += work.anime_spd;
 			if(work.anime_pos < 0.01){
 				work.anime_spd = 0.0;
 				work.anime_pos = 0.0;
-				task.setExecuteFunc(AssistLineClose);
 			}
-			_line.style.opacity = work.anime_pos * 0.5;
+			update_alpha.call(this,(work.anime_pos).toFixed(8));
+
+			if(work.anime_pos <= 0.0){
+				task.release();
+			}
+		}
+		function task_dest(task){
+			DomNodeRemove(this.shadow_host);
+			this.task = null;
 		}
 
-		// --------------------------------------------------------------------------------
-		// 閉じる（内部用）
-		// --------------------------------------------------------------------------------
-		function AssistLineClose(task){
-			var work = task.getUserWork();
-			task.release();
+		function update_alpha(v){
+			var elements = this.elements;
+			arrows.forEach(function(s){
+				var s = elements[s].style;
+				if(s.opacity == v) return;
+				s.opacity = v;
+			});			
+		}
+		function release_task(){
+			if(this.task){
+				this.task.release();
+				this.task = null;
+			}
 		}
 
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _line;
-		var _task;
+		function DoubleTouchAssist(){
+			var _this = this;
+			var elements = this.elements = {};
 
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_line = DocumentCreateElement("div");
-			_line.style.cssText = "height:2px; border:1px solid #000; background:#FFF; border-radius:2px; box-shadow:0px 0px 2px #888;";
-			_line.style.zIndex = 0x7FFFFFFF;
-			_line.style.position = "absolute";
-			_line.style.pointerEvents = "none";
-		})();
-	}
+			var shadow_host = this.shadow_host = DocumentCreateElement("div");
+			var shadow_root = (shadow_host.attachShadow) ? shadow_host.attachShadow({mode:"closed"}) : shadow_host;
+
+			var node_info = node_info_dictionary.addNode(shadow_host);
+			node_info.setInvalid();
+			node_info.setOwnerToPageExpand();
+
+			["root","dash","solid"].forEach(function(name){
+				var e = elements[name] = DocumentCreateElement("div");
+				e.className = name;
+			});
+			arrows.forEach(function(s){ elements.root.appendChild(elements[s]); });
+			shadow_root.appendChild(elements.root);
+
+			var style = DocumentCreateElement("style");
+			shadow_root.appendChild(style);
+			[
+				[".root","all:initial; color-scheme:revert; pointer-events:none;"],
+				[".dash","position:absolute; z-index:2147483647; mix-blend-mode:difference;"],
+				[".solid","position:absolute; z-index:2147483647;"],
+				[".svg_dl","position:absolute; top:-1px;"],
+				[".svg_da","position:absolute; top:-4px;"],
+				[".svg_so","position:absolute; top:-10px; left:-2px;"]
+			].forEach(function(r,i){
+				style.appendChild(DocumentCreateText(r[0] + "{" + r[1] + "}"));				
+			});
+		}
+		DoubleTouchAssist.prototype = {
+			release:function (){
+				release_task.call(this);
+			},
+			setShow:function (options){
+				var _this = this;
+				var elements = this.elements;
+				release_task.call(this);
+				arrows.forEach(function(s){ DomNodeRemoveChildren(elements[s]); });
+
+				var pos = options.position;
+				var vec = options.vector;
+
+				var scroll_pos = WindowGetScrollPosition(window);
+				pos.x += scroll_pos.x;
+				pos.y += scroll_pos.y;
+
+				var total = Math.sqrt(vec.x * vec.x + vec.y * vec.y);
+				var rad = Math.atan2(vec.y,vec.x);
+
+				var len_dl;
+				var len_da;
+				if(total < 16){
+					len_dl = len_da = total * 0.5;
+				}else{
+					len_dl = total - 8;
+					len_da = 8;
+				}
+
+				var list = [];
+				list.push({
+					parent:"dash",
+					name:"svg_dl",
+					svg:'<svg width="' + len_dl + '" height="2" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke-dasharray:2 1;stroke-width:2;stroke:#ccc;" d="M 0,1 H ' + len_dl + '" /></g></svg>'
+				});
+				list.push({
+					parent:"dash",
+					name:"svg_da",
+					svg:'<svg width="' + (len_da) + '" height="8" xmlns="http://www.w3.org/2000/svg"><g><path style="fill:#ccc;" d="M 0,0 V 8 L ' + (len_da) + ',4 Z" /></g></svg>',
+					style:{left:(total-len_da)+"px"}
+				});
+
+				if(options.lambda >= 0){
+					var total_so = options.lambda;
+					var len_sl;
+					var len_sa;
+					if(total_so < 24){
+						len_sl = len_sa = total_so * 0.5;
+					}else{
+						len_sl = total_so - 12;
+						len_sa = 12;
+					}
+					var p0 = len_sl + 2;
+					var p1 = p0 + len_sa;
+					list.push({
+						parent:"solid",
+						name:"svg_so",
+						svg:'<svg width="' + (total_so + 4) + '" height="20" xmlns="http://www.w3.org/2000/svg"><g><path style="stroke-width:1;stroke:canvastext;fill:canvas;" d="M 2,7 V 13 H ' + (p0) + ' V 18 L ' + (p1) + ',10 ' + (p0) + ',2 V 7 Z" /></g></svg>'
+					});
+				}
+
+				list.forEach(function(o){
+					var svg = new DOMParser().parseFromString(o.svg,"image/svg+xml").childNodes[0];
+					svg.classList.add(o.name);
+					elements[o.parent].appendChild(svg);
+					var s = svg.style;
+					Object.entries(o.style || {}).forEach(function(a){ s[a[0]] = a[1]; });
+				});
+
+				arrows.forEach(function(s){
+					var s = elements[s].style;
+					s.left  = (pos.x) + "px";
+					s.top   = (pos.y) + "px";
+					s.transform = "rotate(" + (rad) + "rad)";
+				});
+				document.body.appendChild(this.shadow_host);
+
+				this.task = task_container.createTask();
+				this.task.setThis(this);
+				this.task.setDestructorFunc(task_dest);
+				this.task.setExecuteFunc(task_exec);
+				var work = this.task.getUserWork();
+				work.anime_pos = 1.0;
+				work.anime_spd = 0.0;
+				work.anime_add = 0.0;
+				work.frame = 60;
+				this.task.execute(0xffffffff);
+			},
+			elements:null,
+			task:null,
+
+		};
+		return DoubleTouchAssist;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// 可視制限コンテナ
@@ -76779,8 +76635,6 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	var InputMouse = (function(){
 		var events = [
-			"mousemove",
-			"mouseout",
 			"mousedown",
 			"mouseup",
 			"dragstart",
@@ -76788,58 +76642,85 @@ function PageExpand(page_expand_arguments){
 			"dragover",
 			"dragend",
 			"contextmenu",
-			"blur"
+			"blur",
+			"pointermove",
+			"pointerover",
+			"pointerdown",
+			"pointerup",
+			"pointercancel"
 		];
-		var event_type_down = {"mousedown":true,"dragstart":true};
-		var event_type_up = {"mouseup":true,"dragend":true};
-		var event_type_move = {"mousemove":true,"mouseover":true,"drag":true,"dragover":true};
+		var event_type_down = {"mousedown":1,"pointerdown":1,"dragstart":1};
+		var event_type_up = {"mouseup":1,"pointerup":1,"pointercancel":1,"dragend":1};
+		var event_type_move = {"mousemove":1,"pointermove":1,"drag":1,"dragover":1}; // over は不正確なので含めない
 		var button_to_buttons = [0x01,0x04,0x02,0x08,0x10,0x20];
 
-		var dict = new Object();
-		dict["mousemove"] =
-		dict["mouseover"] =
-		dict["mousedown"] =
-		dict["mouseup"] =
-		dict["dragstart"] =
-		dict["dragover"] =
-		dict["drag"] =
-		dict["dragend"] = function(e,options){
+		var dict_int = new Object();
+		var dict_ext = new Object();
+
+		function mouse_int(e,options){
 			this.enable = true;
-			dispatch_mouseevent.call(this,e,options);
+			this.timeStamp = e.timeStamp;
+			dispatch_buttons.call(this,e,options);
+			dispatch_modifierkey.call(this,e,options);
+			this.event_dispatcher.dispatchEvent("modify",this);
 		};
-		dict["mouseout"] = function(e,options){
-			//var client_size = DocumentGetClientSize(this.window.document);
-			//if(e.clientX < 0) this.enable = false;
-			//if(e.clientY < 0) this.enable = false;
-			//if(e.clientX >= client_size.width ) this.enable = false;
-			//if(e.clientY >= client_size.height) this.enable = false;
-			dispatch_mouseevent.call(this,e,options);
+		function mouse_ext(e,options){
+			this.enable = true;
+			this.timeStamp = e.timeStamp;
+			dispatch_buttons.call(this,e,options);
+			dispatch_position.call(this,e,options);
+			dispatch_modifierkey.call(this,e,options);
+			this.event_dispatcher.dispatchEvent("modify",this);
 		};
-		dict["contextmenu"] = function(e,options){
+		["mousemove","mouseover","mouseout","mousedown","mouseup","dragstart","dragover","drag","dragend"].forEach(function(type){
+			dict_int[type] = mouse_int;
+			dict_ext[type] = mouse_ext;
+		});
+
+		function pointer_both(e,options){
+			if(!e.isPrimary) return;
+			this.enable = true;
+			mouse_ext.call(this,e,options);
+		};
+		["pointermove","pointerover","pointerdown","pointerup","pointercancel"].forEach(function(type){
+			dict_int[type] = dict_ext[type] = pointer_both;
+		});
+
+		function contextmenu(e,options){
 			if(e.defaultPrevented === true) return;
 			if(e.returnValue === false) return;
 			this.buttons &= ~0x02;
+			this.pointer_contact = false;
 		};
-		dict["blur"] = function(e,options){
-			//this.buttons = 0x00;
-			//this.altKey = false;
-			//this.shiftKey = false;
-			//this.ctrlKey = false;
-			//this.enable = false;
-		};
-		function dispatch_event(e,options){
-			var f = dict[e.type];
+		["contextmenu"].forEach(function(type){
+			dict_int[type] = dict_ext[type] = contextmenu;
+		});
+
+		function dispatch_int(e,options){
+			var f = dict_int[e.type];
 			if(f) f.call(this,e,options);
 		}
-		function dispatch_mouseevent(e,options){
-			//if(this.timeStamp >= e.timeStamp) return;
-			this.timeStamp = e.timeStamp;
+		function dispatch_ext(e,options){
+			var f = dict_ext[e.type];
+			if(f) f.call(this,e,options);
+		}
+
+		function dispatch_buttons(e,options){
+
+			if(event_type_down[e.type]){
+				this.pointer_contact = true;
+			}else if(event_type_up[e.type]){
+				this.pointer_contact = false;
+				if(e.buttons == 0) this.buttons = 0;
+			}
+
+			// 非マウス操作
+			if((e.pointerType) && (e.pointerType != "mouse")) return;
 
 			if((function(){
 				if(e.buttons === undefined) return false;
-				if(!event_type_move[e.type]) return false;
-				if((this.clientX == e.clientX) && (this.clientY == e.clientY)) return false;
-				return true;
+//					if((this.clientX == e.clientX) && (this.clientY == e.clientY)) return false;
+				return (event_type_move[e.type]);
 			}).call(this)){
 				this.buttons = e.buttons;
 			}
@@ -76849,30 +76730,33 @@ function PageExpand(page_expand_arguments){
 			}else if(event_type_up[e.type]){
 				this.buttons &= ~(button_to_buttons[e.button] || 0);
 			}
-
-			if(e.clientX || e.clientY){
-				this.clientX = this.topX = e.clientX;
-				this.clientY = this.topY = e.clientY;
-				if(options.modifyClient) options.modifyClient.call(this);
-				if(options.modifyTop) options.modifyTop.call(this);
-			}
-
+		}
+		function dispatch_position(e,options){
+			if((e.clientX == 0) && (e.clientY == 0)) return;
+			this.clientX = this.topX = e.clientX;
+			this.clientY = this.topY = e.clientY;
+			if(options.modifyClient) options.modifyClient.call(this);
+			if(options.modifyTop) options.modifyTop.call(this);
+			if(e.width) this.width = e.width;
+			if(e.height) this.height = e.height;
+		}
+		function dispatch_modifierkey(e,options){
 			this.altKey = e.altKey;
 			this.shiftKey = e.shiftKey;
 			this.ctrlKey = e.ctrlKey;
-			this.event_dispatcher.dispatchEvent("modify",this);
 		}
+
 		function attach_window(window_obj,callback){
 			var _this = this;
 			var handler = callback.call(this);
 			events.forEach(function(type){
 				var listener = new EventListenerWrapper(window_obj);
-				listener.start(type,handler,true);
+				listener.start(type,handler,{capture:true,passive:true});
 				_this.releasers.push(listener);
 			});
 		}
 
-		function f(window_obj){
+		function InputMouse(window_obj){
 			var _this = this;
 			this.releasers = [];
 			this.event_dispatcher = new EventDispatcher();
@@ -76883,7 +76767,7 @@ function PageExpand(page_expand_arguments){
 				// カレントウィンドウを監視（シンプル）
 				attach_window.call(this,this.window,function(){
 					return function(e){
-						dispatch_event.call(_this,e,{});
+						dispatch_int.call(_this,e,{});
 					}
 				});
 				return;
@@ -76917,7 +76801,7 @@ function PageExpand(page_expand_arguments){
 					this.topY -= offsetY;
 				};
 				return function(e){
-					dispatch_event.call(_this,e,options);
+					dispatch_int.call(_this,e,options);
 				};
 			});
 
@@ -76937,11 +76821,11 @@ function PageExpand(page_expand_arguments){
 					this.clientY += offsetY;
 				};
 				return function(e){
-					dispatch_event.call(_this,e,options);
+					dispatch_int.call(_this,e,options);
 				};
 			});
 		}
-		f.prototype = {
+		InputMouse.prototype = {
 			release:function(){
 				if(this.event_dispatcher){
 					this.event_dispatcher.release();
@@ -76969,6 +76853,12 @@ function PageExpand(page_expand_arguments){
 			},
 			getButtonCenter:function(){
 				return Boolean(this.buttons & 0x04);
+			},
+			getButtonPointer:function(){
+				return Boolean(this.pointer_contact);
+			},
+			getContactGeometry:function(){
+				return {width:this.width,height:this.height};
 			},
 			getKeyShift:function(){
 				return this.shiftKey;
@@ -77004,51 +76894,25 @@ function PageExpand(page_expand_arguments){
 					}
 				}
 
-				dispatch_event.call(this,e,options);
+				dispatch_ext.call(this,e,options);
 			},
-			setInputMouse:function(input_mouse){
-				return;
-				if(this.timeStamp >= input_mouse.timeStamp) return;
-
-				var offset = false;
-				var offsetX = 0;
-				var offsetY = 0;
-				try{
-					var now = input_mouse.window;
-					var top = now.top;
-					while(true){
-						if(this.window == now){
-							offset = true;
-							break;
-						}
-						if(now == top) break;
-						var element = now.frameElement;
-						if(!element) break;
-						var size = ComputedStyleGetSize(ElementGetComputedStyle(element,""));
-						var rect = ElementGetBoundingClientRect(element);
-						offsetX += rect.left + size.paddingLeft + size.borderLeft;
-						offsetY += rect.top  + size.paddingTop  + size.borderTop;
-						now = now.parent;
-					}
-				}catch(e){
-				}
-				if(offset){
-					this.clientX = input_mouse.clientX + offsetX;
-					this.clientY = input_mouse.clientY + offsetY;
-				}
-				this.timeStamp = input_mouse.timeStamp;
-				this.buttons = input_mouse.buttons;
-				this.shiftKey = input_mouse.shiftKey;
-				this.ctrlKey = input_mouse.ctrlKey;
-				this.altKey = input_mouse.altKey;
+			setPointerEvent:function(e){
+				this.setMouseEvent(e);
 			},
 			setInputTouch:function(input_touch){
-				if(!input_touch.getEnableTouch()){
-					this.buttons = 0x00;
+				var touch = input_touch.getTouchList()[0];
+				if((function(){
+					if(!touch) return true;
+					return (!touch.isPrimary);
+				})()){
+					pointer_contact = false;
+					return;
 				}
-				var pos = input_touch.getPositionAverage();
-				this.clientX = pos.x;
-				this.clientY = pos.y;
+				pointer_contact = true;
+				this.clientX = touch.clientX;
+				this.clientY = touch.clientY;
+				this.topX = touch.topX;
+				this.topY = touch.topY;
 			},
 			window:null,
 			elements:null,
@@ -77058,278 +76922,404 @@ function PageExpand(page_expand_arguments){
 			topX:-1,
 			topY:-1,
 			buttons:0x00,
+			width:1,
+			height:1,
 			shiftKey:false,
 			ctrlKey:false,
 			altKey:false,
+			pointer_contact:false,
 			enable:false,
 			event_dispatcher:null,
 			releasers:null
 		};
-		return f;
+		return InputMouse;
 	})();
 
 	// --------------------------------------------------------------------------------
 	// タッチ入力
 	// --------------------------------------------------------------------------------
-	function InputTouch(){
-		var _this = this;
-
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			if(document.removeEventListener){
-				document.removeEventListener("touchstart",touch_move_func,true);
-				document.removeEventListener("touchmove",touch_move_func,true);
-				document.removeEventListener("touchend",touch_end_func,true);
-				document.removeEventListener("touchcancel",touch_end_func,true);
-				window.removeEventListener("blur",blur_func);
+	var InputTouch = (function(){
+		var Touch = (function(){
+			function f(){
 			}
-
-			if(_event_dispatcher){
-				_event_dispatcher.release();
-				_event_dispatcher = null;
-			}
-		};
-
-		// --------------------------------------------------------------------------------
-		// タッチイベントをセット
-		// --------------------------------------------------------------------------------
-		_this.setTouchEvent = function(e){
-			touch_move_func(e);
-		};
-
-		// --------------------------------------------------------------------------------
-		// 平均座標を取得
-		// --------------------------------------------------------------------------------
-		_this.getPositionAverage = function(){
-			return ObjectCopy(_pos_average);
-		};
-
-		// --------------------------------------------------------------------------------
-		// タッチが有効か調べる
-		// --------------------------------------------------------------------------------
-		_this.getEnableTouch = function(){
-			return _enable_touch;
-		};
-
-		// --------------------------------------------------------------------------------
-		// タッチリストを取得する
-		// --------------------------------------------------------------------------------
-		_this.getTouchList = function(){
-			return _touch_list;
-		};
-
-		// --------------------------------------------------------------------------------
-		// イベントハンドラを作成
-		// --------------------------------------------------------------------------------
-		_this.createEventHandler = function(type){
-			return _event_dispatcher.createEventHandler(type);
-		};
-
-		// --------------------------------------------------------------------------------
-		// タッチ入力移動（内部用）
-		// --------------------------------------------------------------------------------
-		function touch_input_func(e){
-			var touch_list = e.changedTouches;
-			var i;
-			var num = touch_list.length;
-			for(i=0;i<num;i++){
-				var touch = touch_list[i];
-				_touch_list[touch.identifier] = touch;
-			}
-
-			var x = 0;
-			var y = 0;
-			var count = 0;
-			num = _touch_list.length;
-			for(i=0;i<num;i++){
-				var touch = _touch_list[i];
-				if(!touch) continue;
-				x += touch.clientX;
-				y += touch.clientY;
-				count ++;
-			}
-			if(count){
-				_pos_average.x = x / count;
-				_pos_average.y = y / count;
-			}
-		}
-
-		// --------------------------------------------------------------------------------
-		// タッチ移動（内部用）
-		// --------------------------------------------------------------------------------
-		function touch_move_func(e){
-			_enable_touch = true;
-			touch_input_func(e);
-
-			// イベントを発火
-			_event_dispatcher.dispatchEvent("update",_this);
-		}
-
-		// --------------------------------------------------------------------------------
-		// タッチ終了（内部用）
-		// --------------------------------------------------------------------------------
-		function touch_end_func(e){
-			touch_input_func(e);
-
-			var touch_list = e.changedTouches;
-			var i;
-			var num = touch_list.length;
-			for(i=0;i<num;i++){
-				var touch = touch_list[i];
-				_touch_list[touch.identifier] = null;
-			}
-
-			i = _touch_list.length - 1;
-			while(i >= 0){
-				if(_touch_list[i]) break;
-				i --;
-			}
-			_touch_list.length = i + 1;
-
-			if(!(_touch_list.length)){
-				_enable_touch = false;
-			}
-
-			// イベントを発火
-			_event_dispatcher.dispatchEvent("update",_this);
-		}
-
-		// --------------------------------------------------------------------------------
-		// 非アクティブ（内部用）
-		// --------------------------------------------------------------------------------
-		function blur_func(e){
-			_enable_touch = false;
-			_touch_list.length;
-
-			// イベントを発火
-			_event_dispatcher.dispatchEvent("update",_this);
-		}
-
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _pos_average;
-		var _touch_list;
-		var _enable_touch;
-		var _event_dispatcher;
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_touch_list = new Array();
-			_pos_average = new Object();
-			_pos_average.x = -1;
-			_pos_average.y = -1;
-			_enable_touch = false;
-			_event_dispatcher = new EventDispatcher();
-
-			if(document.addEventListener){
-				document.addEventListener("touchstart",touch_move_func,true);
-				document.addEventListener("touchmove",touch_move_func,true);
-				document.addEventListener("touchend",touch_end_func,true);
-				document.addEventListener("touchcancel",touch_end_func,true);
-				window.addEventListener("blur",blur_func);
-			}
-		})();
-	}
-
-	// --------------------------------------------------------------------------------
-	// 仮想マウスポインタ
-	// --------------------------------------------------------------------------------
-	function VirtualMousePointer(document_obj){
-		var _this = this;
-
-		// --------------------------------------------------------------------------------
-		// 開放
-		// --------------------------------------------------------------------------------
-		_this.release = function(){
-			_element_active = null;
-		};
-
-		// --------------------------------------------------------------------------------
-		// 座標をセット
-		// --------------------------------------------------------------------------------
-		_this.setPosition = function(pos){
-			_mouse_pos = pos;
-			mouse_move_func();
-		};
-
-		// --------------------------------------------------------------------------------
-		// 移動量を加算
-		// --------------------------------------------------------------------------------
-		_this.addVector = function(vec){
-			var pos_end = {
-				x:_mouse_pos.x + vec.x,
-				y:_mouse_pos.y + vec.y
+			f.prototype = {
+				getPositionClient:function(){
+					return {x:this.clientX,y:this.clientY};
+				},
+				getPositionTop:function(){
+					return {x:this.topX,y:this.topY};
+				},
+				getIdentifier:function(){
+					return this.identifier;
+				},
+				timeStamp:0,
+				clientX:-1,
+				clientY:-1,
+				topX:-1,
+				topY:-1,
+				identifier:-1,
+				isPrimary:false,
+				revision:-1,
+				count:-1,
+				touchStart:{}
 			};
+			return f;
+		})();
+		var events = [
+			"touchstart",
+			"touchend",
+			"touchmove",
+			"touchcancel"
+		];
+		var event_type_down = {"touchstart":1};
+		var event_type_up = {"touchend":1,"touchcancel":1};
 
-			var len = Math.sqrt((vec.x * vec.x) + (vec.y * vec.y))
-			var size = 1;
-			var num = Math.floor(len / size);
+		var dict = new Object();
 
-			len = (1 / len) * size;
-			var vx = vec.x * len;
-			var vy = vec.y * len;
-
-			var i;
-			for(i=0;i<num;i++){
-				_mouse_pos.x += vx;
-				_mouse_pos.y += vy;
-				mouse_move_func();
-			}
-			_mouse_pos = pos_end;
-			mouse_move_func();
+		function touch(e,options){
+			this.enable = true;
+			dispatch_touchevent.call(this,e,options);
 		};
+		["touchstart","touchend","touchmove","touchcancel"].forEach(function(type){
+			dict[type] = touch;
+		});
 
-		// --------------------------------------------------------------------------------
-		// マウス移動（内部用）
-		// --------------------------------------------------------------------------------
-		function mouse_move_func(){
-			var node = document_obj.elementFromPoint(_mouse_pos.x,_mouse_pos.y);
-			while(node){
-				var node_info = node_info_dictionary.getNodeInfo(node);
-				if(node_info){
-					break;
+		function dispatch_event(e,options){
+			var f = dict[e.type];
+			if(f) f.call(this,e,options);
+		}
+		function dispatch_touchevent(e,options){
+			var _this = this;
+			var changedTouches = Array.from(e.changedTouches);
+			var touches = Array.from(e.touches);
+			var indexes = [];
+			touches.forEach(function(t){
+				indexes[t.identifier] = t;
+			});
+
+			this.timeStamp = e.timeStamp;
+			this.old_total = this.touches.length;
+			if(event_type_down[e.type]){
+				changedTouches.forEach(function(t,i){
+					var touch = _this.indexes[t.identifier];
+					if(touch){
+						_this.old_total -= 1;
+						touch.count = -1;
+					}else{
+						touch = new Touch();
+						touch.identifier = t.identifier;
+						_this.indexes[t.identifier] = touch;
+						_this.touches.push(touch);
+					}
+					touch.isPrimary = (_this.old_total == 0) && (i == 0);
+					if(touch.isPrimary){
+						_this.revision_primary = _this.revision_counter;
+					}
+					touch.revision = _this.revision_counter;
+					_this.revision_counter += 1;
+				});
+			}else if(event_type_up[e.type]){
+				changedTouches.forEach(function(t){
+					var touch = _this.indexes[t.identifier];
+					if(touch) touch.released = true;
+				});
+			}
+
+			this.touches = (function(){
+				var a = [];
+				_this.touches.forEach(function(touch){
+					if(!indexes[touch.identifier]){
+					}else if(touch.released){
+					}else{
+						a.push(touch);
+						return;
+					}
+					delete _this.indexes[touch.identifier];
+				});
+				return a;
+			})();
+			this.new_total = this.touches.length;
+
+			changedTouches.forEach(function(t){
+				var touch = _this.indexes[t.identifier];
+				if(!touch) return;
+				if(t.clientX || t.clientY){
+					touch.clientX = touch.topX = t.clientX;
+					touch.clientY = touch.topY = t.clientY;
+					if(options.modifyClient) options.modifyClient.call(touch);
+					if(options.modifyTop) options.modifyTop.call(touch);
 				}
+				touch.count += 1;
+				touch.timeStamp = e.timeStamp;
+				if(touch.count == 0){
+					touch.touchStart = {clientX:touch.clientX,clientY:touch.clientY,topX:touch.topX,topY:touch.topY}; 
+				}
+			});
 
+			this.altKey = e.altKey;
+			this.shiftKey = e.shiftKey;
+			this.ctrlKey = e.ctrlKey;
+			this.event_dispatcher.dispatchEvent("modify",this);
+		}
+		function attach_window(window_obj,callback){
+			var _this = this;
+			var handler = callback.call(this);
+			events.forEach(function(type){
+				var listener = new EventListenerWrapper(window_obj);
+				listener.start(type,handler,{capture:true,passive:true});
+				_this.releasers.push(listener);
+			});
+		}
+
+		function InputTouch(window_obj){
+			var _this = this;
+			this.releasers = [];
+			this.event_dispatcher = new EventDispatcher();
+			this.window = window_obj;
+			this.elements = [];
+			this.indexes = [];
+			this.touches = [];
+
+			if(!window_manager.existWindowRoot()){
+				// カレントウィンドウを監視（シンプル）
+				attach_window.call(this,this.window,function(){
+					return function(e){
+						dispatch_event.call(_this,e,{});
+					}
+				});
+				return;
+			}
+
+			var window_top = window_manager.getWindowRoot();
+			try{
+				var window_now = this.window;
+				while(window_now != window_top){
+					var element = window_now.frameElement;
+					if(!element) break;
+					this.elements.push(element);
+					window_now = window_now.parent;
+				}
+			}catch(e){
+			}
+
+			// カレントウィンドウを監視（カレント座標をトップ座標に変換）
+			attach_window.call(this,this.window,function(){
+				var options = {};
+				options.modifyClient = function(){
+					var offsetX = 0;
+					var offsetY = 0;
+					_this.elements.forEach(function(element){
+						var size = ComputedStyleGetSize(ElementGetComputedStyle(element,""));
+						var rect = ElementGetBoundingClientRect(element);
+						offsetX -= rect.left + size.paddingLeft + size.borderLeft;
+						offsetY -= rect.top  + size.paddingTop  + size.borderTop;
+					});
+					this.topX -= offsetX;
+					this.topY -= offsetY;
+				};
+				return function(e){
+					dispatch_event.call(_this,e,options);
+				};
+			});
+
+			// トップウィンドウを監視（トップ座標をカレント座標に変換）
+			attach_window.call(this,window_top,function(){
+				var options = {};
+				options.modifyClient = function(){
+					var offsetX = 0;
+					var offsetY = 0;
+					_this.elements.forEach(function(element){
+						var size = ComputedStyleGetSize(ElementGetComputedStyle(element,""));
+						var rect = ElementGetBoundingClientRect(element);
+						offsetX -= rect.left + size.paddingLeft + size.borderLeft;
+						offsetY -= rect.top  + size.paddingTop  + size.borderTop;
+					});
+					this.clientX += offsetX;
+					this.clientY += offsetY;
+				};
+				return function(e){
+					dispatch_event.call(_this,e,options);
+				};
+			});
+		}
+		InputTouch.prototype = {
+			release:function(){
+				if(this.event_dispatcher){
+					this.event_dispatcher.release();
+					this.event_dispatcher = null;
+				}
+				this.releasers.forEach(function(e){
+					e.release();
+				});
+				this.releasers.length = 0;
+				this.indexes.length = 0;
+				this.touches.length = 0;
+			},
+			getTouchList:function(){
+				return this.touches;
+			},	
+			getTouchByIdentifier:function(id){
+				return this.indexes[id];
+			},
+			getButtonPointer:function(){
+				return Boolean(this.pointer_contact);
+			},
+			getKeyShift:function(){
+				return this.shiftKey;
+			},
+			getKeyCtrl:function(){
+				return this.ctrlKey;
+			},
+			getKeyAlt:function(){
+				return this.altKey;
+			},
+			getRevision:function(){
+				var _this = this;
+				var revision = this.revision_primary;
+				var f = function(){
+//					var touch = _this.touches[0];
+//					if(!touch) return false;
+//					if(!touch.isPrimary) return false;
+//					return (touch.revision > revision);
+					return (_this.revision_primary > revision);
+				};
+				return { isUpdated:f,revision:revision };
+			},
+			window:null,
+			elements:null,
+			indexes:null,
+			touches:null,
+			shiftKey:false,
+			ctrlKey:false,
+			altKey:false,
+			enable:false,
+			revision_counter:2,
+			revision_primary:1,
+			event_dispatcher:null,
+			releasers:null
+		};
+		return InputTouch;
+	})();
+
+	// --------------------------------------------------------------------------------
+	// 疑似マウスオーバー
+	// --------------------------------------------------------------------------------
+	var PseudoMouseOver = (function(){
+		function dispatch_pos(pos,type){
+			var node_info;
+			var node = document.elementFromPoint(pos.x,pos.y);
+			while(node){
+				node_info = node_info_dictionary.getNodeInfo(node);
+				if(node_info){
+					var o = node_info.getData("PseudoMouseOver");
+					if(o) break;
+				}
 				node = node.parentNode;
 			}
-			if(node != _element_active){
-				if(_element_active){
-					// マウスアウトイベント発行
-					//var mouse_event = document_obj.createEvent("MouseEvent");
-					//mouse_event.initMouseEvent("mouseout",false,false,document_obj.defaultView,0,0,0,_mouse_pos.x,_mouse_pos.y,false,false,false,false,0,_element_active);
-					//_element_active.dispatchEvent (mouse_event);
-				}
-				if(node){
-					// マウスオーバーイベント発行
-					var mouse_event = document_obj.createEvent("MouseEvent");
-					mouse_event.initMouseEvent("mouseover",false,false,document_obj.defaultView,0,0,0,_mouse_pos.x,_mouse_pos.y,false,false,false,false,0,node);
-					node.dispatchEvent (mouse_event);
+			if(!node) return;
+			this.touch_revision = input_touch.getRevision();
+			var e = node_info.getEventDispatcher();
+			if(e) e.dispatchEvent("PseudoMouseOver",{type:type,revision:this.touch_revision,position:pos});
+			return true;
+		}
+		function dispatch_vec(pos,vec){
+			var r = {position:pos,vector:vec};
+			var len = Math.sqrt((vec.x * vec.x) + (vec.y * vec.y));
+			var size = 1;
+			var num = Math.floor(len / size);
+			var vx = vec.x / num;
+			var vy = vec.y / num;
+			var i;
+			for(i=0;i<num;i++){
+				if(dispatch_pos.call(this,{x:pos.x + vx * i,y:pos.y + vy * i},"dbltouch")){
+					r.revision = this.touch_revision;
+					r.lambda = i;
+					break;
 				}
 			}
-			_element_active = node;
+
+			if(this.touch_assist){
+				this.touch_assist.setShow(r);
+			}
 		}
 
-		// --------------------------------------------------------------------------------
-		// プライベート変数
-		// --------------------------------------------------------------------------------
-		var _element_active;
-		var _mouse_pos;
+		function PseudoMouseOver(){
+			var _this = this;
+			this.releasers = [];
 
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			_element_active = null;
-			_mouse_pos = new Object();
-			_mouse_pos.x = -1;
-			_mouse_pos.y = -1;
-		})();
-	}
+			var event_handler_release = page_expand_event_dispatcher.createEventHandler("release");
+			event_handler_release.setFunction(function(){
+				this.release();
+			});
+			this.releasers.push(event_handler_release);
+
+			// タッチ入力
+			input_touch = new InputTouch(window);
+
+			// タッチ補助
+			if(project.enableDoubleTouchAssist()){
+				this.touch_assist = new DoubleTouchAssist();
+				this.releasers.push(this.touch_assist);
+			}
+
+			// タッチ入力更新
+			var handler = input_touch.event_dispatcher.createEventHandler("modify");
+			handler.setFunction(function (e){
+				var touches = e.getTouchList();
+				var touch0 = touches[0];
+				var touch1 = touches[1];
+				if(!touch0) return;
+
+				(function(){
+					if(!project.enableTouchMove()) return;
+					if(!touch0.isPrimary) return;
+					input_mouse.setInputTouch(input_touch);
+					if(e.new_total != 1) return;
+					dispatch_pos.call(_this,{x:touch0.clientX,y:touch0.clientY},"touch");
+				})();
+
+				(function(){
+					if(!project.enableDoubleTouch()) return;
+					if(e.new_total != 2) return;
+					if(e.old_total == e.new_total) return;
+					if(!touch0.isPrimary) return;
+					if(touch1.count > 0) return;
+					var pos = {
+						x:touch0.clientX,
+						y:touch0.clientY
+					};
+					var vec = {
+						x:touch1.clientX - touch0.clientX,
+						y:touch1.clientY - touch0.clientY
+					};
+					dispatch_vec.call(_this,pos,vec);
+				})();
+			});
+			this.releasers.push(handler);
+
+			// 主タッチが離されるまでコンテキストメニューを禁止する
+			var listener = new EventListenerWrapper(window);
+			listener.start("contextmenu",function(e){
+				if(!e.pointerType) return;
+				if(e.pointerType != "touch") return;
+				if(!_this.touch_revision) return;
+				if(_this.touch_revision.isUpdated()) return;
+				e.preventDefault();
+			});
+			this.releasers.push(listener);
+		}
+		PseudoMouseOver.prototype = {
+			release:function(){
+				this.releasers.forEach(function(e){
+					e.release();
+				});
+				this.releasers.length = 0;
+			},
+			revision:null,
+			releasers:null
+		};
+		return PseudoMouseOver;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// URLキャッシュ辞書
@@ -78774,6 +78764,14 @@ function PageExpand(page_expand_arguments){
 			if(_element_hit_area.addEventListener){
 				_element_hit_area.addEventListener("mouseover",mouseOverHitArea,false);
 			}
+
+			var node_info = node_info_dictionary.getNodeInfo(_element_hit_area);
+			if(node_info){
+				_observer_pseudo_mouse_over = node_info.observerPseudoMouseOver(function(o){
+					_this.touch_revision = o.revision;
+					mouseOverHitArea();
+				});
+			}
 		}
 
 		// --------------------------------------------------------------------------------
@@ -78784,6 +78782,11 @@ function PageExpand(page_expand_arguments){
 
 			if(_element_hit_area.removeEventListener){
 				_element_hit_area.removeEventListener("mouseover",mouseOverHitArea,false);
+			}
+
+			if(_observer_pseudo_mouse_over){
+				_observer_pseudo_mouse_over.release();
+				_observer_pseudo_mouse_over = null;
 			}
 		}
 
@@ -78841,7 +78844,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		function mouseOverHitArea(e){
 			// マウス入力を更新
-			input_mouse.setMouseEvent(e);
+			if(e) input_mouse.setMouseEvent(e);
 
 			// タスク生成
 			createTask();
@@ -78918,6 +78921,11 @@ function PageExpand(page_expand_arguments){
 					hit = dialog.hittestWindow(mouse_pos);
 					return hit;
 				});
+			}
+			if(!hit){
+				if(_this.touch_revision){
+					if(!_this.touch_revision.isUpdated()) hit = true;
+				}
 			}
 			if(hit){
 				var client_size = DocumentGetClientSize(document);
@@ -79422,6 +79430,7 @@ function PageExpand(page_expand_arguments){
 		var _observer_remove;
 		var _event_handler_revise_scroll;
 		var _event_handler_release;
+		var _observer_pseudo_mouse_over;
 
 		// --------------------------------------------------------------------------------
 		// 初期化
@@ -79746,6 +79755,10 @@ function PageExpand(page_expand_arguments){
 		// マウスクリック時に実行される関数（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseClick(e){
+			if((e.pointerType) && (e.pointerType != "mouse")) return;
+			mouseDblClick(e);
+		}
+		function mouseDblClick(e){
 			_this.release();
 		}
 
@@ -79755,6 +79768,7 @@ function PageExpand(page_expand_arguments){
 		function removeEventClick(){
 			if(_element.removeEventListener){
 				_element.removeEventListener("click",mouseClick);
+				_element.removeEventListener("dblclick",mouseDblClick);
 			}
 		}
 
@@ -79784,6 +79798,7 @@ function PageExpand(page_expand_arguments){
 
 			if(_element.addEventListener){
 				_element.addEventListener("click",mouseClick);
+				_element.addEventListener("dblclick",mouseDblClick);
 			}
 
 			_node_info = node_info_dictionary.addNode(_element);
@@ -79978,6 +79993,10 @@ function PageExpand(page_expand_arguments){
 		// マウスクリック時に実行される関数（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseClick(e){
+			if((e.pointerType) && (e.pointerType != "mouse")) return;
+			mouseDblClick(e);
+		}
+		function mouseDblClick(e){
 			removeEventClick();
 
 			var ary = bbs_dictionary.getResponsesFromId(_id);
@@ -80002,6 +80021,7 @@ function PageExpand(page_expand_arguments){
 		function removeEventClick(){
 			if(_element.removeEventListener){
 				_element.removeEventListener("click",mouseClick);
+				_element.removeEventListener("dblclick",mouseDblClick);
 			}
 		}
 
@@ -80032,6 +80052,7 @@ function PageExpand(page_expand_arguments){
 
 			if(_element.addEventListener){
 				_element.addEventListener("click",mouseClick);
+				_element.addEventListener("dblclick",mouseDblClick);
 			}
 
 			_node_info = node_info_dictionary.addNode(_element);
@@ -80216,6 +80237,10 @@ function PageExpand(page_expand_arguments){
 		// マウスクリック時に実行される関数（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseClick(e){
+			if((e.pointerType) && (e.pointerType != "mouse")) return;
+			mouseDblClick(e);
+		}
+		function mouseDblClick(e){
 			removeEventClick();
 
 			var ary = bbs_dictionary.getResponsesFromName(_name);
@@ -80240,6 +80265,7 @@ function PageExpand(page_expand_arguments){
 		function removeEventClick(){
 			if(_element.removeEventListener){
 				_element.removeEventListener("click",mouseClick);
+				_element.removeEventListener("dblclick",mouseDblClick);
 			}
 		}
 
@@ -80270,6 +80296,7 @@ function PageExpand(page_expand_arguments){
 
 			if(_element.addEventListener){
 				_element.addEventListener("click",mouseClick);
+				_element.addEventListener("dblclick",mouseDblClick);
 			}
 
 			_node_info = node_info_dictionary.addNode(_element);
@@ -80454,6 +80481,10 @@ function PageExpand(page_expand_arguments){
 		// マウスクリック時に実行される関数（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseClick(e){
+			if((e.pointerType) && (e.pointerType != "mouse")) return;
+			mouseDblClick(e);
+		}
+		function mouseDblClick(e){
 			removeEventClick();
 
 			var ary = bbs_dictionary.getResponsesFromHost(_host);
@@ -80478,6 +80509,7 @@ function PageExpand(page_expand_arguments){
 		function removeEventClick(){
 			if(_element.removeEventListener){
 				_element.removeEventListener("click",mouseClick);
+				_element.removeEventListener("dblclick",mouseDblClick);
 			}
 		}
 
@@ -80508,6 +80540,7 @@ function PageExpand(page_expand_arguments){
 
 			if(_element.addEventListener){
 				_element.addEventListener("click",mouseClick);
+				_element.addEventListener("dblclick",mouseDblClick);
 			}
 
 			_node_info = node_info_dictionary.addNode(_element);
@@ -80673,6 +80706,10 @@ function PageExpand(page_expand_arguments){
 		// マウスクリック時に実行される関数（内部用）
 		// --------------------------------------------------------------------------------
 		function mouseClick(e){
+			if((e.pointerType) && (e.pointerType != "mouse")) return;
+			mouseDblClick(e);
+		}
+		function mouseDblClick(e){
 			removeEventClick();
 
 			var ary = _response.getFollower();
@@ -80698,6 +80735,7 @@ function PageExpand(page_expand_arguments){
 		function removeEventClick(){
 			if(_element.removeEventListener){
 				_element.removeEventListener("click",mouseClick);
+				_element.removeEventListener("dblclick",mouseDblClick);
 			}
 		}
 
@@ -80727,6 +80765,7 @@ function PageExpand(page_expand_arguments){
 
 			if(_element.addEventListener){
 				_element.addEventListener("click",mouseClick);
+				_element.addEventListener("dblclick",mouseDblClick);
 			}
 
 			_node_info = node_info_dictionary.addNode(_element);
@@ -86380,18 +86419,15 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	function DocumentGetClientSize(document_obj){
 		var r = document_obj.documentElement;
-		var b = document_obj.body || r;
-		var w = b.clientWidth;
-		var h;
-		if(w < r.clientWidth) w = r.clientWidth;
+		var e;
 		if(document_obj.compatMode == "BackCompat"){
-			h = b.clientHeight;
+			e = document_obj.body || r;
 		}else{
-			h = r.clientHeight || b.clientHeight;
+			e = r;
 		}
 		return {
-			width :w,
-			height:h
+			width:e.clientWidth,
+			height:e.clientHeight
 		};
 	}
 
@@ -87603,70 +87639,28 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// エレメントとクライアント座標との当たり判定を取得
 	// --------------------------------------------------------------------------------
-	function ElementClientRectsTree(element){
-		var _this = this;
-
-		// --------------------------------------------------------------------------------
-		// 座標との当たり判定
-		// --------------------------------------------------------------------------------
-		_this.hitTestPosition = function(pos,child_type){
-			var node = _this.parentNode;
-			while(node){
-				var r = node.boundingClientRect;
-				if(!r) break;
-
-				if(r.bottom + 1 < pos.y) return false;
-				if(r.top    - 1 > pos.y) return false;
-				if(r.right  + 1 < pos.x) return false;
-				if(r.left   - 1 > pos.x) return false;
-
-				node = node.parentNode;
-			}
-
-			var queue = new Array();
-			queue.push(_this);
-			while(true){
-				var node = queue.pop();
-				if(!node)	break;
-
-				// 子ノード
-				var child_nodes = node.childNodes;
-				var i;
-				var num = child_nodes.length;
-				for(i=0;i < num;i++){
-					queue.push(child_nodes[i]);
+	var ElementClientRectsTree = (function(){
+		var overflow_hidden = {"auto":1,"clip":1,"scroll":1,"hidden":1};
+		var display_inline = {"inline":1,"none":1,"contents":1,"table-column":1,"table-column-group":1,"ruby":1};
+		var position_offset_parent = {"relative":1,"absolute":1,"fixed":1,"sticky":1};
+		var hittest = function(a,pos){
+			return a.some(function(r){
+				if(r.bottom + 2.0 < pos.y){
+				}else if(r.top - 2.0 > pos.y){
+				}else if(r.right + 2.0 < pos.x){
+				}else if(r.left - 2.0 > pos.x){
+				}else{
+					return true;
 				}
-
-				var ary = node.clientRects;
-				var i;
-				var num = ary.length;
-				for(i=0;i<num;i++){
-					var r = ary[i];
-					if(r.bottom + 5 < pos.y){
-					}else if(r.top - 5 > pos.y){
-					}else if(r.right + 2 < pos.x){
-					}else if(r.left - 2 > pos.x){
-					}else{
-						return true;
-					}
-				}
-
-				if(!child_type)	return false;
-			}
-
-			return false;
+				return false;
+			});
 		};
-
-		// --------------------------------------------------------------------------------
-		// 初期化
-		// --------------------------------------------------------------------------------
-		(function(){
-			var overflow_hidden = {"scroll":1,"hidden":1,"auto":1};
-			var display_inline = {"inline":1,"none":1,"table-column":1,"table-column-group":1};
-			var position_offset_parent = {"relative":1,"absolute":1,"fixed":1,"sticky":1};
+		function f(element){
+			var _this = this;
+			this.parents = [];
+			this.children = [];
+			
 			var absoluted = false;
-
-			var node_obj = _this;
 			var node = element;
 			while(node){
 				var r = ElementGetBoundingClientRect(node);
@@ -87687,10 +87681,7 @@ function PageExpand(page_expand_arguments){
 					if(!absoluted){
 						if(!display_inline[style.display]){
 							if(overflow_hidden[style.overflow]){
-								node_obj.parentNode = {
-									boundingClientRect:r
-								};
-								node_obj = node_obj.parentNode;
+								this.parents.push(r);
 							}
 						}
 					}
@@ -87699,150 +87690,90 @@ function PageExpand(page_expand_arguments){
 				node = node.parentNode;
 			}
 
-			_this.childNodes = new Array();
-			_this.clientRects = new Array();
-			var queue = new Array();
-			queue.push({node:element,node_obj:_this});
-			while(true){
-				var param = queue.pop();
-				if(!param)	break;
-				var node_obj = param.node_obj;
-				var node = param.node;
+			this.self = Array.from(element.getClientRects());
+			Array.from(element.children).forEach(function(e){
+				_this.children.push(Array.from(e.getClientRects()));
+			});
+		}
+		f.prototype = {
+			hitTestPosition:function(pos,child_type){
+				if(!this.parents.every(function(r){
+					if(r.bottom + 0.5 < pos.y) return false;
+					if(r.top    - 0.5 > pos.y) return false;
+					if(r.right  + 0.5 < pos.x) return false;
+					if(r.left   - 0.5 > pos.x) return false;
+					return true;
+				})) return false;
 
-				var check = true;
-				var style = null;
-				if(node.nodeType == 1){
-					style = ElementGetComputedStyle(node,null);
-				}
-				if(style){
-					if(!display_inline[style.display]){
-						if(overflow_hidden[style.overflow]){
-							check = false;
-						}
-					}
-				}
-				if(check){
-					// 子ノード
-					var child_nodes = node.childNodes;
-					var i;
-					var num = child_nodes.length;
-					for(i=0;i < num;i++){
-						var o = {
-							childNodes:new Array(),
-							clientRects:new Array()
-						};
-						queue.push({
-							node:child_nodes[i],
-							node_obj:o
-						});
-						node_obj.childNodes.push(o);
-					}
-				}
-
-				if(node.getClientRects){
-					var ary = node.getClientRects();
-					var i;
-					var num = ary.length;
-					for(i=0;i<num;i++){
-						node_obj.clientRects.push(ary[i]);
-					}
-				}
+				if(hittest(this.self,pos)) return true;
+				if(!child_type) return false;
+				return this.children.some(function(a){ return hittest(a,pos); });
 			}
-		})();
-	}
+		};
+		return f;
+	})();
 
 	// --------------------------------------------------------------------------------
 	// エレメントとクライアント座標との当たり判定を取得
 	// --------------------------------------------------------------------------------
-	function ElementHitTestPosition(element,pos,child_type){
-		if(!element) return false;
-
-		var overflow_hidden = {"scroll":1,"hidden":1,"auto":1};
-		var display_inline = {"inline":1,"none":1,"table-column":1,"table-column-group":1};
+	var ElementHitTestPosition = (function(){
+		var overflow_hidden = {"auto":1,"clip":1,"scroll":1,"hidden":1};
+		var display_inline = {"inline":1,"none":1,"contents":1,"table-column":1,"table-column-group":1,"ruby":1};
 		var position_offset_parent = {"relative":1,"absolute":1,"fixed":1,"sticky":1};
-		var absoluted = false;
-
-		var node = element;
-		while(node){
-			var r = ElementGetBoundingClientRect(node);
-			if(!r) break;
-
-			if(node.tagName == "BODY") break;
-
-			var style = ElementGetComputedStyle(node,null);
-			if(style){
-				if(style.position == "fixed") break;
-
-				if(absoluted){
-					absoluted = !Boolean(position_offset_parent[style.position]);
+		var hittest = function(e,pos){
+			return Array.from(e.getClientRects()).some(function(r){
+				if(r.bottom + 2.0 < pos.y){
+				}else if(r.top - 2.0 > pos.y){
+				}else if(r.right + 2.0 < pos.x){
+				}else if(r.left - 2.0 > pos.x){
 				}else{
-					absoluted = Boolean(style.position == "absolute");
+					return true;
 				}
+				return false;
+			});
+		};
+		return function (element,pos,child_type){
+			if(!element) return false;
 
-				if(!absoluted){
-					if(!display_inline[style.display]){
-						if(overflow_hidden[style.overflow]){
-							if(r.bottom + 1 < pos.y) return false;
-							if(r.top    - 1 > pos.y) return false;
-							if(r.right  + 1 < pos.x) return false;
-							if(r.left   - 1 > pos.x) return false;
+			var absoluted = false;
+
+			var node = element;
+			while(node){
+				var r = ElementGetBoundingClientRect(node);
+				if(!r) break;
+
+				if(node.tagName == "BODY") break;
+
+				var style = ElementGetComputedStyle(node,null);
+				if(style){
+					if(style.position == "fixed") break;
+
+					if(absoluted){
+						absoluted = !Boolean(position_offset_parent[style.position]);
+					}else{
+						absoluted = Boolean(style.position == "absolute");
+					}
+
+					if(!absoluted){
+						if(!display_inline[style.display]){
+							if(overflow_hidden[style.overflow]){
+								if(r.bottom + 0.5 < pos.y) return false;
+								if(r.top    - 0.5 > pos.y) return false;
+								if(r.right  + 0.5 < pos.x) return false;
+								if(r.left   - 0.5 > pos.x) return false;
+							}
 						}
 					}
 				}
+
+				node = node.parentNode;
 			}
 
-			node = node.parentNode;
+			if(hittest(element,pos)) return true;
+			if(!child_type) return false;
+			return Array.from(element.children).some(function(e){ return hittest(e,pos); });
 		}
-
-		var queue = new Array();
-		queue.push(element);
-		while(true){
-			element = queue.pop();
-			if(!element)	break;
-
-			var check = true;
-			var style = null;
-			if(element.nodeType == 1){
-				style = ElementGetComputedStyle(element,null);
-			}
-			if(style){
-				if(!display_inline[style.display]){
-					if(overflow_hidden[style.overflow]){
-						check = false;
-					}
-				}
-			}
-			if(check){
-				// 子ノード
-				var child_nodes = element.childNodes;
-				var i;
-				var num = child_nodes.length;
-				for(i=0;i < num;i++){
-					queue.push(child_nodes[i]);
-				}
-			}
-
-			if(element.getClientRects){
-				var ary = element.getClientRects();
-				var i;
-				var num = ary.length;
-				for(i=0;i<num;i++){
-					var r = ary[i];
-					if(r.bottom + 5 < pos.y){
-					}else if(r.top - 5 > pos.y){
-					}else if(r.right + 2 < pos.x){
-					}else if(r.left - 2 > pos.x){
-					}else{
-						return true;
-					}
-				}
-			}
-
-			if(!child_type)	return false;
-		}
-
-		return false;
-	}
+	})();
 
 	// --------------------------------------------------------------------------------
 	// エレメントとマウスクライアント座標との当たり判定を取得
@@ -88965,76 +88896,58 @@ function PageExpand(page_expand_arguments){
 	// --------------------------------------------------------------------------------
 	// 擬似スクロール
 	// --------------------------------------------------------------------------------
-	function WheelScrollFromElement(vector,target,current){
-		var p = {
-			result:false,
-			vector:{x:0,y:0},
-			target:null
-		};
+	var WheelScrollFromElement = (function(){
+		var overflow_hidden = {"hidden":1,"clip":1};
+		var ary = [
+			{pos:"x",srp:"scrollLeft",srw:"scrollWidth",clw:"clientWidth",stp:"overflowX"},
+			{pos:"y",srp:"scrollTop",srw:"scrollHeight",clw:"clientHeight",stp:"overflowY"}
+		];
+		return function (vector,target,current){
+			var p = {
+				result:false,
+				vector:{x:0,y:0},
+				target:null
+			};
 
-		var overflow_hidden_x = {"hidden":1};
-		var overflow_hidden_y = {"hidden":1};
-		while(target){
-			if(target == current){
-				break;
-			}
-			if(current.compareDocumentPosition){
+			while(target){
+				if(target == current){
+					break;
+				}
 				var dom_pos = current.compareDocumentPosition(target);
 				if(dom_pos & document.DOCUMENT_POSITION_CONTAINS){
 					break;
 				}
-			}
 
-			var computed_style = ElementGetComputedStyle(target,null);
-			if(!computed_style) computed_style = {};
+				var computed_style = ElementGetComputedStyle(target,null) || {};
 
-			var min_x = 0;
-			var max_x = target.scrollWidth - target.clientWidth;
-			var old_x = target.scrollLeft;
-			var new_x = old_x + vector.x;
+				ary.forEach(function(o){
+					if(!(vector[o.pos])) return;
+					if(overflow_hidden[computed_style[o.stp]]) return;
+					
+					var min = 0;
+					var max = target[o.srw] - target[o.clw];
+					var old = target[o.srp];
+					var nex = old + vector[o.pos];
 
-			if(!(vector.x)){
-			}else if(overflow_hidden_x[computed_style.overflowX]){
-			}else if((vector.x < 0) && (min_x >= old_x)){
-			}else if((vector.x > 0) && (max_x <= old_x)){
-			}else{
-				if(new_x < min_x) new_x = min_x;
-				if(new_x > max_x) new_x = max_x;
-				target.scrollLeft = new_x;
-				if(target.scrollLeft != old_x){
+					if((vector[o.pos] < 0) && (min >= old)) return;
+					if((vector[o.pos] > 0) && (max <= old)) return;
+					if(nex < min) nex = min;
+					if(nex > max) nex = max;
+					target[o.srp] = nex;
+					if(target[o.srp] == old) return;
 					p.result = true;
 					p.target = target;
-					p.vector.x = new_x - old_x;
-				}
+					p.vector[o.pos] = nex - old;
+				});
+				if(p.result) break;
+
+				target = target.parentElement;
 			}
 
-			var min_y = 0;
-			var max_y = target.scrollHeight - target.clientHeight;
-			var old_y = target.scrollTop;
-			var new_y = old_y + vector.y;
+			return p;
+		};
+	})();
 
-			if(!(vector.y)){
-			}else if(overflow_hidden_y[computed_style.overflowY]){
-			}else if((vector.y < 0) && (min_y >= old_y)){
-			}else if((vector.y > 0) && (max_y <= old_y)){
-			}else{
-				if(new_y < min_y) new_y = min_y;
-				if(new_y > max_y) new_y = max_y;
-				target.scrollTop = new_y;
-				if(target.scrollTop != old_y){
-					p.result = true;
-					p.target = target;
-					p.vector.y = new_y - old_y;
-				}
-			}
-
-			if(p.result) break;
-
-			target = target.parentElement;
-		}
-
-		return p;
-	}
 
 
 	// --------------------------------------------------------------------------------
