@@ -1,7 +1,7 @@
 // --------------------------------------------------------------------------------
 // PageExpand
 //
-// Hakuhin 2010-2025  https://hakuhin.jp
+// Hakuhin 2010-2026  https://hakuhin.jp
 // --------------------------------------------------------------------------------
 
 
@@ -11898,6 +11898,32 @@ function PageExpand(page_expand_arguments){
 		}
 		if(exit())	return proj;
 
+		if(proj.version < 57){
+			proj.version = 57;
+
+			var obj = getPreset(proj.expand_bbs,"2ch_v6");
+			obj.filter.regexp.filter[0] = {
+				pattern:"^(http|https)://[^.]+[.](2ch[.]net|5ch[.]net|5ch[.]io)/test/read[.]cgi/c/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			};
+
+			var obj = getPreset(proj.expand_bbs,"5ch_v8",null);
+			obj.filter.regexp.filter[0] = {
+				pattern:"^(http|https)://[^.]+[.](2ch[.]net|5ch[.]net|5ch[.]io)/test/read\\.cgi/[^/]+/[0-9]+.*$",
+				flags:{i:true,g:false}
+			};
+
+			var obj = getPreset(proj.urlmap,"bbs");
+			obj.filter.asterisk.filter.splice(4,0,
+				"*://5ch.io/*",
+				"*://*.5ch.io/*"
+			);
+
+			removePreset("replacement_to_anchor","attach_sns_counter");
+
+		}
+		if(exit())	return proj;
+
 		return proj;
 	}
 
@@ -12090,20 +12116,6 @@ function PageExpand(page_expand_arguments){
 			});
 		}
 
-		// 「画像」検索用 (2024/03/23以降)
-		if((udm == 2) || (query["tbm"] == "isch")){
-			try{
-				if("docid" in element.dataset){
-					var image = element.getElementsByTagName("IMG")[0];
-					if(image){
-						var mouse_event = document.createEvent("MouseEvent");
-						mouse_event.initMouseEvent("mouseover",true,false,document.defaultView,0,0,0,0,0,false,false,false,false,0,null);
-						image.dispatchEvent(mouse_event);
-					}
-				}
-			}catch(e){}
-		}
-
 		// 「動画」検索用
 		if(udm == 7){
 			if([
@@ -12134,22 +12146,9 @@ function PageExpand(page_expand_arguments){
 			}
 		}
 
-		// サイド画像検索用（onmousedown発火でURLが変わるのですべて剥がしている）
-		if([
-			"#Sva75c a img[data-noaft]"
-		].find(function(s){
-			return ElementMatchesSelector(element,s);
-		})){
-			try{
-				var mouse_event = document.createEvent("MouseEvent");
-				mouse_event.initMouseEvent("mousedown",true,false,document.defaultView,0,0,0,0,0,false,false,false,false,0,null);
-				element.dispatchEvent(mouse_event);
-			}catch(e){}
-		}
-
 		// サイド画像検索用のフォーカス画像
 		if([
-			"#Sva75c c-wiz a > img"
+			"c-wiz a > img"
 		].find(function(s){
 			return ElementMatchesSelector(element,s);
 		})){
@@ -12984,6 +12983,7 @@ function PageExpand(page_expand_arguments){
 			{search:"^(http|https)://ime\\.nu/",replace:""},
 			{search:"^(http|https)://jump\\.(2ch|5ch)\\.net/[?]",replace:""},
 			{search:"^(http|https)://2ch\\.io/",replace:""},
+			{search:"^(http|https)://jump5[.]ch/[?]",replace:""},
 			// まちBBS
 			{search:"^(http|https)://machi\\.to/bbs/link\\.cgi[?]URL=",replace:""},
 			// PINKちゃんねる
@@ -13055,283 +13055,6 @@ function PageExpand(page_expand_arguments){
 		event_handler_change.setFunction(change);
 
 		change();
-		return false;
-	},
-	function(info,response){
-		response({});
-		return true;
-	}
-
-			]);
-
-			// --------------------------------------------------------------------------------
-			// アンカー置換定義「ソーシャルサービスのカウント数を表示」
-			// --------------------------------------------------------------------------------
-			attachItem( "ReplacementToAnchor_AttachSnsCounter" , [
-
-	function(info,response){
-		// Twitterボタンを追加
-		var anchor_element = info.anchor_element;
-		var url = anchor_element.href;
-
-		// キュー
-		var result = new Array();
-		var queue = [
-			// Twitter
-			function(){
-				var loader = new Loader();
-				loader.onerror = error;
-				loader.onload = function(v){
-					try{
-						var param = JsonParse(v);
-						var count = param.count;
-						if(count){
-							result.push(createItem({
-								label:"t",
-								value:count,
-								tooltip:"twitter Retweet",
-								color:"#fff",
-								background:"#33CCFF",
-								borderColor:"#33CCFF"
-							}));
-						}
-					}catch(e){}
-					execute();
-				};
-				loader.setURL("http://urls.api.twitter.com/1/urls/count.json?url=" + url);
-				loader.loadText();
-			},
-			// Facebook
-			function(){
-				var loader = new Loader();
-				loader.onerror = error;
-				loader.onload = function(v){
-					try{
-						var param = JsonParse(v);
-						var count = param[0].total_count;
-						if(count){
-							result.push(createItem({
-								label:"f",
-								value:count,
-								tooltip:"Facebook Like",
-								color:"#fff",
-								background:"#3B5999",
-								borderColor:"#233774"
-							}));
-						}
-					}catch(e){}
-					execute();
-				};
-				var fql = "SELECT total_count FROM link_stat WHERE url=\"" + url + "\"";
-				fql = encodeURIComponent(fql).replace(/!/g, '%21').replace(/'/g, '%27').replace(/\(/g, '%28').replace(/\)/g, '%29').replace(/\*/g, '%2A').replace(/%20/g, '+');
-				loader.setURL("https://api.facebook.com/method/fql.query?format=json&query=" + fql);
-				loader.loadText();
-			},
-			// Google +1
-			function(){
-				var loader = new Loader();
-				loader.onerror = error;
-				loader.onload = function(v){
-					if(v.match(/window\.__SSR = [{]c: ([0-9]+)/i)){
-						var count = parseInt(RegExp.$1);
-						if(count){
-							result.push(createItem({
-								label:"g+",
-								value:count,
-								tooltip:"Google +1",
-								color:"#fff",
-								background:"#CD4131",
-								borderColor:"#A5281A"
-							}));
-						}
-					}
-					execute();
-				};
-				loader.setURL("https://plusone.google.com/u/0/_/+1/fastbutton?count=true&url=" + url);
-				loader.loadText();
-			},
-			// はてなブックマーク
-			function(){
-				var loader = new Loader();
-				loader.onerror = error;
-				loader.onload = function(v){
-					try{
-						if(v){
-							result.push(createItem({
-								label:"B!",
-								value:v,
-								tooltip:"Hatena Bookmark",
-								color:"#fff",
-								background:"#2B65A9",
-								borderColor:"#2B65A9"
-							}));
-						}
-					}catch(e){}
-					execute();
-				};
-				loader.setURL("http://api.b.st-hatena.com/entry.count?url=" + escape(url));
-				loader.loadText();
-			},
-			// Pinterest
-			function(){
-				var loader = new Loader();
-				loader.onerror = error;
-				loader.onload = function(v){
-					try{
-						var param = JsonParse(v.match(/\((.*)\)/i)[1]);
-						var count = param.count;
-						if(count){
-							result.push(createItem({
-								label:"Pi",
-								value:count,
-								tooltip:"Pinterest Pin Count",
-								color:"#fff",
-								background:"#DF2532",
-								borderColor:"#8C1B22"
-							}));
-						}
-					}catch(e){}
-					execute();
-				};
-				loader.setURL("http://widgets.pinterest.com/v1/urls/count.json?source=6&url=" + encodeURIComponent(url));
-				loader.loadText();
-			},
-			// reddit score
-			function(){
-				var loader = new Loader();
-				loader.onerror = error;
-				loader.onload = function(v){
-					try{
-						var param = JsonParse(v);
-						var score = param.data.children[0].data.score;
-						if(score){
-							result.push(createItem({
-								label:"r",
-								value:score,
-								tooltip:"reddit Score",
-								color:"#30659A",
-								background:"#C7DEF7",
-								borderColor:"#C7DEF7"
-							}));
-						}
-					}catch(e){}
-					execute();
-				};
-				loader.setURL("http://buttons.reddit.com/button_info.json?url=" + encodeURIComponent(url));
-				loader.loadText();
-			},
-			// StumbleUpon views
-			function(){
-				var loader = new Loader();
-				loader.onerror = error;
-				loader.onload = function(v){
-					try{
-						var param = JsonParse(v);
-						var views = param.result.views;
-						if(views){
-							result.push(createItem({
-								label:"SU",
-								value:views,
-								tooltip:"StumbleUpon Views",
-								color:"#fff",
-								background:"#E6492E",
-								borderColor:"#E6492E"
-							}));
-						}
-					}catch(e){}
-					execute();
-				};
-				loader.setURL("http://www.stumbleupon.com/services/1.01/badge.getinfo?url=" + encodeURIComponent(url));
-				loader.loadText();
-			},
-			// 出力
-			function(){
-				var num = result.length;
-				if(num){
-					// span を生成
-					var span = DocumentCreateElement("span");
-					ElementSetStyle(span,"all:initial; line-height:1.0;");
-
-					var i;
-					for(i=0;i<num;i++){
-						span.appendChild(result[i]);
-					}
-
-					var click_func = function(e){
-						DomNodeRemove(span);
-					};
-					if(span.addEventListener){
-						span.addEventListener("click",click_func,true);
-					}else if(span.attachEvent){
-						span.attachEvent("onclick",click_func);
-					}
-
-					// 直後に登録
-					DomNodeInsertAfter(span,anchor_element);
-				}
-			}
-		];
-
-		// 実行
-		function execute(){
-			var f = queue.shift();
-			if(f){
-				f();
-			}
-		}
-
-		// エラー
-		function error(){
-			execute();
-		}
-
-		// アイテム作成
-		function createItem(param){
-			var table = DocumentCreateElement("table");
-			var tbody = DocumentCreateElement("tbody");
-			table.appendChild(tbody);
-			var tr = DocumentCreateElement("tr");
-			var td0 = DocumentCreateElement("td");
-			var td1 = DocumentCreateElement("td");
-			tbody.appendChild(tr);
-			tr.appendChild(td0);
-			tr.appendChild(td1);
-			td0.appendChild(DocumentCreateText(param.label));
-			td1.appendChild(DocumentCreateText(param.value));
-
-			table.cellspacing = "0";
-			var style = table.style;
-			style.cssText = "border:1px solid #888; border-spacing:0; margin;0; margin-right:2px; padding:0; line-height:1.0; border-radius:2px; display:inline-block; font-size:14px; width:auto; heigh:auto;";
-			if(param.tooltip){
-				table.title = param.tooltip;
-			}
-			if(param.borderColor){
-				style.borderColor = param.borderColor;
-			}
-
-			var style = tr.style;
-			style.cssText = "margin:0; padding:0; width:auto; height:auto;";
-
-			var style = td0.style;
-			style.cssText = "margin:0; padding:1px 2px; background:#fff; text-align:center; width:auto; height:auto; color:#000;";
-			if(param.color){
-				style.color = param.color;
-			}
-			if(param.background){
-				style.background = param.background;
-			}
-
-			var style = td1.style;
-			style.cssText = "padding:1px 2px; background:#fff; text-align:center; width:auto; height:auto;";
-
-			return table;
-		}
-
-		// 初回実行開始
-		if(url.match(new RegExp("^(http|https)://","i"))){
-			execute();
-		}
-
 		return false;
 	},
 	function(info,response){
@@ -28175,8 +27898,8 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"((http|https)://[^.]+[.](2ch|5ch)[.]net/test/read[.]cgi/c/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
-			{url:"((http|https)://[^.]+[.](2ch|5ch)[.]net/[^/]+/kako/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
+			{url:"((http|https)://[^.]+[.](2ch[.]net|5ch[.]net|5ch[.]io)/test/read[.]cgi/c/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
+			{url:"((http|https)://[^.]+[.](2ch[.]net|5ch[.]net|5ch[.]io)/[^/]+/kako/[0-9]+)",replace:"$1/",secure:true,name:"2ch"},
 			{url:"((http|https)://[^.]+[.]bbspink[.]com/test/read[.]cgi/c/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"pink"}
 		];
 
@@ -30325,7 +30048,7 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		var url = document.URL;
 		var bbs_list = [
-			{url:"((http|https)://[^.]+[.](2ch|5ch)[.]net/test/read[.]cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"5ch_v8"},
+			{url:"((http|https)://[^.]+[.](2ch[.]net|5ch[.]net|5ch[.]io)/test/read[.]cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"5ch_v8"},
 			{url:"((http|https)://[^.]+[.]bbspink[.]com/test/read[.]cgi/[^/]+/[0-9]+)",replace:"$1/",secure:true,name:"bbspink"}
 		];
 
@@ -35568,6 +35291,7 @@ function PageExpand(page_expand_arguments){
 
 				var bbs_board_dic = [
 					{type:"5ch",domain:"5ch.net"},
+					{type:"5ch",domain:"5ch.io"},
 					{type:"bbspink",domain:"bbspink.com"},
 					{type:"open2ch",domain:"open2ch.net"},
 					{type:"2chan",domain:"2chan.net"},
@@ -42815,7 +42539,7 @@ function PageExpand(page_expand_arguments){
 				// バージョン情報
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_version"));
 				var parent = container.getElement();
-				new UI_Text(parent,"PageExpand ver.1.7.12");
+				new UI_Text(parent,"PageExpand ver.1.7.13");
 
 				// 製作
 				var container = new UI_LineContainer(_content_window,_i18n.getMessage("menu_credit_info_copyright"));
@@ -42825,7 +42549,7 @@ function PageExpand(page_expand_arguments){
 				var tr = table.insertRow(-1);
 				new UI_Text(tr.insertCell(-1),'by');
 				new UI_AnchorText(tr.insertCell(-1),"Hakuhin","https://hakuhin.jp/");
-				new UI_Text(tr.insertCell(-1),'2010-2025');
+				new UI_Text(tr.insertCell(-1),'2010-2026');
 				new UI_AnchorText(parent,"https://github.com/hakuhin/PageExpand","https://github.com/hakuhin/PageExpand");
 
 				// 翻訳者
@@ -49537,57 +49261,56 @@ function PageExpand(page_expand_arguments){
 		// --------------------------------------------------------------------------------
 		var click = (function(){
 			var menu_commands = Object();
-			menu_commands["openBbsBoard"] = function(info) {
+			menu_commands["openBbsBoard"] = {f:function(info) {
 				var query = new Object();
 				query.referer = encodeURIComponent(Tab_getURL(this.tab));
 				GoogleChromeExtensionOpenBbsBoard(query);
-			};
-			menu_commands["openBbsBoardSidebar"] = function(info) {
+				this.close();
+			}};
+			menu_commands["openBbsBoardSidebar"] = {f:function(info) {
 				if(!(this.tab)) return;
 				GoogleChromeExtensionOpenBbsBoardInSidebar({windowId: this.tab.windowId});
-			};
-			menu_commands["openDownloadBoardApplication"] = function() {
+				this.close();
+			}};
+			menu_commands["openDownloadBoardApplication"] = {f:function() {
 				GoogleChromeExtensionOpenDownloadBoard();
-			};
-			menu_commands["configCurrentPage"] = function(info) {
+				this.close();
+			}};
+
+			var f = function(info) {
+				var o = menu_commands[info.menuItemId];
 				var query = new Object();
-				query.type = "urlmap";
+				query.type = o.type;
 				query.url = encodeURIComponent(Tab_getURL(this.tab));
 				GoogleChromeExtensionOpenPageExpandConfig(query);
+				this.close();
 			};
-			menu_commands["configCurrentBbs"] = function(info) {
-				var query = new Object();
-				query.type = "expand_bbs";
-				query.url = encodeURIComponent(Tab_getURL(this.tab));
-				GoogleChromeExtensionOpenPageExpandConfig(query);
+			menu_commands["configCurrentPage"] = {f:f,type:"urlmap"};
+			menu_commands["configCurrentBbs"] = {f:f,type:"expand_bbs"};
+
+			var f = function(info) {
+				var _this = this;
+				var o = menu_commands[info.menuItemId];
+				var port = extension_message.connectToContent(this.tab);
+				if(!port) return;
+				port.start(function (){
+					port.postMessage({command:info.menuItemId,onlyTopWindow:Boolean(o.onlyTopWindow)});
+					port.terminate();
+					if(o.reload) reload.call(_this);
+					if(o.close) _this.close();
+				});
 			};
 			menu_commands["startPageExpand"] =
 			menu_commands["abortPageExpand"] =
-			menu_commands["executeFastest"] = function(info) {
-				var _this = this;
-				var port = extension_message.connectToContent(this.tab);
-				if(!port) return;
-				port.start(function (){
-					port.postMessage({command:info.menuItemId});
-					port.terminate();
-					reload.call(_this);
-				});
-			};
+			menu_commands["executeFastest"] = {f:f,reload:true};
 			menu_commands["executeDebug"] =
 			menu_commands["openImageViewer"] =
 			menu_commands["openDownloadBoardInline"] =
-			menu_commands["batchDownloadMedia"] = function(info) {
-				var port = extension_message.connectToContent(this.tab);
-				if(!port) return;
-				port.start(function (){
-					port.postMessage({command:info.menuItemId,onlyTopWindow:true});
-					port.terminate();
-				});
-			};
+			menu_commands["batchDownloadMedia"] = {f:f,onlyTopWindow:true,close:true};
 
 			return function(command){
-				var f = menu_commands[command];
-				if(f) f.call(this,{menuItemId:command});
+				var o = menu_commands[command];
+				if(o) o.f.call(this,{menuItemId:command});
 			};
 		})();
 
@@ -49619,6 +49342,9 @@ function PageExpand(page_expand_arguments){
 			reload.call(_this);
 		};
 		PageExpandPopupMenu.prototype = {
+			close : function(){
+				window.close();
+			},
 			exec_methods : null,
 			i18n : null,
 			tab : null,
@@ -51291,7 +51017,8 @@ function PageExpand(page_expand_arguments){
 			case "itest5ch":
 			case "open2ch":
 				var domain = (_current_site == "open2ch") ? "open2ch" : "5ch";
-				var loader_url = "https://menu." + domain + ".net/bbsmenu.html";
+				var gtld = (_current_site == "open2ch") ? "net" : "io";
+				var loader_url = "https://menu." + domain + "." + gtld + "/bbsmenu.html";
 
 				// 成功
 				loader.onload = function(str){
@@ -51794,7 +51521,7 @@ function PageExpand(page_expand_arguments){
 					}
 				}else{
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net|5ch[.]net))/test/read[.]cgi/(c/|)([^/]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net|5ch[.]net|5ch[.]io))/test/read[.]cgi/(c/|)([^/]+)","i"));
 						if(m){
 							protocol = m[1];
 							domain = m[2];
@@ -51802,7 +51529,7 @@ function PageExpand(page_expand_arguments){
 						}
 					}
 					if(!domain){
-						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net|5ch[.]net))/([^/]+)","i"));
+						var m = _catalog_url.match(new RegExp("(http|https)://([^/]+[.](bbspink[.]com|open2ch[.]net|2ch[.]net|5ch[.]net|5ch[.]io))/([^/]+)","i"));
 						if(m){
 							protocol = m[1];
 							domain = m[2];
@@ -51918,14 +51645,14 @@ function PageExpand(page_expand_arguments){
 				var domain;
 				var directory;
 				if(!domain){
-					var m = _catalog_url.match(new RegExp("(http|https)://(itest[.](5ch[.]net|bbspink[.]com))/[^/]+/test/read[.]cgi/([^/]+)","i"));
+					var m = _catalog_url.match(new RegExp("(http|https)://(itest[.](5ch[.]net|5ch[.]io|bbspink[.]com))/[^/]+/test/read[.]cgi/([^/]+)","i"));
 					if(m){
 						domain = m[2];
 						directory = m[4];
 					}
 				}
 				if(!domain){
-					var m = _catalog_url.match(new RegExp("(http|https)://(itest[.](5ch[.]net|bbspink[.]com))/subback/([^/.?]+)","i"));
+					var m = _catalog_url.match(new RegExp("(http|https)://(itest[.](5ch[.]net|5ch[.]io|bbspink[.]com))/subback/([^/.?]+)","i"));
 					if(m){
 						domain = m[2];
 						directory = m[4];
@@ -52950,9 +52677,9 @@ function PageExpand(page_expand_arguments){
 				site = "open2ch";
 			}else if(domain.match(new RegExp("shitaraba[.]net$","i"))){
 				site = "shitaraba";
-			}else if(domain.match(new RegExp("(itest[.](5ch[.]net|bbspink[.]com))$","i"))){
+			}else if(domain.match(new RegExp("(itest[.](5ch[.]net|5ch[.]io|bbspink[.]com))$","i"))){
 				site = "itest5ch";
-			}else if(domain.match(new RegExp("(5ch[.]net|bbspink[.]com)$","i"))){
+			}else if(domain.match(new RegExp("(5ch[.]net|5ch[.]io|bbspink[.]com)$","i"))){
 				site = (url_parser.pathname.search(/[/]test[/]read[.]cgi[/]c[/]/) >= 0) ? "5ch_classic" : "5ch_pc";
 			}else if(domain.match(new RegExp("2chan[.]net$","i"))){
 				site = "2chan";
@@ -53042,9 +52769,9 @@ function PageExpand(page_expand_arguments){
 					_select_site.appendChild(option);
 
 					[
-						{site:["5ch","bbspink"],text:"5ch.net (PC)",value:"5ch_pc"},
-						{site:["5ch","bbspink"],text:"5ch.net (classic)",value:"5ch_classic"},
-						{site:["5ch","bbspink"],text:"itest.5ch.net",value:"itest5ch"},
+						{site:["5ch","bbspink"],text:"5ch.io (PC)",value:"5ch_pc"},
+						{site:["5ch","bbspink"],text:"5ch.io (classic)",value:"5ch_classic"},
+						{site:["5ch","bbspink"],text:"itest.5ch.io",value:"itest5ch"},
 						{site:["open2ch"],text:"open2ch.net",value:"open2ch"},
 						{site:["2chan"],text:"2chan.net",value:"2chan"},
 						{site:["4chan"],text:"4chan.org",value:"4chan"},
@@ -63787,7 +63514,7 @@ function PageExpand(page_expand_arguments){
 					[".root","all:initial;" + project.getStyleSheetExpandImagePopup(this.getOriginalURL())],
 					[".root > img","width:100%; height:100%;"],
 				].forEach(function(r,i){
-					style.appendChild(DocumentCreateText(r[0] + "{" + r[1] + "}"));	
+					style.appendChild(DocumentCreateText(r[0] + "{" + r[1] + "}"));
 				});
 				shadow_root.appendChild(style);
 
@@ -75771,7 +75498,7 @@ function PageExpand(page_expand_arguments){
 		}
 		function update_alpha(v){
 			var s = this.root.style;
-			s.opacity = v;	
+			s.opacity = v;
 		}
 
 		function NotifyProgress(){
@@ -75834,7 +75561,7 @@ function PageExpand(page_expand_arguments){
 				["@keyframes unknown1","0%{stroke-dasharray:0 999 0;}50%{stroke-dasharray:37.68 999 0;}50.00001%{stroke-dasharray:0 0 999;}100%{stroke-dasharray:0 37.68 999;}"]
 
 			].forEach(function(r,i){
-				style.appendChild(DocumentCreateText(r[0] + "{" + r[1] + "}"));				
+				style.appendChild(DocumentCreateText(r[0] + "{" + r[1] + "}"));
 			});
 		}
 		NotifyProgress.prototype = {
@@ -75903,7 +75630,7 @@ function PageExpand(page_expand_arguments){
 				var s = elements[s].style;
 				if(s.opacity == v) return;
 				s.opacity = v;
-			});			
+			});
 		}
 		function release_task(){
 			if(this.task){
@@ -75940,7 +75667,7 @@ function PageExpand(page_expand_arguments){
 				[".svg_da","position:absolute; top:-4px;"],
 				[".svg_so","position:absolute; top:-10px; left:-2px;"]
 			].forEach(function(r,i){
-				style.appendChild(DocumentCreateText(r[0] + "{" + r[1] + "}"));				
+				style.appendChild(DocumentCreateText(r[0] + "{" + r[1] + "}"));
 			});
 		}
 		DoubleTouchAssist.prototype = {
@@ -77052,7 +76779,7 @@ function PageExpand(page_expand_arguments){
 				touch.count += 1;
 				touch.timeStamp = e.timeStamp;
 				if(touch.count == 0){
-					touch.touchStart = {clientX:touch.clientX,clientY:touch.clientY,topX:touch.topX,topY:touch.topY}; 
+					touch.touchStart = {clientX:touch.clientX,clientY:touch.clientY,topX:touch.topX,topY:touch.topY};
 				}
 			});
 
@@ -77157,7 +76884,7 @@ function PageExpand(page_expand_arguments){
 			},
 			getTouchList:function(){
 				return this.touches;
-			},	
+			},
 			getTouchByIdentifier:function(id){
 				return this.indexes[id];
 			},
@@ -87659,7 +87386,7 @@ function PageExpand(page_expand_arguments){
 			var _this = this;
 			this.parents = [];
 			this.children = [];
-			
+
 			var absoluted = false;
 			var node = element;
 			while(node){
@@ -88923,7 +88650,7 @@ function PageExpand(page_expand_arguments){
 				ary.forEach(function(o){
 					if(!(vector[o.pos])) return;
 					if(overflow_hidden[computed_style[o.stp]]) return;
-					
+
 					var min = 0;
 					var max = target[o.srw] - target[o.clw];
 					var old = target[o.srp];
